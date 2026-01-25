@@ -42,7 +42,7 @@ story_location: "{project-root}/_bmad-output/implementation-artifacts"
 development_status:
   epic-1: in-progress
   1-1-frontend-project-initialization: done
-  1-2-backend-project-initialization: backlog
+  1-2-backend-project-initialization: done
   1-3-user-authentication-api: backlog
   1-4-frontend-login-page: backlog
   epic-1-retrospective: optional
