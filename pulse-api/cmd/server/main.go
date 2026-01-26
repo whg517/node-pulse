@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
@@ -29,13 +30,21 @@ func main() {
 	} else {
 		defer database.Close()
 		healthChecker = health.New(database)
+
+		// Run migrations
+		log.Println("[Migration] Running database migrations...")
+		ctx := context.Background()
+		if err := db.Migrate(ctx, database.Pool); err != nil {
+			log.Fatalf("[Migration] Failed to run migrations: %v", err)
+		}
+		log.Println("[Migration] Database migrations completed successfully")
 	}
 
 	// Initialize Gin router
 	router := gin.Default()
 
 	// Setup routes
-	api.SetupRoutes(router, healthChecker)
+	api.SetupRoutes(router, healthChecker, database.Pool)
 
 	// Start server
 	log.Printf("[Pulse] API server starting on port %s...", port)
