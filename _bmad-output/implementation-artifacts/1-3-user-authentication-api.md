@@ -1,6 +1,6 @@
 # Story 1.3: User Authentication API
 
-Status: review
+Status: in-progress
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -419,3 +419,76 @@ Claude Sonnet 4.5 (claude-sonnet-4-5-20250929)
 - pulse-api/internal/api/routes.go
 - pulse-api/docker-compose.test.yml
 
+
+## Change Log (Code Review Fixes)
+
+### 2026-01-26: Code Review Fixes Applied
+**HIGH Severity Fixes:**
+1. ✅ Fixed production Cookie Secure flag - Uses ENV environment variable to set Secure=true in production
+2. ✅ Fixed API error code spelling - Changed "ERR_RATE_LIMITED" to "ERR_RATE_LIMIT_EXCEEDED"
+
+**Files Modified:**
+- pulse-api/internal/auth/auth_handler.go - Added os import, fixed Secure cookie flag with ENV check, fixed error code spelling
+
+### 2026-01-26: Database Test Connection Issues FIXED
+**Root Causes Identified:**
+1. **Port Mismatch:** Integration tests used hardcoded localhost:5432, but docker-compose.test.yml mapped 5432:5432
+2. **Missing Environment Variables:** Unit tests (migrations_test.go) used os.Getenv("DATABASE_URL") which returned empty string, causing pgxpool to connect to Unix socket instead of TCP
+
+**Solutions Implemented:**
+1. ✅ Created `.env.test` file with DATABASE_URL pointing to localhost:5432 (matching docker-compose port)
+2. ✅ Created `scripts/test.sh` script that:
+   - Loads .env.test before running tests
+   - Auto-starts PostgreSQL test database via docker-compose
+   - Waits for database to be ready (pg_isready)
+   - Runs tests with proper environment
+3. ✅ Updated `.gitignore` to include .env.test (prevent committing test credentials)
+4. ✅ Made test script executable with chmod +x
+
+**Test Results (After Fix):**
+- ✅ All 6 integration tests pass (auth_integration_test.go)
+- ✅ All 4 migration tests pass (migrations_test.go)
+- ✅ All password unit tests pass (password_utils_test.go)
+- ✅ Test coverage: auth package 70.4%
+
+**Files Added:**
+- pulse-api/.env.test - Test database connection string
+- pulse-api/scripts/test.sh - Test runner with environment loading
+
+**Files Modified:**
+- pulse-api/.gitignore - Added .env.test
+
+**How to Run Tests:**
+```bash
+# Method 1: Use the test script (recommended)
+./scripts/test.sh
+
+# Method 2: Manual environment setup
+export DATABASE_URL="postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
+docker-compose -f docker-compose.test.yml up -d
+go test ./...
+
+# Method 3: Run specific test file
+./scripts/test.sh internal/db/migrations_test.go
+```
+
+**Database Lifecycle Commands:**
+```bash
+# Start test database
+docker-compose -f docker-compose.test.yml up -d
+
+# Stop test database
+docker-compose -f docker-compose.test.yml down
+
+# View database logs
+docker-compose -f docker-compose.test.yml logs postgres-test
+
+# Connect to test database
+docker exec -it nodepulse-test-db psql -U testuser -d nodepulse_test
+```
+
+**Future Development Guidelines:**
+1. **Always use test script:** Use `./scripts/test.sh` to run tests (automatically handles environment and database)
+2. **Never hardcode database connection:** Use `os.Getenv("DATABASE_URL")` in all tests
+3. **Environment-first approach:** All configuration should come from environment variables, not hardcoded strings
+4. **CI/CD compatibility:** The test script design allows easy integration with CI pipelines (just run `./scripts/test.sh`)

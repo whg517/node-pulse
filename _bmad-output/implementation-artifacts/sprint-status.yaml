@@ -43,8 +43,8 @@ development_status:
   epic-1: in-progress
   1-1-frontend-project-initialization: done
   1-2-backend-project-initialization: done
-  1-3-user-authentication-api: review
-  1-4-frontend-login-page: backlog
+  1-3-user-authentication-api: done
+  1-4-frontend-login-page: done
   epic-1-retrospective: optional
 
   epic-2: backlog

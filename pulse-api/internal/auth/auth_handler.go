@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -123,6 +124,7 @@ func (h *AuthHandler) PostLogin(c *gin.Context) {
 	}
 
 	// Set session cookie
+	secureFlag := os.Getenv("ENV") == "production"
 	c.SetCookie(
 		"session_id",
 		sessionID,
@@ -130,7 +132,7 @@ func (h *AuthHandler) PostLogin(c *gin.Context) {
 		"/",          // path
 		"",           // domain (uses current host)
 		true,         // HttpOnly
-		false,        // Secure (set to true in production with HTTPS)
+		secureFlag,    // Secure (true in production, false in development)
 	)
 
 	// Return success response
@@ -171,6 +173,7 @@ func (h *AuthHandler) PostLogout(c *gin.Context) {
 	}
 
 	// Clear session cookie
+	secureFlag := os.Getenv("ENV") == "production"
 	c.SetCookie(
 		"session_id",
 		"",
@@ -178,7 +181,7 @@ func (h *AuthHandler) PostLogout(c *gin.Context) {
 		"/",    // path
 		"",     // domain
 		true,   // HttpOnly
-		false,  // Secure
+		secureFlag, // Secure (true in production, false in development)
 	)
 
 	c.JSON(http.StatusOK, gin.H{

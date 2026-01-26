@@ -202,7 +202,7 @@ type,name,module,path,hash
 "md","step-v-13-report-complete","bmm","bmm/workflows/2-plan-workflows/prd/steps-v/step-v-13-report-complete.md","b7a47eba1cdeb6116c11118447c6d228011a9cff0788ec70ac2fd8d2e89d12a1"
 "md","tech-spec-template","bmm","bmm/workflows/bmad-quick-flow/quick-spec/tech-spec-template.md","6e0ac4991508fec75d33bbe36197e1576d7b2a1ea7ceba656d616e7d7dadcf03"
 "md","template","bmm","bmm/workflows/4-implementation/create-story/template.md","29ba697368d77e88e88d0e7ac78caf7a78785a7dcfc291082aa96a62948afb67"
-"md","test-design-template","bmm","bmm/workflows/testarch/test-design/test-design-template.md","be2c766858684f5afce7c140f65d6d6e36395433938a866dea09da252a723822"
+"md","test-design-template","bmm","bmm/workflows/testarch/test-design/test-design-template.md","be2c766858684f5afce7c140f65d6d6e36395432938a866dea09da252a723822"
 "md","test-healing-patterns","bmm","bmm/testarch/knowledge/test-healing-patterns.md","b44f7db1ebb1c20ca4ef02d12cae95f692876aee02689605d4b15fe728d28fdf"
 "md","test-levels-framework","bmm","bmm/testarch/knowledge/test-levels-framework.md","80bbac7959a47a2e7e7de82613296f906954d571d2d64ece13381c1a0b480237"
 "md","test-priorities-matrix","bmm","bmm/testarch/knowledge/test-priorities-matrix.md","321c3b708cc19892884be0166afa2a7197028e5474acaf7bc65c17ac861964a5"
