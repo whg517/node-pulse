@@ -21,11 +21,12 @@ import (
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/health"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 // setupTestRouter creates a test router with database connection
 func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool) {
-	pool, err := pgxpool.New(context.Background(), "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable")
+	pool, err := pgxpool.New(context.Background(), testutil.GetTestDBURL())
 	if err != nil {
 		t.Skip("No database connection")
 		return nil, nil

@@ -2,19 +2,20 @@ package db
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 // TestNodesTableCreation tests that nodes table is created with correct structure
 func TestNodesTableCreation(t *testing.T) {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return
@@ -79,7 +80,7 @@ func TestNodesTableCreation(t *testing.T) {
 func TestNodesIndexCreation(t *testing.T) {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return
@@ -106,7 +107,7 @@ func TestNodesIndexCreation(t *testing.T) {
 func TestNodesTableConstraints(t *testing.T) {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return
@@ -137,7 +138,7 @@ func TestNodesTableConstraints(t *testing.T) {
 func TestNodesTableUUIDGeneration(t *testing.T) {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return
@@ -166,7 +167,7 @@ func TestNodesTableUUIDGeneration(t *testing.T) {
 func TestNodesTableTimestampDefaults(t *testing.T) {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return

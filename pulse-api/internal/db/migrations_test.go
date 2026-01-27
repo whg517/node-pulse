@@ -10,6 +10,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 // TestUsersTableCreation tests users table exists and has correct structure
@@ -20,7 +22,7 @@ func TestUsersTableCreation(t *testing.T) {
 	// Note: This test assumes a test database is available
 	// In practice, use test database or mock
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return
@@ -105,7 +107,7 @@ func TestUsersTableCreation(t *testing.T) {
 func TestSessionsTableCreation(t *testing.T) {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return
@@ -208,7 +210,7 @@ func TestSessionsTableCreation(t *testing.T) {
 func TestSeedAdminUser(t *testing.T) {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return
@@ -266,7 +268,7 @@ func TestSeedAdminUser(t *testing.T) {
 func TestCompositeIndexPerformance(t *testing.T) {
 	ctx := context.Background()
 
-	pool, err := pgxpool.New(ctx, os.Getenv("DATABASE_URL"))
+	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
 	if err != nil {
 		t.Skipf("Skipping test: no database connection: %v", err)
 		return
