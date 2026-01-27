@@ -2,18 +2,21 @@ package models
 
 import "time"
 
-// Node represents a monitoring node in the system
+// Node represents a monitoring node in system
 type Node struct {
-	ID        string    `json:"id" db:"id"`
-	Name      string    `json:"name" db:"name"`
-	IP        string    `json:"ip" db:"ip"`
-	Region    string    `json:"region" db:"region"`
-	Tags      string    `json:"tags,omitempty" db:"tags"`      // JSONB stored as string
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	UpdatedAt time.Time `json:"updated_at" db:"updated_at"`
+	ID             string     `json:"id" db:"id"`
+	Name           string     `json:"name" db:"name"`
+	IP             string     `json:"ip" db:"ip"`
+	Region         string     `json:"region" db:"region"`
+	Tags           string     `json:"tags,omitempty" db:"tags"`           // JSONB stored as string
+	LastHeartbeat  *time.Time `json:"last_heartbeat,omitempty" db:"last_heartbeat"`   // Beacon heartbeat time
+	LastReportTime *time.Time `json:"last_report_time,omitempty" db:"last_report_time"` // Data write time
+	Status         string     `json:"status" db:"status"`                           // online/offline/connecting
+	CreatedAt      time.Time  `json:"created_at" db:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at" db:"updated_at"`
 }
 
-// CreateNodeRequest represents the request to create a new node
+// CreateNodeRequest represents request to create a new node
 type CreateNodeRequest struct {
 	Name   string                 `json:"name" binding:"required,max=255"`
 	IP     string                 `json:"ip" binding:"required,max=45"`
@@ -21,7 +24,7 @@ type CreateNodeRequest struct {
 	Tags   map[string]interface{} `json:"tags,omitempty"`
 }
 
-// UpdateNodeRequest represents the request to update a node
+// UpdateNodeRequest represents request to update a node
 type UpdateNodeRequest struct {
 	Name   *string                 `json:"name,omitempty" binding:"omitempty,max=255"`
 	IP     *string                 `json:"ip,omitempty" binding:"omitempty,max=45"`
@@ -49,8 +52,8 @@ type GetNodesData struct {
 // GetNodesResponse represents successful node list retrieval response
 type GetNodesResponse struct {
 	Data GetNodesData `json:"data"`
-	Message   string    `json:"message"`
-	Timestamp string    `json:"timestamp"`
+	Message   string `json:"message"`
+	Timestamp string `json:"timestamp"`
 }
 
 // UpdateNodeResponse represents successful node update response
@@ -70,7 +73,7 @@ type GetNodeData struct {
 // GetNodeResponse represents successful node retrieval response
 type GetNodeResponse struct {
 	Data GetNodeData `json:"data"`
-	Message   string    `json:"message"`
+	Message   string `json:"message"`
 	Timestamp string `json:"timestamp"`
 }
 
@@ -78,4 +81,25 @@ type GetNodeResponse struct {
 type DeleteNodeResponse struct {
 	Message   string `json:"message"`
 	Timestamp string `json:"timestamp"`
+}
+
+// NodeStatusData represents node status data in response
+type NodeStatusData struct {
+	Node *NodeStatus `json:"node"`
+}
+
+// NodeStatus represents node status information
+type NodeStatus struct {
+	ID             string     `json:"id"`
+	Name           string     `json:"name"`
+	Status         string     `json:"status"`
+	LastHeartbeat  *time.Time `json:"last_heartbeat,omitempty"`
+	LastReportTime *time.Time `json:"last_report_time,omitempty"`
+}
+
+// GetNodeStatusResponse represents successful node status retrieval response
+type GetNodeStatusResponse struct {
+	Data    NodeStatusData `json:"data"`
+	Message string       `json:"message"`
+	Timestamp string     `json:"timestamp"`
 }

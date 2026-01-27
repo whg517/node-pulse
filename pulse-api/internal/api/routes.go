@@ -45,6 +45,10 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// GET /api/v1/nodes - Get all nodes (all roles)
 		nodes.GET("", nodeHandler.GetNodesHandler)
 
+		// GET /api/v1/nodes/:id/status - Get node status (all roles)
+		// CRITICAL: Specific route must come before generic /:id route
+		nodes.GET("/:id/status", nodeHandler.GetNodeStatusHandler)
+
 		// GET /api/v1/nodes/:id - Get node by ID (all roles)
 		nodes.GET("/:id", nodeHandler.GetNodeByIDHandler)
 

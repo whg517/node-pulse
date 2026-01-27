@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -22,6 +24,7 @@ type MockNodesQuerier struct {
 	getNodesFunc       func(context.Context) ([]*models.Node, error)
 	getNodesByRegionFunc func(context.Context, string) ([]*models.Node, error)
 	getNodeByIDFunc    func(context.Context, uuid.UUID) (*models.Node, error)
+	getNodeStatusFunc   func(context.Context, uuid.UUID) (*models.NodeStatus, error)
 	updateNodeFunc     func(context.Context, uuid.UUID, map[string]interface{}) error
 	deleteNodeFunc     func(context.Context, uuid.UUID) error
 }
@@ -50,6 +53,13 @@ func (m *MockNodesQuerier) GetNodesByRegion(ctx context.Context, region string) 
 func (m *MockNodesQuerier) GetNodeByID(ctx context.Context, nodeID uuid.UUID) (*models.Node, error) {
 	if m.getNodeByIDFunc != nil {
 		return m.getNodeByIDFunc(ctx, nodeID)
+	}
+	return nil, nil
+}
+
+func (m *MockNodesQuerier) GetNodeStatus(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error) {
+	if m.getNodeStatusFunc != nil {
+		return m.getNodeStatusFunc(ctx, nodeID)
 	}
 	return nil, nil
 }
@@ -760,4 +770,232 @@ func TestIPValidationAcceptsValidIPv4(t *testing.T) {
 		assert.Equal(t, http.StatusCreated, w.Code, "IP %s should be accepted", validIP)
 		assert.Contains(t, w.Body.String(), "节点创建成功", "IP %s should be valid", validIP)
 	}
+}
+
+// Test GetNodeStatusHandler - online node
+func TestGetNodeStatusHandler_OnlineNode(t *testing.T) {
+	// Setup
+	mockQuerier := &MockNodesQuerier{
+		getNodeStatusFunc: func(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error) {
+			// Return online node status
+			now := time.Now()
+			heartbeat := now.Add(-2 * time.Minute) // 2 minutes ago
+			return &models.NodeStatus{
+				ID:             nodeID.String(),
+				Name:           "测试节点",
+				Status:         "online",
+				LastHeartbeat:  &heartbeat,
+				LastReportTime: &now,
+			}, nil
+		},
+	}
+	handler := NewNodeHandler(mockQuerier)
+	router := gin.New()
+	router.GET("/api/v1/nodes/:id/status", handler.GetNodeStatusHandler)
+
+	// Create request
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/nodes/"+uuid.New().String()+"/status", nil)
+
+	// Add auth middleware would inject user_id, but we skip for handler test
+	// In real scenario, auth middleware runs before this handler
+
+	// Execute
+	router.ServeHTTP(w, req)
+
+	// Verify response
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp models.GetNodeStatusResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "online", resp.Data.Node.Status)
+	assert.Equal(t, "节点状态查询成功", resp.Message)
+	assert.NotEmpty(t, resp.Data.Node.LastHeartbeat)
+}
+
+// Test GetNodeStatusHandler - offline node
+func TestGetNodeStatusHandler_OfflineNode(t *testing.T) {
+	mockQuerier := &MockNodesQuerier{
+		getNodeStatusFunc: func(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error) {
+			// Return offline node status (heartbeat > 5 minutes)
+			now := time.Now()
+			heartbeat := now.Add(-6 * time.Minute) // 6 minutes ago
+			return &models.NodeStatus{
+				ID:             nodeID.String(),
+				Name:           "离线节点",
+				Status:         "offline",
+				LastHeartbeat:  &heartbeat,
+				LastReportTime: &now,
+			}, nil
+		},
+	}
+	handler := NewNodeHandler(mockQuerier)
+	router := gin.New()
+	router.GET("/api/v1/nodes/:id/status", handler.GetNodeStatusHandler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/nodes/"+uuid.New().String()+"/status", nil)
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp models.GetNodeStatusResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "offline", resp.Data.Node.Status)
+}
+
+// Test GetNodeStatusHandler - connecting node
+func TestGetNodeStatusHandler_ConnectingNode(t *testing.T) {
+	mockQuerier := &MockNodesQuerier{
+		getNodeStatusFunc: func(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error) {
+			// Return connecting node (no heartbeat yet)
+			return &models.NodeStatus{
+				ID:             nodeID.String(),
+				Name:           "连接中节点",
+				Status:         "connecting",
+				LastHeartbeat:  nil,
+				LastReportTime: nil,
+			}, nil
+		},
+	}
+	handler := NewNodeHandler(mockQuerier)
+	router := gin.New()
+	router.GET("/api/v1/nodes/:id/status", handler.GetNodeStatusHandler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/nodes/"+uuid.New().String()+"/status", nil)
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp models.GetNodeStatusResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "connecting", resp.Data.Node.Status)
+	assert.Nil(t, resp.Data.Node.LastHeartbeat)
+}
+
+// Test GetNodeStatusHandler - node not found
+func TestGetNodeStatusHandler_NodeNotFound(t *testing.T) {
+	mockQuerier := &MockNodesQuerier{
+		getNodeStatusFunc: func(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error) {
+			return nil, db.ErrNodeNotFound
+		},
+	}
+	handler := NewNodeHandler(mockQuerier)
+	router := gin.New()
+	router.GET("/api/v1/nodes/:id/status", handler.GetNodeStatusHandler)
+
+	w := httptest.NewRecorder()
+	testUUID := uuid.New()
+	req, _ := http.NewRequest("GET", "/api/v1/nodes/"+testUUID.String()+"/status", nil)
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	var resp models.ErrorResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "ERR_NODE_NOT_FOUND", resp.Code)
+	assert.Contains(t, resp.Message, "节点不存在")
+}
+
+// Test GetNodeStatusHandler - invalid UUID
+func TestGetNodeStatusHandler_InvalidUUID(t *testing.T) {
+	mockQuerier := &MockNodesQuerier{}
+	handler := NewNodeHandler(mockQuerier)
+	router := gin.New()
+	router.GET("/api/v1/nodes/:id/status", handler.GetNodeStatusHandler)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("GET", "/api/v1/nodes/invalid-uuid/status", nil)
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+	var resp models.ErrorResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Contains(t, resp.Message, "无效的节点 ID 格式")
+}
+
+// Test CalculateNodeStatus helper function
+
+// Helper function to get pointer to time
+func timePtr(t time.Time) *time.Time {
+	return &t
+}
+
+// Test CalculateNodeStatus - basic cases including boundaries
+func TestCalculateNodeStatus_Basic(t *testing.T) {
+	type testCase struct {
+		name          string
+		lastHeartbeat *time.Time
+		expectedStatus string
+	}
+
+	// Use time.Since() logic, so provide relative times
+	// Note: Exact 5-minute boundary test excluded due to time.Since() execution timing
+	tests := []testCase{
+		{
+			name:          "nil heartbeat returns connecting",
+			lastHeartbeat: nil,
+			expectedStatus: "connecting",
+		},
+		{
+			name:          "recent heartbeat (1 min ago) returns online",
+			lastHeartbeat: timePtr(time.Now().Add(-1 * time.Minute)),
+			expectedStatus: "online",
+		},
+		{
+			name:          "heartbeat near threshold (4 min 30s ago) returns online",
+			lastHeartbeat: timePtr(time.Now().Add(-4*time.Minute - 30*time.Second)),
+			expectedStatus: "online",
+		},
+		{
+			name:          "stale heartbeat (10 min ago) returns offline",
+			lastHeartbeat: timePtr(time.Now().Add(-10 * time.Minute)),
+			expectedStatus: "offline",
+		},
+		{
+			name:          "very old heartbeat (1 hour ago) returns offline",
+			lastHeartbeat: timePtr(time.Now().Add(-1 * time.Hour)),
+			expectedStatus: "offline",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status := db.CalculateNodeStatus(tt.lastHeartbeat)
+			assert.Equal(t, tt.expectedStatus, status, "expected %s, got %s", tt.expectedStatus, status)
+		})
+	}
+}
+
+// Test GetNodeStatusHandler - database error
+func TestGetNodeStatusHandler_DatabaseError(t *testing.T) {
+	mockQuerier := &MockNodesQuerier{
+		getNodeStatusFunc: func(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error) {
+			return nil, errors.New("database connection failed")
+		},
+	}
+	handler := NewNodeHandler(mockQuerier)
+	router := gin.New()
+	router.GET("/api/v1/nodes/:id/status", handler.GetNodeStatusHandler)
+
+	w := httptest.NewRecorder()
+	testUUID := uuid.New()
+	req, _ := http.NewRequest("GET", "/api/v1/nodes/"+testUUID.String()+"/status", nil)
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusInternalServerError, w.Code)
+	var resp models.ErrorResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+	assert.Equal(t, "ERR_DATABASE_ERROR", resp.Code)
+	assert.Contains(t, resp.Message, "节点状态查询失败")
+	// Ensure internal error is NOT exposed to client
+	assert.NotContains(t, resp.Message, "database connection failed")
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -14,7 +15,27 @@ import (
 
 var (
 	ErrNodeNotFound = errors.New("node not found")
+
+	// Heartbeat timeout threshold for offline detection
+	HeartbeatTimeout = 5 * time.Minute
 )
+
+// CalculateNodeStatus determines node status based on last heartbeat time
+func CalculateNodeStatus(lastHeartbeat *time.Time) string {
+	if lastHeartbeat == nil {
+		return "connecting"
+	}
+
+	timeSinceHeartbeat := time.Since(*lastHeartbeat)
+
+	// Online if heartbeat within last 5 minutes (≤ 5 min)
+	// Offline if heartbeat older than 5 minutes (> 5 min)
+	if timeSinceHeartbeat > HeartbeatTimeout {
+		return "offline"
+	}
+
+	return "online"
+}
 
 // NodesQuerier defines interface for node database operations
 type NodesQuerier interface {
@@ -22,6 +43,7 @@ type NodesQuerier interface {
 	GetNodes(ctx context.Context) ([]*models.Node, error)
 	GetNodesByRegion(ctx context.Context, region string) ([]*models.Node, error)
 	GetNodeByID(ctx context.Context, nodeID uuid.UUID) (*models.Node, error)
+	GetNodeStatus(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error)
 	UpdateNode(ctx context.Context, nodeID uuid.UUID, updates map[string]interface{}) error
 	DeleteNode(ctx context.Context, nodeID uuid.UUID) error
 }
@@ -145,6 +167,49 @@ func GetNodeByID(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUID) (*mo
 	}
 
 	return &node, nil
+}
+
+// GetNodeStatus retrieves node status information
+func GetNodeStatus(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUID) (*models.NodeStatus, error) {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	query := `
+		SELECT id, name, status, last_heartbeat, last_report_time
+		FROM nodes
+		WHERE id = $1
+	`
+
+	var status models.NodeStatus
+	var lastHeartbeat *time.Time
+	var lastReportTime *time.Time
+
+	err = conn.QueryRow(ctx, query, nodeID).Scan(
+		&status.ID,
+		&status.Name,
+		&status.Status,
+		&lastHeartbeat,
+		&lastReportTime,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNodeNotFound
+		}
+		return nil, err
+	}
+
+	// Calculate status if not set in database
+	if status.Status == "" || status.Status == "connecting" {
+		status.Status = CalculateNodeStatus(lastHeartbeat)
+	}
+
+	status.LastHeartbeat = lastHeartbeat
+	status.LastReportTime = lastReportTime
+
+	return &status, nil
 }
 
 // UpdateNode updates an existing node

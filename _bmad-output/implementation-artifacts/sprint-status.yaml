@@ -49,7 +49,7 @@ development_status:
 
   epic-2: in-progress
   2-1-node-management-api: done
-  2-2-node-status-query-api: backlog
+  2-2-node-status-query-api: done
   2-3-beacon-cli-framework: backlog
   2-4-beacon-config-yaml: backlog
   2-5-beacon-node-registration: backlog

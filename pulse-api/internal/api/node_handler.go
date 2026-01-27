@@ -501,3 +501,57 @@ func isValidIPv6(ip string) bool {
 	// Ensure the string representation matches exactly
 	return parsed.String() == ip
 }
+
+// GetNodeStatusHandler handles GET /api/v1/nodes/:id/status
+func (h *NodeHandler) GetNodeStatusHandler(c *gin.Context) {
+	// All roles can view node status (admin, operator, viewer) - auth is handled by middleware
+
+	// Parse UUID from path parameter
+	idParam := c.Param("id")
+	nodeID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    middleware.ERR_INVALID_REQUEST,
+			Message: "无效的节点 ID 格式",
+			Details: map[string]interface{}{
+				"node_id": idParam,
+				"error":    err.Error(),
+			},
+		})
+		return
+	}
+
+	// Fetch node status from database
+	// Use request context with timeout (NFR-PERF-003: P99 ≤ 500ms)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 500*time.Millisecond)
+	defer cancel()
+
+	nodeStatus, err := h.nodeQuerier.GetNodeStatus(ctx, nodeID)
+	if err != nil {
+		if errors.Is(err, db.ErrNodeNotFound) {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Code:    ErrNodeNotFound,
+				Message: "节点不存在",
+				Details: map[string]interface{}{
+					"node_id": idParam,
+				},
+			})
+			return
+		}
+
+		// Don't expose internal error details to client (security best practice)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    ErrDatabaseError,
+			Message: "节点状态查询失败",
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.GetNodeStatusResponse{
+		Data: models.NodeStatusData{
+			Node: nodeStatus,
+		},
+		Message:   "节点状态查询成功",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}

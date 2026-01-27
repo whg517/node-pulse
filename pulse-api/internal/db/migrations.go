@@ -24,6 +24,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := addNodeStatusFields(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -143,4 +147,49 @@ func seedAdminUser(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 
 	return nil
+}
+
+// addNodeStatusFields adds status tracking fields to nodes table
+func addNodeStatusFields(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		DO $$
+		BEGIN
+			-- Add last_heartbeat column
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='nodes' AND column_name='last_heartbeat'
+			) THEN
+				ALTER TABLE nodes ADD COLUMN last_heartbeat TIMESTAMPTZ;
+			END IF;
+
+			-- Add last_report_time column
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='nodes' AND column_name='last_report_time'
+			) THEN
+				ALTER TABLE nodes ADD COLUMN last_report_time TIMESTAMPTZ;
+			END IF;
+
+			-- Add status column
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='nodes' AND column_name='status'
+			) THEN
+				ALTER TABLE nodes ADD COLUMN status VARCHAR(20) DEFAULT 'connecting';
+				ALTER TABLE nodes ADD CONSTRAINT chk_node_status
+					CHECK (status IN ('online', 'offline', 'connecting'));
+			END IF;
+
+			-- Add index on last_heartbeat for status queries
+			IF NOT EXISTS (
+				SELECT 1 FROM pg_indexes
+				WHERE indexname = 'idx_nodes_last_heartbeat'
+			) THEN
+				CREATE INDEX idx_nodes_last_heartbeat ON nodes(last_heartbeat);
+			END IF;
+		END $$;
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
 }

@@ -40,6 +40,11 @@ func (p *PoolQuerier) GetNodeByID(ctx context.Context, nodeID uuid.UUID) (*model
 	return GetNodeByID(ctx, p.pool, nodeID)
 }
 
+// GetNodeStatus implements NodesQuerier
+func (p *PoolQuerier) GetNodeStatus(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error) {
+	return GetNodeStatus(ctx, p.pool, nodeID)
+}
+
 // UpdateNode implements NodesQuerier
 func (p *PoolQuerier) UpdateNode(ctx context.Context, nodeID uuid.UUID, updates map[string]interface{}) error {
 	return UpdateNode(ctx, p.pool, nodeID, updates)
