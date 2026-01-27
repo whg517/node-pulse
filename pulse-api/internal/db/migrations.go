@@ -20,6 +20,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createNodesTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -62,6 +66,28 @@ func createSessionsTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 		CREATE INDEX IF NOT EXISTS idx_sessions_expired_at ON sessions(expired_at);
 		CREATE INDEX IF NOT EXISTS idx_sessions_user_expired ON sessions(user_id, expired_at DESC);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createNodesTable creates nodes table with indexes
+func createNodesTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS nodes (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR(255) NOT NULL,
+			ip VARCHAR(45) NOT NULL,
+			region VARCHAR(100) NOT NULL,
+			tags JSONB DEFAULT '{}',
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_nodes_region ON nodes(region);
+		CREATE INDEX IF NOT EXISTS idx_nodes_created_at ON nodes(created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_nodes_ip ON nodes(ip);
 	`
 
 	_, err := pool.Exec(ctx, query)
