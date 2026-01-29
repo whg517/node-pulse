@@ -28,6 +28,18 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createProbesTable(ctx, pool); err != nil {
+		return err
+	}
+
+	if err := createProbesTrigger(ctx, pool); err != nil {
+		return err
+	}
+
+	if err := createMetricsTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -188,6 +200,81 @@ func addNodeStatusFields(ctx context.Context, pool *pgxpool.Pool) error {
 				CREATE INDEX idx_nodes_last_heartbeat ON nodes(last_heartbeat);
 			END IF;
 		END $$;
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createProbesTable creates probes table with indexes and foreign keys
+func createProbesTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS probes (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			type VARCHAR(10) NOT NULL CHECK (type IN ('TCP', 'UDP')),
+			target VARCHAR(255) NOT NULL,
+			port INTEGER NOT NULL CHECK (port >= 1 AND port <= 65535),
+			interval_seconds INTEGER NOT NULL CHECK (interval_seconds >= 60 AND interval_seconds <= 300),
+			count INTEGER NOT NULL CHECK (count >= 1 AND count <= 100),
+			timeout_seconds INTEGER NOT NULL CHECK (timeout_seconds >= 1 AND timeout_seconds <= 30),
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_probes_node_id ON probes(node_id);
+		CREATE INDEX IF NOT EXISTS idx_probes_type ON probes(type);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createMetricsTable creates metrics table with indexes and foreign keys
+func createMetricsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS metrics (
+			id BIGSERIAL PRIMARY KEY,
+			node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			probe_id UUID NOT NULL REFERENCES probes(id) ON DELETE CASCADE,
+			timestamp TIMESTAMPTZ NOT NULL,
+			latency_ms DECIMAL(10,2),
+			packet_loss_rate DECIMAL(5,4),
+			jitter_ms DECIMAL(10,2),
+			is_aggregated BOOLEAN DEFAULT FALSE,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_metrics_node_timestamp ON metrics(node_id, timestamp DESC);
+		CREATE INDEX IF NOT EXISTS idx_metrics_probe_timestamp ON metrics(probe_id, timestamp DESC);
+		CREATE INDEX IF NOT EXISTS idx_metrics_timestamp ON metrics(timestamp DESC);
+		CREATE INDEX IF NOT EXISTS idx_metrics_aggregated ON metrics(is_aggregated, timestamp DESC);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createProbesTrigger creates a trigger to auto-update updated_at on probes table
+func createProbesTrigger(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		-- Drop trigger if exists
+		DROP TRIGGER IF EXISTS update_probes_updated_at ON probes;
+
+		-- Create trigger function
+		CREATE OR REPLACE FUNCTION update_probes_updated_at_func()
+		RETURNS TRIGGER AS $$
+		BEGIN
+			NEW.updated_at = NOW();
+			RETURN NEW;
+		END;
+		$$ LANGUAGE plpgsql;
+
+		-- Create trigger
+		CREATE TRIGGER update_probes_updated_at
+		BEFORE UPDATE ON probes
+		FOR EACH ROW
+		EXECUTE FUNCTION update_probes_updated_at_func();
 	`
 
 	_, err := pool.Exec(ctx, query)

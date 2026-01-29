@@ -59,3 +59,33 @@ func (p *PoolQuerier) UpdateNode(ctx context.Context, nodeID uuid.UUID, updates 
 func (p *PoolQuerier) DeleteNode(ctx context.Context, nodeID uuid.UUID) error {
 	return DeleteNode(ctx, p.pool, nodeID)
 }
+
+// CreateProbe implements ProbesQuerier
+func (p *PoolQuerier) CreateProbe(ctx context.Context, probeID uuid.UUID, nodeID uuid.UUID, probeType string, target string, port int, intervalSeconds int, count int, timeoutSeconds int) error {
+	return CreateProbe(ctx, p.pool, probeID, nodeID, probeType, target, port, intervalSeconds, count, timeoutSeconds)
+}
+
+// GetProbes implements ProbesQuerier
+func (p *PoolQuerier) GetProbes(ctx context.Context) ([]*models.Probe, error) {
+	return GetProbes(ctx, p.pool)
+}
+
+// GetProbesByNode implements ProbesQuerier
+func (p *PoolQuerier) GetProbesByNode(ctx context.Context, nodeID uuid.UUID) ([]*models.Probe, error) {
+	return GetProbesByNode(ctx, p.pool, nodeID)
+}
+
+// GetProbeByID implements ProbesQuerier
+func (p *PoolQuerier) GetProbeByID(ctx context.Context, probeID uuid.UUID) (*models.Probe, error) {
+	return GetProbeByID(ctx, p.pool, probeID)
+}
+
+// UpdateProbe implements ProbesQuerier
+func (p *PoolQuerier) UpdateProbe(ctx context.Context, probeID uuid.UUID, updates map[string]interface{}) error {
+	return UpdateProbe(ctx, p.pool, probeID, updates)
+}
+
+// DeleteProbe implements ProbesQuerier
+func (p *PoolQuerier) DeleteProbe(ctx context.Context, probeID uuid.UUID) error {
+	return DeleteProbe(ctx, p.pool, probeID)
+}

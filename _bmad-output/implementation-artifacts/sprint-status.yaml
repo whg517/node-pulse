@@ -59,7 +59,7 @@ development_status:
   epic-3: in-progress
   3-1-pulse-data-receiving-api: done
   3-2-pulse-memory-cache-async-write: done
-  3-3-probe-config-api-timeseries-table: backlog
+  3-3-probe-config-api-timeseries-table: done
   3-4-tcp-ping-probe: backlog
   3-5-udp-ping-probe: backlog
   3-6-core-metrics-collection: backlog

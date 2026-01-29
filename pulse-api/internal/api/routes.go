@@ -89,6 +89,32 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// DELETE /api/v1/nodes/:id - Delete node (admin/operator only)
 		nodes.DELETE("/:id", nodeHandler.DeleteNodeHandler)
+
+		// Probe management routes (require auth)
+		probeQuerier := db.NewPoolQuerier(pool)
+		probeHandler := NewProbeHandler(probeQuerier, nodeQuerier)
+
+		// Probes group with auth middleware
+		probes := v1.Group("/probes")
+		probes.Use(auth.AuthMiddleware(sessionService))
+
+		// GET /api/v1/probes - Get all probes (all roles)
+		probes.GET("", probeHandler.GetProbesHandler)
+
+		// GET /api/v1/probes/:id - Get probe by ID (all roles)
+		probes.GET("/:id", probeHandler.GetProbeByIDHandler)
+
+		// Create/Update/Delete routes require RBAC (admin or operator)
+		probes.Use(auth.RBACMiddleware([]string{"admin", "operator"}))
+
+		// POST /api/v1/probes - Create probe (admin/operator only)
+		probes.POST("", probeHandler.CreateProbeHandler)
+
+		// PUT /api/v1/probes/:id - Update probe (admin/operator only)
+		probes.PUT("/:id", probeHandler.UpdateProbeHandler)
+
+		// DELETE /api/v1/probes/:id - Delete probe (admin/operator only)
+		probes.DELETE("/:id", probeHandler.DeleteProbeHandler)
 	}
 
 	// Return cache manager for graceful shutdown
