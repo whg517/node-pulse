@@ -1,0 +1,15 @@
+# Beacon Configuration File
+# Copy this file to beacon.yaml or /etc/beacon/beacon.yaml
+
+pulse_server: "http://localhost:8080"
+node_id: "us-east-01"
+node_name: "Beacon East-01"
+
+# Optional: Enable debug mode
+debug: false
+
+# Optional: Node metadata
+# region: "us-east"
+# labels:
+#   environment: "production"
+#   rack: "rack-01"

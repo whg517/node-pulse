@@ -1,0 +1,42 @@
+# NodePulse Beacon Configuration
+# Copy this file to /etc/beacon/beacon.yaml or ./beacon.yaml
+
+# Required: Pulse server URL (HTTP/HTTPS)
+pulse_server: https://pulse.example.com
+
+# Required: Unique node identifier (alphanumeric, hyphens, underscores)
+node_id: us-east-01
+
+# Required: Human-readable node name
+node_name: "美国东部-节点01"
+
+# Optional: Region label
+region: us-east
+
+# Optional: Custom tags
+tags:
+  - production
+  - east-coast
+
+# Optional: Probe configurations (for Story 3.3)
+# If not specified, default probes will be used
+probes:
+  - type: tcp_ping
+    target: 8.8.8.8
+    port: 80
+    interval: 300      # seconds (60-300)
+    count: 10          # probe attempts (1-100)
+    timeout: 5         # seconds (1-30)
+
+  - type: udp_ping
+    target: 8.8.8.8
+    port: 53
+    interval: 300
+    count: 10
+    timeout: 5
+
+# Optional: Reconnect configuration (for Story 2.6)
+reconnect:
+  max_retries: 10          # Maximum retry attempts (1-100)
+  retry_interval: 60       # Seconds between retries (1-600)
+  backoff: exponential      # Strategy: exponential, linear, constant
