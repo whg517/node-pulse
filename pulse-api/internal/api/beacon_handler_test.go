@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kevin/node-pulse/pulse-api/internal/cache"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
 	"github.com/stretchr/testify/assert"
@@ -22,7 +23,11 @@ func setupTestRouter(nodeQuerier db.NodesQuerier) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	beaconHandler := NewBeaconHandler(nodeQuerier)
+	// Create memory cache and batch writer for testing
+	memoryCache := cache.NewMemoryCache()
+	batchWriter := cache.NewBatchWriter(nil, 1000, 100) // nil DB for testing
+
+	beaconHandler := NewBeaconHandler(nodeQuerier, memoryCache, batchWriter)
 	router.POST("/api/v1/beacon/heartbeat", beaconHandler.HandleHeartbeat)
 
 	return router

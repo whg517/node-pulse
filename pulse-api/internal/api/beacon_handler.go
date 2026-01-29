@@ -7,8 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kevin/node-pulse/pulse-api/internal/cache"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
+	"log/slog"
 )
 
 var (
@@ -21,13 +23,17 @@ var (
 
 // BeaconHandler handles beacon heartbeat API requests
 type BeaconHandler struct {
-	nodeQuerier db.NodesQuerier
+	nodeQuerier  db.NodesQuerier
+	memoryCache  *cache.MemoryCache
+	batchWriter  *cache.BatchWriter
 }
 
 // NewBeaconHandler creates a new BeaconHandler
-func NewBeaconHandler(nodeQuerier db.NodesQuerier) *BeaconHandler {
+func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCache, batchWriter *cache.BatchWriter) *BeaconHandler {
 	return &BeaconHandler{
 		nodeQuerier: nodeQuerier,
+		memoryCache: memoryCache,
+		batchWriter: batchWriter,
 	}
 }
 
@@ -143,7 +149,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	}
 
 	// Validate timestamp format
-	_, err = time.Parse(time.RFC3339, req.Timestamp)
+	parsedTime, err := time.Parse(time.RFC3339, req.Timestamp)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrInvalidTimestamp,
@@ -158,8 +164,44 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 		return
 	}
 
-	// TODO: Story 3.2 will implement memory cache and async write
-	// For now, just validate and return success
+	// Write to memory cache (Story 3.2 implementation)
+	metricPoint := &cache.MetricPoint{
+		Timestamp:      parsedTime,
+		LatencyMs:      req.LatencyMs,
+		PacketLossRate: req.PacketLossRate,
+		JitterMs:       req.JitterMs,
+	}
+
+	if err := h.memoryCache.Store(req.NodeID, metricPoint); err != nil {
+		slog.Error("Failed to write to memory cache",
+			"node_id", req.NodeID,
+			"error", err)
+		// Don't return error to avoid affecting Beacon reporting
+	}
+
+	// Send to batch writer buffer (non-blocking)
+	metricRecord := &cache.MetricRecord{
+		NodeID:         req.NodeID,
+		ProbeID:        req.ProbeID,
+		Timestamp:      parsedTime,
+		LatencyMs:      req.LatencyMs,
+		PacketLossRate: req.PacketLossRate,
+		JitterMs:       req.JitterMs,
+		IsAggregated:   false,
+	}
+
+	if err := h.batchWriter.Write(metricRecord); err != nil {
+		if err == cache.ErrBufferFull {
+			slog.Warn("Batch writer buffer full, dropping metric",
+				"node_id", req.NodeID,
+				"probe_id", req.ProbeID)
+		} else {
+			slog.Error("Failed to write to batch buffer",
+				"node_id", req.NodeID,
+				"error", err)
+		}
+		// Don't return error to avoid affecting Beacon reporting
+	}
 
 	c.JSON(http.StatusOK, models.HeartbeatSuccessResponse{
 		Data: models.HeartbeatData{

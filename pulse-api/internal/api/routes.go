@@ -4,20 +4,38 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/cache"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/health"
 	"github.com/kevin/node-pulse/pulse-api/internal/auth"
 	"github.com/kevin/node-pulse/pulse-api/pkg/middleware"
 )
 
-// SetupRoutes configures all API routes
-func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *pgxpool.Pool) {
+// CacheManager holds cache instances that need cleanup on shutdown
+type CacheManager struct {
+	MemoryCache *cache.MemoryCache
+	BatchWriter *cache.BatchWriter
+}
+
+// SetupRoutes configures all API routes and returns cache manager for shutdown
+func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *pgxpool.Pool) *CacheManager {
 	// Initialize rate limiter
 	middleware.InitRateLimiter()
 
 	// Apply error handling and rate limiting middleware
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.RateLimitMiddleware())
+
+	// Initialize memory cache and batch writer (Story 3.2)
+	memoryCache := cache.NewMemoryCache()
+	batchWriter := cache.NewBatchWriter(pool, 1000, 100) // Buffer size 1000, batch size 100
+	batchWriter.Start()
+
+	// Create cache manager for graceful shutdown
+	cacheManager := &CacheManager{
+		MemoryCache: memoryCache,
+		BatchWriter: batchWriter,
+	}
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -26,7 +44,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		v1.GET("/health", healthChecker.Handler)
 
 		// Beacon endpoints (public - no auth required for MVP)
-		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool))
+		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter)
 		beacon := v1.Group("/beacon")
 		{
 			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (public)
@@ -72,4 +90,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// DELETE /api/v1/nodes/:id - Delete node (admin/operator only)
 		nodes.DELETE("/:id", nodeHandler.DeleteNodeHandler)
 	}
+
+	// Return cache manager for graceful shutdown
+	return cacheManager
 }

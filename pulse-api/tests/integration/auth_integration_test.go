@@ -25,11 +25,11 @@ import (
 )
 
 // setupTestRouter creates a test router with database connection
-func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool) {
+func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool, *api.CacheManager) {
 	pool, err := pgxpool.New(context.Background(), testutil.GetTestDBURL())
 	if err != nil {
 		t.Skip("No database connection")
-		return nil, nil
+		return nil, nil, nil
 	}
 
 	// Run database migrations
@@ -39,9 +39,17 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool) {
 
 	router := gin.New()
 	healthChecker := health.New(nil)
-	api.SetupRoutes(router, healthChecker, pool)
+	cacheManager := api.SetupRoutes(router, healthChecker, pool)
 
-	return router, pool
+	// Defer cache cleanup for test cleanup
+	t.Cleanup(func() {
+		if cacheManager != nil {
+			cacheManager.BatchWriter.Stop()
+			cacheManager.MemoryCache.Stop()
+		}
+	})
+
+	return router, pool, cacheManager
 }
 
 // cleanupTestUser removes test user from database
@@ -51,7 +59,7 @@ func cleanupTestUser(pool *pgxpool.Pool, username string) {
 
 // TestIntegration_Login_ValidCredentials tests full login flow with valid credentials
 func TestIntegration_Login_ValidCredentials(t *testing.T) {
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
@@ -131,7 +139,7 @@ func TestIntegration_Login_ValidCredentials(t *testing.T) {
 
 // TestIntegration_Login_InvalidCredentials tests login with invalid credentials
 func TestIntegration_Login_InvalidCredentials(t *testing.T) {
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
@@ -169,7 +177,7 @@ func TestIntegration_Login_InvalidCredentials(t *testing.T) {
 
 // TestIntegration_Login_AccountLocked tests login when account is locked
 func TestIntegration_Login_AccountLocked(t *testing.T) {
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
@@ -213,7 +221,7 @@ func TestIntegration_Login_AccountLocked(t *testing.T) {
 
 // TestIntegration_Logout_WithSession tests logout with valid session
 func TestIntegration_Logout_WithSession(t *testing.T) {
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
@@ -268,7 +276,7 @@ func TestIntegration_Logout_WithSession(t *testing.T) {
 
 // TestIntegration_Logout_WithoutSession tests logout without session cookie
 func TestIntegration_Logout_WithoutSession(t *testing.T) {
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
@@ -286,7 +294,7 @@ func TestIntegration_Logout_WithoutSession(t *testing.T) {
 
 // TestIntegration_RateLimit tests rate limiting behavior
 func TestIntegration_RateLimit(t *testing.T) {
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
@@ -340,7 +348,7 @@ func TestIntegration_SessionExpiration(t *testing.T) {
 	// Reset rate limit store for clean test
 	auth.RateLimitStore = make(map[string]auth.RateLimitInfo)
 
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}

@@ -19,7 +19,7 @@ import (
 
 // TestGetNodeStatus_Integration tests the complete node status query workflow
 func TestGetNodeStatus_Integration(t *testing.T) {
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
 
 	// Create test user and login
@@ -229,7 +229,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 
 // TestGetNodeStatus_ResponseFormat validates API response format matches specification
 func TestGetNodeStatus_ResponseFormat(t *testing.T) {
-	router, pool := setupTestRouter(t)
+	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
 
 	// Create test user and node

@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kevin/node-pulse/pulse-api/internal/api"
+	"github.com/kevin/node-pulse/pulse-api/internal/cache"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
 )
@@ -26,7 +27,12 @@ func setupIntegrationTestRouter(pool *pgxpool.Pool) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	beaconHandler := api.NewBeaconHandler(db.NewPoolQuerier(pool))
+	// Create memory cache and batch writer for testing
+	memoryCache := cache.NewMemoryCache()
+	batchWriter := cache.NewBatchWriter(pool, 1000, 100)
+	batchWriter.Start()
+
+	beaconHandler := api.NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter)
 	router.POST("/api/v1/beacon/heartbeat", beaconHandler.HandleHeartbeat)
 
 	return router
