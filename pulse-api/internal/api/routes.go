@@ -25,6 +25,14 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Health check endpoint (public)
 		v1.GET("/health", healthChecker.Handler)
 
+		// Beacon endpoints (public - no auth required for MVP)
+		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool))
+		beacon := v1.Group("/beacon")
+		{
+			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (public)
+			beacon.POST("/heartbeat", beaconHandler.HandleHeartbeat)
+		}
+
 		// Auth endpoints (public)
 		authHandler := auth.NewAuthHandler(pool)
 		authGroup := v1.Group("/auth")
