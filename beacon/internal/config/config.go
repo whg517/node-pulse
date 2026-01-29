@@ -304,3 +304,40 @@ func parseYAMLError(err error, data []byte) error {
 
 	return fmt.Errorf("配置格式错误：%s\n%s", suggestion, errMsg)
 }
+
+// SaveConfig saves configuration to file (optional feature for MVP)
+// Note: MVP saves node_id to memory only. File write is optional for production use.
+func SaveConfig(cfg *Config, path string) error {
+	if path == "" {
+		return errors.New("config path is empty")
+	}
+
+	// Create a new Viper instance
+	v := viper.New()
+	v.SetConfigFile(path)
+	v.SetConfigType("yaml")
+
+	// Set all config values
+	v.Set("pulse_server", cfg.PulseServer)
+	v.Set("node_id", cfg.NodeID)
+	v.Set("node_name", cfg.NodeName)
+	if cfg.Region != "" {
+		v.Set("region", cfg.Region)
+	}
+	if len(cfg.Tags) > 0 {
+		v.Set("tags", cfg.Tags)
+	}
+	if len(cfg.Probes) > 0 {
+		v.Set("probes", cfg.Probes)
+	}
+	if cfg.Reconnect.MaxRetries > 0 || cfg.Reconnect.RetryInterval > 0 || cfg.Reconnect.Backoff != "" {
+		v.Set("reconnect", cfg.Reconnect)
+	}
+
+	// Write config to file
+	if err := v.WriteConfig(); err != nil {
+		return fmt.Errorf("failed to write config file: %w", err)
+	}
+
+	return nil
+}

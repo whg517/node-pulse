@@ -117,12 +117,91 @@ func (h *NodeHandler) CreateNodeHandler(c *gin.Context) {
 		return
 	}
 
+	ctx := context.Background()
+
+	// Check for duplicate node (name+ip combination) using efficient query
+	existingNode, err := h.nodeQuerier.GetNodeByNameAndIP(ctx, req.Name, req.IP)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    ErrDatabaseError,
+			Message: "节点查询失败",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	// If duplicate found, update and return existing node
+	if existingNode != nil {
+		// Convert string ID to UUID for update
+		existingNodeID, err := uuid.Parse(existingNode.ID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Code:    ErrDatabaseError,
+				Message: "节点 ID 格式错误",
+				Details: err.Error(),
+			})
+			return
+		}
+
+		// Build updates map
+		updates := make(map[string]interface{})
+		if req.Name != "" {
+			updates["name"] = req.Name
+		}
+		if req.IP != "" {
+			updates["ip"] = req.IP
+		}
+		if req.Region != "" {
+			updates["region"] = req.Region
+		}
+		if req.Tags != nil {
+			updates["tags"] = req.Tags
+		}
+
+		// Update existing node
+		err = h.nodeQuerier.UpdateNode(ctx, existingNodeID, updates)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Code:    ErrDatabaseError,
+				Message: "节点更新失败",
+				Details: err.Error(),
+			})
+			return
+		}
+
+		// Fetch updated node from database
+		updatedNode, err := h.nodeQuerier.GetNodeByID(ctx, existingNodeID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Code:    ErrDatabaseError,
+				Message: "节点更新失败",
+				Details: err.Error(),
+			})
+			return
+		}
+
+		// Return existing node with 200 status (AC #3)
+		c.JSON(http.StatusOK, models.CreateNodeResponse{
+			Data: models.CreateNodeData{
+				ID:        updatedNode.ID,
+				Name:      updatedNode.Name,
+				IP:        updatedNode.IP,
+				Region:    updatedNode.Region,
+				Tags:      updatedNode.Tags,
+				CreatedAt: updatedNode.CreatedAt,
+				UpdatedAt: updatedNode.UpdatedAt,
+			},
+			Message:   "节点已存在，已更新信息",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
 	// Generate UUID for new node
 	nodeID := uuid.New()
 
 	// Create node in database
-	ctx := context.Background()
-	err := h.nodeQuerier.CreateNode(ctx, nodeID, req.Name, req.IP, req.Region, req.Tags)
+	err = h.nodeQuerier.CreateNode(ctx, nodeID, req.Name, req.IP, req.Region, req.Tags)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    ErrDatabaseError,
@@ -145,7 +224,13 @@ func (h *NodeHandler) CreateNodeHandler(c *gin.Context) {
 
 	c.JSON(http.StatusCreated, models.CreateNodeResponse{
 		Data: models.CreateNodeData{
-			Node: node,
+			ID:        node.ID,
+			Name:      node.Name,
+			IP:        node.IP,
+			Region:    node.Region,
+			Tags:      node.Tags,
+			CreatedAt: node.CreatedAt,
+			UpdatedAt: node.UpdatedAt,
 		},
 		Message:   "节点创建成功",
 		Timestamp: time.Now().Format(time.RFC3339),

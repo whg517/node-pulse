@@ -40,6 +40,11 @@ func (p *PoolQuerier) GetNodeByID(ctx context.Context, nodeID uuid.UUID) (*model
 	return GetNodeByID(ctx, p.pool, nodeID)
 }
 
+// GetNodeByNameAndIP implements NodesQuerier
+func (p *PoolQuerier) GetNodeByNameAndIP(ctx context.Context, name string, ip string) (*models.Node, error) {
+	return GetNodeByNameAndIP(ctx, p.pool, name, ip)
+}
+
 // GetNodeStatus implements NodesQuerier
 func (p *PoolQuerier) GetNodeStatus(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error) {
 	return GetNodeStatus(ctx, p.pool, nodeID)

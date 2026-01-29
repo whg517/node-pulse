@@ -20,13 +20,14 @@ import (
 
 // MockNodesQuerier is a simple mock for NodesQuerier interface
 type MockNodesQuerier struct {
-	createNodeFunc     func(context.Context, uuid.UUID, string, string, string, map[string]interface{}) error
-	getNodesFunc       func(context.Context) ([]*models.Node, error)
+	createNodeFunc       func(context.Context, uuid.UUID, string, string, string, map[string]interface{}) error
+	getNodesFunc         func(context.Context) ([]*models.Node, error)
 	getNodesByRegionFunc func(context.Context, string) ([]*models.Node, error)
-	getNodeByIDFunc    func(context.Context, uuid.UUID) (*models.Node, error)
-	getNodeStatusFunc   func(context.Context, uuid.UUID) (*models.NodeStatus, error)
-	updateNodeFunc     func(context.Context, uuid.UUID, map[string]interface{}) error
-	deleteNodeFunc     func(context.Context, uuid.UUID) error
+	getNodeByIDFunc      func(context.Context, uuid.UUID) (*models.Node, error)
+	getNodeByNameAndIPFunc func(context.Context, string, string) (*models.Node, error)
+	getNodeStatusFunc    func(context.Context, uuid.UUID) (*models.NodeStatus, error)
+	updateNodeFunc       func(context.Context, uuid.UUID, map[string]interface{}) error
+	deleteNodeFunc       func(context.Context, uuid.UUID) error
 }
 
 func (m *MockNodesQuerier) CreateNode(ctx context.Context, nodeID uuid.UUID, name string, ip string, region string, tags map[string]interface{}) error {
@@ -53,6 +54,13 @@ func (m *MockNodesQuerier) GetNodesByRegion(ctx context.Context, region string) 
 func (m *MockNodesQuerier) GetNodeByID(ctx context.Context, nodeID uuid.UUID) (*models.Node, error) {
 	if m.getNodeByIDFunc != nil {
 		return m.getNodeByIDFunc(ctx, nodeID)
+	}
+	return nil, nil
+}
+
+func (m *MockNodesQuerier) GetNodeByNameAndIP(ctx context.Context, name string, ip string) (*models.Node, error) {
+	if m.getNodeByNameAndIPFunc != nil {
+		return m.getNodeByNameAndIPFunc(ctx, name, ip)
 	}
 	return nil, nil
 }

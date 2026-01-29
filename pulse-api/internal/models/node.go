@@ -33,8 +33,16 @@ type UpdateNodeRequest struct {
 }
 
 // CreateNodeData represents node data in create response
+// Note: Changed from nested {data: {node: {...}}} to flat {data: {...}} format
+// This allows Beacon client to directly access node fields (AC #2: "返回完整的节点信息（含自动生成的 UUID)")
 type CreateNodeData struct {
-	Node *Node `json:"node"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	IP        string    `json:"ip"`
+	Region    string    `json:"region"`
+	Tags      string    `json:"tags,omitempty"`           // JSONB stored as string
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // CreateNodeResponse represents successful node creation response

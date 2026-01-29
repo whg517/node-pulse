@@ -52,7 +52,7 @@ development_status:
   2-2-node-status-query-api: done
   2-3-beacon-cli-framework: done
   2-4-beacon-config-yaml: done
-  2-5-beacon-node-registration: backlog
+  2-5-beacon-node-registration: done
   2-6-beacon-process-management: backlog
   epic-2-retrospective: optional
 

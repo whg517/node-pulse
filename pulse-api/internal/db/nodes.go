@@ -43,6 +43,7 @@ type NodesQuerier interface {
 	GetNodes(ctx context.Context) ([]*models.Node, error)
 	GetNodesByRegion(ctx context.Context, region string) ([]*models.Node, error)
 	GetNodeByID(ctx context.Context, nodeID uuid.UUID) (*models.Node, error)
+	GetNodeByNameAndIP(ctx context.Context, name string, ip string) (*models.Node, error)
 	GetNodeStatus(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error)
 	UpdateNode(ctx context.Context, nodeID uuid.UUID, updates map[string]interface{}) error
 	DeleteNode(ctx context.Context, nodeID uuid.UUID) error
@@ -141,6 +142,35 @@ func GetNodesByRegion(ctx context.Context, pool *pgxpool.Pool, region string) ([
 	}
 
 	return nodes, rows.Err()
+}
+
+// GetNodeByNameAndIP retrieves a node by name and IP combination (for duplicate detection)
+func GetNodeByNameAndIP(ctx context.Context, pool *pgxpool.Pool, name string, ip string) (*models.Node, error) {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	query := `
+		SELECT id, name, ip, region, tags::text, created_at, updated_at
+		FROM nodes
+		WHERE name = $1 AND ip = $2
+		LIMIT 1
+	`
+
+	var node models.Node
+	err = conn.QueryRow(ctx, query, name, ip).Scan(
+		&node.ID, &node.Name, &node.IP, &node.Region, &node.Tags, &node.CreatedAt, &node.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil // No duplicate found
+		}
+		return nil, err
+	}
+
+	return &node, nil
 }
 
 // GetNodeByID retrieves a specific node by ID
