@@ -1,6 +1,6 @@
 # Story 3.1: Pulse 数据接收 API
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -293,6 +293,7 @@ No critical issues encountered during implementation. All tests passed on first 
 - ✅ Created `POST /api/v1/beacon/heartbeat` endpoint at `/api/v1/beacon/heartbeat`
 - ✅ Defined `HeartbeatRequest` model with validation tags (node_id, probe_id, latency_ms, packet_loss_rate, jitter_ms, timestamp)
 - ✅ Implemented node ID validation (UUID format + existence check in nodes table)
+- ✅ Implemented probe_id validation (max length 255 characters)
 - ✅ Implemented metric range validation:
   - latency_ms: 0-60000ms
   - packet_loss_rate: 0-100%
@@ -302,24 +303,27 @@ No critical issues encountered during implementation. All tests passed on first 
 - ✅ API response time well under 5-second requirement (typically < 1ms in tests)
 
 **Testing Coverage:**
-- ✅ Unit tests: 9 test cases covering all validation scenarios
+- ✅ Unit tests: 10 test cases covering all validation scenarios
   - Valid request handling
   - Invalid node ID format
   - Node not found
   - Metric range violations (latency, packet loss, jitter)
   - Missing required fields
   - Invalid timestamp format
-- ✅ Integration tests: 3 test cases for end-to-end validation
+  - Invalid probe_id (too long)
+- ✅ Integration tests: 4 test cases for end-to-end validation
   - Valid request with performance measurement
   - Invalid node ID
   - Metric validation with database
+  - Performance test (10 requests)
 
 **Files Created/Modified:**
 - `pulse-api/internal/models/beacon.go` - Beacon data models
-- `pulse-api/internal/api/beacon_handler.go` - Heartbeat handler
-- `pulse-api/internal/api/beacon_handler_test.go` - Unit tests
+- `pulse-api/internal/api/beacon_handler.go` - Heartbeat handler with probe_id validation
+- `pulse-api/internal/api/beacon_handler_test.go` - Unit tests including probe_id validation
 - `pulse-api/internal/api/routes.go` - Added beacon routes
 - `pulse-api/tests/api/beacon_heartbeat_integration_test.go` - Integration tests
+- `pulse-api/tests/api/README.md` - Integration test documentation
 
 **Technical Decisions:**
 1. No authentication required for beacon endpoint (MVP simplification per architecture)
@@ -327,6 +331,14 @@ No critical issues encountered during implementation. All tests passed on first 
 3. Consistent error response format with other API endpoints
 4. TODO comment added for Story 3.2 (memory cache + async write)
 5. Beacon endpoint is public (no auth middleware) as per MVP requirements
+6. Rate limiting uses IP-based middleware (per-node rate limiting deferred)
+
+**Code Review Fixes Applied (2026-01-29):**
+- ✅ Added probe_id length validation (max 255 characters)
+- ✅ Added unit test for probe_id validation
+- ✅ Added integration test documentation (README.md)
+- ✅ Committed all files to git (tests were previously untracked)
+- ✅ Updated sprint status to 'done'
 
 **Performance Validation:**
 - API response time: < 1ms (far below 5-second NFR requirement)
