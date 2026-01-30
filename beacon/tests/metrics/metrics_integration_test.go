@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -12,12 +13,28 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"beacon/internal/config"
+	"beacon/internal/logger"
 	"beacon/internal/metrics"
 	"beacon/internal/probe"
 )
 
 // TestPrometheusScrapingWorkflow simulates Prometheus scraping the /metrics endpoint
 func TestPrometheusScrapingWorkflow(t *testing.T) {
+	// Initialize logger for this test
+	tempDir := t.TempDir()
+	logFile := filepath.Join(tempDir, "beacon.log")
+	logCfg := &config.Config{
+		LogLevel:      "INFO",
+		LogFile:       logFile,
+		LogMaxSize:    10,
+		LogMaxAge:     7,
+		LogMaxBackups: 10,
+		LogCompress:   false,
+		LogToConsole:  false,
+	}
+	require.NoError(t, logger.InitLogger(logCfg))
+	defer logger.Close()
+
 	cfg := &config.Config{
 		NodeID:         "integration-test-node",
 		NodeName:       "beacon-integration",

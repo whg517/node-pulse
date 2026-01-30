@@ -2,12 +2,12 @@ package probe
 
 import (
 	"fmt"
-	"log"
 	"net"
 	"sync"
 	"time"
 
 	"beacon/internal/config"
+	"beacon/internal/logger"
 	"beacon/internal/models"
 )
 
@@ -100,7 +100,7 @@ func (s *ProbeScheduler) Start() error {
 	// Determine interval from first probe config (all probes share the same interval in MVP)
 	totalProbes := len(s.tcpPingers) + len(s.udpPingers)
 	if totalProbes == 0 {
-		log.Println("[INFO] No probes configured, scheduler started but will not execute any probes")
+		logger.Info("No probes configured, scheduler started but will not execute any probes")
 		return nil
 	}
 
@@ -112,7 +112,12 @@ func (s *ProbeScheduler) Start() error {
 	}
 	s.interval = interval
 
-	log.Printf("[INFO] Probe scheduler started with interval: %v (%d TCP, %d UDP)", interval, len(s.tcpPingers), len(s.udpPingers))
+	logger.WithFields(map[string]interface{}{
+		"component":  "probe",
+		"interval":   interval.String(),
+		"tcp_count":  len(s.tcpPingers),
+		"udp_count":  len(s.udpPingers),
+	}).Info("Probe scheduler started")
 
 	// Start scheduling loop in background
 	s.wg.Add(1)
@@ -136,7 +141,7 @@ func (s *ProbeScheduler) run() {
 		case <-ticker.C:
 			s.executeProbes()
 		case <-s.stopChan:
-			log.Println("[INFO] Probe scheduler stopping...")
+			logger.WithField("component", "probe").Info("Probe scheduler stopping...")
 			return
 		}
 	}
@@ -144,7 +149,7 @@ func (s *ProbeScheduler) run() {
 
 // executeProbes runs all probes concurrently
 func (s *ProbeScheduler) executeProbes() {
-	log.Printf("[INFO] Executing %d TCP and %d UDP probes...", len(s.tcpPingers), len(s.udpPingers))
+	logger.WithFields(map[string]interface{}{"component": "probe", "tcp_count": len(s.tcpPingers), "udp_count": len(s.udpPingers)}).Info("Executing probes...")
 
 	var wg sync.WaitGroup
 
@@ -160,12 +165,12 @@ func (s *ProbeScheduler) executeProbes() {
 
 			// Build target address with IPv6 support
 			target := net.JoinHostPort(p.config.Target, fmt.Sprintf("%d", p.config.Port))
-			log.Printf("[DEBUG] Starting TCP probe #%d to %s (count=%d)", index+1, target, p.config.Count)
+			logger.WithFields(map[string]interface{}{"component": "probe", "probe_type": "tcp_ping", "target": target, "count": p.config.Count}).Debug("Starting TCP probe")
 
 			// Execute batch probes with core metrics calculation
 			result, err := p.ExecuteBatch(p.config.Count)
 			if err != nil {
-				log.Printf("[ERROR] TCP probe #%d to %s failed: %v", index+1, target, err)
+				logger.WithFields(map[string]interface{}{"component": "probe", "probe_type": "tcp_ping", "target": target, "error": err}).Error("TCP probe failed")
 				return
 			}
 
@@ -173,14 +178,19 @@ func (s *ProbeScheduler) executeProbes() {
 			tcpResults[index] = result
 
 			// Log core metrics
-			successStatus := "failed"
-			if result.Success {
-				successStatus = "succeeded"
-			}
-
-			log.Printf("[INFO] TCP probe #%d to %s completed: %s, samples=%d, RTT=%.2f ms (median=%.2f ms), jitter=%.2f ms, variance=%.2f ms², packet loss=%.2f%%, timestamp=%s",
-				index+1, target, successStatus, result.SampleCount, result.RTTMs, result.RTTMedianMs,
-				result.JitterMs, result.VarianceMs, result.PacketLossRate, result.Timestamp)
+			logger.WithFields(map[string]interface{}{
+				"component":      "probe",
+				"probe_type":     "tcp_ping",
+				"target":         target,
+				"success":        result.Success,
+				"sample_count":   result.SampleCount,
+				"rtt_ms":         result.RTTMs,
+				"rtt_median_ms":  result.RTTMedianMs,
+				"jitter_ms":      result.JitterMs,
+				"variance_ms":    result.VarianceMs,
+				"packet_loss":    result.PacketLossRate,
+				"timestamp":      result.Timestamp,
+			}).Info("TCP probe completed")
 		}(i, pinger)
 	}
 
@@ -192,12 +202,12 @@ func (s *ProbeScheduler) executeProbes() {
 
 			// Build target address with IPv6 support
 			target := net.JoinHostPort(p.config.Target, fmt.Sprintf("%d", p.config.Port))
-			log.Printf("[DEBUG] Starting UDP probe #%d to %s (count=%d)", index+1, target, p.config.Count)
+			logger.WithFields(map[string]interface{}{"component": "probe", "probe_type": "udp_ping", "target": target, "count": p.config.Count}).Debug("Starting UDP probe")
 
 			// Execute batch probes with core metrics calculation
 			result, err := p.ExecuteBatch(p.config.Count)
 			if err != nil {
-				log.Printf("[ERROR] UDP probe #%d to %s failed: %v", index+1, target, err)
+				logger.WithFields(map[string]interface{}{"component": "probe", "probe_type": "udp_ping", "target": target, "error": err}).Error("UDP probe failed")
 				return
 			}
 
@@ -205,14 +215,21 @@ func (s *ProbeScheduler) executeProbes() {
 			udpResults[index] = result
 
 			// Log core metrics
-			successStatus := "failed"
-			if result.Success {
-				successStatus = "succeeded"
-			}
-
-			log.Printf("[INFO] UDP probe #%d to %s completed: %s, samples=%d, sent=%d, received=%d, RTT=%.2f ms (median=%.2f ms), jitter=%.2f ms, variance=%.2f ms², packet loss=%.2f%%, timestamp=%s",
-				index+1, target, successStatus, result.SampleCount, result.SentPackets, result.ReceivedPackets,
-				result.RTTMs, result.RTTMedianMs, result.JitterMs, result.VarianceMs, result.PacketLossRate, result.Timestamp)
+			logger.WithFields(map[string]interface{}{
+				"component":       "probe",
+				"probe_type":      "udp_ping",
+				"target":          target,
+				"success":         result.Success,
+				"sample_count":    result.SampleCount,
+				"sent":            result.SentPackets,
+				"received":        result.ReceivedPackets,
+				"rtt_ms":          result.RTTMs,
+				"rtt_median_ms":   result.RTTMedianMs,
+				"jitter_ms":       result.JitterMs,
+				"variance_ms":     result.VarianceMs,
+				"packet_loss":     result.PacketLossRate,
+				"timestamp":       result.Timestamp,
+			}).Info("UDP probe completed")
 		}(i, pinger)
 	}
 
@@ -224,7 +241,7 @@ func (s *ProbeScheduler) executeProbes() {
 	s.latestUDPResults = udpResults
 	s.resultsMu.Unlock()
 
-	log.Printf("[INFO] All probes completed")
+	logger.WithField("component", "probe").Info("All probes completed")
 }
 
 // Stop gracefully stops the scheduler
@@ -237,10 +254,10 @@ func (s *ProbeScheduler) Stop() {
 	s.running = false
 	s.mu.Unlock()
 
-	log.Println("[INFO] Stopping probe scheduler...")
+	logger.WithField("component", "probe").Info("Stopping probe scheduler...")
 	close(s.stopChan)
 	s.wg.Wait()
-	log.Println("[INFO] Probe scheduler stopped")
+	logger.WithField("component", "probe").Info("Probe scheduler stopped")
 }
 
 // IsRunning returns whether the scheduler is running

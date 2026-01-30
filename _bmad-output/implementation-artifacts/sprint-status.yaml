@@ -65,7 +65,7 @@ development_status:
   3-6-core-metrics-collection: done
   3-7-beacon-data-reporting: done
   3-8-prometheus-metrics-endpoint: done
-  3-9-structured-logging: backlog
+  3-9-structured-logging: done
   3-10-debug-mode: backlog
   3-11-resource-monitoring-degradation: backlog
   3-12-scheduled-data-cleanup: backlog

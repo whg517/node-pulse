@@ -3,7 +3,6 @@ package metrics
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"sync"
 	"time"
@@ -12,6 +11,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"beacon/internal/config"
+	"beacon/internal/logger"
 	"beacon/internal/probe"
 )
 
@@ -96,7 +96,7 @@ func (m *Metrics) Start() error {
 	defer m.mu.Unlock()
 
 	if !m.config.MetricsEnabled {
-		log.Println("[INFO] Metrics server disabled in configuration")
+		logger.WithField("component", "metrics").Info("Metrics server disabled in configuration")
 		return nil
 	}
 
@@ -128,9 +128,9 @@ func (m *Metrics) Start() error {
 	// Start server in goroutine with error channel
 	serverErrChan := make(chan error, 1)
 	go func() {
-		log.Printf("[INFO] Starting Prometheus metrics server on %s", addr)
+		logger.WithFields(map[string]interface{}{"component": "metrics", "address": addr}).Info("Starting Prometheus metrics server")
 		if err := m.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Printf("[ERROR] Metrics server error: %v", err)
+			logger.WithFields(map[string]interface{}{"component": "metrics", "error": err.Error()}).Error("Metrics server error")
 			serverErrChan <- err
 		}
 	}()
@@ -150,7 +150,7 @@ func (m *Metrics) Start() error {
 	go m.collectMetrics()
 
 	m.running = true
-	log.Println("[INFO] Prometheus metrics server started successfully")
+	logger.WithField("component", "metrics").Info("Prometheus metrics server started successfully")
 	return nil
 }
 
@@ -183,12 +183,12 @@ func (m *Metrics) Stop() error {
 		defer cancel()
 
 		if err := m.server.Shutdown(ctx); err != nil {
-			log.Printf("[ERROR] Metrics server shutdown error: %v", err)
+			logger.WithFields(map[string]interface{}{"component": "metrics", "error": err.Error()}).Error("Metrics server shutdown error")
 			return err
 		}
 	}
 
-	log.Println("[INFO] Prometheus metrics server stopped")
+	logger.WithField("component", "metrics").Info("Prometheus metrics server stopped")
 	return nil
 }
 

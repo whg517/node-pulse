@@ -35,6 +35,15 @@ type Config struct {
 	MetricsPort          int  `mapstructure:"metrics_port" yaml:"metrics_port"`
 	MetricsUpdateSeconds int  `mapstructure:"metrics_update_seconds" yaml:"metrics_update_seconds"`
 
+	// Logging configuration (for Story 3.9)
+	LogLevel      string `mapstructure:"log_level" yaml:"log_level"`                          // DEBUG, INFO, WARN, ERROR
+	LogFile       string `mapstructure:"log_file" yaml:"log_file"`                            // /var/log/beacon/beacon.log
+	LogMaxSize    int    `mapstructure:"log_max_size" yaml:"log_max_size"`                    // MB
+	LogMaxAge     int    `mapstructure:"log_max_age" yaml:"log_max_age"`                      // days
+	LogMaxBackups int    `mapstructure:"log_max_backups" yaml:"log_max_backups"`              // number of backups
+	LogCompress   bool   `mapstructure:"log_compress" yaml:"log_compress"`                    // compress rotated files
+	LogToConsole  bool   `mapstructure:"log_to_console" yaml:"log_to_console"`                // also log to stdout
+
 	// Internal fields (not from config file)
 	ConfigPath string `mapstructure:"-"`
 	Debug      bool   `mapstructure:"debug"`
@@ -143,9 +152,32 @@ func LoadConfig(configPath string) (*Config, error) {
 		config.MetricsUpdateSeconds = 10 // Default 10 seconds
 	}
 
+	// Set default values for logging configuration (Story 3.9)
+	if config.LogLevel == "" {
+		config.LogLevel = "INFO" // Default log level
+	}
+	if config.LogFile == "" {
+		config.LogFile = "/var/log/beacon/beacon.log" // Default log file path
+	}
+	if config.LogMaxSize == 0 {
+		config.LogMaxSize = 10 // Default 10 MB
+	}
+	if config.LogMaxAge == 0 {
+		config.LogMaxAge = 7 // Default 7 days
+	}
+	if config.LogMaxBackups == 0 {
+		config.LogMaxBackups = 10 // Default 10 backups
+	}
+	// LogCompress and LogToConsole default to false (bool default)
+
 	// Validate metrics configuration
 	if err := validateMetricsConfig(config.MetricsPort, config.MetricsUpdateSeconds); err != nil {
 		return nil, fmt.Errorf("metrics configuration validation failed: %w", err)
+	}
+
+	// Validate logging configuration
+	if err := validateLogConfig(config.LogLevel, config.LogFile); err != nil {
+		return nil, fmt.Errorf("logging configuration validation failed: %w", err)
 	}
 
 	config.ConfigPath = resolvedPath
@@ -280,6 +312,32 @@ func validateMetricsConfig(port int, updateSeconds int) error {
 	// Fix #4: Validate metrics update interval (10-60 seconds)
 	if updateSeconds < 10 || updateSeconds > 60 {
 		return fmt.Errorf("invalid metrics_update_seconds %d, must be between 10 and 60 seconds", updateSeconds)
+	}
+
+	return nil
+}
+
+// validateLogConfig validates logging configuration (Story 3.9)
+func validateLogConfig(logLevel string, logFile string) error {
+	// Validate log level
+	validLevels := map[string]bool{
+		"DEBUG": true,
+		"INFO":  true,
+		"WARN":  true,
+		"ERROR": true,
+	}
+	if !validLevels[logLevel] {
+		return fmt.Errorf("invalid log level: %s (must be DEBUG, INFO, WARN, or ERROR)", logLevel)
+	}
+
+	// Validate log file path is not empty
+	if logFile == "" {
+		return errors.New("log file path cannot be empty")
+	}
+
+	// Validate log file extension
+	if filepath.Ext(logFile) != ".log" {
+		return fmt.Errorf("log file must have .log extension, got: %s", logFile)
 	}
 
 	return nil

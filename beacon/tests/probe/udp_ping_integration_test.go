@@ -3,12 +3,32 @@ package probe
 import (
 	"fmt"
 	"net"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"beacon/internal/config"
+	"beacon/internal/logger"
 	"beacon/internal/probe"
 )
+
+// initTestLogger initializes logger for integration tests
+func initTestLoggerUDP(t *testing.T) {
+	tempDir := t.TempDir()
+	logFile := filepath.Join(tempDir, "beacon.log")
+	cfg := &config.Config{
+		LogLevel:      "INFO",
+		LogFile:       logFile,
+		LogMaxSize:    10,
+		LogMaxAge:     7,
+		LogMaxBackups: 10,
+		LogCompress:   false,
+		LogToConsole:  false,
+	}
+	if err := logger.InitLogger(cfg); err != nil {
+		t.Fatalf("Failed to initialize logger: %v", err)
+	}
+}
 
 // TestUDPProbeIntegration tests the complete UDP probe workflow
 func TestUDPProbeIntegration(t *testing.T) {
@@ -109,6 +129,9 @@ func TestUDPProbeIntegration(t *testing.T) {
 
 // TestSchedulerWithUDPProbes tests the scheduler with UDP probe configuration
 func TestSchedulerWithUDPProbes(t *testing.T) {
+	initTestLoggerUDP(t)
+	defer logger.Close()
+
 	probeConfigs := []config.ProbeConfig{
 		{
 			Type:     "udp_ping",
@@ -155,6 +178,9 @@ func TestSchedulerWithUDPProbes(t *testing.T) {
 
 // TestMixedProbeScheduler tests scheduler with both TCP and UDP probes
 func TestMixedProbeScheduler(t *testing.T) {
+	initTestLoggerUDP(t)
+	defer logger.Close()
+
 	probeConfigs := []config.ProbeConfig{
 		{
 			Type:     "tcp_ping",

@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"beacon/internal/config"
+	"beacon/internal/logger"
 	"beacon/internal/models"
 )
 
@@ -402,6 +404,18 @@ func TestAggregateMetricsAllFailed(t *testing.T) {
 
 // TestStartReporting tests starting the heartbeat reporter
 func TestStartReporting(t *testing.T) {
+	// Initialize logger for tests
+	logger.InitLogger(&config.Config{
+		LogLevel:     "INFO",
+		LogFile:      "/tmp/test-reporter.log",
+		LogMaxSize:   10,
+		LogMaxAge:    7,
+		LogMaxBackups: 3,
+		LogCompress:  false,
+		LogToConsole: false,
+	})
+	defer logger.Close()
+
 	// Arrange
 	mockScheduler := &mockProbeScheduler{}
 	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", mockScheduler)

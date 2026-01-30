@@ -9,11 +9,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"sync"
 	"time"
 
+	"beacon/internal/logger"
 	"beacon/internal/models"
 )
 
@@ -143,10 +143,10 @@ func (c *PulseAPIClient) SendHeartbeat(data *HeartbeatData) error {
 
 	// Validate upload latency
 	if elapsed > MaxUploadLatency {
-		log.Printf("[WARN] Heartbeat upload latency %v exceeds %v requirement", elapsed, MaxUploadLatency)
+		logger.WithFields(map[string]interface{}{"component": "reporter", "latency": elapsed.String(), "threshold": MaxUploadLatency.String()}).Warn("Heartbeat upload latency exceeds requirement")
 	}
 
-	log.Printf("[INFO] Heartbeat reported successfully (latency: %v)", elapsed)
+	logger.WithFields(map[string]interface{}{"component": "reporter", "latency": elapsed.String()}).Info("Heartbeat reported successfully")
 	return nil
 }
 
@@ -202,7 +202,7 @@ func (r *HeartbeatReporter) AggregateMetrics(tcpResults []*models.TCPProbeResult
 func (r *HeartbeatReporter) StartReporting(ctx context.Context) {
 	r.mu.Lock()
 	if r.reporting {
-		log.Println("[WARN] Heartbeat reporter already running")
+		logger.WithField("component", "reporter").Warn("Heartbeat reporter already running")
 		r.mu.Unlock()
 		return
 	}
@@ -214,7 +214,7 @@ func (r *HeartbeatReporter) StartReporting(ctx context.Context) {
 	ctx, r.cancel = context.WithCancel(ctx)
 	r.mu.Unlock()
 
-	log.Printf("[INFO] Starting heartbeat reporter (interval: %v)", ReportInterval)
+	logger.WithFields(map[string]interface{}{"component": "reporter", "interval": ReportInterval.String()}).Info("Starting heartbeat reporter")
 
 	// Start reporting goroutine with proper synchronization
 	r.wg.Add(1)
@@ -231,7 +231,7 @@ func (r *HeartbeatReporter) StartReporting(ctx context.Context) {
 				r.reportWithRetry()
 			case <-ctx.Done():
 				r.ticker.Stop()
-				log.Println("[INFO] Heartbeat reporter stopped")
+				logger.WithField("component", "reporter").Info("Heartbeat reporter stopped")
 				return
 			}
 		}
@@ -270,7 +270,7 @@ func (r *HeartbeatReporter) reportWithRetry() {
 			return // Success
 		}
 
-		log.Printf("[ERROR] Heartbeat report failed (attempt %d/%d): %v", attempt+1, MaxRetries, err)
+		logger.WithFields(map[string]interface{}{"component": "reporter", "attempt": attempt + 1, "max_retries": MaxRetries, "error": err.Error()}).Error("Heartbeat report failed")
 
 		if attempt < MaxRetries-1 {
 			// Exponential backoff: 1s, 2s, 4s
@@ -279,5 +279,5 @@ func (r *HeartbeatReporter) reportWithRetry() {
 		}
 	}
 
-	log.Printf("[ERROR] Heartbeat report failed after %d attempts, giving up", MaxRetries)
+	logger.WithFields(map[string]interface{}{"component": "reporter", "attempts": MaxRetries}).Error("Heartbeat report failed after retries, giving up")
 }

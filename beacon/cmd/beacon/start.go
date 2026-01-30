@@ -3,7 +3,6 @@ package beacon
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -12,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"beacon/internal/config"
+	"beacon/internal/logger"
 	"beacon/internal/metrics"
 	"beacon/internal/probe"
 	"beacon/internal/process"
@@ -26,24 +26,36 @@ var startCmd = &cobra.Command{
 }
 
 func runStart(cmd *cobra.Command, args []string) error {
-	fmt.Println("[INFO] Loading configuration...")
-	
+	fmt.Println("Loading configuration...")
+
 	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	// Initialize logger (Story 3.9)
+	if err := logger.InitLogger(cfg); err != nil {
+		return fmt.Errorf("failed to initialize logger: %w", err)
+	}
+	defer logger.Close()
+
+	logger.WithFields(map[string]interface{}{
+		"node_id":   cfg.NodeID,
+		"node_name": cfg.NodeName,
+		"config":    cfg.ConfigPath,
+	}).Info("Configuration loaded successfully")
+
 	// Create process manager
 	procMgr := process.NewManager(cfg)
 
 	// Write PID file
 	if err := procMgr.WritePID(); err != nil {
-		log.Printf("[WARN] Failed to write PID file: %v", err)
+		logger.WithError(err).Warn("Failed to write PID file")
 	}
 	defer procMgr.Cleanup()
 
-	fmt.Println("[INFO] Starting probes...")
+	logger.Info("Starting probes...")
 
 	// Create probe scheduler
 	scheduler, err := probe.NewProbeScheduler(cfg.Probes)
@@ -57,16 +69,16 @@ func runStart(cmd *cobra.Command, args []string) error {
 	}
 	defer scheduler.Stop()
 
-	fmt.Println("[INFO] Starting metrics server...")
+	logger.Info("Starting metrics server...")
 
 	// Create and start metrics server (Story 3.8)
 	metricsServer := metrics.NewMetrics(cfg, scheduler)
 	if err := metricsServer.Start(); err != nil {
-		log.Printf("[WARN] Failed to start metrics server: %v", err)
+		logger.WithError(err).Warn("Failed to start metrics server")
 	}
 	defer metricsServer.Stop()
 
-	fmt.Println("[INFO] Starting heartbeat reporter...")
+	logger.Info("Starting heartbeat reporter...")
 
 	// Create Pulse API client with 5 second timeout (NFR-PERF-001)
 	apiClient := reporter.NewPulseAPIClient(cfg.PulseServer, 5*time.Second)
@@ -77,20 +89,22 @@ func runStart(cmd *cobra.Command, args []string) error {
 	// Start heartbeat reporting
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	heartbeatReporter.StartReporting(ctx)
 	defer heartbeatReporter.StopReporting()
 
-	fmt.Println("[INFO] Beacon started successfully")
-	fmt.Println("[INFO] Press Ctrl+C to stop...")
+	logger.WithFields(map[string]interface{}{
+		"node_id":   cfg.NodeID,
+		"node_name": cfg.NodeName,
+	}).Info("Beacon started successfully")
+	logger.Info("Press Ctrl+C to stop...")
 
 	// Wait for interrupt signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	<-sigChan
 
-	fmt.Println()
-	fmt.Println("[INFO] Shutting down gracefully...")
+	logger.Info("Shutting down gracefully...")
 
 	return nil
 }

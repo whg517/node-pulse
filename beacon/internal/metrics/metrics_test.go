@@ -10,11 +10,30 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"beacon/internal/config"
+	"beacon/internal/logger"
 	"beacon/internal/probe"
 )
 
+// initTestLogger initializes the logger for tests
+func initTestLogger(t *testing.T) {
+	if err := logger.InitLogger(&config.Config{
+		LogLevel:      "INFO",
+		LogFile:       "/tmp/test-metrics.log",
+		LogMaxSize:    10,
+		LogMaxAge:     7,
+		LogMaxBackups: 3,
+		LogCompress:   false,
+		LogToConsole:  false,
+	}); err != nil {
+		t.Fatalf("Failed to initialize logger: %v", err)
+	}
+}
+
 // TestNewMetrics tests the creation of a new Metrics handler
 func TestNewMetrics(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
+
 	cfg := &config.Config{
 		NodeID:         "test-node-id",
 		NodeName:       "test-node",
@@ -43,6 +62,8 @@ func TestNewMetrics(t *testing.T) {
 
 // TestMetricsStart tests starting the metrics server
 func TestMetricsStart(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:         "test-node-id",
 		NodeName:       "test-node",
@@ -78,6 +99,8 @@ func TestMetricsStart(t *testing.T) {
 
 // TestMetricsStartDisabled tests that metrics server doesn't start when disabled
 func TestMetricsStartDisabled(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:         "test-node-id",
 		NodeName:       "test-node",
@@ -99,6 +122,8 @@ func TestMetricsStartDisabled(t *testing.T) {
 
 // TestMetricsStartAlreadyRunning tests that starting an already running server returns error
 func TestMetricsStartAlreadyRunning(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:         "test-node-id",
 		NodeName:       "test-node",
@@ -125,6 +150,8 @@ func TestMetricsStartAlreadyRunning(t *testing.T) {
 
 // TestMetricsEndpoint tests the /metrics endpoint returns correct format
 func TestMetricsEndpoint(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:         "test-node-123",
 		NodeName:       "beacon-test",
@@ -184,6 +211,8 @@ func TestMetricsEndpoint(t *testing.T) {
 
 // TestUpdateMetricsNoResults tests metrics update with no probe results
 func TestUpdateMetricsNoResults(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:         "test-node-id",
 		NodeName:       "test-node",
@@ -207,6 +236,8 @@ func TestUpdateMetricsNoResults(t *testing.T) {
 
 // TestUpdateMetricsWithResults tests metrics update with probe results
 func TestUpdateMetricsWithResults(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:         "test-node-id",
 		NodeName:       "test-node",
@@ -256,6 +287,8 @@ func TestUpdateMetricsWithResults(t *testing.T) {
 
 // TestMetricsStopGraceful tests graceful shutdown
 func TestMetricsStopGraceful(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:         "test-node-id",
 		NodeName:       "test-node",
@@ -289,6 +322,8 @@ func TestMetricsStopGraceful(t *testing.T) {
 
 // TestMetricsStopNotRunning tests stopping a non-running server
 func TestMetricsStopNotRunning(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:         "test-node-id",
 		NodeName:       "test-node",
@@ -310,6 +345,8 @@ func TestMetricsStopNotRunning(t *testing.T) {
 // TestMetricsWaitGroupBlocking tests that Stop() blocks until collector finishes
 // Fix #2: Add WaitGroup.Wait() blocking test
 func TestMetricsWaitGroupBlocking(t *testing.T) {
+	initTestLogger(t)
+	defer logger.Close()
 	cfg := &config.Config{
 		NodeID:               "test-node-id",
 		NodeName:             "test-node",

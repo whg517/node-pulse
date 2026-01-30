@@ -4,18 +4,38 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"beacon/internal/config"
+	"beacon/internal/logger"
 	"beacon/internal/probe"
 )
 
 // containsString checks if a string contains a substring (case-insensitive)
 func containsString(s, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
+}
+
+// initTestLogger initializes logger for integration tests
+func initTestLogger(t *testing.T) {
+	tempDir := t.TempDir()
+	logFile := filepath.Join(tempDir, "beacon.log")
+	cfg := &config.Config{
+		LogLevel:      "INFO",
+		LogFile:       logFile,
+		LogMaxSize:    10,
+		LogMaxAge:     7,
+		LogMaxBackups: 10,
+		LogCompress:   false,
+		LogToConsole:  false,
+	}
+	if err := logger.InitLogger(cfg); err != nil {
+		t.Fatalf("Failed to initialize logger: %v", err)
+	}
 }
 
 // TestIntegration_TCPProbeWithRealServer tests complete TCP probe flow with real server
@@ -82,6 +102,10 @@ func TestIntegration_ProbeSchedulerWithMultipleTargets(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
 	}
+
+	// Initialize logger for this test
+	initTestLogger(t)
+	defer logger.Close()
 
 	// Start multiple test servers
 	server1 := startTestTCPServer(t, "localhost:19002")
