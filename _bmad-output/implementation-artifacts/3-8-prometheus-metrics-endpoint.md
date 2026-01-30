@@ -1,6 +1,6 @@
 # Story 3.8: Prometheus Metrics 端点
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -724,39 +724,46 @@ N/A - Implementation completed without issues
 - ✅ Implemented complete Prometheus Metrics server using github.com/prometheus/client_golang@v1.20.5
 - ✅ All 4 core metrics implemented: beacon_up, beacon_rtt_seconds, beacon_packet_loss_rate, beacon_jitter_ms
 - ✅ All metrics include node_id and node_name labels per requirements
-- ✅ Metrics updated every 10 seconds from ProbeScheduler.GetLatestResults()
+- ✅ Metrics update interval configurable (10-60 seconds, default 10)
 - ✅ HTTP server on configurable port (default 2112) with graceful shutdown
 - ✅ Integrated into beacon start/stop commands
-- ✅ 9 unit tests written and passing (100%)
+- ✅ 10 unit tests written and passing (100%)
 - ✅ 7 integration tests written and passing (100%)
-- ✅ Performance: Average response time 0.77ms (requirement: < 100ms)
+- ✅ Performance: Average response time 0.68ms (requirement: < 100ms)
 - ✅ No security vulnerabilities in Prometheus dependency
-- ✅ Configuration validation for metrics_port (1024-65535)
+- ✅ Configuration validation for metrics_port (1024-65535) and update interval (10-60s)
+
+**Code Review Fixes (2026-01-30):**
+1. ✅ Fixed stopChan cleanup on failed Start() - prevents memory leak
+2. ✅ Made metrics update interval configurable (MetricsUpdateSeconds field)
+3. ✅ Added TestMetricsWaitGroupBlocking to verify Stop() blocks until collector finishes
+4. ✅ Verified beacon.yaml.example has metrics configuration documented
+5. ✅ All 17 tests passing after fixes
 
 **Technical Decisions:**
 1. Used official Prometheus client library for reliable exposition format compliance
 2. Metrics initialized with default values (0) to ensure they always appear in /metrics endpoint
 3. RTT converted from milliseconds to seconds following Prometheus best practices for base units
 4. Packet loss converted from percentage to 0-1 ratio for Prometheus compatibility
-5. Metrics collection runs every 10 seconds to balance real-time updates with resource usage
+5. Metrics collection interval configurable (10-60 seconds) to balance real-time updates with resource usage
 6. When no probe results available: rtt=0, packet_loss=1 (100%), jitter=0
 
 **Test Coverage:**
-- Unit tests: Metrics creation, start/stop, endpoint format, disabled mode, concurrent start
+- Unit tests: Metrics creation, start/stop, endpoint format, disabled mode, concurrent start, WaitGroup blocking
 - Integration tests: Prometheus scraping workflow, metrics update, no results, format compliance, performance
 - All tests pass with excellent performance metrics
 
 ### File List
 
 **Modified Files:**
-- beacon/internal/config/config.go (added MetricsEnabled, MetricsPort fields and validation)
-- beacon/internal/metrics/metrics.go (complete implementation from placeholder)
+- beacon/internal/config/config.go (added MetricsEnabled, MetricsPort, MetricsUpdateSeconds fields and validation)
+- beacon/internal/metrics/metrics.go (complete implementation with configurable interval and stopChan cleanup)
 - beacon/cmd/beacon/start.go (integrated MetricsServer)
 - beacon/go.mod (added prometheus/client_golang dependency)
 - beacon/go.sum (dependency checksums)
-- beacon/beacon.yaml.example (added metrics configuration example)
+- beacon/beacon.yaml.example (added metrics configuration with all options)
 
 **New Files:**
-- beacon/internal/metrics/metrics_test.go (9 unit tests)
+- beacon/internal/metrics/metrics_test.go (10 unit tests including WaitGroup blocking test)
 - beacon/tests/metrics/metrics_integration_test.go (7 integration tests)
 
