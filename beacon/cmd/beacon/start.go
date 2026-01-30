@@ -13,8 +13,9 @@ import (
 	"beacon/internal/config"
 	"beacon/internal/logger"
 	"beacon/internal/metrics"
-	"beacon/internal/probe"
+	"beacon/internal/monitor"
 	"beacon/internal/process"
+	"beacon/internal/probe"
 	"beacon/internal/reporter"
 )
 
@@ -72,6 +73,50 @@ func runStart(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start probe scheduler: %w", err)
 	}
 	defer scheduler.Stop()
+
+	logger.Info("Starting resource monitor...")
+
+	// Create and start resource monitor (Story 3.11)
+	var resourceMonitor monitor.Monitor
+	if cfg.ResourceMonitor.Enabled {
+		logAdapter := &monitor.LogrusLogger{}
+		monitorCfg := &monitor.ResourceMonitorConfig{
+			Enabled:              cfg.ResourceMonitor.Enabled,
+			CheckIntervalSeconds: cfg.ResourceMonitor.CheckIntervalSeconds,
+			Thresholds: monitor.ThresholdsConfig{
+				CPUMicrocores: cfg.ResourceMonitor.Thresholds.CPUMicrocores,
+				MemoryMB:      cfg.ResourceMonitor.Thresholds.MemoryMB,
+			},
+			Degradation: monitor.DegradationConfig{
+				DegradedLevel: monitor.DegradationLevelConfig{
+					CPUMicrocores:      cfg.ResourceMonitor.Degradation.DegradedLevel.CPUMicrocores,
+					MemoryMB:           cfg.ResourceMonitor.Degradation.DegradedLevel.MemoryMB,
+					IntervalMultiplier: cfg.ResourceMonitor.Degradation.DegradedLevel.IntervalMultiplier,
+				},
+				CriticalLevel: monitor.DegradationLevelConfig{
+					CPUMicrocores:      cfg.ResourceMonitor.Degradation.CriticalLevel.CPUMicrocores,
+					MemoryMB:           cfg.ResourceMonitor.Degradation.CriticalLevel.MemoryMB,
+					IntervalMultiplier: cfg.ResourceMonitor.Degradation.CriticalLevel.IntervalMultiplier,
+				},
+				Recovery: monitor.RecoveryConfig{
+					ConsecutiveNormalChecks: cfg.ResourceMonitor.Degradation.Recovery.ConsecutiveNormalChecks,
+				},
+			},
+			Alerting: monitor.AlertingConfig{
+				SuppressionWindowSeconds: cfg.ResourceMonitor.Alerting.SuppressionWindowSeconds,
+			},
+		}
+		resourceMonitor, err = monitor.NewMonitor(monitorCfg, scheduler, logAdapter)
+		if err != nil {
+			logger.WithError(err).Warn("Failed to create resource monitor")
+		} else {
+			if err := resourceMonitor.Start(); err != nil {
+				logger.WithError(err).Warn("Failed to start resource monitor")
+			} else {
+				defer resourceMonitor.Stop()
+			}
+		}
+	}
 
 	logger.Info("Starting metrics server...")
 

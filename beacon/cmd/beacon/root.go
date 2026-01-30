@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -44,6 +45,19 @@ func Execute() {
 
 // GetRootCmd returns the root command (for testing)
 func GetRootCmd() *cobra.Command {
+	// Reset flags to default values to prevent test pollution
+	resetFlags := func(flags *pflag.FlagSet) {
+		flags.VisitAll(func(f *pflag.Flag) {
+			flags.Set(f.Name, f.DefValue)
+		})
+	}
+	resetFlags(rootCmd.Flags())
+	resetFlags(rootCmd.PersistentFlags())
+	// Also reset all subcommands
+	for _, cmd := range rootCmd.Commands() {
+		resetFlags(cmd.Flags())
+		resetFlags(cmd.PersistentFlags())
+	}
 	return rootCmd
 }
 

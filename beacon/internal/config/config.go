@@ -44,6 +44,12 @@ type Config struct {
 	LogCompress   bool   `mapstructure:"log_compress" yaml:"log_compress"`                    // compress rotated files
 	LogToConsole  bool   `mapstructure:"log_to_console" yaml:"log_to_console"`                // also log to stdout
 
+	// Debug mode configuration (for Story 3.10)
+	DebugMode bool `mapstructure:"debug_mode" yaml:"debug_mode"` // Enable debug mode (auto-sets log_level=DEBUG)
+
+	// Resource monitor configuration (for Story 3.11)
+	ResourceMonitor ResourceMonitorConfig `mapstructure:"resource_monitor" yaml:"resource_monitor"`
+
 	// Internal fields (not from config file)
 	ConfigPath string `mapstructure:"-"`
 	Debug      bool   `mapstructure:"debug"`
@@ -169,6 +175,47 @@ func LoadConfig(configPath string) (*Config, error) {
 		config.LogMaxBackups = 10 // Default 10 backups
 	}
 	// LogCompress and LogToConsole default to false (bool default)
+
+	// Apply debug mode configuration (Story 3.10)
+	// When debug_mode is true, automatically set log level to DEBUG
+	if config.DebugMode {
+		config.LogLevel = "DEBUG"
+	}
+
+	// Set default values for resource monitor configuration (Story 3.11)
+	if config.ResourceMonitor.CheckIntervalSeconds == 0 {
+		config.ResourceMonitor.CheckIntervalSeconds = 60 // Default 60 seconds
+	}
+	if config.ResourceMonitor.Thresholds.CPUMicrocores == 0 {
+		config.ResourceMonitor.Thresholds.CPUMicrocores = 100 // Default 100 microcores
+	}
+	if config.ResourceMonitor.Thresholds.MemoryMB == 0 {
+		config.ResourceMonitor.Thresholds.MemoryMB = 100 // Default 100 MB
+	}
+	if config.ResourceMonitor.Degradation.DegradedLevel.CPUMicrocores == 0 {
+		config.ResourceMonitor.Degradation.DegradedLevel.CPUMicrocores = 200 // Default 200 microcores
+	}
+	if config.ResourceMonitor.Degradation.DegradedLevel.MemoryMB == 0 {
+		config.ResourceMonitor.Degradation.DegradedLevel.MemoryMB = 150 // Default 150 MB
+	}
+	if config.ResourceMonitor.Degradation.DegradedLevel.IntervalMultiplier == 0 {
+		config.ResourceMonitor.Degradation.DegradedLevel.IntervalMultiplier = 2 // Default 2x
+	}
+	if config.ResourceMonitor.Degradation.CriticalLevel.CPUMicrocores == 0 {
+		config.ResourceMonitor.Degradation.CriticalLevel.CPUMicrocores = 300 // Default 300 microcores
+	}
+	if config.ResourceMonitor.Degradation.CriticalLevel.MemoryMB == 0 {
+		config.ResourceMonitor.Degradation.CriticalLevel.MemoryMB = 200 // Default 200 MB
+	}
+	if config.ResourceMonitor.Degradation.CriticalLevel.IntervalMultiplier == 0 {
+		config.ResourceMonitor.Degradation.CriticalLevel.IntervalMultiplier = 3 // Default 3x
+	}
+	if config.ResourceMonitor.Degradation.Recovery.ConsecutiveNormalChecks == 0 {
+		config.ResourceMonitor.Degradation.Recovery.ConsecutiveNormalChecks = 3 // Default 3 checks
+	}
+	if config.ResourceMonitor.Alerting.SuppressionWindowSeconds == 0 {
+		config.ResourceMonitor.Alerting.SuppressionWindowSeconds = 300 // Default 5 minutes
+	}
 
 	// Validate metrics configuration
 	if err := validateMetricsConfig(config.MetricsPort, config.MetricsUpdateSeconds); err != nil {
@@ -438,4 +485,43 @@ func SaveConfig(cfg *Config, path string) error {
 	}
 
 	return nil
+}
+
+// ResourceMonitorConfig represents resource monitoring configuration (Story 3.11)
+type ResourceMonitorConfig struct {
+	Enabled              bool              `mapstructure:"enabled" yaml:"enabled"`
+	CheckIntervalSeconds int               `mapstructure:"check_interval_seconds" yaml:"check_interval_seconds"`
+	Thresholds           ThresholdsConfig  `mapstructure:"thresholds" yaml:"thresholds"`
+	Degradation          DegradationConfig `mapstructure:"degradation" yaml:"degradation"`
+	Alerting             AlertingConfig    `mapstructure:"alerting" yaml:"alerting"`
+}
+
+// ThresholdsConfig represents resource threshold configuration
+type ThresholdsConfig struct {
+	CPUMicrocores int `mapstructure:"cpu_microcores" yaml:"cpu_microcores"`
+	MemoryMB      int `mapstructure:"memory_mb" yaml:"memory_mb"`
+}
+
+// DegradationConfig represents degradation policy configuration
+type DegradationConfig struct {
+	DegradedLevel  DegradationLevelConfig `mapstructure:"degraded_level" yaml:"degraded_level"`
+	CriticalLevel  DegradationLevelConfig `mapstructure:"critical_level" yaml:"critical_level"`
+	Recovery       RecoveryConfig         `mapstructure:"recovery" yaml:"recovery"`
+}
+
+// DegradationLevelConfig represents a single degradation level configuration
+type DegradationLevelConfig struct {
+	CPUMicrocores      int `mapstructure:"cpu_microcores" yaml:"cpu_microcores"`
+	MemoryMB           int `mapstructure:"memory_mb" yaml:"memory_mb"`
+	IntervalMultiplier int `mapstructure:"interval_multiplier" yaml:"interval_multiplier"`
+}
+
+// RecoveryConfig represents auto-recovery configuration
+type RecoveryConfig struct {
+	ConsecutiveNormalChecks int `mapstructure:"consecutive_normal_checks" yaml:"consecutive_normal_checks"`
+}
+
+// AlertingConfig represents alert configuration
+type AlertingConfig struct {
+	SuppressionWindowSeconds int `mapstructure:"suppression_window_seconds" yaml:"suppression_window_seconds"`
 }

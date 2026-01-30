@@ -184,13 +184,19 @@ func TestDebugCommand(t *testing.T) {
 		t.Errorf("Expected no error, got: %v", err)
 	}
 
-	// Check output
+	// Check output contains JSON diagnostic fields
 	output := buf.String()
-	if !strings.Contains(output, "[DEBUG] Debug mode enabled") {
-		t.Error("Expected debug output to contain '[DEBUG] Debug mode enabled'")
+	if !strings.Contains(output, `"timestamp"`) {
+		t.Error("Expected debug output to contain JSON timestamp field")
 	}
-	if !strings.Contains(output, "[DEBUG] (1/4)") {
-		t.Error("Expected debug output to contain step indicators")
+	if !strings.Contains(output, `"level"`) {
+		t.Error("Expected debug output to contain JSON level field")
+	}
+	if !strings.Contains(output, `"message"`) {
+		t.Error("Expected debug output to contain JSON message field")
+	}
+	if !strings.Contains(output, `"diagnostics"`) {
+		t.Error("Expected debug output to contain JSON diagnostics field")
 	}
 }
 

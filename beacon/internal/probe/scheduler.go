@@ -16,6 +16,7 @@ type ProbeScheduler struct {
 	tcpPingers    []*TCPPinger
 	udpPingers    []*UDPPinger
 	interval      time.Duration
+	baseInterval  time.Duration // Store original interval for degradation recovery
 	stopChan      chan struct{}
 	wg            sync.WaitGroup
 	running       bool
@@ -111,6 +112,7 @@ func (s *ProbeScheduler) Start() error {
 		interval = time.Duration(s.udpPingers[0].config.Interval) * time.Second
 	}
 	s.interval = interval
+	s.baseInterval = interval // Store base interval
 
 	logger.WithFields(map[string]interface{}{
 		"component":  "probe",
@@ -300,4 +302,38 @@ func (s *ProbeScheduler) GetLatestResults() ([]*models.TCPProbeResult, []*models
 	copy(udpCopy, s.latestUDPResults)
 
 	return tcpCopy, udpCopy
+}
+
+// UpdateProbeInterval dynamically updates the probe interval (for Story 3.11 resource monitoring)
+// multiplier: interval multiplier (1=normal, 2=degraded, 3=critical)
+func (s *ProbeScheduler) UpdateProbeInterval(multiplier int) error {
+	if multiplier < 1 || multiplier > 10 {
+		return fmt.Errorf("invalid multiplier %d, must be between 1 and 10", multiplier)
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	newInterval := s.baseInterval * time.Duration(multiplier)
+	oldInterval := s.interval
+	s.interval = newInterval
+
+	logger.WithFields(map[string]interface{}{
+		"component":       "probe",
+		"multiplier":      multiplier,
+		"old_interval":    oldInterval.String(),
+		"new_interval":    newInterval.String(),
+	}).Info("Probe interval updated due to resource degradation")
+
+	// Restart the ticker with new interval by stopping and starting goroutine
+	// This is handled by recreating the ticker in the next cycle
+
+	return nil
+}
+
+// GetInterval returns the current probe interval (for testing)
+func (s *ProbeScheduler) GetInterval() time.Duration {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.interval
 }

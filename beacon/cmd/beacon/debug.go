@@ -6,32 +6,59 @@ import (
 	"github.com/spf13/cobra"
 
 	"beacon/internal/config"
+	"beacon/internal/diagnostics"
 )
 
-var debugCmd = &cobra.Command{
-	Use:   "debug",
-	Short: "Run Beacon in debug mode",
-	Long:  `Run Beacon in debug mode with verbose logging.`,
-	RunE:  runDebug,
-}
+var (
+	debugCmd = &cobra.Command{
+		Use:   "debug",
+		Short: "Show detailed diagnostic information",
+		Long: `Display comprehensive diagnostic information for troubleshooting.
+
+This command outputs detailed information about:
+- Network status and connectivity
+- Configuration details
+- Connection retry status
+- Resource usage
+- Probe task status
+- Prometheus metrics summary
+
+Output is in JSON format by default. Use --pretty for human-readable output.`,
+		RunE: runDebug,
+	}
+)
 
 func runDebug(cmd *cobra.Command, args []string) error {
-	fmt.Fprintln(cmd.OutOrStdout(), "[DEBUG] Debug mode enabled")
-	fmt.Fprintln(cmd.OutOrStdout(), "[DEBUG] (1/4) Loading configuration...")
-
-	// Try to load configuration
-	_, err := config.LoadConfig(configFile)
+	// Load configuration
+	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
-		// Show detailed error information
-		fmt.Fprintln(cmd.OutOrStdout(), "[DEBUG] Configuration error:")
-		fmt.Fprintf(cmd.OutOrStdout(), "[DEBUG]   Error: %s\n", err.Error())
-		// The config.LoadConfig already includes detailed error information
-		// with line numbers and suggestions
-		return nil // Don't fail the command, just show the error
+		return fmt.Errorf("error loading config: %w", err)
 	}
 
-	fmt.Fprintln(cmd.OutOrStdout(), "[DEBUG] (2/4) Initializing probes...")
-	fmt.Fprintln(cmd.OutOrStdout(), "[DEBUG] (3/4) Starting heartbeat reporter...")
-	fmt.Fprintln(cmd.OutOrStdout(), "[DEBUG] (4/4) Debug mode active")
+	// Create diagnostic collector
+	collector := diagnostics.NewCollector(cfg)
+
+	// Get pretty flag from command
+	prettyPrint, _ := cmd.Flags().GetBool("pretty")
+
+	// Collect and output diagnostic information
+	if prettyPrint {
+		output, err := collector.CollectPretty()
+		if err != nil {
+			return fmt.Errorf("error collecting diagnostics: %w", err)
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), output)
+	} else {
+		data, err := collector.CollectJSON()
+		if err != nil {
+			return fmt.Errorf("error collecting diagnostics: %w", err)
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), string(data))
+	}
+
 	return nil
+}
+
+func init() {
+	debugCmd.Flags().BoolP("pretty", "p", false, "Pretty print output in human-readable format")
 }
