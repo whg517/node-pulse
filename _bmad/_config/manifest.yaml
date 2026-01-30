@@ -1,9 +1,22 @@
 installation:
-  version: 6.0.0-alpha.23
-  installDate: 2026-01-19T13:54:56.828Z
-  lastUpdated: 2026-01-19T13:54:56.828Z
+  version: 6.0.0-Beta.4
+  installDate: 2026-01-30T05:24:12.995Z
+  lastUpdated: 2026-01-30T05:24:12.995Z
 modules:
-  - core
-  - bmm
+  - name: core
+    version: 6.0.0-Beta.4
+    installDate: 2026-01-30T05:24:12.995Z
+    lastUpdated: 2026-01-30T05:24:12.995Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
+  - name: bmm
+    version: 6.0.0-Beta.4
+    installDate: 2026-01-30T05:24:12.973Z
+    lastUpdated: 2026-01-30T05:24:12.995Z
+    source: built-in
+    npmPackage: null
+    repoUrl: null
 ides:
   - claude-code
+  - github-copilot
