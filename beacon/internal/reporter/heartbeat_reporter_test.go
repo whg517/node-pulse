@@ -1,6 +1,7 @@
 package reporter
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -156,9 +157,10 @@ func TestPulseAPIClientTLSSupport(t *testing.T) {
 func TestHeartbeatReporterCreation(t *testing.T) {
 	// Arrange
 	apiClient := NewPulseAPIClient("https://pulse.example.com", 5*time.Second)
+	mockScheduler := &mockProbeScheduler{}
 
 	// Act
-	reporter := NewHeartbeatReporter(apiClient, "test-node-id")
+	reporter := NewHeartbeatReporter(apiClient, "test-node-id", mockScheduler)
 
 	// Assert
 	if reporter == nil {
@@ -173,15 +175,26 @@ func TestHeartbeatReporterCreation(t *testing.T) {
 	if reporter.reporting {
 		t.Error("Expected reporting to be false initially")
 	}
-	if reporter.stopChan != nil {
-		t.Error("Expected stopChan to be nil initially")
+	if reporter.scheduler != mockScheduler {
+		t.Error("Expected scheduler to match")
 	}
+}
+
+// Mock scheduler for testing
+type mockProbeScheduler struct {
+	tcpResults []*models.TCPProbeResult
+	udpResults []*models.UDPProbeResult
+}
+
+func (m *mockProbeScheduler) GetLatestResults() ([]*models.TCPProbeResult, []*models.UDPProbeResult) {
+	return m.tcpResults, m.udpResults
 }
 
 // TestAggregateMetricsFromTCPProbes tests aggregating metrics from multiple successful TCP probes
 func TestAggregateMetricsFromTCPProbes(t *testing.T) {
 	// Arrange
-	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id")
+	mockScheduler := &mockProbeScheduler{}
+	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", mockScheduler)
 
 	// Create mock TCP probe results (3 successful probes)
 	tcpResults := []*models.TCPProbeResult{
@@ -226,7 +239,7 @@ func TestAggregateMetricsFromTCPProbes(t *testing.T) {
 // TestAggregateMetricsNoProbes tests aggregating when no probe results are available
 func TestAggregateMetricsNoProbes(t *testing.T) {
 	// Arrange
-	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id")
+	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", &mockProbeScheduler{})
 
 	// Act
 	data := reporter.AggregateMetrics(nil, nil)
@@ -249,7 +262,7 @@ func TestAggregateMetricsNoProbes(t *testing.T) {
 // TestAggregateMetricsPartialFailures tests aggregating when some probes failed
 func TestAggregateMetricsPartialFailures(t *testing.T) {
 	// Arrange
-	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id")
+	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", &mockProbeScheduler{})
 
 	// Create mock TCP probe results (2 successful, 1 failed)
 	tcpResults := []*models.TCPProbeResult{
@@ -288,7 +301,7 @@ func TestAggregateMetricsPartialFailures(t *testing.T) {
 // TestAggregateMetricsUDPProbes tests aggregating metrics from UDP probes
 func TestAggregateMetricsUDPProbes(t *testing.T) {
 	// Arrange
-	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id")
+	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", &mockProbeScheduler{})
 
 	// Create mock UDP probe results
 	udpResults := []*models.UDPProbeResult{
@@ -324,7 +337,7 @@ func TestAggregateMetricsUDPProbes(t *testing.T) {
 // TestAggregateMetricsMixedProbes tests aggregating metrics from both TCP and UDP probes
 func TestAggregateMetricsMixedProbes(t *testing.T) {
 	// Arrange
-	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id")
+	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", &mockProbeScheduler{})
 
 	// Create mock TCP and UDP probe results
 	tcpResults := []*models.TCPProbeResult{
@@ -363,7 +376,7 @@ func TestAggregateMetricsMixedProbes(t *testing.T) {
 // TestAggregateMetricsAllFailed tests aggregating when all probes failed
 func TestAggregateMetricsAllFailed(t *testing.T) {
 	// Arrange
-	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id")
+	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", &mockProbeScheduler{})
 
 	// Create mock TCP probe results (all failed)
 	tcpResults := []*models.TCPProbeResult{
@@ -390,47 +403,100 @@ func TestAggregateMetricsAllFailed(t *testing.T) {
 // TestStartReporting tests starting the heartbeat reporter
 func TestStartReporting(t *testing.T) {
 	// Arrange
-	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id")
+	mockScheduler := &mockProbeScheduler{}
+	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", mockScheduler)
 
 	// Act
-	reporter.StartReporting()
+	ctx := context.Background()
+	reporter.StartReporting(ctx)
 	defer reporter.StopReporting() // Ensure cleanup
 
+	// Wait a moment for goroutine to start
+	time.Sleep(50 * time.Millisecond)
+
 	// Assert
-	if !reporter.reporting {
+	reporter.mu.Lock()
+	isReporting := reporter.reporting
+	reporter.mu.Unlock()
+
+	if !isReporting {
 		t.Error("Expected reporting to be true after StartReporting")
 	}
 	if reporter.ticker == nil {
 		t.Error("Expected ticker to be initialized")
-	}
-	if reporter.stopChan == nil {
-		t.Error("Expected stopChan to be initialized")
 	}
 }
 
 // TestStopReporting tests stopping the heartbeat reporter
 func TestStopReporting(t *testing.T) {
 	// Arrange
-	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id")
-	reporter.StartReporting()
+	mockScheduler := &mockProbeScheduler{}
+	reporter := NewHeartbeatReporter(NewPulseAPIClient("https://pulse.example.com", 5*time.Second), "test-node-id", mockScheduler)
+	ctx := context.Background()
+	reporter.StartReporting(ctx)
+
+	// Wait a moment
+	time.Sleep(50 * time.Millisecond)
 
 	// Act
 	reporter.StopReporting()
 
+	// Wait for goroutine to finish
+	time.Sleep(50 * time.Millisecond)
+
 	// Assert
-	if reporter.reporting {
+	reporter.mu.Lock()
+	isReporting := reporter.reporting
+	reporter.mu.Unlock()
+
+	if isReporting {
 		t.Error("Expected reporting to be false after StopReporting")
 	}
 }
 
 // TestReportWithRetrySuccess tests successful heartbeat reporting without retries
 func TestReportWithRetrySuccess(t *testing.T) {
-	// This test will be implemented in integration tests with a mock server
-	t.Skip("Requires mock Pulse API server - will be tested in integration tests")
+	// Arrange - start mock Pulse server
+	mockServer := NewMockPulseServer()
+	defer mockServer.Close()
+
+	apiClient := NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	mockScheduler := &mockProbeScheduler{
+		tcpResults: []*models.TCPProbeResult{
+			{Success: true, RTTMs: 100.0, PacketLossRate: 0.0, JitterMs: 2.0},
+		},
+	}
+	reporter := NewHeartbeatReporter(apiClient, "test-node-uuid", mockScheduler)
+
+	// Act - trigger report
+	reporter.reportWithRetry()
+
+	// Assert - server should receive exactly 1 heartbeat (no retries)
+	if mockServer.GetHeartbeatCount() != 1 {
+		t.Errorf("Expected 1 heartbeat (no retries), got %d", mockServer.GetHeartbeatCount())
+	}
 }
 
 // TestReportWithRetryFailure tests retry mechanism on failure
 func TestReportWithRetryFailure(t *testing.T) {
-	// This test will be implemented in integration tests with a mock server
-	t.Skip("Requires mock Pulse API server - will be tested in integration tests")
+	// Arrange - start mock Pulse server configured to fail
+	mockServer := NewMockPulseServer()
+	mockServer.SetResponseStatusCode(http.StatusInternalServerError)
+	defer mockServer.Close()
+
+	apiClient := NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	mockScheduler := &mockProbeScheduler{
+		tcpResults: []*models.TCPProbeResult{
+			{Success: true, RTTMs: 100.0, PacketLossRate: 0.0, JitterMs: 2.0},
+		},
+	}
+	reporter := NewHeartbeatReporter(apiClient, "test-node-uuid", mockScheduler)
+
+	// Act - trigger report (should retry 3 times)
+	reporter.reportWithRetry()
+
+	// Assert - server should receive 3 requests (MaxRetries)
+	if mockServer.GetHeartbeatCount() != 3 {
+		t.Errorf("Expected 3 heartbeat requests (MaxRetries), got %d", mockServer.GetHeartbeatCount())
+	}
 }
