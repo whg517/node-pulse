@@ -12,8 +12,11 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/kevin/node-pulse/pulse-api/internal/api"
+	"github.com/kevin/node-pulse/pulse-api/internal/cleanup"
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/health"
+	"github.com/kevin/node-pulse/pulse-api/internal/scheduler"
 )
 
 func main() {
@@ -30,10 +33,10 @@ func main() {
 		log.Printf("[WARN] Database connection failed: %v", err)
 		// Continue without database for now, health check will report disabled
 		// Pass nil directly to avoid interface nil behavior issues
-		healthChecker = health.New(nil)
+		// Note: scheduler not created yet, will update health checker after scheduler init
+		healthChecker = health.New(nil, nil)
 	} else {
 		defer database.Close()
-		healthChecker = health.New(database)
 
 		// Run migrations
 		log.Println("[Migration] Running database migrations...")
@@ -42,6 +45,9 @@ func main() {
 			log.Fatalf("[Migration] Failed to run migrations: %v", err)
 		}
 		log.Println("[Migration] Database migrations completed successfully")
+
+		// Note: scheduler not created yet, will update health checker after scheduler init
+		healthChecker = health.New(database, nil)
 	}
 
 	// Initialize Gin router
@@ -49,6 +55,55 @@ func main() {
 
 	// Setup routes and get cache manager for shutdown
 	cacheManager := api.SetupRoutes(router, healthChecker, database.Pool)
+
+	// Initialize scheduler for background tasks (Story 3.12)
+	sched, err := scheduler.NewScheduler()
+	if err != nil {
+		log.Fatalf("[Pulse] Failed to create scheduler: %v", err)
+	}
+
+	// Load cleanup configuration
+	cleanupConfig, err := config.LoadCleanupConfig()
+	if err != nil {
+		log.Fatalf("[Pulse] Failed to load cleanup config: %v", err)
+	}
+
+	// Create and register cleanup task if enabled
+	var cleanupTask *cleanup.CleanupTask
+	if cleanupConfig.Enabled && database != nil && database.Pool != nil {
+		cleanupTask, err = cleanup.NewCleanupTask(cleanupConfig, database.Pool, log.Default())
+		if err != nil {
+			log.Fatalf("[Pulse] Failed to create cleanup task: %v", err)
+		}
+
+		if cleanupTask != nil {
+			if err := sched.RegisterTask(cleanupTask); err != nil {
+				log.Fatalf("[Pulse] Failed to register cleanup task: %v", err)
+			}
+			log.Printf("[Pulse] Cleanup task registered (interval: %ds, retention: %ddays)",
+				cleanupConfig.IntervalSeconds, cleanupConfig.RetentionDays)
+		}
+	}
+
+	// Start scheduler in background
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	if err := sched.Start(ctx); err != nil {
+		log.Fatalf("[Pulse] Failed to start scheduler: %v", err)
+	}
+	log.Println("[Pulse] Scheduler started")
+
+	// Update health checker with scheduler reference
+	healthChecker = health.New(
+		func() health.Checker {
+			if database != nil {
+				return database
+			}
+			return nil
+		}(),
+		sched,
+	)
 
 	// Create server with timeout configuration
 	srv := &http.Server{
@@ -74,7 +129,7 @@ func main() {
 	log.Println("[Pulse] Shutting down server...")
 
 	// Graceful shutdown with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	// Stop cache components (Story 3.2)
@@ -85,8 +140,14 @@ func main() {
 		cacheManager.MemoryCache.Stop()
 	}
 
+	// Stop scheduler and cleanup task (Story 3.12)
+	log.Println("[Pulse] Stopping scheduler...")
+	if err := sched.Stop(); err != nil {
+		log.Printf("[Pulse] Error stopping scheduler: %v", err)
+	}
+
 	// Shutdown HTTP server
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		log.Printf("[Pulse] Server forced to shutdown: %v", err)
 	}
 

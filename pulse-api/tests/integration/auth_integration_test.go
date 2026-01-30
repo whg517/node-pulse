@@ -38,7 +38,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool, *api.CacheManage
 	}
 
 	router := gin.New()
-	healthChecker := health.New(nil)
+	healthChecker := health.New(nil, nil) // No scheduler in tests
 	cacheManager := api.SetupRoutes(router, healthChecker, pool)
 
 	// Defer cache cleanup for test cleanup
