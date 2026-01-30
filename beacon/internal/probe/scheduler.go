@@ -13,13 +13,17 @@ import (
 
 // ProbeScheduler manages and executes multiple probes
 type ProbeScheduler struct {
-	tcpPingers []*TCPPinger
-	udpPingers []*UDPPinger
-	interval   time.Duration
-	stopChan   chan struct{}
-	wg         sync.WaitGroup
-	running    bool
-	mu         sync.RWMutex
+	tcpPingers    []*TCPPinger
+	udpPingers    []*UDPPinger
+	interval      time.Duration
+	stopChan      chan struct{}
+	wg            sync.WaitGroup
+	running       bool
+	mu            sync.RWMutex
+	// Cache latest results for heartbeat reporting
+	latestTCPResults []*models.TCPProbeResult
+	latestUDPResults []*models.UDPProbeResult
+	resultsMu        sync.RWMutex
 }
 
 // NewProbeScheduler creates a new probe scheduler from configuration
@@ -144,6 +148,10 @@ func (s *ProbeScheduler) executeProbes() {
 
 	var wg sync.WaitGroup
 
+	// Temporary storage for results
+	tcpResults := make([]*models.TCPProbeResult, len(s.tcpPingers))
+	udpResults := make([]*models.UDPProbeResult, len(s.udpPingers))
+
 	// Execute TCP probes
 	for i, pinger := range s.tcpPingers {
 		wg.Add(1)
@@ -161,6 +169,9 @@ func (s *ProbeScheduler) executeProbes() {
 				return
 			}
 
+			// Store result for heartbeat reporting
+			tcpResults[index] = result
+
 			// Log core metrics
 			successStatus := "failed"
 			if result.Success {
@@ -170,8 +181,6 @@ func (s *ProbeScheduler) executeProbes() {
 			log.Printf("[INFO] TCP probe #%d to %s completed: %s, samples=%d, RTT=%.2f ms (median=%.2f ms), jitter=%.2f ms, variance=%.2f ms², packet loss=%.2f%%, timestamp=%s",
 				index+1, target, successStatus, result.SampleCount, result.RTTMs, result.RTTMedianMs,
 				result.JitterMs, result.VarianceMs, result.PacketLossRate, result.Timestamp)
-
-			// TODO: Report results to Pulse (Story 3.7)
 		}(i, pinger)
 	}
 
@@ -192,6 +201,9 @@ func (s *ProbeScheduler) executeProbes() {
 				return
 			}
 
+			// Store result for heartbeat reporting
+			udpResults[index] = result
+
 			// Log core metrics
 			successStatus := "failed"
 			if result.Success {
@@ -201,12 +213,17 @@ func (s *ProbeScheduler) executeProbes() {
 			log.Printf("[INFO] UDP probe #%d to %s completed: %s, samples=%d, sent=%d, received=%d, RTT=%.2f ms (median=%.2f ms), jitter=%.2f ms, variance=%.2f ms², packet loss=%.2f%%, timestamp=%s",
 				index+1, target, successStatus, result.SampleCount, result.SentPackets, result.ReceivedPackets,
 				result.RTTMs, result.RTTMedianMs, result.JitterMs, result.VarianceMs, result.PacketLossRate, result.Timestamp)
-
-			// TODO: Report results to Pulse (Story 3.7)
 		}(i, pinger)
 	}
 
 	wg.Wait()
+
+	// Update cached results
+	s.resultsMu.Lock()
+	s.latestTCPResults = tcpResults
+	s.latestUDPResults = udpResults
+	s.resultsMu.Unlock()
+
 	log.Printf("[INFO] All probes completed")
 }
 
@@ -251,4 +268,19 @@ func (s *ProbeScheduler) ExecuteProbeNow(index int) (*models.TCPProbeResult, err
 
 	pinger := s.tcpPingers[index]
 	return pinger.Execute()
+}
+
+// GetLatestResults returns the most recent probe results for heartbeat reporting
+func (s *ProbeScheduler) GetLatestResults() ([]*models.TCPProbeResult, []*models.UDPProbeResult) {
+	s.resultsMu.RLock()
+	defer s.resultsMu.RUnlock()
+
+	// Return copies to avoid concurrent access issues
+	tcpCopy := make([]*models.TCPProbeResult, len(s.latestTCPResults))
+	udpCopy := make([]*models.UDPProbeResult, len(s.latestUDPResults))
+
+	copy(tcpCopy, s.latestTCPResults)
+	copy(udpCopy, s.latestUDPResults)
+
+	return tcpCopy, udpCopy
 }

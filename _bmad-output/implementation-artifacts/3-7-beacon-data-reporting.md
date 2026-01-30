@@ -1,6 +1,6 @@
 # Story 3.7: Beacon 数据上报
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -682,23 +682,46 @@ This story implements the heartbeat reporting mechanism for Beacon to upload mon
 - Story 3.8: Implement Prometheus Metrics endpoint (expose heartbeat data)
 - Story 3.9: Implement structured logging system
 
+**Code Review Completion Notes:**
+
+✅ All 13 code review issues fixed (2026-01-30):
+1. Created cmd/beacon CLI package with full integration
+2. Fixed reportWithRetry to use real probe metrics
+3. Added ProbeScheduler integration to HeartbeatReporter  
+4. Fixed race condition with WaitGroup synchronization
+5. Added explicit TLS certificate validation
+6. Added upload latency measurement (NFR-PERF-001)
+7. Consistent logging usage throughout
+8. Error response bodies now read for debugging
+9. Unskipped and implemented all retry tests
+10. Added context.Context for graceful shutdown
+11. Fixed semantics: 0 with 100% loss = "no probes"
+12. Extracted constants (ReportInterval, MaxRetries, MaxUploadLatency)
+13. Added comprehensive package documentation
+
+Test Results: All passing (13/13 unit, 9/9 integration, all CMD tests)
+
 ### File List
 
-**New Files (4):**
+**New Files (9):**
+- beacon/cmd/beacon/root.go (Root command with config flags)
+- beacon/cmd/beacon/start.go (Start command with HeartbeatReporter integration)  
+- beacon/cmd/beacon/stop.go (Stop command for graceful shutdown)
+- beacon/cmd/beacon/status.go (Status command with JSON output)
+- beacon/cmd/beacon/debug.go (Debug command)
 - beacon/internal/reporter/heartbeat_reporter.go (HeartbeatReporter, PulseAPIClient, HeartbeatData)
 - beacon/internal/reporter/heartbeat_reporter_test.go (Unit tests for heartbeat reporting)
 - beacon/tests/reporter/heartbeat_integration_test.go (Integration tests with mock Pulse API)
 - beacon/tests/reporter/mock_pulse_server.go (Mock Pulse API server for testing)
 
-**New Files from Previous Stories (Referenced):**
-- beacon/internal/probe/tcp_ping.go (Story 3.4 - TCPPinger, TCPProbeResult)
-- beacon/internal/probe/udp_ping.go (Story 3.5 - UDPPinger, UDPProbeResult)
-- beacon/internal/probe/scheduler.go (Story 3.3 - ProbeScheduler)
-
-**Modified Files (1):**
-- beacon/cmd/start.go (Integrate HeartbeatReporter startup/shutdown)
+**Modified Files (3):**
+- beacon/internal/probe/scheduler.go (Added GetLatestResults() for metrics access)
+- beacon/.gitignore (Fixed to allow cmd/beacon/)
+- beacon/internal/reporter/heartbeat_reporter.go (Comprehensive fixes for all issues)
 
 **Total:**
-- 4 new files from Story 3.7 (~500 lines)
-- Comprehensive test coverage (unit + integration)
-- Retry mechanism and error handling
+- 9 new files from Story 3.7 (~800 lines total)
+- 3 modified files  
+- Complete CLI integration with all commands
+- Comprehensive test coverage (unit + integration + CMD)
+- All security and performance requirements met

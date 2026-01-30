@@ -1,15 +1,29 @@
+// Package reporter provides heartbeat reporting functionality for Beacon.
+// It aggregates probe metrics and reports them to the Pulse server via HTTP/HTTPS.
 package reporter
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"beacon/internal/models"
+)
+
+const (
+	// ReportInterval is the interval between heartbeat reports (60 seconds)
+	ReportInterval = 60 * time.Second
+	// MaxRetries is the maximum number of retry attempts for failed reports
+	MaxRetries = 3
+	// MaxUploadLatency is the maximum acceptable upload latency (NFR-PERF-001)
+	MaxUploadLatency = 5 * time.Second
 )
 
 // HeartbeatData represents the heartbeat data structure for reporting to Pulse
@@ -28,12 +42,20 @@ type PulseAPIClient struct {
 	timeout    time.Duration
 }
 
+// ProbeScheduler interface for accessing probe results
+type ProbeScheduler interface {
+	GetLatestResults() ([]*models.TCPProbeResult, []*models.UDPProbeResult)
+}
+
 // HeartbeatReporter manages scheduled heartbeat reporting to Pulse
 type HeartbeatReporter struct {
 	apiClient *PulseAPIClient
 	nodeID    string
+	scheduler ProbeScheduler
 	ticker    *time.Ticker
-	stopChan  chan struct{}
+	cancel    context.CancelFunc
+	wg        sync.WaitGroup
+	mu        sync.Mutex
 	reporting bool
 }
 
@@ -53,7 +75,10 @@ func NewPulseAPIClient(serverURL string, timeout time.Duration) *PulseAPIClient 
 	// Create HTTP client with TLS config
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12, // Enforce TLS 1.2 or higher
+			MinVersion:         tls.VersionTLS12, // Enforce TLS 1.2 or higher (NFR-SEC-001)
+			InsecureSkipVerify: false,            // Require certificate validation
+			// In production, you may want to add:
+			// RootCAs: customCertPool,
 		},
 	}
 
@@ -69,29 +94,32 @@ func NewPulseAPIClient(serverURL string, timeout time.Duration) *PulseAPIClient 
 	}
 }
 
-// NewHeartbeatReporter creates a new HeartbeatReporter
-func NewHeartbeatReporter(apiClient *PulseAPIClient, nodeID string) *HeartbeatReporter {
+// NewHeartbeatReporter creates a new HeartbeatReporter with probe scheduler integration
+func NewHeartbeatReporter(apiClient *PulseAPIClient, nodeID string, scheduler ProbeScheduler) *HeartbeatReporter {
 	return &HeartbeatReporter{
 		apiClient: apiClient,
 		nodeID:    nodeID,
+		scheduler: scheduler,
 		reporting: false,
-		stopChan:  nil,
 	}
 }
 
-// SendHeartbeat sends heartbeat data to Pulse server
+// SendHeartbeat sends heartbeat data to Pulse server with latency measurement
 func (c *PulseAPIClient) SendHeartbeat(data *HeartbeatData) error {
+	// Measure upload latency (NFR-PERF-001)
+	startTime := time.Now()
+
 	// Serialize heartbeat data to JSON
 	jsonData, err := json.Marshal(data)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal heartbeat data: %w", err)
 	}
 
 	// Create HTTP POST request
 	url := c.serverURL + "/api/v1/beacon/heartbeat"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
@@ -99,15 +127,26 @@ func (c *PulseAPIClient) SendHeartbeat(data *HeartbeatData) error {
 	// Send request with timeout
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
 
+	// Measure elapsed time
+	elapsed := time.Since(startTime)
+
 	// Check response status
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("pulse API returned error %d", resp.StatusCode)
+		// Read error response body for debugging
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("pulse API returned error %d: %s", resp.StatusCode, string(body))
 	}
 
+	// Validate upload latency
+	if elapsed > MaxUploadLatency {
+		log.Printf("[WARN] Heartbeat upload latency %v exceeds %v requirement", elapsed, MaxUploadLatency)
+	}
+
+	log.Printf("[INFO] Heartbeat reported successfully (latency: %v)", elapsed)
 	return nil
 }
 
@@ -136,13 +175,15 @@ func (r *HeartbeatReporter) AggregateMetrics(tcpResults []*models.TCPProbeResult
 		}
 	}
 
-	// If no successful probe results, use default values
+	// If no successful probe results, report 100% packet loss with 0 latency/jitter
+	// This semantically indicates "all probes failed" which is different from
+	// "low latency/jitter" but is the only valid JSON representation
 	if count == 0 {
 		return &HeartbeatData{
 			NodeID:         r.nodeID,
-			LatencyMs:      0,
+			LatencyMs:      0,   // 0 with 100% loss means "no successful probes"
 			PacketLossRate: 100, // All probes failed
-			JitterMs:       0,
+			JitterMs:       0,   // 0 with 100% loss means "no successful probes"
 			Timestamp:      time.Now().Format(time.RFC3339),
 		}
 	}
@@ -157,29 +198,38 @@ func (r *HeartbeatReporter) AggregateMetrics(tcpResults []*models.TCPProbeResult
 	}
 }
 
-// StartReporting starts the scheduled heartbeat reporting (every 60 seconds)
-func (r *HeartbeatReporter) StartReporting() {
+// StartReporting starts the scheduled heartbeat reporting with context support
+func (r *HeartbeatReporter) StartReporting(ctx context.Context) {
+	r.mu.Lock()
 	if r.reporting {
 		log.Println("[WARN] Heartbeat reporter already running")
+		r.mu.Unlock()
 		return
 	}
 
 	r.reporting = true
-	r.ticker = time.NewTicker(60 * time.Second)
-	r.stopChan = make(chan struct{})
+	r.ticker = time.NewTicker(ReportInterval)
 
-	log.Println("[INFO] Starting heartbeat reporter (interval: 60s)")
+	// Create cancellable context
+	ctx, r.cancel = context.WithCancel(ctx)
+	r.mu.Unlock()
 
-	// Report immediately on start
-	go r.reportWithRetry()
+	log.Printf("[INFO] Starting heartbeat reporter (interval: %v)", ReportInterval)
 
-	// Start scheduled reporting
+	// Start reporting goroutine with proper synchronization
+	r.wg.Add(1)
 	go func() {
+		defer r.wg.Done()
+
+		// Report immediately on start (synchronized)
+		r.reportWithRetry()
+
+		// Start scheduled reporting
 		for {
 			select {
 			case <-r.ticker.C:
 				r.reportWithRetry()
-			case <-r.stopChan:
+			case <-ctx.Done():
 				r.ticker.Stop()
 				log.Println("[INFO] Heartbeat reporter stopped")
 				return
@@ -190,36 +240,44 @@ func (r *HeartbeatReporter) StartReporting() {
 
 // StopReporting gracefully stops the heartbeat reporter
 func (r *HeartbeatReporter) StopReporting() {
+	r.mu.Lock()
 	if !r.reporting {
+		r.mu.Unlock()
 		return
 	}
 
-	close(r.stopChan)
+	if r.cancel != nil {
+		r.cancel()
+	}
 	r.reporting = false
+	r.mu.Unlock()
+
+	// Wait for goroutine to finish
+	r.wg.Wait()
 }
 
 // reportWithRetry sends heartbeat with retry mechanism (max 3 retries, exponential backoff)
 func (r *HeartbeatReporter) reportWithRetry() {
-	// Create heartbeat data with default values (no probe results yet)
-	data := NewHeartbeatData(r.nodeID, 0, 100, 0)
+	// Get latest probe results from scheduler
+	tcpResults, udpResults := r.scheduler.GetLatestResults()
 
-	maxRetries := 3
+	// Aggregate metrics from actual probe results
+	data := r.AggregateMetrics(tcpResults, udpResults)
 
-	for attempt := 0; attempt < maxRetries; attempt++ {
+	for attempt := 0; attempt < MaxRetries; attempt++ {
 		err := r.apiClient.SendHeartbeat(data)
 		if err == nil {
-			log.Println("[INFO] Heartbeat reported successfully to Pulse")
 			return // Success
 		}
 
-		log.Printf("[ERROR] Heartbeat report failed (attempt %d/%d): %v", attempt+1, maxRetries, err)
+		log.Printf("[ERROR] Heartbeat report failed (attempt %d/%d): %v", attempt+1, MaxRetries, err)
 
-		if attempt < maxRetries-1 {
+		if attempt < MaxRetries-1 {
 			// Exponential backoff: 1s, 2s, 4s
 			backoff := time.Duration(1<<uint(attempt)) * time.Second
 			time.Sleep(backoff)
 		}
 	}
 
-	log.Printf("[ERROR] Heartbeat report failed after %d attempts, giving up", maxRetries)
+	log.Printf("[ERROR] Heartbeat report failed after %d attempts, giving up", MaxRetries)
 }

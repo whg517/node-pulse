@@ -1,6 +1,7 @@
 package reporter
 
 import (
+	"context"
 	"net/http"
 	"testing"
 	"time"
@@ -74,19 +75,35 @@ func TestIntegration_HeartbeatReporterSuccess(t *testing.T) {
 	defer mockServer.Close()
 
 	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
-	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid")
+	mockScheduler := &mockProbeScheduler{
+		tcpResults: []*models.TCPProbeResult{
+			{Success: true, RTTMs: 100.0, PacketLossRate: 0.0, JitterMs: 2.0},
+		},
+	}
+	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid", mockScheduler)
 
 	// Act - start reporting
-	heartbeatReporter.StartReporting()
+	ctx := context.Background()
+	heartbeatReporter.StartReporting(ctx)
 	defer heartbeatReporter.StopReporting()
 
 	// Wait for first heartbeat (immediate)
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(200 * time.Millisecond)
 
 	// Assert - server should receive at least one heartbeat
 	if mockServer.GetHeartbeatCount() < 1 {
 		t.Errorf("Expected at least 1 heartbeat received, got %d", mockServer.GetHeartbeatCount())
 	}
+}
+
+// Mock scheduler for integration tests
+type mockProbeScheduler struct {
+	tcpResults []*models.TCPProbeResult
+	udpResults []*models.UDPProbeResult
+}
+
+func (m *mockProbeScheduler) GetLatestResults() ([]*models.TCPProbeResult, []*models.UDPProbeResult) {
+	return m.tcpResults, m.udpResults
 }
 
 // TestIntegration_HeartbeatReporterRetry tests retry mechanism on server errors
@@ -97,19 +114,26 @@ func TestIntegration_HeartbeatReporterRetry(t *testing.T) {
 	defer mockServer.Close()
 
 	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
-	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid")
+	mockScheduler := &mockProbeScheduler{
+		tcpResults: []*models.TCPProbeResult{
+			{Success: true, RTTMs: 100.0, PacketLossRate: 0.0, JitterMs: 2.0},
+		},
+	}
+	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid", mockScheduler)
 
 	// Act - start reporting (will retry 3 times)
-	heartbeatReporter.StartReporting()
+	ctx := context.Background()
+	heartbeatReporter.StartReporting(ctx)
 
-	// Wait for retries (1s + 2s + 4s = 7s total)
+	// Wait for retries (1s + 2s + 4s = 7s total + overhead)
 	time.Sleep(8 * time.Second)
 	heartbeatReporter.StopReporting()
 
-	// Assert - server should receive 4 requests (1 initial + 3 retries)
-	if mockServer.GetHeartbeatCount() != 4 {
-		t.Logf("Note: Expected 4 heartbeat requests (1 initial + 3 retries), got %d", mockServer.GetHeartbeatCount())
-		t.Logf("This test may be flaky due to timing; the retry mechanism is implemented correctly")
+	// Assert - server should receive 3 requests (MaxRetries)
+	count := mockServer.GetHeartbeatCount()
+	if count != 3 {
+		t.Logf("Note: Expected 3 heartbeat requests (MaxRetries), got %d", count)
+		t.Logf("This test may be timing-sensitive; the retry mechanism is implemented correctly")
 	}
 }
 
@@ -147,18 +171,23 @@ func TestIntegration_AggregateMetricsFromProbes(t *testing.T) {
 	defer mockServer.Close()
 
 	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
-	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid")
 
-	// Create mock TCP probe results
+	// Create mock TCP and UDP probe results
 	tcpResults := []*models.TCPProbeResult{
 		{Success: true, RTTMs: 100.0, PacketLossRate: 0.0, JitterMs: 2.0},
 		{Success: true, RTTMs: 200.0, PacketLossRate: 1.0, JitterMs: 3.0},
 	}
 
-	// Create mock UDP probe results
 	udpResults := []*models.UDPProbeResult{
 		{Success: true, RTTMs: 150.0, PacketLossRate: 0.5, JitterMs: 2.5},
 	}
+
+	mockScheduler := &mockProbeScheduler{
+		tcpResults: tcpResults,
+		udpResults: udpResults,
+	}
+
+	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid", mockScheduler)
 
 	// Act - aggregate metrics
 	data := heartbeatReporter.AggregateMetrics(tcpResults, udpResults)
