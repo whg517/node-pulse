@@ -63,7 +63,7 @@ development_status:
   3-4-tcp-ping-probe: done
   3-5-udp-ping-probe: done
   3-6-core-metrics-collection: done
-  3-7-beacon-data-reporting: backlog
+  3-7-beacon-data-reporting: review
   3-8-prometheus-metrics-endpoint: backlog
   3-9-structured-logging: backlog
   3-10-debug-mode: backlog
