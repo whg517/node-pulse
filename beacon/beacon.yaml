@@ -13,3 +13,29 @@ debug: false
 # labels:
 #   environment: "production"
 #   rack: "rack-01"
+
+# Optional: Probe Configuration
+# Configure TCP and UDP ping probes to monitor network connectivity and latency
+probes:
+  - type: "tcp_ping"       # Probe type (tcp_ping or udp_ping)
+    target: "192.168.1.1"  # Target IP address or hostname
+    port: 80               # Target port (1-65535)
+    timeout_seconds: 5     # Connection timeout in seconds (1-30, default: 5)
+    interval: 60           # Probe interval in seconds (60-300)
+    count: 10              # Number of probes per interval (1-100)
+
+  # Example: UDP probe to DNS server
+  # - type: "udp_ping"
+  #   target: "8.8.8.8"
+  #   port: 53
+  #   timeout_seconds: 5
+  #   interval: 60
+  #   count: 10
+
+  # Example: Monitor HTTPS server
+  # - type: "tcp_ping"
+  #   target: "example.com"
+  #   port: 443
+  #   timeout_seconds: 10
+  #   interval: 300
+  #   count: 5

@@ -162,7 +162,7 @@ func TestProbeConfigStruct_Valid(t *testing.T) {
 		Port:     80,
 		Interval: 300,
 		Count:    10,
-		Timeout:  5,
+		TimeoutSeconds:  5,
 	}
 
 	if probe.Type != "tcp_ping" {
@@ -180,8 +180,8 @@ func TestProbeConfigStruct_Valid(t *testing.T) {
 	if probe.Count != 10 {
 		t.Errorf("Expected Count to be 10, got: %d", probe.Count)
 	}
-	if probe.Timeout != 5 {
-		t.Errorf("Expected Timeout to be 5, got: %d", probe.Timeout)
+	if probe.TimeoutSeconds != 5 {
+		t.Errorf("Expected TimeoutSeconds to be 5, got: %d", probe.TimeoutSeconds)
 	}
 }
 
@@ -193,7 +193,7 @@ func TestProbeConfigStruct_UDP(t *testing.T) {
 		Port:     53,
 		Interval: 300,
 		Count:    10,
-		Timeout:  5,
+		TimeoutSeconds:  5,
 	}
 
 	if probe.Type != "udp_ping" {
@@ -246,7 +246,7 @@ func TestConfigStruct_WithProbes(t *testing.T) {
 				Port:     80,
 				Interval: 300,
 				Count:    10,
-				Timeout:  5,
+				TimeoutSeconds:  5,
 			},
 			{
 				Type:     "udp_ping",
@@ -254,7 +254,7 @@ func TestConfigStruct_WithProbes(t *testing.T) {
 				Port:     53,
 				Interval: 300,
 				Count:    10,
-				Timeout:  5,
+				TimeoutSeconds:  5,
 			},
 		},
 	}

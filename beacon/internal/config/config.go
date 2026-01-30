@@ -37,12 +37,12 @@ type Config struct {
 
 // ProbeConfig represents a single probe configuration
 type ProbeConfig struct {
-	Type     string `mapstructure:"type" yaml:"type"`
-	Target   string `mapstructure:"target" yaml:"target"`
-	Port     int    `mapstructure:"port" yaml:"port"`
-	Interval int    `mapstructure:"interval" yaml:"interval"`
-	Count    int    `mapstructure:"count" yaml:"count"`
-	Timeout  int    `mapstructure:"timeout" yaml:"timeout"`
+	Type           string `mapstructure:"type" yaml:"type"`
+	Target         string `mapstructure:"target" yaml:"target"`
+	Port           int    `mapstructure:"port" yaml:"port"`
+	TimeoutSeconds int    `mapstructure:"timeout_seconds" yaml:"timeout_seconds"`
+	Interval       int    `mapstructure:"interval" yaml:"interval"`
+	Count          int    `mapstructure:"count" yaml:"count"`
 }
 
 // ReconnectConfig represents connection retry configuration
@@ -183,8 +183,8 @@ func validateProbeConfig(probe ProbeConfig) error {
 	}
 
 	// Validate timeout range (1-30)
-	if probe.Timeout < 1 || probe.Timeout > 30 {
-		return fmt.Errorf("invalid timeout %d, must be between 1 and 30 seconds (suggestion: adjust timeout to be within range)", probe.Timeout)
+	if probe.TimeoutSeconds < 1 || probe.TimeoutSeconds > 30 {
+		return fmt.Errorf("invalid timeout %d, must be between 1 and 30 seconds (suggestion: adjust timeout to be within range)", probe.TimeoutSeconds)
 	}
 
 	return nil

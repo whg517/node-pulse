@@ -60,9 +60,9 @@ development_status:
   3-1-pulse-data-receiving-api: done
   3-2-pulse-memory-cache-async-write: done
   3-3-probe-config-api-timeseries-table: done
-  3-4-tcp-ping-probe: backlog
-  3-5-udp-ping-probe: backlog
-  3-6-core-metrics-collection: backlog
+  3-4-tcp-ping-probe: done
+  3-5-udp-ping-probe: done
+  3-6-core-metrics-collection: done
   3-7-beacon-data-reporting: backlog
   3-8-prometheus-metrics-endpoint: backlog
   3-9-structured-logging: backlog
