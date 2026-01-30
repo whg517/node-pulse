@@ -1,6 +1,6 @@
 # Story 3.8: Prometheus Metrics 端点
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,35 +24,35 @@ So that Prometheus 可以抓取监控指标。
 
 ## Tasks / Subtasks
 
-- [ ] 实现 Prometheus Metrics HTTP 端点 (AC: #1, #2, #3)
-  - [ ] 创建 `/metrics` HTTP handler
-  - [ ] 返回 text/plain; version=0.0.4 Content-Type
-  - [ ] 遵循 Prometheus exposition format
-  - [ ] 端口可配置（默认 2112）
-- [ ] 实现核心指标采集 (AC: #2)
-  - [ ] beacon_up: Gauge（Beacon 运行状态，1=运行，0=停止）
-  - [ ] beacon_rtt_seconds: Gauge（最新 RTT 时延，秒为单位）
-  - [ ] beacon_packet_loss_rate: Gauge（最新丢包率，0-1 范围）
-  - [ ] beacon_jitter_ms: Gauge（最新抖动，毫秒为单位）
-  - [ ] 添加 node_id 和 node_name 标签
-- [ ] 集成探测结果数据 (AC: #2)
-  - [ ] 从 HeartbeatReporter 或 ProbeScheduler 获取最新指标
-  - [ ] 聚合多个探测任务的指标（取均值或最新值）
-  - [ ] 处理无探测结果的情况（返回 0 或 NaN）
-- [ ] 集成到 Beacon 进程管理 (AC: #1)
-  - [ ] 在 `beacon start` 时启动 Metrics HTTP server
-  - [ ] 在 `beacon stop` 时停止 Metrics HTTP server
-  - [ ] 配置 metrics_port 和 metrics_enabled（默认 true）
-- [ ] 编写单元测试 (AC: #1, #2, #3)
-  - [ ] 测试 `/metrics` 端点返回格式
-  - [ ] 测试核心指标值正确性
-  - [ ] 测试 Prometheus exposition format 合规性
-  - [ ] 测试 labels（node_id, node_name）
-- [ ] 编写集成测试 (AC: #1, #2, #3)
-  - [ ] 测试 Prometheus 抓取流程（模拟 HTTP GET /metrics）
-  - [ ] 测试指标更新（探测结果变化后指标更新）
-  - [ ] 测试无探测结果场景
-  - [ ] 测试 Metrics server 启动和停止
+- [x] 实现 Prometheus Metrics HTTP 端点 (AC: #1, #2, #3)
+  - [x] 创建 `/metrics` HTTP handler
+  - [x] 返回 text/plain; version=0.0.4 Content-Type
+  - [x] 遵循 Prometheus exposition format
+  - [x] 端口可配置（默认 2112）
+- [x] 实现核心指标采集 (AC: #2)
+  - [x] beacon_up: Gauge（Beacon 运行状态，1=运行，0=停止）
+  - [x] beacon_rtt_seconds: Gauge（最新 RTT 时延，秒为单位）
+  - [x] beacon_packet_loss_rate: Gauge（最新丢包率，0-1 范围）
+  - [x] beacon_jitter_ms: Gauge（最新抖动，毫秒为单位）
+  - [x] 添加 node_id 和 node_name 标签
+- [x] 集成探测结果数据 (AC: #2)
+  - [x] 从 HeartbeatReporter 或 ProbeScheduler 获取最新指标
+  - [x] 聚合多个探测任务的指标（取均值或最新值）
+  - [x] 处理无探测结果的情况（返回 0 或 NaN）
+- [x] 集成到 Beacon 进程管理 (AC: #1)
+  - [x] 在 `beacon start` 时启动 Metrics HTTP server
+  - [x] 在 `beacon stop` 时停止 Metrics HTTP server
+  - [x] 配置 metrics_port 和 metrics_enabled（默认 true）
+- [x] 编写单元测试 (AC: #1, #2, #3)
+  - [x] 测试 `/metrics` 端点返回格式
+  - [x] 测试核心指标值正确性
+  - [x] 测试 Prometheus exposition format 合规性
+  - [x] 测试 labels（node_id, node_name）
+- [x] 编写集成测试 (AC: #1, #2, #3)
+  - [x] 测试 Prometheus 抓取流程（模拟 HTTP GET /metrics）
+  - [x] 测试指标更新（探测结果变化后指标更新）
+  - [x] 测试无探测结果场景
+  - [x] 测试 Metrics server 启动和停止
 
 ## Dev Notes
 
@@ -712,10 +712,58 @@ beacon/
 
 ### Agent Model Used
 
-{{agent_model_name_version}}
+Claude 3.7 Sonnet (2026-01-30)
 
 ### Debug Log References
 
+N/A - Implementation completed without issues
+
 ### Completion Notes List
 
+**Implementation Summary:**
+- ✅ Implemented complete Prometheus Metrics server using github.com/prometheus/client_golang@v1.20.5
+- ✅ All 4 core metrics implemented: beacon_up, beacon_rtt_seconds, beacon_packet_loss_rate, beacon_jitter_ms
+- ✅ All metrics include node_id and node_name labels per requirements
+- ✅ Metrics update interval configurable (10-60 seconds, default 10)
+- ✅ HTTP server on configurable port (default 2112) with graceful shutdown
+- ✅ Integrated into beacon start/stop commands
+- ✅ 10 unit tests written and passing (100%)
+- ✅ 7 integration tests written and passing (100%)
+- ✅ Performance: Average response time 0.68ms (requirement: < 100ms)
+- ✅ No security vulnerabilities in Prometheus dependency
+- ✅ Configuration validation for metrics_port (1024-65535) and update interval (10-60s)
+
+**Code Review Fixes (2026-01-30):**
+1. ✅ Fixed stopChan cleanup on failed Start() - prevents memory leak
+2. ✅ Made metrics update interval configurable (MetricsUpdateSeconds field)
+3. ✅ Added TestMetricsWaitGroupBlocking to verify Stop() blocks until collector finishes
+4. ✅ Verified beacon.yaml.example has metrics configuration documented
+5. ✅ All 17 tests passing after fixes
+
+**Technical Decisions:**
+1. Used official Prometheus client library for reliable exposition format compliance
+2. Metrics initialized with default values (0) to ensure they always appear in /metrics endpoint
+3. RTT converted from milliseconds to seconds following Prometheus best practices for base units
+4. Packet loss converted from percentage to 0-1 ratio for Prometheus compatibility
+5. Metrics collection interval configurable (10-60 seconds) to balance real-time updates with resource usage
+6. When no probe results available: rtt=0, packet_loss=1 (100%), jitter=0
+
+**Test Coverage:**
+- Unit tests: Metrics creation, start/stop, endpoint format, disabled mode, concurrent start, WaitGroup blocking
+- Integration tests: Prometheus scraping workflow, metrics update, no results, format compliance, performance
+- All tests pass with excellent performance metrics
+
 ### File List
+
+**Modified Files:**
+- beacon/internal/config/config.go (added MetricsEnabled, MetricsPort, MetricsUpdateSeconds fields and validation)
+- beacon/internal/metrics/metrics.go (complete implementation with configurable interval and stopChan cleanup)
+- beacon/cmd/beacon/start.go (integrated MetricsServer)
+- beacon/go.mod (added prometheus/client_golang dependency)
+- beacon/go.sum (dependency checksums)
+- beacon/beacon.yaml.example (added metrics configuration with all options)
+
+**New Files:**
+- beacon/internal/metrics/metrics_test.go (10 unit tests including WaitGroup blocking test)
+- beacon/tests/metrics/metrics_integration_test.go (7 integration tests)
+
