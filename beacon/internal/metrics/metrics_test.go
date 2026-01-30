@@ -20,6 +20,7 @@ func TestNewMetrics(t *testing.T) {
 		NodeName:       "test-node",
 		MetricsEnabled: true,
 		MetricsPort:    2112,
+		MetricsUpdateSeconds: 10,
 	}
 
 	// Create a mock scheduler
@@ -47,6 +48,7 @@ func TestMetricsStart(t *testing.T) {
 		NodeName:       "test-node",
 		MetricsEnabled: true,
 		MetricsPort:    19112, // Use a different port to avoid conflicts
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -81,6 +83,7 @@ func TestMetricsStartDisabled(t *testing.T) {
 		NodeName:       "test-node",
 		MetricsEnabled: false,
 		MetricsPort:    19113,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -101,6 +104,7 @@ func TestMetricsStartAlreadyRunning(t *testing.T) {
 		NodeName:       "test-node",
 		MetricsEnabled: true,
 		MetricsPort:    19114,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -126,6 +130,7 @@ func TestMetricsEndpoint(t *testing.T) {
 		NodeName:       "beacon-test",
 		MetricsEnabled: true,
 		MetricsPort:    19115,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -184,6 +189,7 @@ func TestUpdateMetricsNoResults(t *testing.T) {
 		NodeName:       "test-node",
 		MetricsEnabled: true,
 		MetricsPort:    19116,
+		MetricsUpdateSeconds: 10,
 	}
 
 	// Create scheduler with no probes
@@ -206,6 +212,7 @@ func TestUpdateMetricsWithResults(t *testing.T) {
 		NodeName:       "test-node",
 		MetricsEnabled: true,
 		MetricsPort:    19117,
+		MetricsUpdateSeconds: 10,
 		Probes: []config.ProbeConfig{
 			{
 				Type:           "tcp_ping",
@@ -254,6 +261,7 @@ func TestMetricsStopGraceful(t *testing.T) {
 		NodeName:       "test-node",
 		MetricsEnabled: true,
 		MetricsPort:    19118,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -286,6 +294,7 @@ func TestMetricsStopNotRunning(t *testing.T) {
 		NodeName:       "test-node",
 		MetricsEnabled: true,
 		MetricsPort:    19119,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -296,4 +305,47 @@ func TestMetricsStopNotRunning(t *testing.T) {
 	// Stop without starting (should not error)
 	err = m.Stop()
 	assert.NoError(t, err)
+}
+
+// TestMetricsWaitGroupBlocking tests that Stop() blocks until collector finishes
+// Fix #2: Add WaitGroup.Wait() blocking test
+func TestMetricsWaitGroupBlocking(t *testing.T) {
+	cfg := &config.Config{
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       true,
+		MetricsPort:          19120,
+		MetricsUpdateSeconds: 10,
+	}
+
+	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
+	require.NoError(t, err)
+
+	m := NewMetrics(cfg, scheduler)
+
+	// Start metrics server
+	err = m.Start()
+	require.NoError(t, err)
+
+	// Give time for collector to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Track if collector goroutine has finished
+	collectorDone := make(chan struct{})
+	
+	// Call Stop in goroutine to detect blocking
+	go func() {
+		_ = m.Stop()
+		close(collectorDone)
+	}()
+
+	// Stop should block until collector goroutine finishes
+	// If it doesn't block, this will timeout indicating a problem
+	select {
+	case <-collectorDone:
+		// Good - Stop() completed (after waiting for collector)
+		assert.False(t, m.IsRunning())
+	case <-time.After(2 * time.Second):
+		t.Fatal("Stop() took too long - possible deadlock or WaitGroup issue")
+	}
 }

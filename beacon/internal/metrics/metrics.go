@@ -138,6 +138,8 @@ func (m *Metrics) Start() error {
 	// Give server a moment to start and check for immediate errors
 	select {
 	case err := <-serverErrChan:
+		// Fix #5: Clean up stopChan on failed start
+		close(m.stopChan)
 		return fmt.Errorf("failed to start metrics server: %w", err)
 	case <-time.After(100 * time.Millisecond):
 		// Server started successfully
@@ -194,7 +196,9 @@ func (m *Metrics) Stop() error {
 func (m *Metrics) collectMetrics() {
 	defer m.collectorWg.Done()
 	
-	ticker := time.NewTicker(10 * time.Second) // Update every 10 seconds
+	// Fix #4: Use configurable update interval from config
+	updateInterval := time.Duration(m.config.MetricsUpdateSeconds) * time.Second
+	ticker := time.NewTicker(updateInterval)
 	defer ticker.Stop()
 
 	for {

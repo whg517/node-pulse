@@ -45,3 +45,4 @@ reconnect:
 # Exposes /metrics endpoint for Prometheus scraping
 metrics_enabled: true      # Enable/disable metrics server (default: true)
 metrics_port: 2112         # Metrics server port (default: 2112, range: 1024-65535)
+metrics_update_seconds: 10 # Metrics update interval (default: 10, range: 10-60 seconds)

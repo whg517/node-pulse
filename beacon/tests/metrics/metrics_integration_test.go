@@ -23,6 +23,7 @@ func TestPrometheusScrapingWorkflow(t *testing.T) {
 		NodeName:       "beacon-integration",
 		MetricsEnabled: true,
 		MetricsPort:    29112,
+		MetricsUpdateSeconds: 10,
 		Probes: []config.ProbeConfig{
 			{
 				Type:           "tcp_ping",
@@ -95,6 +96,7 @@ func TestMetricsUpdateAfterProbeExecution(t *testing.T) {
 		NodeName:       "beacon-update",
 		MetricsEnabled: true,
 		MetricsPort:    29113,
+		MetricsUpdateSeconds: 10,
 		Probes: []config.ProbeConfig{
 			{
 				Type:           "tcp_ping",
@@ -148,6 +150,7 @@ func TestMetricsNoProbeResultsScenario(t *testing.T) {
 		NodeName:       "beacon-no-results",
 		MetricsEnabled: true,
 		MetricsPort:    29114,
+		MetricsUpdateSeconds: 10,
 	}
 
 	// Create scheduler with no probes
@@ -189,6 +192,7 @@ func TestMetricsServerStartStop(t *testing.T) {
 		NodeName:       "beacon-lifecycle",
 		MetricsEnabled: true,
 		MetricsPort:    29115,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -229,6 +233,7 @@ func TestPrometheusExpositionFormatCompliance(t *testing.T) {
 		NodeName:       "beacon-format",
 		MetricsEnabled: true,
 		MetricsPort:    29116,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -292,6 +297,7 @@ func TestConfigurationDisabled(t *testing.T) {
 		NodeName:       "beacon-disabled",
 		MetricsEnabled: false,
 		MetricsPort:    29117,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})
@@ -316,6 +322,7 @@ func TestMetricsPerformance(t *testing.T) {
 		NodeName:       "beacon-perf",
 		MetricsEnabled: true,
 		MetricsPort:    29118,
+		MetricsUpdateSeconds: 10,
 	}
 
 	scheduler, err := probe.NewProbeScheduler([]config.ProbeConfig{})

@@ -31,8 +31,9 @@ type Config struct {
 	Reconnect ReconnectConfig `mapstructure:"reconnect" yaml:"reconnect"`
 
 	// Metrics configuration (for Story 3.8)
-	MetricsEnabled bool `mapstructure:"metrics_enabled" yaml:"metrics_enabled"`
-	MetricsPort    int  `mapstructure:"metrics_port" yaml:"metrics_port"`
+	MetricsEnabled       bool `mapstructure:"metrics_enabled" yaml:"metrics_enabled"`
+	MetricsPort          int  `mapstructure:"metrics_port" yaml:"metrics_port"`
+	MetricsUpdateSeconds int  `mapstructure:"metrics_update_seconds" yaml:"metrics_update_seconds"`
 
 	// Internal fields (not from config file)
 	ConfigPath string `mapstructure:"-"`
@@ -137,9 +138,13 @@ func LoadConfig(configPath string) (*Config, error) {
 	if !config.MetricsEnabled && config.MetricsPort != 0 {
 		config.MetricsEnabled = true // Default to enabled
 	}
+	// Fix #4: Set default metrics update interval (10-60 seconds range)
+	if config.MetricsUpdateSeconds == 0 {
+		config.MetricsUpdateSeconds = 10 // Default 10 seconds
+	}
 
 	// Validate metrics configuration
-	if err := validateMetricsConfig(config.MetricsPort); err != nil {
+	if err := validateMetricsConfig(config.MetricsPort, config.MetricsUpdateSeconds); err != nil {
 		return nil, fmt.Errorf("metrics configuration validation failed: %w", err)
 	}
 
@@ -265,11 +270,16 @@ func validateReconnectConfig(reconnect ReconnectConfig) error {
 }
 
 // validateMetricsConfig validates metrics configuration (Story 3.8)
-func validateMetricsConfig(port int) error {
+func validateMetricsConfig(port int, updateSeconds int) error {
 	// Validate metrics port range (1024-65535)
 	// Avoid system ports (< 1024) for security
 	if port < 1024 || port > 65535 {
 		return fmt.Errorf("invalid metrics_port %d, must be between 1024 and 65535 (suggestion: use default port 2112 or choose an available port)", port)
+	}
+
+	// Fix #4: Validate metrics update interval (10-60 seconds)
+	if updateSeconds < 10 || updateSeconds > 60 {
+		return fmt.Errorf("invalid metrics_update_seconds %d, must be between 10 and 60 seconds", updateSeconds)
 	}
 
 	return nil
