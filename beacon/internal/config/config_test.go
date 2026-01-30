@@ -1078,7 +1078,7 @@ probes:
     port: 80
     interval: 300
     count: 10
-    timeout: 5
+    timeout_seconds: 5
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -1117,7 +1117,7 @@ probes:
     port: 80
     interval: 300
     count: 10
-    timeout: 5
+    timeout_seconds: 5
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {

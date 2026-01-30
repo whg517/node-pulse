@@ -368,3 +368,33 @@ node_name: "Test Node"
 		t.Error("Start command should handle PID file errors gracefully")
 	}
 }
+
+// getLocalIP returns the local IP address for testing purposes
+func getLocalIP() string {
+	// This is a simplified implementation for testing
+	// In a real scenario, this would use net.Interfaces() to get the actual local IP
+	return "127.0.0.1"
+}
+
+// isValidUUID checks if a string is a valid UUID format
+func isValidUUID(uuid string) bool {
+	// Basic UUID format validation: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+	if len(uuid) != 36 {
+		return false
+	}
+	// Check for dashes at correct positions
+	if uuid[8] != '-' || uuid[13] != '-' || uuid[18] != '-' || uuid[23] != '-' {
+		return false
+	}
+	// Check for hex characters in segments
+	for i, c := range uuid {
+		if c == '-' {
+			continue
+		}
+		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+			return false
+		}
+		_ = i // suppress unused variable warning
+	}
+	return true
+}

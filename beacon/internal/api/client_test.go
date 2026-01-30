@@ -57,7 +57,7 @@ func TestPulseClient_RegisterNode_Success(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{
@@ -103,7 +103,7 @@ func TestPulseClient_RegisterNode_Duplicate(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{
@@ -157,7 +157,7 @@ func TestPulseClient_RegisterNode_RetryNetworkError(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{
@@ -189,7 +189,7 @@ func TestPulseClient_RegisterNode_RetryMaxExceeded(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{
@@ -220,7 +220,7 @@ func TestPulseClient_RegisterNode_ClientErrorNoRetry(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{
@@ -245,7 +245,7 @@ func TestPulseClient_RegisterNode_ContextCancellation(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -266,7 +266,7 @@ func TestPulseClient_RegisterNode_ContextCancellation(t *testing.T) {
 func TestPulseClient_RegisterNode_InvalidURL(t *testing.T) {
 	// Test: Invalid server URL should fail
 	client := NewPulseClient("://invalid-url", "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{
@@ -291,7 +291,7 @@ func TestPulseClient_RegisterNode_InvalidJSONResponse(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{
@@ -315,7 +315,7 @@ func TestPulseClient_RegisterNode_Timeout(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, "", &http.Client{
-		TimeoutSeconds: 1 * time.Second, // Short timeout
+		Timeout: 1 * time.Second, // Short timeout
 	})
 
 	req := &RegisterNodeRequest{
@@ -333,7 +333,7 @@ func TestPulseClient_RegisterNode_Timeout(t *testing.T) {
 func TestPulseClient_RegisterNode_ConnectionRefused(t *testing.T) {
 	// Test: Connection refused (server not running) should fail
 	client := NewPulseClient("http://localhost:9999", "", &http.Client{
-		TimeoutSeconds: 1 * time.Second,
+		Timeout: 1 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{
@@ -351,7 +351,7 @@ func TestPulseClient_RegisterNode_ConnectionRefused(t *testing.T) {
 func TestPulseClient_TLS_Enabled(t *testing.T) {
 	// Test: Client should use TLS by default (https scheme)
 	client := NewPulseClient("https://pulse.example.com", "", &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	// Can't fully test TLS without actual HTTPS server, but verify URL is parsed correctly
@@ -384,7 +384,7 @@ func TestPulseClient_RegisterNode_AuthToken(t *testing.T) {
 	defer server.Close()
 
 	client := NewPulseClient(server.URL, authToken, &http.Client{
-		TimeoutSeconds: 30 * time.Second,
+		Timeout: 30 * time.Second,
 	})
 
 	req := &RegisterNodeRequest{

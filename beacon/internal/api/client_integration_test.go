@@ -84,7 +84,7 @@ func TestPulseClient_Integration_RetryWithExponentialBackoff(t *testing.T) {
 // TestPulseClient_Integration_PulseUnavailable verifies retry behavior (Subtask 5.3)
 func TestPulseClient_Integration_PulseUnavailable(t *testing.T) {
 	// Create a client with an invalid URL (will fail after retries)
-	client := NewPulseClient("http://localhost:9999", "", &http.Client{TimeoutSeconds: 1 * time.Second})
+	client := NewPulseClient("http://localhost:9999", "", &http.Client{Timeout: 1 * time.Second})
 
 	req := &RegisterNodeRequest{
 		NodeName: "测试节点",

@@ -30,7 +30,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 			"error":          err.Error(),
 		}
 		jsonData, _ := json.MarshalIndent(status, "", "  ")
-		fmt.Println(string(jsonData))
+		fmt.Fprintln(cmd.OutOrStdout(), string(jsonData))
 		return nil
 	}
 
@@ -43,6 +43,8 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	// Build status response
 	status := map[string]interface{}{
 		"status":         "unknown",
+		"node_id":        cfg.NodeID,
+		"node_name":      cfg.NodeName,
 		"last_heartbeat": time.Now().Format(time.RFC3339),
 		"config_version": "1.0",
 	}
@@ -63,6 +65,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}
 
-	fmt.Println(string(jsonData))
+	fmt.Fprintln(cmd.OutOrStdout(), string(jsonData))
 	return nil
 }

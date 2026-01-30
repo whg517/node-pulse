@@ -26,13 +26,17 @@ var startCmd = &cobra.Command{
 }
 
 func runStart(cmd *cobra.Command, args []string) error {
-	fmt.Println("Loading configuration...")
+	fmt.Fprintln(cmd.OutOrStdout(), "Loading configuration...")
 
 	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
+
+	// Print node info immediately for user visibility
+	fmt.Fprintf(cmd.OutOrStdout(), "Node ID: %s\n", cfg.NodeID)
+	fmt.Fprintf(cmd.OutOrStdout(), "Node Name: %s\n", cfg.NodeName)
 
 	// Initialize logger (Story 3.9)
 	if err := logger.InitLogger(cfg); err != nil {
@@ -99,10 +103,16 @@ func runStart(cmd *cobra.Command, args []string) error {
 	}).Info("Beacon started successfully")
 	logger.Info("Press Ctrl+C to stop...")
 
-	// Wait for interrupt signal
+	// Wait for interrupt signal or context cancellation
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
-	<-sigChan
+
+	select {
+	case <-sigChan:
+		// Signal received
+	case <-ctx.Done():
+		// Context cancelled (e.g., timeout in tests)
+	}
 
 	logger.Info("Shutting down gracefully...")
 
