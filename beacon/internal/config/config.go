@@ -129,9 +129,13 @@ func LoadConfig(configPath string) (*Config, error) {
 	}
 
 	// Set default values for metrics configuration (Story 3.8)
+	// If metrics_port is not set, use default port and enable metrics
 	if config.MetricsPort == 0 {
-		config.MetricsEnabled = true // Default to enabled if not explicitly set
-		config.MetricsPort = 2112    // Default Prometheus port
+		config.MetricsPort = 2112 // Default Prometheus port
+	}
+	// If metrics_enabled is not explicitly set (false), default to true
+	if !config.MetricsEnabled && config.MetricsPort != 0 {
+		config.MetricsEnabled = true // Default to enabled
 	}
 
 	// Validate metrics configuration

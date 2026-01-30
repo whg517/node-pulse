@@ -29,9 +29,10 @@ type Metrics struct {
 	registry *prometheus.Registry
 	server   *http.Server
 
-	mu       sync.RWMutex
-	running  bool
-	stopChan chan struct{}
+	mu           sync.RWMutex
+	running      bool
+	stopChan     chan struct{}
+	collectorWg  sync.WaitGroup
 }
 
 // NewMetrics creates a new Metrics handler
@@ -121,15 +122,29 @@ func (m *Metrics) Start() error {
 		Handler: mux,
 	}
 
-	// Start server in goroutine
+	// Create new stopChan for this start cycle
+	m.stopChan = make(chan struct{})
+
+	// Start server in goroutine with error channel
+	serverErrChan := make(chan error, 1)
 	go func() {
 		log.Printf("[INFO] Starting Prometheus metrics server on %s", addr)
 		if err := m.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Printf("[ERROR] Metrics server error: %v", err)
+			serverErrChan <- err
 		}
 	}()
 
-	// Start metrics collector
+	// Give server a moment to start and check for immediate errors
+	select {
+	case err := <-serverErrChan:
+		return fmt.Errorf("failed to start metrics server: %w", err)
+	case <-time.After(100 * time.Millisecond):
+		// Server started successfully
+	}
+
+	// Start metrics collector with WaitGroup
+	m.collectorWg.Add(1)
 	go m.collectMetrics()
 
 	m.running = true
@@ -140,34 +155,45 @@ func (m *Metrics) Start() error {
 // Stop stops the metrics server
 func (m *Metrics) Stop() error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
+	
 	if !m.running {
+		m.mu.Unlock()
 		return nil
 	}
 
+	// Mark as not running first
+	m.running = false
+	
 	// Set beacon_up to 0 (stopped)
 	m.beaconUp.WithLabelValues(m.config.NodeID, m.config.NodeName).Set(0)
 
-	// Stop metrics collector
+	// Stop metrics collector by closing channel
 	close(m.stopChan)
+	
+	m.mu.Unlock()
 
-	// Shutdown HTTP server gracefully
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
+	// Wait for collector goroutine to finish (outside lock to prevent deadlock)
+	m.collectorWg.Wait()
 
-	if err := m.server.Shutdown(ctx); err != nil {
-		log.Printf("[ERROR] Metrics server shutdown error: %v", err)
-		return err
+	// Shutdown HTTP server gracefully if it exists
+	if m.server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		if err := m.server.Shutdown(ctx); err != nil {
+			log.Printf("[ERROR] Metrics server shutdown error: %v", err)
+			return err
+		}
 	}
 
-	m.running = false
 	log.Println("[INFO] Prometheus metrics server stopped")
 	return nil
 }
 
 // collectMetrics periodically updates Prometheus metrics from probe results
 func (m *Metrics) collectMetrics() {
+	defer m.collectorWg.Done()
+	
 	ticker := time.NewTicker(10 * time.Second) // Update every 10 seconds
 	defer ticker.Stop()
 
