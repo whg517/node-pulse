@@ -64,7 +64,7 @@ development_status:
   3-5-udp-ping-probe: done
   3-6-core-metrics-collection: done
   3-7-beacon-data-reporting: done
-  3-8-prometheus-metrics-endpoint: ready-for-dev
+  3-8-prometheus-metrics-endpoint: in-progress
   3-9-structured-logging: backlog
   3-10-debug-mode: backlog
   3-11-resource-monitoring-degradation: backlog

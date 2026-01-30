@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"beacon/internal/config"
+	"beacon/internal/metrics"
 	"beacon/internal/probe"
 	"beacon/internal/process"
 	"beacon/internal/reporter"
@@ -55,6 +56,15 @@ func runStart(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start probe scheduler: %w", err)
 	}
 	defer scheduler.Stop()
+
+	fmt.Println("[INFO] Starting metrics server...")
+
+	// Create and start metrics server (Story 3.8)
+	metricsServer := metrics.NewMetrics(cfg, scheduler)
+	if err := metricsServer.Start(); err != nil {
+		log.Printf("[WARN] Failed to start metrics server: %v", err)
+	}
+	defer metricsServer.Stop()
 
 	fmt.Println("[INFO] Starting heartbeat reporter...")
 

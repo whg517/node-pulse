@@ -30,6 +30,10 @@ type Config struct {
 	// Reconnect configuration (for Story 2.6)
 	Reconnect ReconnectConfig `mapstructure:"reconnect" yaml:"reconnect"`
 
+	// Metrics configuration (for Story 3.8)
+	MetricsEnabled bool `mapstructure:"metrics_enabled" yaml:"metrics_enabled"`
+	MetricsPort    int  `mapstructure:"metrics_port" yaml:"metrics_port"`
+
 	// Internal fields (not from config file)
 	ConfigPath string `mapstructure:"-"`
 	Debug      bool   `mapstructure:"debug"`
@@ -122,6 +126,17 @@ func LoadConfig(configPath string) (*Config, error) {
 	// Validate reconnect configuration if present
 	if err := validateReconnectConfig(config.Reconnect); err != nil {
 		return nil, fmt.Errorf("reconnect configuration validation failed: %w", err)
+	}
+
+	// Set default values for metrics configuration (Story 3.8)
+	if config.MetricsPort == 0 {
+		config.MetricsEnabled = true // Default to enabled if not explicitly set
+		config.MetricsPort = 2112    // Default Prometheus port
+	}
+
+	// Validate metrics configuration
+	if err := validateMetricsConfig(config.MetricsPort); err != nil {
+		return nil, fmt.Errorf("metrics configuration validation failed: %w", err)
 	}
 
 	config.ConfigPath = resolvedPath
@@ -240,6 +255,17 @@ func validateReconnectConfig(reconnect ReconnectConfig) error {
 	// Validate backoff type
 	if reconnect.Backoff != "" && reconnect.Backoff != "exponential" && reconnect.Backoff != "linear" && reconnect.Backoff != "constant" {
 		return fmt.Errorf("invalid backoff '%s', must be 'exponential', 'linear', or 'constant'", reconnect.Backoff)
+	}
+
+	return nil
+}
+
+// validateMetricsConfig validates metrics configuration (Story 3.8)
+func validateMetricsConfig(port int) error {
+	// Validate metrics port range (1024-65535)
+	// Avoid system ports (< 1024) for security
+	if port < 1024 || port > 65535 {
+		return fmt.Errorf("invalid metrics_port %d, must be between 1024 and 65535 (suggestion: use default port 2112 or choose an available port)", port)
 	}
 
 	return nil
