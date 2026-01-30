@@ -131,3 +131,8 @@ func Close() error {
 	}
 	return nil
 }
+
+// GetLogger returns the global logger instance
+func GetLogger() *logrus.Logger {
+	return Logger
+}

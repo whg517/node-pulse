@@ -337,3 +337,83 @@ func (s *ProbeScheduler) GetInterval() time.Duration {
 	defer s.mu.RUnlock()
 	return s.interval
 }
+
+// ReloadConfig reloads probe configuration (for Story 3.13 config hot reload)
+// This recreates the probe scheduler with new configuration without stopping
+func (s *ProbeScheduler) ReloadConfig(probeConfigs []config.ProbeConfig) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	// Create new pingers from the updated config
+	newTCPingers := make([]*TCPPinger, 0)
+	newUDPPingers := make([]*UDPPinger, 0)
+
+	for _, cfg := range probeConfigs {
+		if cfg.Type == "tcp_ping" {
+			tcpConfig := TCPProbeConfig{
+				Type:           cfg.Type,
+				Target:         cfg.Target,
+				Port:           cfg.Port,
+				TimeoutSeconds: cfg.TimeoutSeconds,
+				Interval:       cfg.Interval,
+				Count:          cfg.Count,
+			}
+
+			if err := tcpConfig.Validate(); err != nil {
+				return fmt.Errorf("invalid probe config for %s:%d: %w", cfg.Target, cfg.Port, err)
+			}
+
+			if cfg.Count < 10 {
+				return fmt.Errorf("probe count for %s must be ≥ 10 to calculate core metrics (current: %d)", cfg.Target, cfg.Count)
+			}
+
+			pinger := NewTCPPinger(tcpConfig)
+			newTCPingers = append(newTCPingers, pinger)
+		} else if cfg.Type == "udp_ping" {
+			udpConfig := UDPProbeConfig{
+				Type:           cfg.Type,
+				Target:         cfg.Target,
+				Port:           cfg.Port,
+				TimeoutSeconds: cfg.TimeoutSeconds,
+				Interval:       cfg.Interval,
+				Count:          cfg.Count,
+			}
+
+			if err := udpConfig.Validate(); err != nil {
+				return fmt.Errorf("invalid probe config for %s:%d: %w", cfg.Target, cfg.Port, err)
+			}
+
+			if cfg.Count < 10 {
+				return fmt.Errorf("probe count for %s must be ≥ 10 to calculate core metrics (current: %d)", cfg.Target, cfg.Count)
+			}
+
+			pinger := NewUDPPinger(udpConfig)
+			newUDPPingers = append(newUDPPingers, pinger)
+		}
+	}
+
+	// Atomically replace the pingers
+	s.tcpPingers = newTCPingers
+	s.udpPingers = newUDPPingers
+
+	// Update base interval if probes exist
+	totalProbes := len(s.tcpPingers) + len(s.udpPingers)
+	if totalProbes > 0 {
+		if len(s.tcpPingers) > 0 {
+			s.baseInterval = time.Duration(s.tcpPingers[0].config.Interval) * time.Second
+		} else if len(s.udpPingers) > 0 {
+			s.baseInterval = time.Duration(s.udpPingers[0].config.Interval) * time.Second
+		}
+		// Reset current interval to base (will be adjusted by resource monitor if needed)
+		s.interval = s.baseInterval
+	}
+
+	logger.WithFields(map[string]interface{}{
+		"component":  "probe",
+		"tcp_count":  len(s.tcpPingers),
+		"udp_count":  len(s.udpPingers),
+		"interval":   s.interval.String(),
+	}).Info("Probe configuration reloaded")
+
+	return nil
+}

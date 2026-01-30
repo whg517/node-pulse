@@ -62,6 +62,10 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Starting probes...")
 
+	// Create context for canceling goroutines
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
 	// Create probe scheduler
 	scheduler, err := probe.NewProbeScheduler(cfg.Probes)
 	if err != nil {
@@ -73,6 +77,31 @@ func runStart(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to start probe scheduler: %w", err)
 	}
 	defer scheduler.Stop()
+
+	// Create config watcher for hot reload (Story 3.13)
+	configWatcher, err := config.NewFileWatcher(cfg.ConfigPath, cfg, logger.GetLogger())
+	if err != nil {
+		logger.WithError(err).Warn("Failed to create config watcher, hot reload disabled")
+	} else {
+		// Register callback to reload probe config
+		configWatcher.OnReload(func(newConfig *config.Config, changes []string) error {
+			logger.WithField("changes", changes).Info("Reloading probe configuration...")
+			if err := scheduler.ReloadConfig(newConfig.Probes); err != nil {
+				return fmt.Errorf("failed to reload probe config: %w", err)
+			}
+			logger.Info("Probe configuration reloaded successfully")
+			return nil
+		})
+
+		// Start config watcher in goroutine
+		go func() {
+			if err := configWatcher.Start(ctx); err != nil {
+				logger.WithError(err).Error("Config watcher stopped with error")
+			}
+		}()
+
+		logger.WithField("config_path", cfg.ConfigPath).Info("Config watcher started for hot reload")
+	}
 
 	logger.Info("Starting resource monitor...")
 
@@ -135,10 +164,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 	// Create heartbeat reporter with scheduler integration
 	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, cfg.NodeID, scheduler)
 
-	// Start heartbeat reporting
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
+	// Start heartbeat reporting (using existing context)
 	heartbeatReporter.StartReporting(ctx)
 	defer heartbeatReporter.StopReporting()
 

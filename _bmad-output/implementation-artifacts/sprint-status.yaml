@@ -69,7 +69,7 @@ development_status:
   3-10-debug-mode: done
   3-11-resource-monitoring-degradation: done
   3-12-scheduled-data-cleanup: done
-  3-13-config-hot-reload: backlog
+  3-13-config-hot-reload: done
   epic-3-retrospective: optional
 
   epic-4: backlog

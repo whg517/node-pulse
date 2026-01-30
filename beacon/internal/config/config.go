@@ -450,6 +450,49 @@ func parseYAMLError(err error, data []byte) error {
 	return fmt.Errorf("配置格式错误：%s\n%s", suggestion, errMsg)
 }
 
+// Validate validates the configuration
+func (c *Config) Validate() error {
+	// Validate required fields
+	if c.PulseServer == "" {
+		return errors.New("required field 'pulse_server' is missing")
+	}
+	if c.NodeID == "" {
+		return errors.New("required field 'node_id' is missing")
+	}
+	if c.NodeName == "" {
+		return errors.New("required field 'node_name' is missing")
+	}
+
+	// Validate URL format
+	if _, err := url.ParseRequestURI(c.PulseServer); err != nil {
+		return fmt.Errorf("invalid pulse_server URL: %w", err)
+	}
+
+	// Validate probe configurations
+	for i, probe := range c.Probes {
+		if err := validateProbeConfig(probe); err != nil {
+			return fmt.Errorf("probe %d validation failed: %w", i+1, err)
+		}
+	}
+
+	// Validate reconnect configuration
+	if err := validateReconnectConfig(c.Reconnect); err != nil {
+		return fmt.Errorf("reconnect configuration validation failed: %w", err)
+	}
+
+	// Validate metrics configuration
+	if err := validateMetricsConfig(c.MetricsPort, c.MetricsUpdateSeconds); err != nil {
+		return fmt.Errorf("metrics configuration validation failed: %w", err)
+	}
+
+	// Validate logging configuration
+	if err := validateLogConfig(c.LogLevel, c.LogFile); err != nil {
+		return fmt.Errorf("logging configuration validation failed: %w", err)
+	}
+
+	return nil
+}
+
 // SaveConfig saves configuration to file (optional feature for MVP)
 // Note: MVP saves node_id to memory only. File write is optional for production use.
 func SaveConfig(cfg *Config, path string) error {
