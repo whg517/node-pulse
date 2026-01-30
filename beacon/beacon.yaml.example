@@ -40,3 +40,8 @@ reconnect:
   max_retries: 10          # Maximum retry attempts (1-100)
   retry_interval: 60       # Seconds between retries (1-600)
   backoff: exponential      # Strategy: exponential, linear, constant
+
+# Optional: Prometheus metrics configuration (for Story 3.8)
+# Exposes /metrics endpoint for Prometheus scraping
+metrics_enabled: true      # Enable/disable metrics server (default: true)
+metrics_port: 2112         # Metrics server port (default: 2112, range: 1024-65535)

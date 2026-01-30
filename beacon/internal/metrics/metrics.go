@@ -106,6 +106,11 @@ func (m *Metrics) Start() error {
 	// Set beacon_up to 1 (running)
 	m.beaconUp.WithLabelValues(m.config.NodeID, m.config.NodeName).Set(1)
 
+	// Initialize other metrics with default values (0) so they appear in /metrics
+	m.beaconRTTSeconds.WithLabelValues(m.config.NodeID, m.config.NodeName).Set(0)
+	m.beaconPacketLoss.WithLabelValues(m.config.NodeID, m.config.NodeName).Set(0)
+	m.beaconJitterMs.WithLabelValues(m.config.NodeID, m.config.NodeName).Set(0)
+
 	// Create HTTP server
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(m.registry, promhttp.HandlerOpts{}))
