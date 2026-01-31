@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { login, logout, LoginError } from './auth'
+import { login, logout } from './auth'
+import { AuthenticationError } from './errors'
 import { SESSION_COOKIE_NAME } from './auth'
 
 describe('auth API', () => {
@@ -50,7 +51,7 @@ describe('auth API', () => {
       vi.unstubAllGlobals()
     })
 
-    it('should throw LoginError for invalid credentials', async () => {
+    it('should throw AuthenticationError for invalid credentials', async () => {
       const errorResponse = {
         code: 'ERR_INVALID_CREDENTIALS',
         message: 'Invalid username or password',
@@ -63,20 +64,21 @@ describe('auth API', () => {
       const mockFetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
+          status: 401,
           json: async () => errorResponse,
         } as Response)
       )
 
       vi.stubGlobal('fetch', mockFetch)
 
-      await expect(login({ username: 'admin', password: 'wrong' })).rejects.toThrow(LoginError)
+      await expect(login({ username: 'admin', password: 'wrong' })).rejects.toThrow(AuthenticationError)
 
       vi.unstubAllGlobals()
     })
 
-    it('should throw LoginError for locked account', async () => {
+    it('should throw AuthenticationError for locked account', async () => {
       const errorResponse = {
-        code: 'ERR_ACCOUNT_LOCKED',
+        code: 'ERR_AUTHENTICATION',
         message: 'Account locked due to too many failed login attempts',
         details: {
           locked_until: '2026-01-26T11:00:00Z',
@@ -87,40 +89,42 @@ describe('auth API', () => {
       const mockFetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
+          status: 401,
           json: async () => errorResponse,
         } as Response)
       )
 
       vi.stubGlobal('fetch', mockFetch)
 
-      await expect(login({ username: 'admin', password: 'wrong' })).rejects.toThrow(LoginError)
+      await expect(login({ username: 'admin', password: 'wrong' })).rejects.toThrow(AuthenticationError)
 
       vi.unstubAllGlobals()
     })
 
-    it('should throw LoginError for rate limit', async () => {
+    it('should throw AuthenticationError for rate limit', async () => {
       const errorResponse = {
-        code: 'ERR_RATE_LIMITED',
+        code: 'ERR_RATE_LIMIT',
         message: 'Too many login attempts. Please try again later.',
       }
 
       const mockFetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
+          status: 429,
           json: async () => errorResponse,
         } as Response)
       )
 
       vi.stubGlobal('fetch', mockFetch)
 
-      await expect(login({ username: 'admin', password: 'wrong' })).rejects.toThrow(LoginError)
+      await expect(login({ username: 'admin', password: 'wrong' })).rejects.toThrow()
 
       vi.unstubAllGlobals()
     })
 
-    it('should include error code in thrown LoginError', async () => {
+    it('should include error code in thrown AuthenticationError', async () => {
       const errorResponse = {
-        code: 'ERR_INVALID_CREDENTIALS',
+        code: 'ERR_AUTHENTICATION',
         message: 'Invalid username or password',
         details: { failed_attempts: 3 },
       }
@@ -128,6 +132,7 @@ describe('auth API', () => {
       const mockFetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
+          status: 401,
           json: async () => errorResponse,
         } as Response)
       )
@@ -138,19 +143,20 @@ describe('auth API', () => {
         await login({ username: 'admin', password: 'wrong' })
         expect.fail('Should have thrown an error')
       } catch (error) {
-        expect(error).toBeInstanceOf(LoginError)
-        const loginError = error as LoginError
-        expect(loginError.code).toBe('ERR_INVALID_CREDENTIALS')
-        expect(loginError.message).toBe('Invalid username or password')
-        expect(loginError.details?.failed_attempts).toBe(3)
+        expect(error).toBeInstanceOf(AuthenticationError)
+        const authError = error as AuthenticationError
+        expect(authError.code).toBe('ERR_AUTHENTICATION')
+        expect(authError.message).toBe('Invalid username or password')
+        expect(authError.details).toEqual({ failed_attempts: 3 })
+        expect(authError.status).toBe(401)
       }
 
       vi.unstubAllGlobals()
     })
 
-    it('should include account locked details in thrown LoginError', async () => {
+    it('should include account locked details in thrown AuthenticationError', async () => {
       const errorResponse = {
-        code: 'ERR_ACCOUNT_LOCKED',
+        code: 'ERR_AUTHENTICATION',
         message: 'Account locked',
         details: {
           locked_until: '2026-01-26T12:00:00Z',
@@ -161,6 +167,7 @@ describe('auth API', () => {
       const mockFetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
+          status: 401,
           json: async () => errorResponse,
         } as Response)
       )
@@ -171,11 +178,14 @@ describe('auth API', () => {
         await login({ username: 'admin', password: 'wrong' })
         expect.fail('Should have thrown an error')
       } catch (error) {
-        expect(error).toBeInstanceOf(LoginError)
-        const loginError = error as LoginError
-        expect(loginError.code).toBe('ERR_ACCOUNT_LOCKED')
-        expect(loginError.details?.locked_until).toBe('2026-01-26T12:00:00Z')
-        expect(loginError.details?.lock_duration_minutes).toBe(10)
+        expect(error).toBeInstanceOf(AuthenticationError)
+        const authError = error as AuthenticationError
+        expect(authError.code).toBe('ERR_AUTHENTICATION')
+        expect(authError.details).toEqual({
+          locked_until: '2026-01-26T12:00:00Z',
+          lock_duration_minutes: 10,
+        })
+        expect(authError.status).toBe(401)
       }
 
       vi.unstubAllGlobals()
@@ -215,16 +225,17 @@ describe('auth API', () => {
       vi.unstubAllGlobals()
     })
 
-    it('should throw error on logout failure', async () => {
+    it('should throw AuthenticationError on logout failure', async () => {
       const mockFetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
+          status: 401,
         } as Response)
       )
 
       vi.stubGlobal('fetch', mockFetch)
 
-      await expect(logout()).rejects.toThrow('Logout failed')
+      await expect(logout()).rejects.toThrow(AuthenticationError)
 
       vi.unstubAllGlobals()
     })

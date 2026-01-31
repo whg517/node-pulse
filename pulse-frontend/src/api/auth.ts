@@ -1,71 +1,84 @@
+/**
+ * Authentication API endpoints
+ *
+ * Provides typed functions for user authentication operations
+ * including login, logout, and session management.
+ */
+
+import { apiClient } from './client'
 import type { LoginRequest, LoginResponse, LogoutResponse } from '../types/auth'
+import { AuthenticationError } from './errors'
 
 export type { LoginRequest, LoginResponse, LogoutResponse }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080'
 const SESSION_COOKIE_NAME = 'session_id'
 
+/**
+ * User login
+ *
+ * Authenticates user with username and password.
+ * On success, Session Cookie is automatically set by the server.
+ *
+ * @param credentials - User credentials (username, password)
+ * @returns Login response with user info and session details
+ * @throws AuthenticationError if login fails
+ * @throws ValidationError if credentials are invalid
+ *
+ * @example
+ * try {
+ *   const { user } = await login({ username: 'admin', password: 'pass123' })
+ *   console.log('Logged in as', user.username)
+ * } catch (error) {
+ *   if (isAuthenticationError(error)) {
+ *     console.error('Login failed:', error.message)
+ *   }
+ * }
+ */
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(credentials),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json()
-    throw new LoginError(errorData.message, errorData.code, errorData.details)
-  }
-
-  const data: LoginResponse = await response.json()
-  return data
-}
-
-export async function logout(): Promise<LogoutResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/v1/auth/logout`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  })
-
-  if (!response.ok) {
-    throw new Error('Logout failed')
-  }
-
-  const data: LogoutResponse = await response.json()
-  return data
-}
-
-export class LoginError extends Error {
-  code: string
-  details?: {
-    failed_attempts?: number
-    remaining_attempts?: number
-    locked_until?: string
-    lock_duration_minutes?: number
-  }
-
-  constructor(
-    message: string,
-    code: string,
-    details?: {
-      failed_attempts?: number
-      remaining_attempts?: number
-      locked_until?: string
-      lock_duration_minutes?: number
+  try {
+    return await apiClient<LoginResponse>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+    })
+  } catch (error) {
+    // Ensure authentication errors are properly typed
+    if (error instanceof Error && error.name === 'AuthenticationError') {
+      throw error
     }
-  ) {
-    super(message)
-    this.name = 'LoginError'
-    this.code = code
-    this.details = details
-    Object.setPrototypeOf(this, LoginError.prototype)
+    // Wrap other errors as AuthenticationError
+    throw new AuthenticationError(
+      error instanceof Error ? error.message : 'Login failed'
+    )
   }
 }
 
+/**
+ * User logout
+ *
+ * Clears the current user session.
+ * Session Cookie is automatically cleared by the server.
+ *
+ * @returns Logout response
+ * @throws AuthenticationError if logout fails
+ *
+ * @example
+ * await logout()
+ * console.log('Logged out successfully')
+ */
+export async function logout(): Promise<LogoutResponse> {
+  try {
+    return await apiClient<LogoutResponse>('/api/v1/auth/logout', {
+      method: 'POST',
+    })
+  } catch (error) {
+    throw new AuthenticationError(
+      error instanceof Error ? error.message : 'Logout failed'
+    )
+  }
+}
+
+/**
+ * Session cookie name constant
+ * Used by the server to set and read the session cookie
+ */
 export { SESSION_COOKIE_NAME }
