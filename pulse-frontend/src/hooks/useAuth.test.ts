@@ -14,10 +14,10 @@ describe('useAuth', () => {
   beforeEach(() => {
     // Reset store state before each test
     useAuthStore.setState({
+      user: null,
       isAuthenticated: false,
-      userId: null,
-      username: null,
       role: null,
+      sessionId: null,
       sessionExpiry: null,
     })
     vi.clearAllMocks()
@@ -61,10 +61,14 @@ describe('useAuth', () => {
   it('should handle successful logout', async () => {
     // First set up an authenticated session
     useAuthStore.setState({
+      user: {
+        id: 'user-123',
+        username: 'testuser',
+        role: 'admin',
+      },
       isAuthenticated: true,
-      userId: 'user-123',
-      username: 'testuser',
       role: 'admin',
+      sessionId: 'user-123',
       sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
     })
 
@@ -96,10 +100,14 @@ describe('useAuth', () => {
     // Set valid session
     act(() => {
       useAuthStore.setState({
+        user: {
+          id: 'user-123',
+          username: 'testuser',
+          role: 'admin',
+        },
         isAuthenticated: true,
-        userId: 'user-123',
-        username: 'testuser',
         role: 'admin',
+        sessionId: 'user-123',
         sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
       })
     })

@@ -2,18 +2,27 @@ import { useAuthStore } from '../stores/authStore'
 import { login, logout, type LoginRequest, type LoginResponse, type LogoutResponse } from '../api/auth'
 
 export function useAuth() {
-  const { setSession, clearSession, isAuthenticated, userId, username, role, sessionExpiry, checkSession } = useAuthStore()
+  const {
+    isAuthenticated,
+    user,
+    role,
+    sessionExpiry,
+    login: storeLogin,
+    logout: storeLogout,
+    checkSession,
+  } = useAuthStore()
 
   const handleLogin = async (credentials: LoginRequest): Promise<LoginResponse> => {
     const response = await login(credentials)
-    const expiryTime = Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-    setSession(response.data.user_id, response.data.username, response.data.role, expiryTime)
+    // The storeLogin now handles the state update
+    await storeLogin(credentials.username, credentials.password)
     return response
   }
 
   const handleLogout = async (): Promise<LogoutResponse> => {
     const response = await logout()
-    clearSession()
+    // The storeLogout now handles the state update
+    await storeLogout()
     return response
   }
 
@@ -23,8 +32,8 @@ export function useAuth() {
 
   return {
     isAuthenticated,
-    userId,
-    username,
+    userId: user?.id || null,
+    username: user?.username || null,
     role,
     sessionExpiry,
     login: handleLogin,

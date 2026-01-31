@@ -1,48 +1,87 @@
 import { create } from 'zustand'
+import { login as apiLogin, logout as apiLogout } from '../api/auth'
+import { SESSION_COOKIE_NAME, SESSION_EXPIRY_HOURS } from '../config/constants'
+import type { User } from './types'
 
+// ============== Types ==============
 export interface AuthState {
+  user: User | null
   isAuthenticated: boolean
-  userId: string | null
-  username: string | null
   role: 'admin' | 'operator' | 'viewer' | null
+  sessionId: string | null
   sessionExpiry: number | null
 }
 
 export interface AuthActions {
-  setSession: (userId: string, username: string, role: 'admin' | 'operator' | 'viewer', expiry: number) => void
-  clearSession: () => void
+  login: (username: string, password: string) => Promise<void>
+  logout: () => Promise<void>
+  setUser: (user: User) => void
+  clearAuth: () => void
   checkSession: () => boolean
 }
 
 type AuthStore = AuthState & AuthActions
 
-const SESSION_COOKIE_NAME = 'session_id'
-const SESSION_EXPIRY_HOURS = 24
-
+// ============== Store ==============
 export const useAuthStore = create<AuthStore>((set, get) => ({
+  // State
+  user: null,
   isAuthenticated: false,
-  userId: null,
-  username: null,
   role: null,
+  sessionId: null,
   sessionExpiry: null,
 
-  setSession: (userId, username, role, expiry) => {
-    const sessionData = {
-      isAuthenticated: true,
-      userId,
-      username,
-      role,
-      sessionExpiry: expiry,
+  // Actions
+  login: async (username: string, password: string) => {
+    const response = await apiLogin({ username, password })
+    const expiry = Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000
+
+    const user: User = {
+      id: response.data.user_id,
+      username: response.data.username,
+      role: response.data.role,
     }
-    set(sessionData)
+
+    set({
+      user,
+      isAuthenticated: true,
+      role: response.data.role,
+      sessionId: response.data.user_id, // Using user_id as session identifier
+      sessionExpiry: expiry,
+    })
   },
 
-  clearSession: () => {
+  logout: async () => {
+    try {
+      await apiLogout()
+    } catch (error) {
+      console.error('Logout API call failed:', error)
+      // Continue with local logout even if API call fails
+    } finally {
+      set({
+        user: null,
+        isAuthenticated: false,
+        role: null,
+        sessionId: null,
+        sessionExpiry: null,
+      })
+    }
+  },
+
+  setUser: (user: User) => {
     set({
+      user,
+      isAuthenticated: true,
+      role: user.role,
+    })
+  },
+
+  clearAuth: () => {
+    set({
+      user: null,
       isAuthenticated: false,
-      userId: null,
-      username: null,
       role: null,
+      sessionId: null,
       sessionExpiry: null,
     })
   },
@@ -56,10 +95,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
     if (!isValid) {
       set({
+        user: null,
         isAuthenticated: false,
-        userId: null,
-        username: null,
         role: null,
+        sessionId: null,
         sessionExpiry: null,
       })
     }
@@ -67,5 +106,3 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     return isValid
   },
 }))
-
-export { SESSION_COOKIE_NAME, SESSION_EXPIRY_HOURS }

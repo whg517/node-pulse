@@ -12,10 +12,10 @@ describe('ProtectedRoute', () => {
   beforeEach(() => {
     // Reset store state before each test
     useAuthStore.setState({
+      user: null,
       isAuthenticated: false,
-      userId: null,
-      username: null,
       role: null,
+      sessionId: null,
       sessionExpiry: null,
     })
   })
@@ -42,10 +42,14 @@ describe('ProtectedRoute', () => {
 
   it('should redirect to login when session is invalid', () => {
     useAuthStore.setState({
+      user: {
+        id: 'user-123',
+        username: 'testuser',
+        role: 'admin',
+      },
       isAuthenticated: true,
-      userId: 'user-123',
-      username: 'testuser',
       role: 'admin',
+      sessionId: 'user-123',
       sessionExpiry: Date.now() - 1000, // Expired
     })
 
@@ -70,10 +74,14 @@ describe('ProtectedRoute', () => {
 
   it('should render protected content when user is authenticated with valid session', () => {
     useAuthStore.setState({
+      user: {
+        id: 'user-123',
+        username: 'testuser',
+        role: 'admin',
+      },
       isAuthenticated: true,
-      userId: 'user-123',
-      username: 'testuser',
       role: 'admin',
+      sessionId: 'user-123',
       sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
     })
 

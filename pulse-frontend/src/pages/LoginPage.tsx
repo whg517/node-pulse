@@ -8,8 +8,8 @@ import { ToastNotification, type ToastProps } from '../components/ToastNotificat
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const setSession = useAuthStore((state) => state.setSession)
-  const clearSession = useAuthStore((state) => state.clearSession)
+  const storeLogin = useAuthStore((state) => state.login)
+  const storeLogout = useAuthStore((state) => state.logout)
   const { isAuthenticated } = useAuthStore()
 
   // Get the location from router state (where user was trying to go)
@@ -78,9 +78,8 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
-      const response = await login({ username: username.trim(), password })
-      const expiryTime = Date.now() + 24 * 60 * 60 * 1000 // 24 hours
-      setSession(response.data.user_id, response.data.username, response.data.role, expiryTime)
+      await login({ username: username.trim(), password })
+      await storeLogin(username.trim(), password)
 
       showToast('success', 'Login successful', 'Redirecting to dashboard...')
 
@@ -232,7 +231,7 @@ export default function LoginPage() {
               onClick={async () => {
                 try {
                   await logout()
-                  clearSession()
+                  await storeLogout()
                   showToast('success', 'Logout successful', 'You have been logged out')
                   navigate('/login')
                 } catch {

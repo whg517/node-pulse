@@ -9,10 +9,10 @@ describe('Authentication Flow Integration', () => {
   beforeEach(() => {
     // Reset store state before each test
     useAuthStore.setState({
+      user: null,
       isAuthenticated: false,
-      userId: null,
-      username: null,
       role: null,
+      sessionId: null,
       sessionExpiry: null,
     })
   })
@@ -44,10 +44,14 @@ describe('Authentication Flow Integration', () => {
   it('should allow authenticated user to access protected route', async () => {
     // Set authenticated state
     useAuthStore.setState({
+      user: {
+        id: 'user-123',
+        username: 'testuser',
+        role: 'admin',
+      },
       isAuthenticated: true,
-      userId: 'user-123',
-      username: 'testuser',
       role: 'admin',
+      sessionId: 'user-123',
       sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
     })
 
@@ -103,10 +107,14 @@ describe('Authentication Flow Integration', () => {
   it('should redirect to login when session expires', async () => {
     // Set authenticated state with expired session
     useAuthStore.setState({
+      user: {
+        id: 'user-123',
+        username: 'testuser',
+        role: 'admin',
+      },
       isAuthenticated: true,
-      userId: 'user-123',
-      username: 'testuser',
       role: 'admin',
+      sessionId: 'user-123',
       sessionExpiry: Date.now() - 1000, // Expired
     })
 

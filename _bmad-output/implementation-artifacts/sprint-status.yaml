@@ -74,7 +74,7 @@ development_status:
 
   epic-4: in-progress
   4-1-frontend-route-auth-guard: done
-  4-2-zustand-state-management: backlog
+  4-2-zustand-state-management: done
   4-3-api-layer-encapsulation: backlog
   4-4-dashboard-homepage-node-list: backlog
   4-5-node-detail-page: backlog
