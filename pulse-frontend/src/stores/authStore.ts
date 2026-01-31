@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { login as apiLogin, logout as apiLogout } from '../api/auth'
-import { SESSION_COOKIE_NAME, SESSION_EXPIRY_HOURS } from '../config/constants'
+import { SESSION_EXPIRY_HOURS } from '../config/constants'
 import type { User } from './types'
 
 // ============== Types ==============

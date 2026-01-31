@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
+import NodeDetailPage from './pages/NodeDetailPage'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
 function App() {
@@ -33,7 +34,7 @@ function App() {
           path="/nodes/:id"
           element={
             <ProtectedRoute>
-              <div>Node Detail (Coming Soon)</div>
+              <NodeDetailPage />
             </ProtectedRoute>
           }
         />

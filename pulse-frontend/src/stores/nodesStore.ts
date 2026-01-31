@@ -22,7 +22,7 @@ export interface NodesActions {
 type NodesStore = NodesState & NodesActions
 
 // ============== Store ==============
-export const useNodesStore = create<NodesStore>((set, get) => ({
+export const useNodesStore = create<NodesStore>((set) => ({
   // State
   nodes: [],
   selectedNode: null,

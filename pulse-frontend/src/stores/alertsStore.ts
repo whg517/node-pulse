@@ -31,7 +31,7 @@ const defaultFilter: AlertFilter = {
 }
 
 // ============== Store ==============
-export const useAlertsStore = create<AlertsStore>((set, get) => ({
+export const useAlertsStore = create<AlertsStore>((set) => ({
   // State
   alertRules: [],
   alertRecords: [],
@@ -100,7 +100,7 @@ export const useAlertsStore = create<AlertsStore>((set, get) => ({
         metric: record.metric,
         level: record.level,
         status: record.status,
-        timestamp: record.timestamp,
+        timestamp: record.created_at,
       }))
 
       set({ alertRecords })

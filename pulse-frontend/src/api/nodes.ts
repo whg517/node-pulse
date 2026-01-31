@@ -31,6 +31,22 @@ export async function fetchNodes(): Promise<{ data: NodeDTO[] }> {
 }
 
 /**
+ * Fetch a single node by ID
+ *
+ * @param id - Node ID to fetch
+ * @returns Node data
+ * @throws AuthenticationError if user is not authenticated
+ * @throws NotFoundError if node does not exist
+ *
+ * @example
+ * const { data } = await fetchNode('node-id')
+ * console.log('Node:', data.name)
+ */
+export async function fetchNode(id: string): Promise<{ data: NodeDTO }> {
+  return apiClient<{ data: NodeDTO }>(`/api/v1/nodes/${id}`)
+}
+
+/**
  * Create a new node
  *
  * @param request - Node creation parameters
