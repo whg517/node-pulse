@@ -1,0 +1,35 @@
+name: auto-sprint
+description: "Automatic sprint orchestration - continuously executes stories from backlog through done"
+author: "BMad"
+
+# Critical variables from config
+config_source: "{project-root}/_bmad/bmm/config.yaml"
+output_folder: "{config_source}:output_folder"
+user_name: "{config_source}:user_name"
+communication_language: "{config_source}:communication_language"
+user_skill_level: "{config_source}:user_skill_level"
+document_output_language: "{config_source}:document_output_language"
+story_dir: "{config_source}:implementation_artifacts"
+date: system-generated
+
+# Workflow components
+installed_path: "{project-root}/_bmad/bmm/workflows/4-implementation/auto-sprint"
+instructions: "{installed_path}/instructions.xml"
+validation: "{installed_path}/checklist.md"
+
+story_file: "" # Auto-discovered from sprint-status
+implementation_artifacts: "{config_source}:implementation_artifacts"
+sprint_status: "{implementation_artifacts}/sprint-status.yaml"
+project_context: "**/project-context.md"
+
+# Orchestration control variables
+variables:
+  mode: "continuous" # continuous, single-story, manual
+  max_iterations: 0 # 0 = unlimited, positive number = iteration limit
+  pause_on_review: true # Pause before code-review for fresh context
+  pause_on_retrospective: true # Pause before epic retrospective
+  skip_epics: [] # Epics to skip (e.g., ["epic-5"])
+  iteration_count: 0 # Current iteration counter
+  halt_on_completion: false # Auto-halt when all stories complete
+
+standalone: true

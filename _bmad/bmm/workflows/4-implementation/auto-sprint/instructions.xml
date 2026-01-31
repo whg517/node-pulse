@@ -1,0 +1,209 @@
+<workflow>
+  <critical>The workflow execution engine is governed by: {project-root}/_bmad/core/tasks/workflow.xml</critical>
+  <critical>You MUST have already loaded and processed: {installed_path}/workflow.yaml</critical>
+  <critical>Communicate all responses in {communication_language} and language MUST be tailored to {user_skill_level}</critical>
+  <critical>Generate all documents in {document_output_language}</critical>
+  <critical>This workflow orchestrates continuous sprint execution in a dedicated background context</critical>
+  <critical>Uses Skill tool to invoke BMAD workflows (not agent activation)</critical>
+  <critical>Development cycle: backlog → create-story → ready-for-dev → dev-story → review → code-review → done → git commit → next iteration</critical>
+
+  <!-- ========================= -->
+  <!-- PHASE 1: LAUNCH           -->
+  <!-- ========================= -->
+
+  <step n="1" goal="Launch Auto-Sprint orchestration in dedicated background context">
+    <critical>This launches continuous sprint execution in background context</critical>
+    <critical>Uses Skill tool to invoke BMAD workflows with proper agents</critical>
+
+    <output>
+═══════════════════════════════════════════════════════════
+🚀 LAUNCHING AUTO-SPRINT ORCHESTRATION
+═══════════════════════════════════════════════════════════
+
+Auto-Sprint will:
+- Execute continuously in dedicated background context
+- Use Skill tool to invoke BMAD workflows
+- Coordinate all sprint execution automatically
+- Handle git commits after review completion
+- Continue iterating until all stories complete or you halt it
+
+**Execution Context:** Independent background execution
+**Resumable:** Yes - state saved to sprint-status.yaml
+    </output>
+
+    <!-- Launch auto-sprint orchestration using invoke-task with background execution -->
+    <invoke-task run_in_background="true">
+      <subagent_type>general-purpose</subagent_type>
+      <description>Execute auto-sprint orchestration</description>
+      <prompt>
+**CRITICAL:** Execute Auto-Sprint orchestration continuously in this dedicated context.
+
+**Your Role:** You are the Auto-Sprint Orchestrator. Execute the following continuous loop:
+
+## Configuration
+- Sprint status file: {sprint_status}
+- Story directory: {story_dir}
+- Mode: {{mode}}
+- Max iterations: {{max_iterations}}
+- Skip epics: {{skip_epics}}
+
+## Phase 1: Initialization
+
+1. Load sprint-status.yaml
+2. Validate file exists and is well-formed
+3. Call `/bmad-bmm-sprint-status` to display current state
+4. Ask: "Start auto-sprint now? [Y/N/HELP]"
+5. If N or HELP, provide guidance and wait
+
+## Phase 2: Continuous Iteration Loop
+
+**Execute CONTINUOUSLY until all stories complete or user halts:**
+
+For each iteration:
+
+1. **Refresh Status**
+   - Call `/bmad-bmm-sprint-status` to get current state
+   - Parse BMAD's recommendation (next_workflow, next_story)
+   - Display iteration header
+
+2. **Story Routing (Priority Order)**
+   Scan development_status:
+   - in-progress → dev-story
+   - review → code-review
+   - ready-for-dev → dev-story
+   - backlog → create-story
+   - done (not committed) → git commit
+   Skip stories in {{skip_epics}}
+
+3. **Execute Workflow using Skill Tool**
+
+   **Case A: backlog → create-story**
+   ```
+   Use Skill tool:
+   - skill: "bmad-bmm-create-story"
+   - This skill loads bmad-agent-bmm-sm context
+   - Let it run to completion
+   - Story status becomes: ready-for-dev
+   ```
+
+   **Case B: ready-for-dev OR in-progress → dev-story**
+   ```
+   Use Skill tool:
+   - skill: "bmad-bmm-dev-story"
+   - This skill loads bmad-agent-bmm-dev context
+   - Let it run to completion
+   - Story status becomes: review
+   ```
+
+   **Case C: review → code-review**
+   ```
+   Use Skill tool:
+   - skill: "bmad-bmm-code-review"
+   - This skill loads bmad-agent-bmm-dev context
+   - Let it run to completion
+   - Story status becomes: done
+   ```
+
+   **Case D: done (not committed) → git commit**
+   - Check for uncommitted changes: `git status --porcelain`
+   - Review changed files
+   - Generate commit message from story title
+   - Execute: `git add . && git commit -m "message"`
+   - Add story to committed_stories list
+
+4. **Post-Execution Validation**
+   - Reload sprint-status.yaml
+   - Verify story status updated correctly
+   - If incorrect, ask: "Retry [R], Skip [S], View status [V], Help [HELP]?"
+
+5. **Epic Completion Check**
+   - Check if all stories in an epic are "done"
+   - If epic complete, ask: "Run retrospective now? [Y/N]"
+   - If Y, use Skill tool: `skill: "bmad-bmm-retrospective"`
+   - Mark epic as "done"
+
+6. **Continue to next iteration**
+
+## Critical Execution Rules
+
+1. **Use Skill Tool for All BMAD Workflows:**
+   - Use: skill="bmad-bmm-create-story"
+   - Use: skill="bmad-bmm-dev-story"
+   - Use: skill="bmad-bmm-code-review"
+   - Use: skill="bmad-bmm-retrospective"
+   - Each skill loads its own agent context automatically
+   - Let each skill run to full completion
+
+2. **Continuous Execution:**
+   - Execute ALL workflows in one continuous session
+   - NEVER halt for milestones or session boundaries
+   - Continue iterating until completion
+
+3. **Status Management:**
+   - sprint-status.yaml is single source of truth
+   - Reload after each workflow completion
+   - Validate state transitions
+
+4. **User Control:**
+   - Display progress at each iteration
+   - Offer checkpoints at key decision points
+   - Respect HALT command immediately
+   - Save state before any interruption
+
+## Execution
+
+Execute CONTINUOUSLY. Do NOT halt for milestones or session boundaries.
+Complete the entire sprint execution in one continuous session.
+      </prompt>
+    </invoke-task>
+
+    <output>
+✅ **Auto-Sprint Orchestrator launched in background context**
+
+The orchestrator is now executing continuously in its dedicated context.
+It will coordinate all sprint execution using BMAD workflows.
+
+**To monitor progress:**
+- The orchestrator will display progress updates
+- Check sprint status: `/bmad-bmm-sprint-status`
+- The orchestrator will complete or halt when done
+
+**To intervene:**
+- The orchestrator will pause at checkpoints for user input
+- Type 'halt' at any checkpoint to stop (can resume later)
+
+**💡 Note:** The orchestrator runs independently. This main session is now free.
+    </output>
+
+    <goto step="15">Completion</goto>
+  </step>
+
+  <!-- ========================= -->
+  <!-- PHASE 2: COMPLETION       -->
+  <!-- ========================= -->
+
+  <step n="15" goal="Workflow complete">
+    <output>
+═══════════════════════════════════════════════════════════
+✅ AUTO-SPRINT LAUNCHED
+═══════════════════════════════════════════════════════════
+
+The Auto-Sprint Orchestrator is now executing in its dedicated context.
+
+**What happens next:**
+1. The orchestrator will load sprint-status.yaml
+2. It will begin continuous iteration through stories
+3. It will use Skill tool to invoke BMAD workflows
+4. It will continue until all stories complete or you halt it
+5. It will save state after each operation
+
+**To resume after interruption:**
+Simply run `/bmad-bmm-auto-sprint` again. Execution will continue from current state.
+
+**💡 Commands:**
+- `/bmad-bmm-sprint-status` - View current sprint status
+- `/bmad-help` - Get help and guidance
+    </output>
+  </step>
+
+</workflow>
