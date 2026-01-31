@@ -72,8 +72,8 @@ development_status:
   3-13-config-hot-reload: done
   epic-3-retrospective: optional
 
-  epic-4: backlog
-  4-1-frontend-route-auth-guard: backlog
+  epic-4: in-progress
+  4-1-frontend-route-auth-guard: done
   4-2-zustand-state-management: backlog
   4-3-api-layer-encapsulation: backlog
   4-4-dashboard-homepage-node-list: backlog

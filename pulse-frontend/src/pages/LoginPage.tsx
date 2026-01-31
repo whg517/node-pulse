@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { login, logout } from '../api/auth'
 import { useAuthStore } from '../stores/authStore'
 import type { ValidationError } from '../types/auth'
@@ -7,9 +7,13 @@ import { ToastNotification, type ToastProps } from '../components/ToastNotificat
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
   const setSession = useAuthStore((state) => state.setSession)
   const clearSession = useAuthStore((state) => state.clearSession)
   const { isAuthenticated } = useAuthStore()
+
+  // Get the location from router state (where user was trying to go)
+  const from = (location.state as any)?.from?.pathname || '/dashboard'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -81,7 +85,7 @@ export default function LoginPage() {
       showToast('success', 'Login successful', 'Redirecting to dashboard...')
 
       setTimeout(() => {
-        navigate('/dashboard')
+        navigate(from, { replace: true })
       }, 500)
     } catch (error) {
       const err = error as { code?: string; details?: { locked_until?: string } }
