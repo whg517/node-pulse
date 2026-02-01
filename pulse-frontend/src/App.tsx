@@ -6,6 +6,7 @@ import NodeComparisonPage from './pages/NodeComparison'
 import AlertRulesPage from './pages/AlertRulesPage'
 import AlertRecordsPage from './pages/AlertRecordsPage'
 import WebhooksPage from './pages/WebhooksPage'
+import DataExportPage from './pages/DataExportPage'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
 function App() {
@@ -86,7 +87,7 @@ function App() {
           path="/export"
           element={
             <ProtectedRoute>
-              <div>Data Export (Coming Soon)</div>
+              <DataExportPage />
             </ProtectedRoute>
           }
         />
