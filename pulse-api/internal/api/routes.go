@@ -139,6 +139,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// GET /api/v1/data/comparison - Get node comparison data (all roles) (Story 7.2)
 		data.GET("/comparison", dataHandler.GetComparisonHandler)
 
+		// GET /api/v1/data/diagnosis - Get problem type diagnosis (all roles) (Story 7.4)
+		data.GET("/diagnosis", dataHandler.GetDiagnosisHandler)
+
 		// Alert management routes (require auth) (Story 5.1)
 		alertHandler := NewAlertHandler(alertQuerier)
 

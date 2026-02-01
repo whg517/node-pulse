@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/kevin/node-pulse/pulse-api/internal/diagnostic"
 )
 
 // DataHandler handles data query API requests
@@ -812,4 +814,126 @@ func findOverlapTimeRange(nodesData []ComparisonNodeData) (time.Time, time.Time)
 	}
 
 	return *latestStart, *earliestEnd
+}
+
+// DiagnosisRequest represents the query parameters for problem diagnosis
+type DiagnosisRequest struct {
+	NodeIDs []string `form:"node_ids" binding:"required,min=3"`
+}
+
+// DiagnosisResponse represents the response for problem diagnosis
+type DiagnosisResponse struct {
+	Data      diagnostic.DiagnosisResult `json:"data"`
+	Message   string                     `json:"message"`
+	Timestamp string                     `json:"timestamp"`
+}
+
+// GetDiagnosisHandler handles GET /api/v1/data/diagnosis
+// Returns problem type diagnosis based on multi-node comparison (Story 7.4)
+func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
+	// Parse query parameters
+	var req DiagnosisRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid query parameters",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Query node metrics for the last 1 hour
+	ctx := context.Background()
+	nodesData, err := h.queryNodesForDiagnosis(ctx, req.NodeIDs)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to query node data",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Check if we have enough nodes with data
+	if len(nodesData) < 3 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Insufficient data for diagnosis",
+			"details": fmt.Sprintf("Need at least 3 nodes with data, got %d", len(nodesData)),
+		})
+		return
+	}
+
+	// Perform diagnosis
+	engine := diagnostic.NewDiagnosticEngine()
+	result, err := engine.Diagnose(nodesData)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Diagnosis failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Return response
+	c.JSON(http.StatusOK, DiagnosisResponse{
+		Data:      *result,
+		Message:   "Diagnosis completed",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
+// queryNodesForDiagnosis queries node metrics for diagnosis
+func (h *DataHandler) queryNodesForDiagnosis(ctx context.Context, nodeIDs []string) ([]diagnostic.MetricData, error) {
+	// Query time window: last 1 hour
+	endTime := time.Now()
+	startTime := endTime.Add(-1 * time.Hour)
+
+	// Build query to get average metrics for each node
+	query := `
+		SELECT
+			m.node_id,
+			n.region,
+			AVG(m.latency_ms) as avg_latency,
+			AVG(m.packet_loss_rate) as avg_packet_loss,
+			AVG(m.jitter_ms) as avg_jitter,
+			COUNT(*) as data_point_count
+		FROM metrics m
+		JOIN nodes n ON m.node_id = n.id
+		WHERE m.node_id = ANY($1)
+			AND m.timestamp >= $2
+			AND m.timestamp <= $3
+			AND m.latency_ms IS NOT NULL
+		GROUP BY m.node_id, n.region
+		ORDER BY m.node_id;
+	`
+
+	rows, err := h.pool.Query(ctx, query, nodeIDs, startTime, endTime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query metrics: %w", err)
+	}
+	defer rows.Close()
+
+	nodesData := make([]diagnostic.MetricData, 0)
+	for rows.Next() {
+		var nodeID, region string
+		var avgLatency, avgPacketLoss, avgJitter float64
+		var dataPointCount int
+
+		if err := rows.Scan(&nodeID, &region, &avgLatency, &avgPacketLoss, &avgJitter, &dataPointCount); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+
+		nodesData = append(nodesData, diagnostic.MetricData{
+			NodeID:         nodeID,
+			Region:         region,
+			Latency:        avgLatency,
+			PacketLossRate: avgPacketLoss,
+			Jitter:         avgJitter,
+			DataPointCount: dataPointCount,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return nodesData, nil
 }
