@@ -27,7 +27,7 @@ var startCmd = &cobra.Command{
 }
 
 func runStart(cmd *cobra.Command, args []string) error {
-	fmt.Fprintln(cmd.OutOrStdout(), "Loading configuration...")
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), "Loading configuration...")
 
 	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
@@ -36,14 +36,14 @@ func runStart(cmd *cobra.Command, args []string) error {
 	}
 
 	// Print node info immediately for user visibility
-	fmt.Fprintf(cmd.OutOrStdout(), "Node ID: %s\n", cfg.NodeID)
-	fmt.Fprintf(cmd.OutOrStdout(), "Node Name: %s\n", cfg.NodeName)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Node ID: %s\n", cfg.NodeID)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "Node Name: %s\n", cfg.NodeName)
 
 	// Initialize logger (Story 3.9)
 	if err := logger.InitLogger(cfg); err != nil {
 		return fmt.Errorf("failed to initialize logger: %w", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	logger.WithFields(map[string]interface{}{
 		"node_id":   cfg.NodeID,
@@ -58,7 +58,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 	if err := procMgr.WritePID(); err != nil {
 		logger.WithError(err).Warn("Failed to write PID file")
 	}
-	defer procMgr.Cleanup()
+	defer func() { _ = procMgr.Cleanup() }()
 
 	logger.Info("Starting probes...")
 
@@ -154,7 +154,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 	if err := metricsServer.Start(); err != nil {
 		logger.WithError(err).Warn("Failed to start metrics server")
 	}
-	defer metricsServer.Stop()
+	defer func() { _ = metricsServer.Stop() }()
 
 	logger.Info("Starting heartbeat reporter...")
 

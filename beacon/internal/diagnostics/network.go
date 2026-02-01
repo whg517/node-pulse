@@ -76,7 +76,7 @@ func (c *collector) collectNetworkStatus() (*NetworkStatus, error) {
 			successfulPings++
 			rtt := float64(time.Since(start).Microseconds()) / 1000.0 // Convert to ms
 			rttValues = append(rttValues, rtt)
-			conn.Close()
+			_ = conn.Close()
 		}
 
 		// Small delay between pings to avoid overwhelming the server
@@ -91,22 +91,22 @@ func (c *collector) collectNetworkStatus() (*NetworkStatus, error) {
 
 	if successfulPings > 0 {
 		// Calculate RTT statistics
-		min := rttValues[0]
-		max := rttValues[0]
+		minRTT := rttValues[0]
+		maxRTT := rttValues[0]
 		sum := 0.0
 		for _, rtt := range rttValues {
-			if rtt < min {
-				min = rtt
+			if rtt < minRTT {
+				minRTT = rtt
 			}
-			if rtt > max {
-				max = rtt
+			if rtt > maxRTT {
+				maxRTT = rtt
 			}
 			sum += rtt
 		}
 		status.RTTMs = RTTStatistics{
 			Avg:     sum / float64(successfulPings),
-			Min:     min,
-			Max:     max,
+			Min:     minRTT,
+			Max:     maxRTT,
 			Samples: successfulPings,
 		}
 	}

@@ -129,7 +129,7 @@ func (c *PulseClient) doRegisterNode(ctx context.Context, req *RegisterNodeReque
 	if err != nil {
 		return nil, fmt.Errorf("request failed: %w", err)
 	}
-	defer httpResp.Body.Close()
+	defer func() { _ = httpResp.Body.Close() }()
 
 	// Read response body
 	var responseBody struct {

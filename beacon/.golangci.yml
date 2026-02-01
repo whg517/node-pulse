@@ -1,0 +1,129 @@
+version: 2
+
+run:
+  timeout: 5m
+  skip-dirs:
+    - vendor
+  skip-files:
+    - ".*\\.pb\\.go$"
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - gosec
+    - prealloc
+    - gocritic
+    - revive
+
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+    check-blank: false
+    # Exclude common functions where error checking is not critical
+    exclude-functions:
+      - (io.Closer).Close
+      - (*logrus.Logger).Close
+      - (net/http.Response).Body.Close
+      - fmt.Fprintln
+      - fmt.Fprintf
+      - (fmt.Stringer).String
+      - os.Chdir
+      - (encoding/json.Encoder).Encode
+      - (io.Writer).Write
+
+  govet:
+    enable-all: false
+
+  gosec:
+    excludes:
+      - G104  # Exclude errors not checked in production code
+    # Select which checks to run
+    includes:
+      - G101
+      - G102
+      - G106
+      - G107
+      - G108
+      - G109
+      - G110
+      - G201
+      - G202
+      - G203
+      - G204
+      - G301
+      - G302
+      - G303
+      - G304
+      - G305
+      - G306
+      - G401
+      - G402
+      - G403
+      - G404
+      - G501
+      - G502
+      - G503
+      - G504
+      - G505
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new: false
+  exclude-rules:
+    # Exclude specific revive rules for production code
+    - linters:
+        - revive
+      text: "should have a package comment"
+    - linters:
+        - revive
+      text: "exported.*should have comment.*or be unexported"
+    - linters:
+        - revive
+      text: "type name will be used as.*by other packages, and that stutters"
+    # Exclude unused-parameter for callbacks
+    - linters:
+        - revive
+      text: "unused-parameter"
+    # Exclude specific gocritic rules
+    - linters:
+        - gocritic
+      text: "preferFprint:"
+    # Exclude specific staticcheck rules (style suggestions - these are optional)
+    - linters:
+        - staticcheck
+      text: "QF1001:"
+    - linters:
+        - staticcheck
+      text: "QF1003:"
+    - linters:
+        - staticcheck
+      text: "QF1007:"
+    # Exclude SA5011 (possible nil pointer) - these are mostly false positives
+    - linters:
+        - staticcheck
+      text: "SA5011:"
+
+  # Don't report issues with these texts
+  exclude:
+    - "should have a package comment"
+    - "exported.*should have comment"
+    - "type name will be used as.*by other packages, and that stutters"
+    - "unused-parameter"
+    - "QF1001:"
+    - "QF1003:"
+    - "QF1007:"
+    - "SA5011:"
+
+output:
+  format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
+  sort-results: true

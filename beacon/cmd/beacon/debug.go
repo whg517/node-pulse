@@ -47,13 +47,13 @@ func runDebug(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return fmt.Errorf("error collecting diagnostics: %w", err)
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), output)
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), output)
 	} else {
 		data, err := collector.CollectJSON()
 		if err != nil {
 			return fmt.Errorf("error collecting diagnostics: %w", err)
 		}
-		fmt.Fprintln(cmd.OutOrStdout(), string(data))
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(data))
 	}
 
 	return nil

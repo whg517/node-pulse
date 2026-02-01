@@ -21,7 +21,7 @@ func init() {
 		Short: "Beacon - Network monitoring agent",
 		Long:  `Beacon is a lightweight network monitoring agent that performs TCP/UDP probes and reports metrics to Pulse server.`,
 		Run: func(cmd *cobra.Command, args []string) {
-			cmd.Help()
+			_ = cmd.Help()
 		},
 	}
 
@@ -48,7 +48,7 @@ func GetRootCmd() *cobra.Command {
 	// Reset flags to default values to prevent test pollution
 	resetFlags := func(flags *pflag.FlagSet) {
 		flags.VisitAll(func(f *pflag.Flag) {
-			flags.Set(f.Name, f.DefValue)
+			_ = flags.Set(f.Name, f.DefValue)
 		})
 	}
 	resetFlags(rootCmd.Flags())

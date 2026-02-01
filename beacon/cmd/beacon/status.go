@@ -30,7 +30,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 			"error":          err.Error(),
 		}
 		jsonData, _ := json.MarshalIndent(status, "", "  ")
-		fmt.Fprintln(cmd.OutOrStdout(), string(jsonData))
+		_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(jsonData))
 		return nil
 	}
 
@@ -65,6 +65,6 @@ func runStatus(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to marshal status: %w", err)
 	}
 
-	fmt.Fprintln(cmd.OutOrStdout(), string(jsonData))
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), string(jsonData))
 	return nil
 }

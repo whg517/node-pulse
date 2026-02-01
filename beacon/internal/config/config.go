@@ -414,7 +414,7 @@ func parseYAMLError(err error, data []byte) error {
 		if len(parts) > 1 {
 			numParts := strings.Split(parts[1], " ")
 			if len(numParts) > 0 {
-				fmt.Sscanf(numParts[0], "%d", &lineNumber)
+				_, _ = fmt.Sscanf(numParts[0], "%d", &lineNumber)
 			}
 		}
 	}

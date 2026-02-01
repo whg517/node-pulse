@@ -52,7 +52,7 @@ func (fw *FileWatcher) Start(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create file watcher: %w", err)
 	}
-	defer watcher.Close()
+	defer func() { _ = watcher.Close() }()
 
 	if err := watcher.Add(fw.path); err != nil {
 		return fmt.Errorf("failed to watch config file: %w", err)

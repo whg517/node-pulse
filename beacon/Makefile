@@ -1,4 +1,4 @@
-.PHONY: build clean test install
+.PHONY: build clean test install lint
 
 # Build variables
 BINARY_NAME=beacon
@@ -34,6 +34,16 @@ test-coverage:
 	go test -v -cover -coverprofile=coverage.out ./...
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+# Run linter
+lint:
+	@echo "Running golangci-lint..."
+	golangci-lint run --timeout 5m
+
+# Fix linting issues automatically
+lint-fix:
+	@echo "Running golangci-lint with fixes..."
+	golangci-lint run --fix --timeout 5m
 
 # Clean build artifacts
 clean:

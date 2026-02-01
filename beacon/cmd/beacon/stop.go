@@ -18,7 +18,7 @@ var stopCmd = &cobra.Command{
 }
 
 func runStop(cmd *cobra.Command, args []string) error {
-	fmt.Fprintln(cmd.OutOrStdout(), "[INFO] Stopping Beacon...")
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), "[INFO] Stopping Beacon...")
 
 	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
@@ -33,12 +33,12 @@ func runStop(cmd *cobra.Command, args []string) error {
 	if err := procMgr.Stop(); err != nil {
 		// Check if it's because no PID file was found (not running)
 		if strings.Contains(err.Error(), "no valid PID file found") {
-			fmt.Fprintln(cmd.OutOrStdout(), "[INFO] Beacon is not running")
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), "[INFO] Beacon is not running")
 			return nil
 		}
 		return fmt.Errorf("failed to stop beacon: %w", err)
 	}
 
-	fmt.Fprintln(cmd.OutOrStdout(), "[INFO] Beacon stopped successfully")
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), "[INFO] Beacon stopped successfully")
 	return nil
 }
