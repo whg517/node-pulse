@@ -11,14 +11,16 @@ import (
 	"github.com/kevin/node-pulse/pulse-api/internal/auth"
 	"github.com/kevin/node-pulse/pulse-api/internal/export"
 	"github.com/kevin/node-pulse/pulse-api/pkg/middleware"
+	"github.com/kevin/node-pulse/pulse-api/pkg/metrics"
 )
 
 // CacheManager holds cache instances that need cleanup on shutdown
 type CacheManager struct {
-	MemoryCache   *cache.MemoryCache
-	BatchWriter   *cache.BatchWriter
-	AlertEngine   *alert.AlertEngine
-	ExportService *export.ExportService
+	MemoryCache      *cache.MemoryCache
+	BatchWriter      *cache.BatchWriter
+	AlertEngine      *alert.AlertEngine
+	ExportService    *export.ExportService
+	MetricsCollector *metrics.Collector
 }
 
 // SetupRoutes configures all API routes and returns cache manager for shutdown
@@ -44,13 +46,23 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	// Initialize export service (Story 8.1)
 	exportService := export.NewExportService(pool)
 
+	// Initialize metrics collector (Story 8.3)
+	metricsCollector := metrics.NewCollector()
+	metricsCollector.Start()
+
 	// Create cache manager for graceful shutdown
 	cacheManager := &CacheManager{
-		MemoryCache:   memoryCache,
-		BatchWriter:   batchWriter,
-		AlertEngine:   alertEngine,
-		ExportService: exportService,
+		MemoryCache:      memoryCache,
+		BatchWriter:      batchWriter,
+		AlertEngine:      alertEngine,
+		ExportService:    exportService,
+		MetricsCollector: metricsCollector,
 	}
+
+	// Apply performance tracking middleware (Story 8.3)
+	perfConfig := middleware.DefaultPerformanceConfig(metricsCollector)
+	router.Use(middleware.PerformanceMiddleware(perfConfig))
+	router.Use(middleware.InjectCollector(metricsCollector))
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -227,6 +239,20 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// DELETE /api/v1/webhooks/:id - Delete webhook configuration (admin only)
 		webhooks.DELETE("/:id", webhookHandler.DeleteWebhookHandler)
+
+		// Performance metrics routes (require auth) (Story 8.3)
+		metricsHandler := NewMetricsHandler(metricsCollector)
+
+		// Metrics group with auth middleware (all roles)
+		metricsGroup := v1.Group("/metrics")
+		metricsGroup.Use(auth.AuthMiddleware(sessionService))
+		{
+			// GET /api/v1/metrics/performance - Get performance metrics (all roles)
+			metricsGroup.GET("/performance", metricsHandler.GetPerformanceMetrics)
+
+			// GET /api/v1/metrics/stats - Get collector statistics (all roles)
+			metricsGroup.GET("/stats", metricsHandler.GetCollectorStats)
+		}
 	}
 
 	// Return cache manager for graceful shutdown

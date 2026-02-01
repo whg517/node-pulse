@@ -169,6 +169,10 @@ func main() {
 		if cacheManager.ExportService != nil {
 			cacheManager.ExportService.Shutdown()
 		}
+		log.Println("[Pulse] Stopping metrics collector...")
+		if cacheManager.MetricsCollector != nil {
+			cacheManager.MetricsCollector.Stop()
+		}
 	}
 
 	// Stop scheduler and cleanup task (Story 3.12)
