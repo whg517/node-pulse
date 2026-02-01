@@ -17,6 +17,7 @@ import (
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/health"
 	"github.com/kevin/node-pulse/pulse-api/internal/scheduler"
+	"github.com/kevin/node-pulse/pulse-api/internal/suppression"
 )
 
 func main() {
@@ -83,6 +84,15 @@ func main() {
 			log.Printf("[Pulse] Cleanup task registered (interval: %ds, retention: %ddays)",
 				cleanupConfig.IntervalSeconds, cleanupConfig.RetentionDays)
 		}
+	}
+
+	// Create and register suppression cleanup task
+	if database != nil && database.Pool != nil {
+		suppressionCleanupTask := suppression.NewCleanupTask(db.NewAlertSuppressionsQuerier(database.Pool))
+		if err := sched.RegisterTask(suppressionCleanupTask); err != nil {
+			log.Fatalf("[Pulse] Failed to register suppression cleanup task: %v", err)
+		}
+		log.Println("[Pulse] Suppression cleanup task registered (interval: 1h)")
 	}
 
 	// Start scheduler in background

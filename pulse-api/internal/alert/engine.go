@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
+	"github.com/kevin/node-pulse/pulse-api/internal/suppression"
 )
 
 // MetricData represents metric data from beacon heartbeat
@@ -22,15 +23,16 @@ type MetricData struct {
 
 // AlertEngine handles alert evaluation and event creation
 type AlertEngine struct {
-	alertQuerier       db.AlertQuerier
-	alertEventsQuerier db.AlertEventsQuerier
-	metricChannel      chan *MetricData
-	workerPoolSize     int
-	ctx                context.Context
-	cancel             context.CancelFunc
-	wg                 sync.WaitGroup
-	ruleCache          []*models.Alert
-	ruleCacheMutex     sync.RWMutex
+	alertQuerier        db.AlertQuerier
+	alertEventsQuerier  db.AlertEventsQuerier
+	suppressionService   *suppression.Service
+	metricChannel       chan *MetricData
+	workerPoolSize      int
+	ctx                 context.Context
+	cancel              context.CancelFunc
+	wg                  sync.WaitGroup
+	ruleCache           []*models.Alert
+	ruleCacheMutex      sync.RWMutex
 	ruleCacheLastRefresh time.Time
 	ruleCacheRefreshInterval time.Duration
 }
@@ -60,10 +62,13 @@ func NewAlertEngine(
 	ctx, cancel := context.WithCancel(context.Background())
 
 	alertEventsQuerier := db.NewAlertEventsQuerier(pool)
+	suppressionQuerier := db.NewAlertSuppressionsQuerier(pool)
+	suppressionService := suppression.NewService(suppressionQuerier)
 
 	return &AlertEngine{
 		alertQuerier:            alertQuerier,
 		alertEventsQuerier:      alertEventsQuerier,
+		suppressionService:      suppressionService,
 		metricChannel:           make(chan *MetricData, config.MetricChannelBufferSize),
 		workerPoolSize:          config.WorkerPoolSize,
 		ctx:                     ctx,
@@ -162,11 +167,29 @@ func (e *AlertEngine) evaluateMetric(data *MetricData) {
 
 		// Evaluate rule
 		if alertEvent := e.evaluateRule(rule, data); alertEvent != nil {
-			// Create alert event in database
+			// Check suppression before creating alert event
 			ctx, cancel := context.WithTimeout(e.ctx, 5*time.Second)
-			err := e.alertEventsQuerier.CreateAlertEvent(ctx, alertEvent)
-			cancel()
+			defer cancel()
 
+			suppressed, err := e.suppressionService.ShouldSuppress(ctx, data.NodeID, rule.Metric)
+			if err != nil {
+				slog.Error("Failed to check suppression",
+					"node_id", data.NodeID,
+					"metric", rule.Metric,
+					"error", err)
+				// Continue with alert creation on error (fail open)
+			} else if suppressed {
+				slog.Info("Alert suppressed",
+					"node_id", data.NodeID,
+					"metric", rule.Metric,
+					"level", rule.Level,
+					"threshold", rule.Threshold,
+					"current_value", alertEvent.CurrentValue)
+				continue // Skip creating alert event
+			}
+
+			// Create alert event in database
+			err = e.alertEventsQuerier.CreateAlertEvent(ctx, alertEvent)
 			if err != nil {
 				slog.Error("Failed to create alert event",
 					"node_id", data.NodeID,
@@ -181,6 +204,16 @@ func (e *AlertEngine) evaluateMetric(data *MetricData) {
 					"threshold", alertEvent.Threshold,
 					"current_value", alertEvent.CurrentValue,
 					"level", alertEvent.Level)
+
+				// Record suppression for future alerts
+				err = e.suppressionService.RecordDefaultSuppression(ctx, data.NodeID, rule.Metric)
+				if err != nil {
+					slog.Error("Failed to record suppression",
+						"node_id", data.NodeID,
+						"metric", rule.Metric,
+						"error", err)
+					// Don't fail the alert if suppression recording fails
+				}
 			}
 		}
 	}

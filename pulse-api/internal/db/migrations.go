@@ -52,6 +52,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createAlertSuppressionsTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -352,6 +356,27 @@ func createAlertEventsTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_alert_events_metric ON alert_events(metric);
 		CREATE INDEX IF NOT EXISTS idx_alert_events_created_at ON alert_events(created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_alert_events_node_created ON alert_events(node_id, created_at DESC);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createAlertSuppressionsTable creates alert_suppressions table with indexes (Story 5.6)
+func createAlertSuppressionsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS alert_suppressions (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			metric VARCHAR NOT NULL,
+			suppressed_until TIMESTAMPTZ NOT NULL,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW(),
+			UNIQUE(node_id, metric)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_alert_suppressions_node_metric ON alert_suppressions(node_id, metric);
+		CREATE INDEX IF NOT EXISTS idx_alert_suppressions_until ON alert_suppressions(suppressed_until);
 	`
 
 	_, err := pool.Exec(ctx, query)
