@@ -10,6 +10,7 @@ import (
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
 	"github.com/kevin/node-pulse/pulse-api/internal/suppression"
+	"github.com/kevin/node-pulse/pulse-api/internal/webhook"
 )
 
 // MetricData represents metric data from beacon heartbeat
@@ -26,6 +27,7 @@ type AlertEngine struct {
 	alertQuerier        db.AlertQuerier
 	alertEventsQuerier  db.AlertEventsQuerier
 	suppressionService   *suppression.Service
+	webhookPushService  *webhook.PushService
 	metricChannel       chan *MetricData
 	workerPoolSize      int
 	ctx                 context.Context
@@ -65,10 +67,16 @@ func NewAlertEngine(
 	suppressionQuerier := db.NewAlertSuppressionsQuerier(pool)
 	suppressionService := suppression.NewService(suppressionQuerier)
 
+	// Get webhooks querier for webhook push
+	webhookQuerier := db.NewWebhookQuerier(pool)
+	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
+	webhookPushService := webhook.NewPushService(webhookQuerier, webhookLogsQuerier, "http://localhost:8080")
+
 	return &AlertEngine{
 		alertQuerier:            alertQuerier,
 		alertEventsQuerier:      alertEventsQuerier,
 		suppressionService:      suppressionService,
+		webhookPushService:      webhookPushService,
 		metricChannel:           make(chan *MetricData, config.MetricChannelBufferSize),
 		workerPoolSize:          config.WorkerPoolSize,
 		ctx:                     ctx,
@@ -214,6 +222,18 @@ func (e *AlertEngine) evaluateMetric(data *MetricData) {
 						"error", err)
 					// Don't fail the alert if suppression recording fails
 				}
+
+				// Send webhook notifications asynchronously (non-blocking)
+				go func(event *models.AlertEvent) {
+					webhookCtx, webhookCancel := context.WithTimeout(context.Background(), 30*time.Second)
+					defer webhookCancel()
+
+					if err := e.webhookPushService.SendAlert(webhookCtx, event); err != nil {
+						slog.Error("Webhook push failed",
+							"alert_id", event.ID,
+							"error", err)
+					}
+				}(alertEvent)
 			}
 		}
 	}
