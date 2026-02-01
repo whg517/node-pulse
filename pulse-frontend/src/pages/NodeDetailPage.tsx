@@ -1,10 +1,17 @@
 import { useParams, Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import { useNodeDetail } from '../hooks/useNodeDetail'
 import MetricCard from '../components/dashboard/MetricCard'
 import ProblemDiagnosis, {
   type ProblemType,
   type ConfidenceLevel,
 } from '../components/dashboard/ProblemDiagnosis'
+import TrendChart, {
+  type TimeRange,
+  type MetricType,
+  type DataPoint,
+} from '../components/dashboard/TrendChart'
+import { fetchHistory } from '../api/data'
 
 /**
  * NodeDetailPage component
@@ -24,6 +31,146 @@ export default function NodeDetailPage() {
     id || '',
     5000 // 5-second polling
   )
+
+  // Historical data state
+  const [timeRange, setTimeRange] = useState<TimeRange>('24h')
+  const [historyData, setHistoryData] = useState<{
+    latency_ms: DataPoint[]
+    packet_loss_rate: DataPoint[]
+    jitter_ms: DataPoint[]
+  }>({
+    latency_ms: [],
+    packet_loss_rate: [],
+    jitter_ms: [],
+  })
+  const [baselines, setBaselines] = useState<{
+    latency_ms?: number
+    packet_loss_rate?: number
+    jitter_ms?: number
+  }>({})
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [historyError, setHistoryError] = useState<string | null>(null)
+
+  // Fetch historical data when node ID or time range changes
+  useEffect(() => {
+    if (!id) return
+
+    const fetchHistoricalData = async () => {
+      setIsLoadingHistory(true)
+      setHistoryError(null)
+
+      try {
+        const now = new Date()
+        let startTime: Date
+
+        // Calculate start time based on selected range
+        switch (timeRange) {
+          case '24h':
+            startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+            break
+          case '7d':
+            startTime = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+            break
+          case '30d':
+            startTime = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+            break
+          default:
+            startTime = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        }
+
+        // Determine aggregation based on time range
+        let aggregation: '1m' | '5m' = '1m'
+        if (timeRange === '7d' || timeRange === '30d') {
+          aggregation = '5m'
+        }
+
+        // Fetch data for all three metrics in parallel
+        const [latencyResult, lossResult, jitterResult] = await Promise.all([
+          fetchHistory({
+            node_ids: [id],
+            start_time: startTime.toISOString(),
+            end_time: now.toISOString(),
+            metrics: ['latency'],
+            aggregation,
+          }),
+          fetchHistory({
+            node_ids: [id],
+            start_time: startTime.toISOString(),
+            end_time: now.toISOString(),
+            metrics: ['packet_loss_rate'],
+            aggregation,
+          }),
+          fetchHistory({
+            node_ids: [id],
+            start_time: startTime.toISOString(),
+            end_time: now.toISOString(),
+            metrics: ['jitter'],
+            aggregation,
+          }),
+        ])
+
+        // Process latency data
+        const latencySeries = latencyResult.data.find(
+          (series) => series.metric === 'latency'
+        )
+        const latencyDataPoints: DataPoint[] =
+          latencySeries?.data_points.map((dp) => ({
+            timestamp: dp.timestamp,
+            value: dp.value,
+          })) || []
+
+        // Process packet loss data
+        const lossSeries = lossResult.data.find(
+          (series) => series.metric === 'packet_loss_rate'
+        )
+        const lossDataPoints: DataPoint[] =
+          lossSeries?.data_points.map((dp) => ({
+            timestamp: dp.timestamp,
+            value: dp.value,
+          })) || []
+
+        // Process jitter data
+        const jitterSeries = jitterResult.data.find(
+          (series) => series.metric === 'jitter'
+        )
+        const jitterDataPoints: DataPoint[] =
+          jitterSeries?.data_points.map((dp) => ({
+            timestamp: dp.timestamp,
+            value: dp.value,
+          })) || []
+
+        // Update history data state
+        setHistoryData({
+          latency_ms: latencyDataPoints,
+          packet_loss_rate: lossDataPoints,
+          jitter_ms: jitterDataPoints,
+        })
+
+        // Update baselines (only for 7d and 30d ranges)
+        if (timeRange === '7d' || timeRange === '30d') {
+          setBaselines({
+            latency_ms: latencySeries?.baseline,
+            packet_loss_rate: lossSeries?.baseline,
+            jitter_ms: jitterSeries?.baseline,
+          })
+        } else {
+          setBaselines({})
+        }
+      } catch (err) {
+        console.error('Failed to fetch historical data:', err)
+        setHistoryError('Failed to load historical data. Please try again.')
+      } finally {
+        setIsLoadingHistory(false)
+      }
+    }
+
+    fetchHistoricalData()
+  }, [id, timeRange])
+
+  // Handle time range change
+  const handleTimeRangeChange = (newRange: TimeRange) => {
+    setTimeRange(newRange)
+  }
 
   // Determine problem type based on metrics (placeholder until Story 7.4)
   const getProblemType = (): ProblemType => {
@@ -303,6 +450,77 @@ export default function NodeDetailPage() {
                   />
                 </svg>
               }
+            />
+          </div>
+
+          {/* Historical Trend Charts */}
+          <div className="space-y-6">
+            {/* Error Message */}
+            {historyError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <svg
+                    className="w-5 h-5 text-red-600 mr-2"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                  <p className="text-red-800">{historyError}</p>
+                  <button
+                    onClick={() => {
+                      setHistoryError(null)
+                      window.location.reload()
+                    }}
+                    className="ml-auto px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                  >
+                    Retry
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Latency Trend Chart */}
+            <TrendChart
+              data={historyData.latency_ms}
+              metric="latency_ms"
+              timeRange={timeRange}
+              showBaseline={timeRange === '7d' || timeRange === '30d'}
+              baselineValue={baselines.latency_ms}
+              height="350px"
+              onTimeRangeChange={handleTimeRangeChange}
+              isLoading={isLoadingHistory}
+            />
+
+            {/* Packet Loss Rate Trend Chart */}
+            <TrendChart
+              data={historyData.packet_loss_rate}
+              metric="packet_loss_rate"
+              timeRange={timeRange}
+              showBaseline={timeRange === '7d' || timeRange === '30d'}
+              baselineValue={baselines.packet_loss_rate}
+              height="350px"
+              onTimeRangeChange={handleTimeRangeChange}
+              isLoading={isLoadingHistory}
+            />
+
+            {/* Jitter Trend Chart */}
+            <TrendChart
+              data={historyData.jitter_ms}
+              metric="jitter_ms"
+              timeRange={timeRange}
+              showBaseline={timeRange === '7d' || timeRange === '30d'}
+              baselineValue={baselines.jitter_ms}
+              height="350px"
+              onTimeRangeChange={handleTimeRangeChange}
+              isLoading={isLoadingHistory}
             />
           </div>
 

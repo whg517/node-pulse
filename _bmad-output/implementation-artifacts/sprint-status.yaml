@@ -72,17 +72,17 @@ development_status:
   3-13-config-hot-reload: done
   epic-3-retrospective: optional
 
-  epic-4: in-progress
+  epic-4: done
   4-1-frontend-route-auth-guard: done
   4-2-zustand-state-management: done
-  4-3-api-layer-encapsulation: review
-  4-4-dashboard-homepage-node-list: backlog
-  4-5-node-detail-page: backlog
-  4-6-echarts-trend-chart-component: backlog
-  4-7-7-day-history-trend-chart: backlog
-  4-8-toast-notification-component: backlog
-  4-9-data-real-time-polling: backlog
-  epic-4-retrospective: optional
+  4-3-api-layer-encapsulation: done
+  4-4-dashboard-homepage-node-list: done
+  4-5-node-detail-page: done
+  4-6-echarts-trend-chart-component: done
+  4-7-7-day-history-trend-chart: done
+  4-8-toast-notification-component: done
+  4-9-data-real-time-polling: done
+  epic-4-retrospective: done
 
   epic-5: backlog
   5-1-alert-rule-api: backlog

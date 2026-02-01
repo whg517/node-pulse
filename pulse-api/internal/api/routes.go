@@ -115,6 +115,17 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// DELETE /api/v1/probes/:id - Delete probe (admin/operator only)
 		probes.DELETE("/:id", probeHandler.DeleteProbeHandler)
+
+		// Data query routes (require auth)
+		dataHandler := NewDataHandler(pool)
+		data := v1.Group("/data")
+		data.Use(auth.AuthMiddleware(sessionService))
+
+		// GET /api/v1/data/metrics - Get real-time metrics (all roles)
+		data.GET("/metrics", dataHandler.GetMetricsHandler)
+
+		// GET /api/v1/data/history - Get historical data (all roles)
+		data.GET("/history", dataHandler.GetHistoryHandler)
 	}
 
 	// Return cache manager for graceful shutdown
