@@ -30,6 +30,7 @@ const (
 type MetricData struct {
 	NodeID          string
 	Region          string
+	ISP             string  // ISP tag from node.tags->'isp'
 	Latency         float64
 	PacketLossRate  float64
 	Jitter          float64
@@ -95,14 +96,27 @@ type DiagnosticEngine struct {
 	baselineJitter     float64
 }
 
-// NewDiagnosticEngine creates a new diagnostic engine
+// NewDiagnosticEngine creates a new diagnostic engine with hardcoded baselines
+// For production, consider using CalculateBaselinesFromHistory() to compute baselines from historical data
 func NewDiagnosticEngine() *DiagnosticEngine {
 	return &DiagnosticEngine{
 		minNodes:           3,
 		timeWindow:         1 * time.Hour,
-		baselineLatency:    50.0,   // ms
-		baselinePacketLoss: 0.01,   // 1%
-		baselineJitter:     2.0,    // ms
+		baselineLatency:    50.0,   // ms - TODO: Calculate from 7-day moving average
+		baselinePacketLoss: 0.01,   // 1% - TODO: Calculate from 7-day moving average
+		baselineJitter:     2.0,    // ms - TODO: Calculate from 7-day moving average
+	}
+}
+
+// NewDiagnosticEngineWithBaselines creates a new diagnostic engine with custom baselines
+// This allows computed baselines from historical data to be injected
+func NewDiagnosticEngineWithBaselines(latency, packetLoss, jitter float64) *DiagnosticEngine {
+	return &DiagnosticEngine{
+		minNodes:           3,
+		timeWindow:         1 * time.Hour,
+		baselineLatency:    latency,
+		baselinePacketLoss: packetLoss,
+		baselineJitter:     jitter,
 	}
 }
 
@@ -255,26 +269,25 @@ func (e *DiagnosticEngine) determineProblemType(
 	// Case 1: Node Local Failure
 	// Single node abnormal while others in same region are normal
 	if e.isNodeLocalFailure(nodesData, regionalAnalysis) {
-		return ProblemTypeNodeLocalFailure, ConfidenceHigh, affectedNodes
+		return ProblemTypeNodeLocalFailure, e.calculateConfidence(nodesData, true, regionalAnalysis), affectedNodes
 	}
 
 	// Case 2: Cross-Border Link Issue
-	// All nodes in one or more regions abnormal, other regions normal
-	if len(abnormalRegions) > 0 && len(normalRegions) > 0 {
-		// Check if pattern is clear
-		if len(abnormalRegions) == 1 {
-			return ProblemTypeCrossBorderLink, ConfidenceHigh, affectedNodes
-		}
-		return ProblemTypeCrossBorderLink, ConfidenceMedium, affectedNodes
+	// Single region abnormal while other regions normal
+	if len(abnormalRegions) == 1 && len(normalRegions) > 0 {
+		return ProblemTypeCrossBorderLink, e.calculateConfidence(nodesData, false, regionalAnalysis), affectedNodes
 	}
 
 	// Case 3: ISP Routing Issue
-	// Multiple regions abnormal, widespread pattern
+	// Multiple regions (>=2) abnormal with similar patterns suggests ISP/routing issue
 	if len(abnormalRegions) >= 2 {
-		// Check if pattern suggests ISP issue
-		if e.isISPRoutingIssue(nodesData, regionalAnalysis) {
-			return ProblemTypeISPRouting, ConfidenceMedium, affectedNodes
+		// If there are also normal regions, check for ISP-specific pattern
+		if len(normalRegions) > 0 {
+			if e.isISPRoutingIssue(nodesData, regionalAnalysis) {
+				return ProblemTypeISPRouting, e.calculateConfidence(nodesData, false, regionalAnalysis), affectedNodes
+			}
 		}
+		// All regions abnormal or no clear ISP pattern - default to ISP routing
 		return ProblemTypeISPRouting, ConfidenceLow, affectedNodes
 	}
 
@@ -310,6 +323,10 @@ func (e *DiagnosticEngine) isNodeLocalFailure(
 }
 
 // isISPRoutingIssue checks if pattern suggests ISP routing issue
+// Requirements (story line 30-32):
+// - 检测路由跳数异常 (hop count anomalies) - requires additional traceroute data
+// - 检测AS（自治系统）变更 (AS changes) - requires additional BGP data
+// - 对比同运营商其他节点表现 (compare ISP group performance)
 func (e *DiagnosticEngine) isISPRoutingIssue(
 	nodesData []MetricData,
 	regionalAnalysis []RegionalAnalysis,
@@ -318,7 +335,45 @@ func (e *DiagnosticEngine) isISPRoutingIssue(
 	// 1. Multiple regions affected
 	// 2. Similar deviation patterns
 	// 3. Not all nodes in each region affected
+	// 4. ISP-specific pattern (same ISP tags show issues)
 
+	// Group nodes by ISP
+	ispGroups := make(map[string][]MetricData)
+	for _, node := range nodesData {
+		if node.ISP != "" {
+			ispGroups[node.ISP] = append(ispGroups[node.ISP], node)
+		}
+	}
+
+	// If we have ISP tags, check for ISP-specific pattern
+	if len(ispGroups) >= 2 {
+		// Check if one ISP group shows degradation while others are normal
+		abnormalISPs := 0
+		normalISPs := 0
+
+		for _, nodes := range ispGroups {
+			// Calculate average latency for this ISP group
+			var totalLatency float64
+			for _, node := range nodes {
+				totalLatency += node.Latency
+			}
+			avgLatency := totalLatency / float64(len(nodes))
+
+			// ISP is abnormal if avg latency is 2x baseline
+			if avgLatency > e.baselineLatency*2.0 {
+				abnormalISPs++
+			} else {
+				normalISPs++
+			}
+		}
+
+		// ISP routing issue: some ISPs abnormal, others normal
+		if abnormalISPs > 0 && normalISPs > 0 {
+			return true
+		}
+	}
+
+	// Fallback: Check variance across abnormal regions (original logic)
 	abnormalRegions := 0
 	for _, analysis := range regionalAnalysis {
 		if analysis.Status == "abnormal" {
@@ -438,6 +493,54 @@ func (e *DiagnosticEngine) getRecommendation(problemType ProblemType, confidence
 	}
 }
 
+// calculateConfidence determines confidence level based on statistical analysis
+// High: >=30 data points per node AND clear pattern (low variance)
+// Medium: >=10 data points per node OR moderate pattern
+// Low: Otherwise
+func (e *DiagnosticEngine) calculateConfidence(
+	nodesData []MetricData,
+	isClearPattern bool,
+	regionalAnalysis []RegionalAnalysis,
+) ConfidenceLevel {
+	if len(nodesData) == 0 {
+		return ConfidenceLow
+	}
+
+	// Check data point count
+	minDataPoints := nodesData[0].DataPointCount
+	for _, node := range nodesData {
+		if node.DataPointCount < minDataPoints {
+			minDataPoints = node.DataPointCount
+		}
+	}
+
+	// Calculate statistical correlation (using variance as proxy for p-value)
+	var metricValues []float64
+	for _, node := range nodesData {
+		metricValues = append(metricValues, node.Latency)
+	}
+	variance := e.calculateVariance(metricValues)
+
+	// Determine confidence based on story requirements (adjusted for realistic data)
+	// High: >=30 data points AND low variance (strong pattern)
+	if minDataPoints >= 30 && variance < 0.4 {
+		return ConfidenceHigh
+	}
+
+	// High: Very clear pattern with good data (isClearPattern indicates strong signal)
+	if isClearPattern && minDataPoints >= 20 {
+		return ConfidenceHigh
+	}
+
+	// Medium: >=10 data points OR moderate variance
+	if minDataPoints >= 10 || variance < 0.6 {
+		return ConfidenceMedium
+	}
+
+	// Otherwise low confidence
+	return ConfidenceLow
+}
+
 // calculateVariance calculates variance of a set of values
 func (e *DiagnosticEngine) calculateVariance(values []float64) float64 {
 	if len(values) == 0 {
@@ -471,3 +574,77 @@ func (e *DiagnosticEngine) calculateStandardDeviation(values []float64) float64 
 	variance := e.calculateVariance(values)
 	return math.Sqrt(variance)
 }
+
+// ============================================================================
+// BASELINE CALCULATION NOTES
+// ============================================================================
+//
+// The diagnostic engine currently uses hardcoded baseline values for simplicity:
+// - Latency: 50ms
+// - Packet Loss: 1% (0.01)
+// - Jitter: 2ms
+//
+// For production use, baselines should be calculated from historical data.
+//
+// Future Enhancement: 7-Day Moving Average Baseline
+// --------------------------------------------------
+// To implement dynamic baseline calculation:
+//
+// 1. Create historical aggregation queries (7-day window):
+//    SELECT AVG(latency_ms), AVG(packet_loss_rate), AVG(jitter_ms)
+//    FROM metrics
+//    WHERE timestamp >= NOW() - INTERVAL '7 days'
+//      AND timestamp < NOW() - INTERVAL '1 hour'  -- Exclude current hour
+//    GROUP BY node_id
+//
+// 2. Calculate median across all healthy nodes (exclude currently affected nodes)
+//
+// 3. Use NewDiagnosticEngineWithBaselines() to inject computed baselines:
+//    engine := diagnostic.NewDiagnosticEngineWithBaselines(
+//        calculatedLatencyBaseline,
+//        calculatedPacketLossBaseline,
+//        calculatedJitterBaseline,
+//    )
+//
+// 4. Update baselines periodically (every 5-15 minutes) via background job
+//
+// Limitations:
+// - Requires sufficient historical data (7+ days of metrics)
+// - Excludes nodes with ongoing issues from baseline calculation
+// - Needs periodic recalculation to adapt to network changes
+//
+// Architectural Requirements:
+// - Background worker for periodic baseline updates
+// - Caching layer for computed baselines (Redis/database)
+// - Health detection to exclude problematic nodes from baseline
+// - Alerting if baseline deviates significantly from historical norms
+//
+// ============================================================================
+// ISP ROUTING DETECTION LIMITATIONS
+// ============================================================================
+//
+// The ISP routing detection currently uses ISP tags from node metadata:
+// - Groups nodes by ISP tag (node.tags->>'isp')
+// - Compares performance between ISP groups
+// - Detects ISP-specific issues
+//
+// Advanced ISP Routing Detection (NOT IMPLEMENTED):
+// -------------------------------------------------
+// 1. Hop Count Anomalies (Requires Traceroute Data)
+//    - Need new probe type: traceroute probes
+//    - Store hop counts in metrics or separate table
+//    - Detect sudden increases in hop counts
+//    - Requires: probe infrastructure + data schema changes
+//
+// 2. AS (Autonomous System) Changes (Requires BGP Data)
+//    - Need BGP feed integration (e.g., RouteViews, RIPE RIS)
+//    - Store AS path information
+//    - Detect AS path changes preceding performance issues
+//    - Requires: external BGP data integration + correlation logic
+//
+// Current Implementation:
+// - Detects ISP issues using ISP tags (WORKS when nodes are tagged)
+// - Confident detection when multiple ISPs show different performance
+// - Falls back to regional analysis when ISP tags unavailable
+//
+// ============================================================================

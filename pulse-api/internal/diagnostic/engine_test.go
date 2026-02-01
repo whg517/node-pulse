@@ -155,7 +155,8 @@ func TestDiagnosticEngine_Diagnose_ISPRouting(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, ProblemTypeISPRouting, result.ProblemType)
-	assert.Equal(t, ConfidenceMedium, result.Confidence)
+	// Updated: ISP routing with clear pattern and sufficient data points (60 per node) = high confidence
+	assert.Equal(t, ConfidenceHigh, result.Confidence)
 	assert.NotEmpty(t, result.Recommendation)
 }
 

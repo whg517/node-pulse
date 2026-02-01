@@ -36,8 +36,8 @@ func TestGetComparisonHandler_Success(t *testing.T) {
 	// Insert test metrics data
 	insertTestMetrics(t, ctx, pool, nodeIDs)
 
-	// Create handler
-	handler := NewDataHandler(pool)
+	// Create handler with nil cache (tests use PostgreSQL only)
+	handler := NewDataHandler(pool, nil)
 
 	// Create request
 	w := httptest.NewRecorder()
@@ -113,8 +113,8 @@ func TestGetComparisonHandler_MultipleMetrics(t *testing.T) {
 	// Insert test metrics data
 	insertTestMetrics(t, ctx, pool, nodeIDs)
 
-	// Create handler
-	handler := NewDataHandler(pool)
+	// Create handler with nil cache (tests use PostgreSQL only)
+	handler := NewDataHandler(pool, nil)
 
 	// Create request with multiple metrics
 	w := httptest.NewRecorder()
@@ -170,8 +170,8 @@ func TestGetComparisonHandler_MaxFiveNodes(t *testing.T) {
 	// Insert test metrics data
 	insertTestMetrics(t, ctx, pool, nodeIDs)
 
-	// Create handler
-	handler := NewDataHandler(pool)
+	// Create handler with nil cache (tests use PostgreSQL only)
+	handler := NewDataHandler(pool, nil)
 
 	// Create request with 5 nodes (should succeed)
 	w := httptest.NewRecorder()
@@ -197,8 +197,8 @@ func TestGetComparisonHandler_MaxFiveNodes(t *testing.T) {
 func TestGetComparisonHandler_TooManyNodes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create handler without database
-	handler := NewDataHandler(nil)
+	// Create handler without database (nil cache for error case testing)
+	handler := NewDataHandler(nil, nil)
 
 	// Create request with 6 node IDs (should fail validation)
 	w := httptest.NewRecorder()
@@ -222,8 +222,8 @@ func TestGetComparisonHandler_TooManyNodes(t *testing.T) {
 func TestGetComparisonHandler_MinTwoNodes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create handler without database
-	handler := NewDataHandler(nil)
+	// Create handler without database (nil cache for error case testing)
+	handler := NewDataHandler(nil, nil)
 
 	// Create request with only 1 node (should fail)
 	w := httptest.NewRecorder()
@@ -245,8 +245,8 @@ func TestGetComparisonHandler_MinTwoNodes(t *testing.T) {
 func TestGetComparisonHandler_InvalidTimeRange(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create handler without database
-	handler := NewDataHandler(nil)
+	// Create handler without database (nil cache for error case testing)
+	handler := NewDataHandler(nil, nil)
 
 	// Create request with end_time before start_time
 	w := httptest.NewRecorder()
@@ -273,8 +273,8 @@ func TestGetComparisonHandler_InvalidTimeRange(t *testing.T) {
 func TestGetComparisonHandler_InvalidMetric(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create handler without database
-	handler := NewDataHandler(nil)
+	// Create handler without database (nil cache for error case testing)
+	handler := NewDataHandler(nil, nil)
 
 	// Create request with invalid metric
 	w := httptest.NewRecorder()
@@ -301,8 +301,8 @@ func TestGetComparisonHandler_InvalidMetric(t *testing.T) {
 func TestGetComparisonHandler_InvalidStartTimeFormat(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create handler without database
-	handler := NewDataHandler(nil)
+	// Create handler without database (nil cache for error case testing)
+	handler := NewDataHandler(nil, nil)
 
 	// Create request with invalid start_time format
 	w := httptest.NewRecorder()
@@ -326,8 +326,8 @@ func TestGetComparisonHandler_InvalidStartTimeFormat(t *testing.T) {
 func TestGetComparisonHandler_MissingRequiredParameter(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Create handler without database
-	handler := NewDataHandler(nil)
+	// Create handler without database (nil cache for error case testing)
+	handler := NewDataHandler(nil, nil)
 
 	tests := []struct {
 		name       string

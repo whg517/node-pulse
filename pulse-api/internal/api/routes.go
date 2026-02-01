@@ -144,7 +144,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		probes.DELETE("/:id", probeHandler.DeleteProbeHandler)
 
 		// Data query routes (require auth)
-		dataHandler := NewDataHandler(pool)
+		dataHandler := NewDataHandler(pool, memoryCache)
 		data := v1.Group("/data")
 		data.Use(auth.AuthMiddleware(sessionService))
 

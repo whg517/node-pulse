@@ -9,18 +9,21 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/cache"
 	"github.com/kevin/node-pulse/pulse-api/internal/diagnostic"
 )
 
 // DataHandler handles data query API requests
 type DataHandler struct {
-	pool *pgxpool.Pool
+	pool  *pgxpool.Pool
+	cache *cache.MemoryCache
 }
 
 // NewDataHandler creates a new DataHandler
-func NewDataHandler(pool *pgxpool.Pool) *DataHandler {
+func NewDataHandler(pool *pgxpool.Pool, cache *cache.MemoryCache) *DataHandler {
 	return &DataHandler{
-		pool: pool,
+		pool:  pool,
+		cache: cache,
 	}
 }
 
@@ -818,6 +821,8 @@ func findOverlapTimeRange(nodesData []ComparisonNodeData) (time.Time, time.Time)
 
 // DiagnosisRequest represents the query parameters for problem diagnosis
 type DiagnosisRequest struct {
+	// NodeIDs must have at least 3 nodes for statistical validity in diagnosis
+	// Validation: Gin binding tag "min=3" ensures minimum node count
 	NodeIDs []string `form:"node_ids" binding:"required,min=3"`
 }
 
@@ -835,7 +840,8 @@ func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 	var req DiagnosisRequest
 	if err := c.ShouldBindQuery(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid query parameters",
+			"code":    "ERR_VALIDATION",
+			"message": "Invalid query parameters",
 			"details": err.Error(),
 		})
 		return
@@ -846,7 +852,8 @@ func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 	nodesData, err := h.queryNodesForDiagnosis(ctx, req.NodeIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to query node data",
+			"code":    "ERR_QUERY_DATA",
+			"message": "Failed to query node data",
 			"details": err.Error(),
 		})
 		return
@@ -855,7 +862,8 @@ func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 	// Check if we have enough nodes with data
 	if len(nodesData) < 3 {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Insufficient data for diagnosis",
+			"code":    "ERR_INSUFFICIENT_DATA",
+			"message": "Insufficient data for diagnosis",
 			"details": fmt.Sprintf("Need at least 3 nodes with data, got %d", len(nodesData)),
 		})
 		return
@@ -866,7 +874,8 @@ func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 	result, err := engine.Diagnose(nodesData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Diagnosis failed",
+			"code":    "ERR_DIAGNOSIS",
+			"message": "Diagnosis failed",
 			"details": err.Error(),
 		})
 		return
@@ -881,59 +890,198 @@ func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 }
 
 // queryNodesForDiagnosis queries node metrics for diagnosis
+// Uses memory cache for real-time data (< 1 hour) per NFR-OTHER-002
 func (h *DataHandler) queryNodesForDiagnosis(ctx context.Context, nodeIDs []string) ([]diagnostic.MetricData, error) {
 	// Query time window: last 1 hour
 	endTime := time.Now()
 	startTime := endTime.Add(-1 * time.Hour)
 
-	// Build query to get average metrics for each node
-	query := `
-		SELECT
-			m.node_id,
-			n.region,
-			AVG(m.latency_ms) as avg_latency,
-			AVG(m.packet_loss_rate) as avg_packet_loss,
-			AVG(m.jitter_ms) as avg_jitter,
-			COUNT(*) as data_point_count
-		FROM metrics m
-		JOIN nodes n ON m.node_id = n.id
-		WHERE m.node_id = ANY($1)
-			AND m.timestamp >= $2
-			AND m.timestamp <= $3
-			AND m.latency_ms IS NOT NULL
-		GROUP BY m.node_id, n.region
-		ORDER BY m.node_id;
-	`
+	// Strategy: Try memory cache first for real-time data (NFR-OTHER-002)
+	// If cache has insufficient data, fall back to PostgreSQL
 
-	rows, err := h.pool.Query(ctx, query, nodeIDs, startTime, endTime)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query metrics: %w", err)
+	// Step 1: Query memory cache for all requested nodes
+	type cachedMetricData struct {
+		NodeID         string
+		Region         string
+		ISP            string
+		Latency        float64
+		PacketLossRate float64
+		Jitter         float64
+		DataPointCount int
 	}
-	defer rows.Close()
 
-	nodesData := make([]diagnostic.MetricData, 0)
-	for rows.Next() {
-		var nodeID, region string
-		var avgLatency, avgPacketLoss, avgJitter float64
-		var dataPointCount int
+	cacheDataMap := make(map[string]cachedMetricData) // node_id -> cached data
 
-		if err := rows.Scan(&nodeID, &region, &avgLatency, &avgPacketLoss, &avgJitter, &dataPointCount); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+	if h.cache != nil {
+		for _, nodeID := range nodeIDs {
+			// Get aggregated metrics from cache (1-minute intervals)
+			aggregated := h.cache.AggregateMetricsByNode(nodeID)
+
+			// Filter to last 1 hour and calculate averages
+			if aggregated != nil && len(aggregated) > 0 {
+				validMetrics := filterAggregatedByTime(aggregated, startTime, endTime)
+
+				if len(validMetrics) > 0 {
+					// Calculate averages from cached aggregated data
+					avgLatency, avgPacketLoss, avgJitter := calculateAverageFromAggregated(validMetrics)
+
+					cacheDataMap[nodeID] = cachedMetricData{
+						NodeID:         nodeID,
+						Latency:        avgLatency,
+						PacketLossRate: avgPacketLoss,
+						Jitter:         avgJitter,
+						DataPointCount: len(validMetrics),
+						// Note: Region and ISP will be filled from nodes table query
+					}
+				}
+			}
+		}
+	}
+
+	// Step 2: Identify nodes that need PostgreSQL data
+	// (cache miss or insufficient data points)
+	nodesNeedingDB := []string{}
+	for _, nodeID := range nodeIDs {
+		if _, exists := cacheDataMap[nodeID]; !exists {
+			nodesNeedingDB = append(nodesNeedingDB, nodeID)
+		}
+	}
+
+	// Step 3: Query PostgreSQL for nodes without cache data
+	// Also query region/ISP info for cached nodes
+	dbDataMap := make(map[string]diagnostic.MetricData)
+
+	// Always query region/ISP info for cached nodes
+	nodesNeedingRegionISP := []string{}
+	for nodeID := range cacheDataMap {
+		nodesNeedingRegionISP = append(nodesNeedingRegionISP, nodeID)
+	}
+
+	// Combine nodes needing full data and nodes needing region/ISP only
+	allDBQueries := append(nodesNeedingDB, nodesNeedingRegionISP...)
+	if len(allDBQueries) > 0 {
+		// Remove duplicates
+		uniqueDBQueries := make(map[string]bool)
+		for _, id := range allDBQueries {
+			uniqueDBQueries[id] = true
 		}
 
-		nodesData = append(nodesData, diagnostic.MetricData{
-			NodeID:         nodeID,
-			Region:         region,
-			Latency:        avgLatency,
-			PacketLossRate: avgPacketLoss,
-			Jitter:         avgJitter,
-			DataPointCount: dataPointCount,
-		})
+		finalDBQueries := make([]string, 0, len(uniqueDBQueries))
+		for id := range uniqueDBQueries {
+			finalDBQueries = append(finalDBQueries, id)
+		}
+
+		query := `
+			SELECT
+				m.node_id,
+				n.region,
+				COALESCE(n.tags->>'isp', '') as isp,
+				AVG(m.latency_ms) as avg_latency,
+				AVG(m.packet_loss_rate) as avg_packet_loss,
+				AVG(m.jitter_ms) as avg_jitter,
+				COUNT(*) as data_point_count
+			FROM metrics m
+			JOIN nodes n ON m.node_id = n.id
+			WHERE m.node_id = ANY($1)
+				AND m.timestamp >= $2
+				AND m.timestamp <= $3
+				AND m.latency_ms IS NOT NULL
+			GROUP BY m.node_id, n.region, n.tags->>'isp'
+			ORDER BY m.node_id;
+		`
+
+		rows, err := h.pool.Query(ctx, query, finalDBQueries, startTime, endTime)
+		if err != nil {
+			return nil, fmt.Errorf("failed to query metrics: %w", err)
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var nodeID, region, isp string
+			var avgLatency, avgPacketLoss, avgJitter float64
+			var dataPointCount int
+
+			if err := rows.Scan(&nodeID, &region, &isp, &avgLatency, &avgPacketLoss, &avgJitter, &dataPointCount); err != nil {
+				return nil, fmt.Errorf("failed to scan row: %w", err)
+			}
+
+			dbDataMap[nodeID] = diagnostic.MetricData{
+				NodeID:         nodeID,
+				Region:         region,
+				ISP:            isp,
+				Latency:        avgLatency,
+				PacketLossRate: avgPacketLoss,
+				Jitter:         avgJitter,
+				DataPointCount: dataPointCount,
+			}
+		}
+
+		if err := rows.Err(); err != nil {
+			return nil, fmt.Errorf("error iterating rows: %w", err)
+		}
 	}
 
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("error iterating rows: %w", err)
+	// Step 4: Merge cache and DB data
+	// Priority: Cache data (more recent) > DB data (fallback)
+	nodesData := make([]diagnostic.MetricData, 0, len(nodeIDs))
+
+	for _, nodeID := range nodeIDs {
+		if cached, exists := cacheDataMap[nodeID]; exists {
+			// Use cache data, but fill region/ISP from DB if available
+			region := ""
+			isp := ""
+
+			if dbData, dbExists := dbDataMap[nodeID]; dbExists {
+				region = dbData.Region
+				isp = dbData.ISP
+			}
+
+			nodesData = append(nodesData, diagnostic.MetricData{
+				NodeID:         cached.NodeID,
+				Region:         region,
+				ISP:            isp,
+				Latency:        cached.Latency,
+				PacketLossRate: cached.PacketLossRate,
+				Jitter:         cached.Jitter,
+				DataPointCount: cached.DataPointCount,
+			})
+		} else if dbData, exists := dbDataMap[nodeID]; exists {
+			// Use DB data
+			nodesData = append(nodesData, dbData)
+		}
+		// If neither cache nor DB has data, skip this node
 	}
 
 	return nodesData, nil
+}
+
+// filterAggregatedByTime filters aggregated metrics to within time window
+func filterAggregatedByTime(aggregated []*cache.AggregatedMetrics, startTime, endTime time.Time) []*cache.AggregatedMetrics {
+	filtered := make([]*cache.AggregatedMetrics, 0)
+	for _, agg := range aggregated {
+		if (agg.Timestamp.Equal(startTime) || agg.Timestamp.After(startTime)) &&
+			(agg.Timestamp.Equal(endTime) || agg.Timestamp.Before(endTime)) {
+			filtered = append(filtered, agg)
+		}
+	}
+	return filtered
+}
+
+// calculateAverageFromAggregated calculates average metrics from aggregated cache data
+// Returns averaged latency, packet loss rate, and jitter
+func calculateAverageFromAggregated(aggregated []*cache.AggregatedMetrics) (avgLatency, avgPacketLoss, avgJitter float64) {
+	if len(aggregated) == 0 {
+		return 0, 0, 0
+	}
+
+	var sumLatency, sumPacketLoss, sumJitter float64
+
+	for _, agg := range aggregated {
+		sumLatency += agg.LatencyMs
+		sumPacketLoss += agg.PacketLossRate
+		sumJitter += agg.JitterMs
+	}
+
+	count := float64(len(aggregated))
+	return sumLatency / count, sumPacketLoss / count, sumJitter / count
 }
