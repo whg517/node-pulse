@@ -107,9 +107,9 @@ development_status:
   7-4-problem-diagnosis-engine: done
   epic-7-retrospective: done
 
-  epic-8: in-progress
+  epic-8: done
   8-1-data-export-api: done
   8-2-data-export-frontend-page: done
   8-3-performance-metrics-collection: done
-  8-4-performance-monitoring-dashboard: backlog
-  epic-8-retrospective: optional
+  8-4-performance-monitoring-dashboard: done
+  epic-8-retrospective: done

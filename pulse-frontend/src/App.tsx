@@ -7,6 +7,7 @@ import AlertRulesPage from './pages/AlertRulesPage'
 import AlertRecordsPage from './pages/AlertRecordsPage'
 import WebhooksPage from './pages/WebhooksPage'
 import DataExportPage from './pages/DataExportPage'
+import PerformanceDashboard from './pages/PerformanceDashboard'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
 function App() {
@@ -88,6 +89,14 @@ function App() {
           element={
             <ProtectedRoute>
               <DataExportPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/performance"
+          element={
+            <ProtectedRoute>
+              <PerformanceDashboard />
             </ProtectedRoute>
           }
         />

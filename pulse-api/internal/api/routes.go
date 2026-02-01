@@ -50,6 +50,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	metricsCollector := metrics.NewCollector()
 	metricsCollector.Start()
 
+	// Initialize handlers that depend on metrics collector
+	metricsHandler := NewMetricsHandler(metricsCollector)
+
 	// Create cache manager for graceful shutdown
 	cacheManager := &CacheManager{
 		MemoryCache:      memoryCache,
@@ -160,6 +163,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// GET /api/v1/data/diagnosis - Get problem type diagnosis (all roles) (Story 7.4)
 		data.GET("/diagnosis", dataHandler.GetDiagnosisHandler)
 
+		// GET /api/v1/data/performance - Get performance metrics with targets (all roles) (Story 8.4)
+		data.GET("/performance", metricsHandler.GetPerformanceData)
+
 		// Export management routes (require admin auth only) (Story 8.1)
 		exportHandler := NewExportHandler(exportService)
 
@@ -240,9 +246,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// DELETE /api/v1/webhooks/:id - Delete webhook configuration (admin only)
 		webhooks.DELETE("/:id", webhookHandler.DeleteWebhookHandler)
 
-		// Performance metrics routes (require auth) (Story 8.3)
-		metricsHandler := NewMetricsHandler(metricsCollector)
-
+		// Performance metrics routes (require auth) (Story 8.3, 8.4)
 		// Metrics group with auth middleware (all roles)
 		metricsGroup := v1.Group("/metrics")
 		metricsGroup.Use(auth.AuthMiddleware(sessionService))
