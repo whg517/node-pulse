@@ -8,7 +8,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/kevin/node-pulse/pulse-api/pkg/middleware"
 )
 
 // DataHandler handles data query API requests
@@ -182,21 +181,16 @@ func (h *DataHandler) queryMetricHistory(
 	}
 
 	// Determine aggregation interval
-	var interval string
 	var truncateFormat string
 	switch aggregation {
 	case "1m":
-		interval = "1 minute"
 		truncateFormat = "minute"
 	case "5m":
 		// For 5-minute aggregation, we need to truncate to 5-minute buckets
-		interval = "5 minutes"
 		truncateFormat = "minute"
 	case "1h":
-		interval = "1 hour"
 		truncateFormat = "hour"
 	default:
-		interval = "1 minute"
 		truncateFormat = "minute"
 	}
 

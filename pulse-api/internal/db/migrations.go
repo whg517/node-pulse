@@ -40,6 +40,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createAlertsTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -275,6 +279,28 @@ func createProbesTrigger(ctx context.Context, pool *pgxpool.Pool) error {
 		BEFORE UPDATE ON probes
 		FOR EACH ROW
 		EXECUTE FUNCTION update_probes_updated_at_func();
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createAlertsTable creates alerts table with indexes and foreign keys (Story 5.1)
+func createAlertsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS alerts (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			metric VARCHAR NOT NULL CHECK (metric IN ('latency', 'packet_loss_rate', 'jitter')),
+			threshold DECIMAL(10,2) NOT NULL CHECK (threshold > 0),
+			level VARCHAR NOT NULL CHECK (level IN ('P0', 'P1', 'P2')),
+			node_id UUID REFERENCES nodes(id) ON DELETE CASCADE,
+			enabled BOOLEAN NOT NULL DEFAULT true,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_alerts_node_id ON alerts(node_id);
+		CREATE INDEX IF NOT EXISTS idx_alerts_enabled ON alerts(enabled);
+		CREATE INDEX IF NOT EXISTS idx_alerts_metric ON alerts(metric);
 	`
 
 	_, err := pool.Exec(ctx, query)

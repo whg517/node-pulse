@@ -126,6 +126,32 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// GET /api/v1/data/history - Get historical data (all roles)
 		data.GET("/history", dataHandler.GetHistoryHandler)
+
+		// Alert management routes (require auth) (Story 5.1)
+		alertQuerier := db.NewAlertQuerier(pool)
+		alertHandler := NewAlertHandler(alertQuerier)
+
+		// Alerts group with auth middleware
+		alerts := v1.Group("/alerts")
+		alerts.Use(auth.AuthMiddleware(sessionService))
+
+		// GET /api/v1/alerts/rules - Get all alert rules (all roles)
+		alerts.GET("/rules", alertHandler.GetAlertRulesHandler)
+
+		// GET /api/v1/alerts/rules/:id - Get alert rule by ID (all roles)
+		alerts.GET("/rules/:id", alertHandler.GetAlertRuleByIDHandler)
+
+		// Create/Update/Delete routes require RBAC (admin or operator)
+		alerts.Use(auth.RBACMiddleware([]string{"admin", "operator"}))
+
+		// POST /api/v1/alerts/rules - Create alert rule (admin/operator only)
+		alerts.POST("/rules", alertHandler.CreateAlertRuleHandler)
+
+		// PUT /api/v1/alerts/rules/:id - Update alert rule (admin/operator only)
+		alerts.PUT("/rules/:id", alertHandler.UpdateAlertRuleHandler)
+
+		// DELETE /api/v1/alerts/rules/:id - Delete alert rule (admin/operator only)
+		alerts.DELETE("/rules/:id", alertHandler.DeleteAlertRuleHandler)
 	}
 
 	// Return cache manager for graceful shutdown

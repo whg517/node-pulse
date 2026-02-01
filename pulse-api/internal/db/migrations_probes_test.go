@@ -3,8 +3,6 @@ package db
 import (
 	"context"
 	"testing"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 // TestCreateProbesTable tests probes table creation
@@ -186,34 +184,4 @@ func TestCreateMetricsTable(t *testing.T) {
 			t.Errorf("Foreign key constraint on %s referencing %s was not created: %v", col, refTable, err)
 		}
 	}
-}
-
-// setupTestDB creates a test database connection pool
-func setupTestDB(t *testing.T) *pgxpool.Pool {
-	ctx := context.Background()
-
-	// Use test database from environment or default
-	testDSN := "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
-
-	pool, err := pgxpool.New(ctx, testDSN)
-	if err != nil {
-		t.Skipf("Skipping test: cannot connect to test database: %v", err)
-	}
-
-	// Clean up any existing probes/metrics tables from previous tests
-	pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
-
-	// Create dependent tables first
-	if err := createUsersTable(ctx, pool); err != nil {
-		t.Fatalf("Failed to create users table: %v", err)
-	}
-	if err := createNodesTable(ctx, pool); err != nil {
-		t.Fatalf("Failed to create nodes table: %v", err)
-	}
-
-	return pool
 }
