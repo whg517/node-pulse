@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import NodeDetailPage from './pages/NodeDetailPage'
+import AlertRulesPage from './pages/AlertRulesPage'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
 function App() {
@@ -50,7 +51,7 @@ function App() {
           path="/alerts/rules"
           element={
             <ProtectedRoute>
-              <div>Alert Rules (Coming Soon)</div>
+              <AlertRulesPage />
             </ProtectedRoute>
           }
         />

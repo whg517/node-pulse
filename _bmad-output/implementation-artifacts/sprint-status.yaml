@@ -87,7 +87,7 @@ development_status:
   epic-5: in-progress
   5-1-alert-rule-api: done
   5-2-webhook-config-api: done
-  5-3-alert-rule-frontend-page: backlog
+  5-3-alert-rule-frontend-page: done
   5-4-webhook-config-frontend-page: backlog
   5-5-alert-engine: backlog
   5-6-alert-suppression-mechanism: backlog
