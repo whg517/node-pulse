@@ -165,6 +165,10 @@ func main() {
 		cacheManager.BatchWriter.Stop()
 		log.Println("[Pulse] Stopping memory cache...")
 		cacheManager.MemoryCache.Stop()
+		log.Println("[Pulse] Stopping export service...")
+		if cacheManager.ExportService != nil {
+			cacheManager.ExportService.Shutdown()
+		}
 	}
 
 	// Stop scheduler and cleanup task (Story 3.12)

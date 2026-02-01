@@ -9,14 +9,16 @@ import (
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/health"
 	"github.com/kevin/node-pulse/pulse-api/internal/auth"
+	"github.com/kevin/node-pulse/pulse-api/internal/export"
 	"github.com/kevin/node-pulse/pulse-api/pkg/middleware"
 )
 
 // CacheManager holds cache instances that need cleanup on shutdown
 type CacheManager struct {
-	MemoryCache  *cache.MemoryCache
-	BatchWriter  *cache.BatchWriter
-	AlertEngine  *alert.AlertEngine
+	MemoryCache   *cache.MemoryCache
+	BatchWriter   *cache.BatchWriter
+	AlertEngine   *alert.AlertEngine
+	ExportService *export.ExportService
 }
 
 // SetupRoutes configures all API routes and returns cache manager for shutdown
@@ -39,11 +41,15 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	alertEngine := alert.NewAlertEngine(pool, alertQuerier, alertEngineConfig)
 	alertEngine.Start()
 
+	// Initialize export service (Story 8.1)
+	exportService := export.NewExportService(pool)
+
 	// Create cache manager for graceful shutdown
 	cacheManager := &CacheManager{
-		MemoryCache: memoryCache,
-		BatchWriter: batchWriter,
-		AlertEngine: alertEngine,
+		MemoryCache:   memoryCache,
+		BatchWriter:   batchWriter,
+		AlertEngine:   alertEngine,
+		ExportService: exportService,
 	}
 
 	// API v1 routes
@@ -141,6 +147,24 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// GET /api/v1/data/diagnosis - Get problem type diagnosis (all roles) (Story 7.4)
 		data.GET("/diagnosis", dataHandler.GetDiagnosisHandler)
+
+		// Export management routes (require admin auth only) (Story 8.1)
+		exportHandler := NewExportHandler(exportService)
+
+		// Export group with auth and RBAC middleware (admin only)
+		exports := v1.Group("/data/export")
+		exports.Use(auth.AuthMiddleware(sessionService))
+		exports.Use(auth.RBACMiddleware([]string{"admin"}))
+		{
+			// POST /api/v1/data/export - Create export task (admin only)
+			exports.POST("", exportHandler.CreateExportHandler)
+
+			// GET /api/v1/data/export/:id - Get export status (admin only)
+			exports.GET("/:id", exportHandler.GetExportStatusHandler)
+
+			// GET /api/v1/data/export/:id/download - Download export file (admin only)
+			exports.GET("/:id/download", exportHandler.DownloadExportHandler)
+		}
 
 		// Alert management routes (require auth) (Story 5.1)
 		alertHandler := NewAlertHandler(alertQuerier)
