@@ -27,6 +27,7 @@ export function AlertRecordsTable({
   onPageChange,
   sortField,
   sortOrder,
+  onSort,
 }: AlertRecordsTableProps) {
   // Helper to get node name by ID
   const getNodeName = (nodeId: string) => {

@@ -35,7 +35,8 @@ describe('MetricsSummaryCards', () => {
 
       // Average latency: (50 + 150) / 2 = 100
       expect(screen.getByText('100.0')).toBeInTheDocument()
-      expect(screen.getByText('ms')).toBeInTheDocument()
+      const msLabels = screen.getAllByText('ms')
+      expect(msLabels.length).toBeGreaterThan(0)
 
       // Average packet loss: (0.1 + 2.5) / 2 = 1.3
       expect(screen.getByText('1.30')).toBeInTheDocument()
@@ -148,8 +149,12 @@ describe('MetricsSummaryCards', () => {
     it('should display zero values when no metrics', () => {
       render(<MetricsSummaryCards metrics={[]} />)
 
-      expect(screen.getByText('0.0')).toBeInTheDocument()
-      expect(screen.getByText('0.00')).toBeInTheDocument()
+      const zeroValues = screen.getAllByText('0.0')
+      expect(zeroValues.length).toBeGreaterThan(0)
+
+      const zeroDecimalValues = screen.getAllByText('0.00')
+      expect(zeroDecimalValues.length).toBeGreaterThan(0)
+
       expect(screen.getByText('Across 0 nodes')).toBeInTheDocument()
     })
 

@@ -1,5 +1,5 @@
 import { renderHook, waitFor, act } from '@testing-library/react'
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useDashboardData } from '../useDashboardData'
 import * as api from '../../api'
 
@@ -12,12 +12,6 @@ vi.mock('../../api', () => ({
 describe('useDashboardData', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
-  })
-
-  afterEach(() => {
-    vi.runOnlyPendingTimers()
-    vi.useRealTimers()
   })
 
   it('should fetch initial data on mount', async () => {
@@ -76,48 +70,59 @@ describe('useDashboardData', () => {
   })
 
   it('should poll data at specified interval', async () => {
-    const mockNodes = { data: [] }
-    const mockMetrics = { data: [] }
+    vi.useFakeTimers()
 
-    vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
-    vi.mocked(api.fetchMetrics).mockResolvedValue(mockMetrics as any)
+    try {
+      const mockNodes = { data: [] }
+      const mockMetrics = { data: [] }
 
-    renderHook(() => useDashboardData(5000))
+      vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
+      vi.mocked(api.fetchMetrics).mockResolvedValue(mockMetrics as any)
 
-    await waitFor(() => {
+      renderHook(() => useDashboardData(5000))
+
+      // Initial fetch happens synchronously with fake timers
       expect(api.fetchNodes).toHaveBeenCalledTimes(1)
-    })
 
-    act(() => {
-      vi.advanceTimersByTime(5000)
-    })
+      // Fast-forward 5 seconds to trigger polling
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
 
-    await waitFor(() => {
+      // Should have called fetchNodes again
       expect(api.fetchNodes).toHaveBeenCalledTimes(2)
-    })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('should cleanup interval on unmount', async () => {
-    const mockNodes = { data: [] }
-    const mockMetrics = { data: [] }
+    vi.useFakeTimers()
 
-    vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
-    vi.mocked(api.fetchMetrics).mockResolvedValue(mockMetrics as any)
+    try {
+      const mockNodes = { data: [] }
+      const mockMetrics = { data: [] }
 
-    const { unmount } = renderHook(() => useDashboardData(5000))
+      vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
+      vi.mocked(api.fetchMetrics).mockResolvedValue(mockMetrics as any)
 
-    await waitFor(() => {
+      const { unmount } = renderHook(() => useDashboardData(5000))
+
+      // Initial fetch
       expect(api.fetchNodes).toHaveBeenCalledTimes(1)
-    })
 
-    unmount()
+      unmount()
 
-    act(() => {
-      vi.advanceTimersByTime(5000)
-    })
+      // Fast-forward time (should not trigger another fetch after unmount)
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
 
-    // Should not call fetchNodes again after unmount
-    expect(api.fetchNodes).toHaveBeenCalledTimes(1)
+      // Should not call fetchNodes again after unmount
+      expect(api.fetchNodes).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('should provide refetch function', async () => {
@@ -143,24 +148,28 @@ describe('useDashboardData', () => {
   })
 
   it('should use default polling interval of 5000ms', async () => {
-    const mockNodes = { data: [] }
-    const mockMetrics = { data: [] }
+    vi.useFakeTimers()
 
-    vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
-    vi.mocked(api.fetchMetrics).mockResolvedValue(mockMetrics as any)
+    try {
+      const mockNodes = { data: [] }
+      const mockMetrics = { data: [] }
 
-    renderHook(() => useDashboardData())
+      vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
+      vi.mocked(api.fetchMetrics).mockResolvedValue(mockMetrics as any)
 
-    await waitFor(() => {
+      renderHook(() => useDashboardData())
+
+      // Initial fetch
       expect(api.fetchNodes).toHaveBeenCalledTimes(1)
-    })
 
-    act(() => {
-      vi.advanceTimersByTime(5000)
-    })
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
 
-    await waitFor(() => {
+      // Should have called fetchNodes again after 5000ms
       expect(api.fetchNodes).toHaveBeenCalledTimes(2)
-    })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

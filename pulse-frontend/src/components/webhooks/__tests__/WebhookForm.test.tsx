@@ -137,6 +137,8 @@ describe('WebhookForm', () => {
     fireEvent.click(resetButton)
 
     const eventFormatTextarea = screen.getByLabelText(/Event Format \(JSON\)/i)
-    expect(eventFormatTextarea).toHaveValue(expect.stringContaining('"version"'))
+    const value = eventFormatTextarea.value
+    expect(value).toContain('"version"')
+    expect(value).toContain('"1.0"')
   })
 })

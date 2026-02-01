@@ -14,12 +14,6 @@ const mockFetchMetrics = fetchMetrics as ReturnType<typeof vi.mocked<typeof fetc
 describe('useNodeDetail', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.useFakeTimers()
-  })
-
-  afterEach(() => {
-    vi.runOnlyPendingTimers()
-    vi.useRealTimers()
   })
 
   it('fetches node data on mount', async () => {
@@ -96,113 +90,117 @@ describe('useNodeDetail', () => {
   })
 
   it('polls data at specified interval', async () => {
-    const mockNode = {
-      data: {
-        id: 'node-1',
-        name: 'Test Node',
-        ip: '192.168.1.1',
-        region: 'us-east',
-        tags: ['production'],
-        status: 'online',
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      },
-    }
+    vi.useFakeTimers()
 
-    const mockStatus = {
-      data: {
-        status: 'online',
-        last_heartbeat: '2024-01-01T12:00:00Z',
-      },
-    }
-
-    const mockMetrics = {
-      data: [
-        {
-          node_id: 'node-1',
-          latency_ms: 45,
-          packet_loss_rate: 0,
-          jitter_ms: 5,
-          timestamp: '2024-01-01T12:00:00Z',
+    try {
+      const mockNode = {
+        data: {
+          id: 'node-1',
+          name: 'Test Node',
+          ip: '192.168.1.1',
+          region: 'us-east',
+          tags: ['production'],
+          status: 'online',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
         },
-      ],
-    }
+      }
 
-    mockFetchNode.mockResolvedValue(mockNode as any)
-    mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
-    mockFetchMetrics.mockResolvedValue(mockMetrics as any)
+      const mockStatus = {
+        data: {
+          status: 'online',
+          last_heartbeat: '2024-01-01T12:00:00Z',
+        },
+      }
 
-    const { result } = renderHook(() => useNodeDetail('node-1', 5000))
+      const mockMetrics = {
+        data: [
+          {
+            node_id: 'node-1',
+            latency_ms: 45,
+            packet_loss_rate: 0,
+            jitter_ms: 5,
+            timestamp: '2024-01-01T12:00:00Z',
+          },
+        ],
+      }
 
-    // Wait for initial fetch
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
+      mockFetchNode.mockResolvedValue(mockNode as any)
+      mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
+      mockFetchMetrics.mockResolvedValue(mockMetrics as any)
 
-    expect(mockFetchNode).toHaveBeenCalledTimes(1)
+      renderHook(() => useNodeDetail('node-1', 5000))
 
-    // Fast-forward time
-    act(() => {
-      vi.advanceTimersByTime(5000)
-    })
+      // Initial fetch happens synchronously with fake timers
+      expect(mockFetchNode).toHaveBeenCalledTimes(1)
 
-    await waitFor(() => {
+      // Fast-forward time
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
+
+      // Should have called fetchNode again
       expect(mockFetchNode).toHaveBeenCalledTimes(2)
-    })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('does not poll when interval is 0', async () => {
-    const mockNode = {
-      data: {
-        id: 'node-1',
-        name: 'Test Node',
-        ip: '192.168.1.1',
-        region: 'us-east',
-        tags: ['production'],
-        status: 'online',
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      },
-    }
+    vi.useFakeTimers()
 
-    const mockStatus = {
-      data: {
-        status: 'online',
-        last_heartbeat: '2024-01-01T12:00:00Z',
-      },
-    }
-
-    const mockMetrics = {
-      data: [
-        {
-          node_id: 'node-1',
-          latency_ms: 45,
-          packet_loss_rate: 0,
-          jitter_ms: 5,
-          timestamp: '2024-01-01T12:00:00Z',
+    try {
+      const mockNode = {
+        data: {
+          id: 'node-1',
+          name: 'Test Node',
+          ip: '192.168.1.1',
+          region: 'us-east',
+          tags: ['production'],
+          status: 'online',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
         },
-      ],
+      }
+
+      const mockStatus = {
+        data: {
+          status: 'online',
+          last_heartbeat: '2024-01-01T12:00:00Z',
+        },
+      }
+
+      const mockMetrics = {
+        data: [
+          {
+            node_id: 'node-1',
+            latency_ms: 45,
+            packet_loss_rate: 0,
+            jitter_ms: 5,
+            timestamp: '2024-01-01T12:00:00Z',
+          },
+        ],
+      }
+
+      mockFetchNode.mockResolvedValue(mockNode as any)
+      mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
+      mockFetchMetrics.mockResolvedValue(mockMetrics as any)
+
+      renderHook(() => useNodeDetail('node-1', 0))
+
+      // Initial fetch
+      expect(mockFetchNode).toHaveBeenCalledTimes(1)
+
+      // Fast-forward time (should not trigger another fetch)
+      act(() => {
+        vi.advanceTimersByTime(10000)
+      })
+
+      // Should still be 1 (no polling when interval is 0)
+      expect(mockFetchNode).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
     }
-
-    mockFetchNode.mockResolvedValue(mockNode as any)
-    mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
-    mockFetchMetrics.mockResolvedValue(mockMetrics as any)
-
-    const { result } = renderHook(() => useNodeDetail('node-1', 0))
-
-    // Wait for initial fetch
-    await waitFor(() => {
-      expect(result.current.isLoading).toBe(false)
-    })
-
-    expect(mockFetchNode).toHaveBeenCalledTimes(1)
-
-    // Fast-forward time (should not trigger another fetch)
-    act(() => {
-      vi.advanceTimersByTime(10000)
-    })
-
-    expect(mockFetchNode).toHaveBeenCalledTimes(1)
   })
 
   it('provides refetch function', async () => {
@@ -258,56 +256,61 @@ describe('useNodeDetail', () => {
   })
 
   it('cleans up interval on unmount', async () => {
-    const mockNode = {
-      data: {
-        id: 'node-1',
-        name: 'Test Node',
-        ip: '192.168.1.1',
-        region: 'us-east',
-        tags: ['production'],
-        status: 'online',
-        created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z',
-      },
-    }
+    vi.useFakeTimers()
 
-    const mockStatus = {
-      data: {
-        status: 'online',
-        last_heartbeat: '2024-01-01T12:00:00Z',
-      },
-    }
-
-    const mockMetrics = {
-      data: [
-        {
-          node_id: 'node-1',
-          latency_ms: 45,
-          packet_loss_rate: 0,
-          jitter_ms: 5,
-          timestamp: '2024-01-01T12:00:00Z',
+    try {
+      const mockNode = {
+        data: {
+          id: 'node-1',
+          name: 'Test Node',
+          ip: '192.168.1.1',
+          region: 'us-east',
+          tags: ['production'],
+          status: 'online',
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-01T00:00:00Z',
         },
-      ],
-    }
+      }
 
-    mockFetchNode.mockResolvedValue(mockNode as any)
-    mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
-    mockFetchMetrics.mockResolvedValue(mockMetrics as any)
+      const mockStatus = {
+        data: {
+          status: 'online',
+          last_heartbeat: '2024-01-01T12:00:00Z',
+        },
+      }
 
-    const { unmount } = renderHook(() => useNodeDetail('node-1', 5000))
+      const mockMetrics = {
+        data: [
+          {
+            node_id: 'node-1',
+            latency_ms: 45,
+            packet_loss_rate: 0,
+            jitter_ms: 5,
+            timestamp: '2024-01-01T12:00:00Z',
+          },
+        ],
+      }
 
-    await waitFor(() => {
+      mockFetchNode.mockResolvedValue(mockNode as any)
+      mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
+      mockFetchMetrics.mockResolvedValue(mockMetrics as any)
+
+      const { unmount } = renderHook(() => useNodeDetail('node-1', 5000))
+
+      // Initial fetch
       expect(mockFetchNode).toHaveBeenCalledTimes(1)
-    })
 
-    unmount()
+      unmount()
 
-    // Fast-forward time (should not trigger another fetch after unmount)
-    act(() => {
-      vi.advanceTimersByTime(5000)
-    })
+      // Fast-forward time (should not trigger another fetch after unmount)
+      act(() => {
+        vi.advanceTimersByTime(5000)
+      })
 
-    // Should still be 1 (no additional fetch after unmount)
-    expect(mockFetchNode).toHaveBeenCalledTimes(1)
+      // Should still be 1 (no additional fetch after unmount)
+      expect(mockFetchNode).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })

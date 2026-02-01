@@ -46,7 +46,6 @@ export default function NodeComparisonPage() {
     setComparisonTimeRange,
     setComparisonCustomTimeRange,
     setComparisonGroupBy,
-    resetComparison,
   } = useDashboardStore()
 
   // Local state

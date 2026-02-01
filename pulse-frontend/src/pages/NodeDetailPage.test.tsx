@@ -2,11 +2,11 @@ import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
-import NodeDetailPage from '../NodeDetailPage'
-import { useNodeDetail } from '../../hooks/useNodeDetail'
+import NodeDetailPage from './NodeDetailPage'
+import { useNodeDetail } from '../hooks/useNodeDetail'
 
 // Mock the hook
-vi.mock('../../hooks/useNodeDetail')
+vi.mock('../hooks/useNodeDetail')
 
 const mockUseNodeDetail = useNodeDetail as ReturnType<typeof vi.mocked<typeof useNodeDetail>>
 

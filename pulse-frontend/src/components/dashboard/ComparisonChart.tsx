@@ -31,14 +31,6 @@ export interface ComparisonChartProps {
   isLoading?: boolean
 }
 
-interface TooltipParams {
-  name: string
-  value: number
-  seriesName: string
-  marker: string
-  data?: any
-}
-
 interface StatisticsResult {
   avg: number
   max: number

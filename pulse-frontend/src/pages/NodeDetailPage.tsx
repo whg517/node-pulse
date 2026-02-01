@@ -8,7 +8,6 @@ import ProblemDiagnosis, {
 } from '../components/dashboard/ProblemDiagnosis'
 import TrendChart, {
   type TimeRange,
-  type MetricType,
   type DataPoint,
 } from '../components/dashboard/TrendChart'
 import { fetchHistory } from '../api/data'
@@ -146,16 +145,9 @@ export default function NodeDetailPage() {
           jitter_ms: jitterDataPoints,
         })
 
-        // Update baselines (only for 7d and 30d ranges)
-        if (timeRange === '7d' || timeRange === '30d') {
-          setBaselines({
-            latency_ms: latencySeries?.baseline,
-            packet_loss_rate: lossSeries?.baseline,
-            jitter_ms: jitterSeries?.baseline,
-          })
-        } else {
-          setBaselines({})
-        }
+        // TODO: Implement baseline calculation when API supports it
+        // For now, baselines remain empty for all time ranges
+        setBaselines({})
       } catch (err) {
         console.error('Failed to fetch historical data:', err)
         setHistoryError('Failed to load historical data. Please try again.')

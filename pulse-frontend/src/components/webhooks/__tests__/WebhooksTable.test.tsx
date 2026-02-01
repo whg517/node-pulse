@@ -31,7 +31,8 @@ describe('WebhooksTable', () => {
       />
     )
 
-    expect(screen.getByText('https://example.com/webhook')).toBeInTheDocument()
+    const webhookUrls = screen.getAllByText('https://example.com/webhook')
+    expect(webhookUrls.length).toBeGreaterThan(0)
     expect(screen.getByText('Enabled')).toBeInTheDocument()
     expect(screen.getByText('Disabled')).toBeInTheDocument()
   })

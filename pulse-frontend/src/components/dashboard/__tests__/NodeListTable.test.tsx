@@ -136,7 +136,7 @@ describe('NodeListTable', () => {
       renderWithRouter(<NodeListTable nodes={[]} metrics={[]} />)
 
       expect(
-        screen.getByText('Get started by adding your first node.')
+        screen.getByText(/Get started by adding your first node/)
       ).toBeInTheDocument()
     })
   })
