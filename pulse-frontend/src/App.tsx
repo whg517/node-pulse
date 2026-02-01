@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import NodeDetailPage from './pages/NodeDetailPage'
 import AlertRulesPage from './pages/AlertRulesPage'
+import WebhooksPage from './pages/WebhooksPage'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
 function App() {
@@ -60,6 +61,14 @@ function App() {
           element={
             <ProtectedRoute>
               <div>Alert History (Coming Soon)</div>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/webhooks"
+          element={
+            <ProtectedRoute>
+              <WebhooksPage />
             </ProtectedRoute>
           }
         />
