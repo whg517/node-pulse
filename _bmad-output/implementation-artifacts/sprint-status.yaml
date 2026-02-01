@@ -84,7 +84,7 @@ development_status:
   4-9-data-real-time-polling: done
   epic-4-retrospective: done
 
-  epic-5: in-progress
+  epic-5: done
   5-1-alert-rule-api: done
   5-2-webhook-config-api: done
   5-3-alert-rule-frontend-page: done
@@ -93,7 +93,7 @@ development_status:
   5-6-alert-suppression-mechanism: done
   5-7-webhook-push: done
   5-8-health-check-extension: done
-  epic-5-retrospective: optional
+  epic-5-retrospective: done
 
   epic-6: backlog
   6-1-alert-record-storage-api: backlog
