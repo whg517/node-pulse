@@ -1,0 +1,251 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import type { AlertRecordDTO, AlertRecordStatus } from '../../api/alertRecords'
+import type { NodeDTO } from '../../api/types'
+
+interface AlertRecordDetailModalProps {
+  record: AlertRecordDTO
+  nodes: NodeDTO[]
+  canEdit: boolean
+  onClose: () => void
+  onStatusUpdate: (id: string, status: AlertRecordStatus) => Promise<void>
+}
+
+export function AlertRecordDetailModal({
+  record,
+  nodes,
+  canEdit,
+  onClose,
+  onStatusUpdate,
+}: AlertRecordDetailModalProps) {
+  const navigate = useNavigate()
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Helper to get node name by ID
+  const node = nodes.find((n) => n.id === record.node_id)
+
+  // Helper to get status display name
+  const getStatusDisplayName = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return '未处理'
+      case 'in_progress':
+        return '处理中'
+      case 'resolved':
+        return '已解决'
+      default:
+        return status
+    }
+  }
+
+  // Helper to get status badge color
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-red-100 text-red-800'
+      case 'in_progress':
+        return 'bg-yellow-100 text-yellow-800'
+      case 'resolved':
+        return 'bg-green-100 text-green-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  // Helper to get level badge color
+  const getLevelBadgeColor = (level: string) => {
+    switch (level) {
+      case 'P0':
+        return 'bg-red-100 text-red-800'
+      case 'P1':
+        return 'bg-orange-100 text-orange-800'
+      case 'P2':
+        return 'bg-yellow-100 text-yellow-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  // Helper to get metric display name
+  const getMetricDisplayName = (metric: string) => {
+    switch (metric) {
+      case 'latency':
+        return '延迟'
+      case 'packet_loss_rate':
+        return '丢包率'
+      case 'jitter':
+        return '抖动'
+      default:
+        return metric
+    }
+  }
+
+  // Helper to format timestamp
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
+    return date.toLocaleString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    })
+  }
+
+  const handleStatusUpdate = async (newStatus: AlertRecordStatus) => {
+    setIsUpdating(true)
+    setError(null)
+    try {
+      await onStatusUpdate(record.id, newStatus)
+      onClose()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update status')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleViewNodeDetails = () => {
+    onClose()
+    navigate(`/nodes/${record.node_id}`)
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50"
+      onClick={onClose}
+    >
+      <div
+        className="relative top-20 mx-auto p-5 border shadow-lg rounded-md bg-white max-w-2xl w-full"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-lg font-medium text-gray-900">告警记录详情</h3>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-500"
+          >
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
+            <p className="text-sm text-red-700">{error}</p>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="space-y-4">
+          {/* Alert ID */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">告警 ID</label>
+            <p className="mt-1 text-sm text-gray-900">{record.id}</p>
+          </div>
+
+          {/* Node Information */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">节点</label>
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-sm text-gray-900">{node?.name || record.node_id}</p>
+              <button
+                type="button"
+                onClick={handleViewNodeDetails}
+                className="text-blue-600 hover:text-blue-900 text-sm"
+              >
+                查看节点详情
+              </button>
+            </div>
+            {node && (
+              <p className="text-xs text-gray-500">IP: {node.ip}</p>
+            )}
+          </div>
+
+          {/* Metric Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">指标类型</label>
+            <p className="mt-1 text-sm text-gray-900">{getMetricDisplayName(record.metric)}</p>
+          </div>
+
+          {/* Alert Level */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">告警级别</label>
+            <div className="mt-1">
+              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getLevelBadgeColor(record.level)}`}>
+                {record.level}
+              </span>
+            </div>
+          </div>
+
+          {/* Status */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">状态</label>
+            <div className="mt-1">
+              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(record.status)}`}>
+                {getStatusDisplayName(record.status)}
+              </span>
+            </div>
+          </div>
+
+          {/* Timestamps */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">创建时间</label>
+            <p className="mt-1 text-sm text-gray-900">{formatTimestamp(record.created_at)}</p>
+          </div>
+
+          {record.updated_at !== record.created_at && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700">更新时间</label>
+              <p className="mt-1 text-sm text-gray-900">{formatTimestamp(record.updated_at)}</p>
+            </div>
+          )}
+
+          {/* Status Update Actions */}
+          {canEdit && record.status !== 'resolved' && (
+            <div className="pt-4 border-t border-gray-200">
+              <label className="block text-sm font-medium text-gray-700 mb-2">更新状态</label>
+              <div className="flex gap-3">
+                {record.status === 'pending' && (
+                  <button
+                    type="button"
+                    onClick={() => handleStatusUpdate('in_progress')}
+                    disabled={isUpdating}
+                    className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors disabled:opacity-50"
+                  >
+                    标记为处理中
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleStatusUpdate('resolved')}
+                  disabled={isUpdating}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  标记为已解决
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}

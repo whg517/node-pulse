@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import NodeDetailPage from './pages/NodeDetailPage'
 import AlertRulesPage from './pages/AlertRulesPage'
+import AlertRecordsPage from './pages/AlertRecordsPage'
 import WebhooksPage from './pages/WebhooksPage'
 import ProtectedRoute from './components/common/ProtectedRoute'
 
@@ -53,6 +54,14 @@ function App() {
           element={
             <ProtectedRoute>
               <AlertRulesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/alerts/records"
+          element={
+            <ProtectedRoute>
+              <AlertRecordsPage />
             </ProtectedRoute>
           }
         />

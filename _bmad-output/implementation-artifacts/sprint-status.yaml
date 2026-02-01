@@ -97,7 +97,7 @@ development_status:
 
   epic-6: in-progress
   6-1-alert-record-storage-api: done
-  6-2-alert-record-frontend-page: backlog
+  6-2-alert-record-frontend-page: done
   epic-6-retrospective: optional
 
   epic-7: backlog
