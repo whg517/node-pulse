@@ -44,6 +44,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createWebhooksTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -301,6 +305,26 @@ func createAlertsTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_alerts_node_id ON alerts(node_id);
 		CREATE INDEX IF NOT EXISTS idx_alerts_enabled ON alerts(enabled);
 		CREATE INDEX IF NOT EXISTS idx_alerts_metric ON alerts(metric);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createWebhooksTable creates webhooks table with indexes and HTTPS URL constraint (Story 5.2)
+func createWebhooksTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS webhooks (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			url VARCHAR NOT NULL,
+			event_format JSONB,
+			enabled BOOLEAN NOT NULL DEFAULT true,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			CONSTRAINT valid_webhook_url CHECK (url ~* '^https://.*')
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled);
+		CREATE INDEX IF NOT EXISTS idx_webhooks_url ON webhooks(url);
 	`
 
 	_, err := pool.Exec(ctx, query)

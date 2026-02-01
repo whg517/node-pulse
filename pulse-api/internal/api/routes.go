@@ -152,6 +152,30 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// DELETE /api/v1/alerts/rules/:id - Delete alert rule (admin/operator only)
 		alerts.DELETE("/rules/:id", alertHandler.DeleteAlertRuleHandler)
+
+		// Webhook management routes (require admin auth only) (Story 5.2)
+		webhookQuerier := db.NewWebhookQuerier(pool)
+		webhookHandler := NewWebhookHandler(webhookQuerier)
+
+		// Webhooks group with auth and RBAC middleware (admin only)
+		webhooks := v1.Group("/webhooks")
+		webhooks.Use(auth.AuthMiddleware(sessionService))
+		webhooks.Use(auth.RBACMiddleware([]string{"admin"}))
+
+		// GET /api/v1/webhooks - Get all webhook configurations (admin only)
+		webhooks.GET("", webhookHandler.GetWebhooksHandler)
+
+		// GET /api/v1/webhooks/:id - Get webhook configuration by ID (admin only)
+		webhooks.GET("/:id", webhookHandler.GetWebhookByIDHandler)
+
+		// POST /api/v1/webhooks - Create webhook configuration (admin only)
+		webhooks.POST("", webhookHandler.CreateWebhookHandler)
+
+		// PUT /api/v1/webhooks/:id - Update webhook configuration (admin only)
+		webhooks.PUT("/:id", webhookHandler.UpdateWebhookHandler)
+
+		// DELETE /api/v1/webhooks/:id - Delete webhook configuration (admin only)
+		webhooks.DELETE("/:id", webhookHandler.DeleteWebhookHandler)
 	}
 
 	// Return cache manager for graceful shutdown
