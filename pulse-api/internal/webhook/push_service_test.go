@@ -24,6 +24,12 @@ func (m *mockWebhookLogsQuerier) CreateWebhookLog(ctx context.Context, log *mode
 	return nil
 }
 
+func (m *mockWebhookLogsQuerier) CountRecentWebhookLogs(ctx context.Context, totalCount, successCount *int64, limit int) error {
+	*totalCount = int64(len(m.logsCreated))
+	*successCount = int64(len(m.logsCreated)) // Simplified mock - all successful
+	return nil
+}
+
 // Mock WebhookQuerier for testing
 type mockWebhookQuerier struct {
 	webhooks []*models.Webhook
@@ -406,13 +412,29 @@ func TestPushService_SendAlert_PartialFailure(t *testing.T) {
 	// Verify all 3 webhooks were logged
 	assert.Len(t, mockLogs.logsCreated, 3)
 
+	// Find webhook-2 log entry
+	var webhook2Log *models.WebhookLog
+	for _, log := range mockLogs.logsCreated {
+		if log.WebhookID == "webhook-2" {
+			webhook2Log = log
+			break
+		}
+	}
+	require.NotNil(t, webhook2Log, "webhook-2 log should exist")
+
 	// webhook-1 and webhook-3 should succeed
-	assert.Equal(t, "success", mockLogs.logsCreated[0].Status)
-	assert.Equal(t, "success", mockLogs.logsCreated[2].Status)
+	successCount := 0
+	for _, log := range mockLogs.logsCreated {
+		if log.WebhookID == "webhook-1" || log.WebhookID == "webhook-3" {
+			assert.Equal(t, "success", log.Status, "Webhook %s should succeed", log.WebhookID)
+			successCount++
+		}
+	}
+	assert.Equal(t, 2, successCount, "Should have 2 successful webhooks")
 
 	// webhook-2 should fail
-	assert.Equal(t, "failure", mockLogs.logsCreated[1].Status)
-	assert.Equal(t, 3, mockLogs.logsCreated[1].RetryCount)
+	assert.Equal(t, "failure", webhook2Log.Status)
+	assert.Equal(t, 3, webhook2Log.RetryCount)
 }
 
 func TestPushService_formatAlertEvent(t *testing.T) {

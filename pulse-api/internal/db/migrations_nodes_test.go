@@ -38,13 +38,16 @@ func TestNodesTableCreation(t *testing.T) {
 
 	// Verify columns
 	expectedColumns := map[string]bool{
-		"id":         false,
-		"name":       false,
-		"ip":         false,
-		"region":     false,
-		"tags":       false,
-		"created_at": false,
-		"updated_at": false,
+		"id":                false,
+		"name":              false,
+		"ip":                false,
+		"region":            false,
+		"tags":              false,
+		"status":            false,
+		"last_heartbeat":    false,
+		"last_report_time":  false,
+		"created_at":        false,
+		"updated_at":        false,
 	}
 
 	rows, err := pool.Query(ctx, `
@@ -68,7 +71,7 @@ func TestNodesTableCreation(t *testing.T) {
 	}
 
 	require.NoError(t, rows.Err())
-	assert.ElementsMatch(t, []string{"created_at", "id", "ip", "name", "region", "tags", "updated_at"}, foundColumns)
+	assert.ElementsMatch(t, []string{"created_at", "id", "ip", "last_heartbeat", "last_report_time", "name", "region", "status", "tags", "updated_at"}, foundColumns)
 
 	// Verify all expected columns exist
 	for col, found := range expectedColumns {

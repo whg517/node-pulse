@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
+	"github.com/kevin/node-pulse/pulse-api/internal/models"
 )
 
 func TestExportService_CreateExport_Success(t *testing.T) {
@@ -262,7 +263,7 @@ func TestExportService_ProcessExport_CompletesSuccessfully(t *testing.T) {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
-	var completedTask *ExportTask
+	var completedTask *models.ExportTask
 	for {
 		select {
 		case <-timeout:

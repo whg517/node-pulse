@@ -168,12 +168,35 @@ func CalculatePercentiles(durations []time.Duration) (p50, p95, p99 time.Duratio
 	n := len(durations)
 
 	// Helper function to get value at percentile
+	// Uses linear interpolation for better accuracy
 	getPercentile := func(p float64) time.Duration {
-		idx := int(float64(n) * p / 100)
-		if idx >= n {
-			idx = n - 1
+		if n == 1 {
+			return durations[0]
 		}
-		return durations[idx]
+
+		// For very high percentiles, return max value
+		if p >= 99 {
+			return durations[n-1]
+		}
+
+		// Calculate exact position
+		pos := float64(n-1) * p / 100
+		idx := int(pos)
+
+		// Handle boundary cases
+		if idx >= n-1 {
+			return durations[n-1]
+		}
+		if idx < 0 {
+			return durations[0]
+		}
+
+		// Simple linear interpolation
+		frac := pos - float64(idx)
+		base := durations[idx]
+		next := durations[idx+1]
+
+		return base + time.Duration(float64(next-base)*frac)
 	}
 
 	return getPercentile(50), getPercentile(95), getPercentile(99)

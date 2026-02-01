@@ -36,6 +36,13 @@ func NewWebhookQuerier(pool *pgxpool.Pool) WebhookQuerier {
 func (q *webhookQuerier) CreateWebhook(ctx context.Context, webhook *models.Webhook) error {
 	webhook.ID = uuid.New().String()
 
+	// Set default event format if not provided
+	if webhook.EventFormat == nil {
+		webhook.EventFormat = map[string]interface{}{
+			"version": "1.0",
+		}
+	}
+
 	eventFormatJSON, err := json.Marshal(webhook.EventFormat)
 	if err != nil {
 		return fmt.Errorf("failed to marshal event format: %w", err)

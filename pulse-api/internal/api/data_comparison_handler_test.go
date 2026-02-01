@@ -525,19 +525,32 @@ func insertTestMetrics(t *testing.T, ctx context.Context, pool *pgxpool.Pool, no
 	baseTime := now.Add(-2 * time.Hour)
 
 	for _, nodeID := range nodeIDs {
+		// Create a probe for this node first (required by foreign key constraint)
+		probeID := uuid.New()
+		nodeUUID, err := uuid.Parse(nodeID)
+		require.NoError(t, err)
+
+		probeQuery := `
+			INSERT INTO probes (id, node_id, type, target, port, interval_seconds, count, timeout_seconds)
+			VALUES ($1, $2, 'TCP', 'example.com', 443, 60, 10, 5)
+		`
+		_, err = pool.Exec(ctx, probeQuery, probeID, nodeUUID)
+		require.NoError(t, err)
+
+		// Now insert metrics with the probe_id
 		for i := 0; i < 60; i++ { // 60 data points over 2 hours
 			timestamp := baseTime.Add(time.Duration(i) * 2 * time.Minute)
 
 			query := `
 				INSERT INTO metrics (node_id, probe_id, timestamp, latency_ms, packet_loss_rate, jitter_ms, is_aggregated, created_at)
-				VALUES ($1, gen_random_uuid(), $2, $3, $4, $5, false, NOW())
+				VALUES ($1, $2, $3, $4, $5, $6, false, NOW())
 			`
 
 			latency := 50.0 + float64(i%10)*5.0
 			packetLoss := 0.01 + float64(i%5)*0.005
 			jitter := 2.0 + float64(i%3)*1.0
 
-			_, err := pool.Exec(ctx, query, nodeID, timestamp, latency, packetLoss, jitter)
+			_, err := pool.Exec(ctx, query, nodeUUID, probeID, timestamp, latency, packetLoss, jitter)
 			require.NoError(t, err)
 		}
 	}

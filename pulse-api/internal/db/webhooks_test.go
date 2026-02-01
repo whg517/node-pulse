@@ -12,13 +12,9 @@ import (
 )
 
 func setupWebhookTestDB(t *testing.T) *pgxpool.Pool {
-	pool := setupTestDB(t)
+	pool, _ := setupTestDB(t)
 
-	// Create webhooks table
-	ctx := context.Background()
-	err := createWebhooksTable(ctx, pool)
-	require.NoError(t, err, "Failed to create webhooks table")
-
+	// webhooks table is already created by Migrate in setupTestDB
 	return pool
 }
 

@@ -20,22 +20,26 @@ func setupAlertEventsTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	// Connect to test database
 	testDBURL := os.Getenv("TEST_DATABASE_URL")
 	if testDBURL == "" {
-		testDBURL = "postgres://postgres:postgres@localhost:5432/node_pulse_test?sslmode=disable"
+		testDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
 	}
 
 	pool, err := pgxpool.New(ctx, testDBURL)
-	require.NoError(t, err, "Failed to connect to test database")
+	if err != nil {
+		t.Skipf("Skipping test: cannot connect to test database: %v", err)
+		return nil, nil
+	}
 
 	// Run migrations
 	err = Migrate(ctx, pool)
-	require.NoError(t, err, "Failed to run migrations")
+	if err != nil {
+		pool.Close()
+		t.Fatalf("Failed to run migrations: %v", err)
+		return nil, nil
+	}
 
 	// Create test node for foreign key reference
-	nodeQuerier := NewPoolQuerier(pool)
 	testNodeID := uuid.New()
-	err = nodeQuerier.CreateNode(ctx, testNodeID, "test-alert-node", "192.168.1.200", "test-region", map[string]interface{}{
-		"test": "true",
-	})
+	err = CreateNode(ctx, pool, testNodeID, "test-alert-node", "192.168.1.200", "test-region", nil)
 	require.NoError(t, err, "Failed to create test node")
 
 	// Cleanup function
@@ -134,8 +138,7 @@ func TestAlertEventsQuerier_MultipleEvents(t *testing.T) {
 	ctx := context.Background()
 	querier := NewAlertEventsQuerier(pool)
 
-	nodeQuerier := NewPoolQuerier(pool)
-	nodes, err := nodeQuerier.GetNodes(ctx)
+	nodes, err := GetNodes(ctx, pool)
 	require.NoError(t, err)
 	require.Greater(t, len(nodes), 0)
 	nodeID := nodes[0].ID

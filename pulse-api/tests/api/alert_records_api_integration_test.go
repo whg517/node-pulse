@@ -1,4 +1,4 @@
-package api
+package api_test
 
 import (
 	"bytes"
@@ -10,16 +10,44 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/api"
 	"github.com/kevin/node-pulse/pulse-api/internal/auth"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
 )
 
+func setupTestDBForAlertRecords(t *testing.T) (*pgxpool.Pool, func()) {
+	ctx := context.Background()
+	testDSN := "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
+
+	pool, err := pgxpool.New(ctx, testDSN)
+	if err != nil {
+		t.Skipf("Skipping test: cannot connect to test database: %v", err)
+	}
+
+	// Clean up and migrate
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_events CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
+
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
+
+	cleanup := func() {
+		pool.Close()
+	}
+
+	return pool, cleanup
+}
+
 func setupAlertRecordsAPITest(t *testing.T) (*gin.Engine, *pgxpool.Pool, *auth.SessionService, func()) {
-	pool, cleanup := setupTestDB(t)
+	pool, cleanup := setupTestDBForAlertRecords(t)
 
 	// Create tables
 	ctx := context.Background()
@@ -32,7 +60,7 @@ func setupAlertRecordsAPITest(t *testing.T) (*gin.Engine, *pgxpool.Pool, *auth.S
 	// Setup router
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	handler := NewAlertRecordHandler(pool)
+	handler := api.NewAlertRecordHandler(pool)
 
 	// Create authenticated test route
 	router.GET("/api/v1/alerts/records", func(c *gin.Context) {
@@ -59,19 +87,14 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test data
-	node := &models.Node{
-		ID:     "test-node-id",
-		Name:   "Test Node",
-		IP:     "192.168.1.1",
-		Region: "us-east",
-	}
-	err := db.CreateNode(ctx, pool, node)
+	nodeUUID, _ := uuid.Parse("test-node-id")
+	err := db.CreateNode(ctx, pool, nodeUUID, "Test Node", "192.168.1.1", "us-east", nil)
 	require.NoError(t, err)
 
 	// Create alert event
 	alertEvent := &models.AlertEvent{
 		ID:           "test-alert-event-id",
-		NodeID:       node.ID,
+		NodeID:       "test-node-id",
 		Metric:       "latency",
 		Threshold:    100.0,
 		CurrentValue: 150.0,
@@ -85,7 +108,7 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 	// Create alert record
 	record := &models.AlertRecord{
 		AlertEventID: alertEvent.ID,
-		NodeID:       node.ID,
+		NodeID:       "test-node-id",
 		Metric:       alertEvent.Metric,
 		Level:        alertEvent.Level,
 		Status:       "pending",
@@ -109,7 +132,7 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 	assert.GreaterOrEqual(t, len(data), 1, "Should return at least 1 record")
 
 	// Test filtering by node_id
-	req, _ = http.NewRequest("GET", "/api/v1/alerts/records?node_id="+node.ID, nil)
+	req, _ = http.NewRequest("GET", "/api/v1/alerts/records?node_id=test-node-id", nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -226,18 +249,13 @@ func TestUpdateAlertRecordStatusHandler(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test data
-	node := &models.Node{
-		ID:     "test-node-id-2",
-		Name:   "Test Node 2",
-		IP:     "192.168.1.2",
-		Region: "us-east",
-	}
-	err := db.CreateNode(ctx, pool, node)
+	nodeUUID, _ := uuid.Parse("test-node-id-2")
+	err := db.CreateNode(ctx, pool, nodeUUID, "Test Node 2", "192.168.1.2", "us-east", nil)
 	require.NoError(t, err)
 
 	alertEvent := &models.AlertEvent{
 		ID:           "test-alert-event-id-2",
-		NodeID:       node.ID,
+		NodeID:       "test-node-id-2",
 		Metric:       "latency",
 		Threshold:    100.0,
 		CurrentValue: 150.0,
@@ -250,7 +268,7 @@ func TestUpdateAlertRecordStatusHandler(t *testing.T) {
 
 	record := &models.AlertRecord{
 		AlertEventID: alertEvent.ID,
-		NodeID:       node.ID,
+		NodeID:       "test-node-id-2",
 		Metric:       alertEvent.Metric,
 		Level:        alertEvent.Level,
 		Status:       "pending",

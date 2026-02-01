@@ -35,18 +35,13 @@ func TestCreateAlertRecord(t *testing.T) {
 	ctx := context.Background()
 
 	// First create a node and alert event
-	node := &models.Node{
-		ID:     uuid.New().String(),
-		Name:   "Test Node",
-		IP:     "192.168.1.1",
-		Region: "us-east",
-	}
-	err := CreateNode(ctx, pool, node)
+	nodeID := uuid.New()
+	err := CreateNode(ctx, pool, nodeID, "Test Node", "192.168.1.1", "us-east", nil)
 	require.NoError(t, err)
 
 	alertEvent := &models.AlertEvent{
 		ID:           uuid.New().String(),
-		NodeID:       node.ID,
+		NodeID:       nodeID.String(),
 		Metric:       "latency",
 		Threshold:    100.0,
 		CurrentValue: 150.0,
@@ -62,7 +57,7 @@ func TestCreateAlertRecord(t *testing.T) {
 	// Create alert record
 	record := &models.AlertRecord{
 		AlertEventID: alertEvent.ID,
-		NodeID:       node.ID,
+		NodeID:       nodeID.String(),
 		Metric:       alertEvent.Metric,
 		Level:        alertEvent.Level,
 		Status:       "pending",
@@ -85,13 +80,8 @@ func TestGetAlertRecords(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test data
-	node := &models.Node{
-		ID:     uuid.New().String(),
-		Name:   "Test Node",
-		IP:     "192.168.1.1",
-		Region: "us-east",
-	}
-	err := CreateNode(ctx, pool, node)
+	nodeID := uuid.New()
+	err := CreateNode(ctx, pool, nodeID, "Test Node", "192.168.1.1", "us-east", nil)
 	require.NoError(t, err)
 
 	// Create multiple alert events and records
@@ -101,7 +91,7 @@ func TestGetAlertRecords(t *testing.T) {
 	for i := 0; i < 3; i++ {
 		alertEvent := &models.AlertEvent{
 			ID:           uuid.New().String(),
-			NodeID:       node.ID,
+			NodeID:       nodeID.String(),
 			Metric:       "latency",
 			Threshold:    100.0,
 			CurrentValue: float64(100 + i*10),
@@ -113,7 +103,7 @@ func TestGetAlertRecords(t *testing.T) {
 
 		record := &models.AlertRecord{
 			AlertEventID: alertEvent.ID,
-			NodeID:       node.ID,
+			NodeID:       nodeID.String(),
 			Metric:       alertEvent.Metric,
 			Level:        alertEvent.Level,
 			Status:       "pending",
@@ -134,9 +124,9 @@ func TestGetAlertRecords(t *testing.T) {
 	assert.Len(t, results, 3, "Should return 3 records")
 
 	// Test filtering by node ID
-	nodeID := node.ID
+	nodeIDStr := nodeID.String()
 	filters = AlertRecordFilters{
-		NodeID: &nodeID,
+		NodeID: &nodeIDStr,
 		Limit:  10,
 		Offset: 0,
 	}
@@ -197,18 +187,13 @@ func TestGetAlertRecordByID(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test data
-	node := &models.Node{
-		ID:     uuid.New().String(),
-		Name:   "Test Node",
-		IP:     "192.168.1.1",
-		Region: "us-east",
-	}
-	err := CreateNode(ctx, pool, node)
+	nodeID := uuid.New()
+	err := CreateNode(ctx, pool, nodeID, "Test Node", "192.168.1.1", "us-east", nil)
 	require.NoError(t, err)
 
 	alertEvent := &models.AlertEvent{
 		ID:           uuid.New().String(),
-		NodeID:       node.ID,
+		NodeID:       nodeID.String(),
 		Metric:       "latency",
 		Threshold:    100.0,
 		CurrentValue: 150.0,
@@ -222,7 +207,7 @@ func TestGetAlertRecordByID(t *testing.T) {
 
 	record := &models.AlertRecord{
 		AlertEventID: alertEvent.ID,
-		NodeID:       node.ID,
+		NodeID:       nodeID.String(),
 		Metric:       alertEvent.Metric,
 		Level:        alertEvent.Level,
 		Status:       "pending",
@@ -252,18 +237,13 @@ func TestUpdateAlertRecordStatus(t *testing.T) {
 	ctx := context.Background()
 
 	// Create test data
-	node := &models.Node{
-		ID:     uuid.New().String(),
-		Name:   "Test Node",
-		IP:     "192.168.1.1",
-		Region: "us-east",
-	}
-	err := CreateNode(ctx, pool, node)
+	nodeID := uuid.New()
+	err := CreateNode(ctx, pool, nodeID, "Test Node", "192.168.1.1", "us-east", nil)
 	require.NoError(t, err)
 
 	alertEvent := &models.AlertEvent{
 		ID:           uuid.New().String(),
-		NodeID:       node.ID,
+		NodeID:       nodeID.String(),
 		Metric:       "latency",
 		Threshold:    100.0,
 		CurrentValue: 150.0,
@@ -277,7 +257,7 @@ func TestUpdateAlertRecordStatus(t *testing.T) {
 
 	record := &models.AlertRecord{
 		AlertEventID: alertEvent.ID,
-		NodeID:       node.ID,
+		NodeID:       nodeID.String(),
 		Metric:       alertEvent.Metric,
 		Level:        alertEvent.Level,
 		Status:       "pending",
@@ -325,7 +305,8 @@ func TestAlertRecordFilters(t *testing.T) {
 		{ID: uuid.New().String(), Name: "Node 2", IP: "192.168.1.2", Region: "eu-west"},
 	}
 	for _, node := range nodes {
-		err := CreateNode(ctx, pool, &node)
+		nodeUUID, _ := uuid.Parse(node.ID)
+		err := CreateNode(ctx, pool, nodeUUID, node.Name, node.IP, node.Region, nil)
 		require.NoError(t, err)
 	}
 
