@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/kevin/node-pulse/pulse-api/internal/alert"
 	"github.com/kevin/node-pulse/pulse-api/internal/cache"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
@@ -26,14 +27,16 @@ type BeaconHandler struct {
 	nodeQuerier  db.NodesQuerier
 	memoryCache  *cache.MemoryCache
 	batchWriter  *cache.BatchWriter
+	alertEngine  *alert.AlertEngine
 }
 
 // NewBeaconHandler creates a new BeaconHandler
-func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCache, batchWriter *cache.BatchWriter) *BeaconHandler {
+func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCache, batchWriter *cache.BatchWriter, alertEngine *alert.AlertEngine) *BeaconHandler {
 	return &BeaconHandler{
 		nodeQuerier: nodeQuerier,
 		memoryCache: memoryCache,
 		batchWriter: batchWriter,
+		alertEngine: alertEngine,
 	}
 }
 
@@ -201,6 +204,22 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 				"error", err)
 		}
 		// Don't return error to avoid affecting Beacon reporting
+	}
+
+	// Trigger alert evaluation (async, non-blocking)
+	if h.alertEngine != nil {
+		metricData := &alert.MetricData{
+			NodeID:         req.NodeID,
+			LatencyMs:      req.LatencyMs,
+			PacketLossRate: req.PacketLossRate,
+			JitterMs:       req.JitterMs,
+			Timestamp:      parsedTime,
+		}
+		if !h.alertEngine.EvaluateMetrics(metricData) {
+			slog.Warn("Alert engine metric channel full, skipping evaluation",
+				"node_id", req.NodeID,
+				"timestamp", parsedTime)
+		}
 	}
 
 	c.JSON(http.StatusOK, models.HeartbeatSuccessResponse{

@@ -32,7 +32,7 @@ func setupIntegrationTestRouter(pool *pgxpool.Pool) *gin.Engine {
 	batchWriter := cache.NewBatchWriter(pool, 1000, 100)
 	batchWriter.Start()
 
-	beaconHandler := api.NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter)
+	beaconHandler := api.NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter, nil)
 	router.POST("/api/v1/beacon/heartbeat", beaconHandler.HandleHeartbeat)
 
 	return router

@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/alert"
 	"github.com/kevin/node-pulse/pulse-api/internal/cache"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/health"
@@ -13,8 +14,9 @@ import (
 
 // CacheManager holds cache instances that need cleanup on shutdown
 type CacheManager struct {
-	MemoryCache *cache.MemoryCache
-	BatchWriter *cache.BatchWriter
+	MemoryCache  *cache.MemoryCache
+	BatchWriter  *cache.BatchWriter
+	AlertEngine  *alert.AlertEngine
 }
 
 // SetupRoutes configures all API routes and returns cache manager for shutdown
@@ -31,10 +33,17 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	batchWriter := cache.NewBatchWriter(pool, 1000, 100) // Buffer size 1000, batch size 100
 	batchWriter.Start()
 
+	// Initialize alert engine (Story 5.5)
+	alertQuerier := db.NewAlertQuerier(pool)
+	alertEngineConfig := alert.DefaultEngineConfig()
+	alertEngine := alert.NewAlertEngine(pool, alertQuerier, alertEngineConfig)
+	alertEngine.Start()
+
 	// Create cache manager for graceful shutdown
 	cacheManager := &CacheManager{
 		MemoryCache: memoryCache,
 		BatchWriter: batchWriter,
+		AlertEngine: alertEngine,
 	}
 
 	// API v1 routes
@@ -44,7 +53,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		v1.GET("/health", healthChecker.Handler)
 
 		// Beacon endpoints (public - no auth required for MVP)
-		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter)
+		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter, alertEngine)
 		beacon := v1.Group("/beacon")
 		{
 			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (public)
@@ -128,7 +137,6 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		data.GET("/history", dataHandler.GetHistoryHandler)
 
 		// Alert management routes (require auth) (Story 5.1)
-		alertQuerier := db.NewAlertQuerier(pool)
 		alertHandler := NewAlertHandler(alertQuerier)
 
 		// Alerts group with auth middleware

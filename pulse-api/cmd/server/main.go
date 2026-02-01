@@ -134,6 +134,10 @@ func main() {
 
 	// Stop cache components (Story 3.2)
 	if cacheManager != nil {
+		log.Println("[Pulse] Stopping alert engine...")
+		if cacheManager.AlertEngine != nil {
+			cacheManager.AlertEngine.Stop()
+		}
 		log.Println("[Pulse] Stopping batch writer...")
 		cacheManager.BatchWriter.Stop()
 		log.Println("[Pulse] Stopping memory cache...")

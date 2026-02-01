@@ -48,6 +48,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createAlertEventsTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -325,6 +329,29 @@ func createWebhooksTable(ctx context.Context, pool *pgxpool.Pool) error {
 
 		CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled);
 		CREATE INDEX IF NOT EXISTS idx_webhooks_url ON webhooks(url);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createAlertEventsTable creates alert_events table with indexes (Story 5.5)
+func createAlertEventsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS alert_events (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			metric VARCHAR NOT NULL,
+			threshold DECIMAL NOT NULL,
+			current_value DECIMAL NOT NULL,
+			level VARCHAR NOT NULL,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_alert_events_node_id ON alert_events(node_id);
+		CREATE INDEX IF NOT EXISTS idx_alert_events_metric ON alert_events(metric);
+		CREATE INDEX IF NOT EXISTS idx_alert_events_created_at ON alert_events(created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_alert_events_node_created ON alert_events(node_id, created_at DESC);
 	`
 
 	_, err := pool.Exec(ctx, query)

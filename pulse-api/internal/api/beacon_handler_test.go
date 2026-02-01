@@ -27,7 +27,7 @@ func setupTestRouter(nodeQuerier db.NodesQuerier) *gin.Engine {
 	memoryCache := cache.NewMemoryCache()
 	batchWriter := cache.NewBatchWriter(nil, 1000, 100) // nil DB for testing
 
-	beaconHandler := NewBeaconHandler(nodeQuerier, memoryCache, batchWriter)
+	beaconHandler := NewBeaconHandler(nodeQuerier, memoryCache, batchWriter, nil) // nil alert engine for tests
 	router.POST("/api/v1/beacon/heartbeat", beaconHandler.HandleHeartbeat)
 
 	return router
