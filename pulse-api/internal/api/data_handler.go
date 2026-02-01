@@ -358,3 +358,458 @@ func (h *DataHandler) GetMetricsHandler(c *gin.Context) {
 		"data": metricsList,
 	})
 }
+
+// ComparisonRequest represents the query parameters for node comparison
+type ComparisonRequest struct {
+	NodeIDs   []string  `form:"node_ids" binding:"required,min=2,max=5"`
+	StartTime string    `form:"start_time" binding:"required"`
+	EndTime   string    `form:"end_time" binding:"required"`
+	Metrics   []string  `form:"metrics" binding:"required,min=1"`
+}
+
+// ComparisonMetricData represents metric data with statistics for a single node
+type ComparisonMetricData struct {
+	DataPoints []DataPoint `json:"data_points"`
+	Avg        float64     `json:"avg"`
+	Max        float64     `json:"max"`
+	Min        float64     `json:"min"`
+}
+
+// ComparisonNodeData represents comparison data for a single node
+type ComparisonNodeData struct {
+	NodeID  string                         `json:"node_id"`
+	Name    string                         `json:"name"`
+	Metrics map[string]ComparisonMetricData `json:"metrics"`
+}
+
+// ComparisonMetricStats represents statistics for a metric across all nodes
+type ComparisonMetricStats struct {
+	OverallAvg    float64                       `json:"overall_avg"`
+	OverallMax    float64                       `json:"overall_max"`
+	OverallMin    float64                       `json:"overall_min"`
+	Differences   []ComparisonNodeDifference    `json:"differences"`
+}
+
+// ComparisonNodeDifference represents the difference from overall average for a node
+type ComparisonNodeDifference struct {
+	NodeID       string  `json:"node_id"`
+	DiffFromAvg  float64 `json:"diff_from_avg"`
+}
+
+// ComparisonData represents the comparison response data
+type ComparisonData struct {
+	TimeRange  struct {
+		Start string `json:"start"`
+		End   string `json:"end"`
+	} `json:"time_range"`
+	Nodes      []ComparisonNodeData                `json:"nodes"`
+	Statistics map[string]ComparisonMetricStats    `json:"statistics"`
+}
+
+// ComparisonResponse represents the response for node comparison query
+type ComparisonResponse struct {
+	Data      ComparisonData `json:"data"`
+	Message   string         `json:"message"`
+	Timestamp string         `json:"timestamp"`
+}
+
+// GetComparisonHandler handles GET /api/v1/data/comparison
+// Returns comparison data for multiple nodes with statistics
+func (h *DataHandler) GetComparisonHandler(c *gin.Context) {
+	// Parse query parameters
+	var req ComparisonRequest
+	if err := c.ShouldBindQuery(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid query parameters",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Parse timestamps
+	startTime, err := time.Parse(time.RFC3339, req.StartTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid start_time format",
+			"details": "Must be ISO 8601 format (e.g., 2024-01-01T00:00:00Z)",
+		})
+		return
+	}
+
+	endTime, err := time.Parse(time.RFC3339, req.EndTime)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid end_time format",
+			"details": "Must be ISO 8601 format (e.g., 2024-01-01T00:00:00Z)",
+		})
+		return
+	}
+
+	// Validate time range
+	if endTime.Before(startTime) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid time range",
+			"details": "end_time must be after start_time",
+		})
+		return
+	}
+
+	// Validate metrics
+	validMetrics := map[string]bool{
+		"latency":           true,
+		"packet_loss_rate":  true,
+		"jitter":            true,
+	}
+	for _, metric := range req.Metrics {
+		if !validMetrics[metric] {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "Invalid metric",
+				"details": fmt.Sprintf("Metric '%s' is not valid. Valid metrics: latency, packet_loss_rate, jitter", metric),
+			})
+			return
+		}
+	}
+
+	// Query comparison data
+	ctx := context.Background()
+	comparisonData, err := h.queryComparisonData(ctx, req.NodeIDs, req.Metrics, startTime, endTime)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to query comparison data",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Check if we have any data
+	if len(comparisonData.Nodes) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": "No data found",
+			"details": "No metrics data found for the specified nodes and time range",
+		})
+		return
+	}
+
+	// Return response
+	c.JSON(http.StatusOK, ComparisonResponse{
+		Data:      *comparisonData,
+		Message:   "Comparison data retrieved successfully",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
+// queryComparisonData queries and aggregates comparison data for multiple nodes
+func (h *DataHandler) queryComparisonData(
+	ctx context.Context,
+	nodeIDs []string,
+	metrics []string,
+	startTime time.Time,
+	endTime time.Time,
+) (*ComparisonData, error) {
+	// Step 1: Query data for all nodes
+	nodesData := make([]ComparisonNodeData, 0)
+	allMetricValues := make(map[string][]float64) // For calculating overall statistics
+
+	// Determine if we need real-time data (< 1 hour ago)
+	oneHourAgo := time.Now().Add(-1 * time.Hour)
+	useRealtimeData := endTime.After(oneHourAgo)
+
+	for _, nodeID := range nodeIDs {
+		// Get node info
+		nodeName, err := h.getNodeName(ctx, nodeID)
+		if err != nil {
+			// Skip node if not found, but continue with others
+			continue
+		}
+
+		nodeMetrics := make(map[string]ComparisonMetricData)
+
+		for _, metric := range metrics {
+			var dataPoints []DataPoint
+			var avg, max, min float64
+
+			// Query data based on time range
+			if useRealtimeData && startTime.After(oneHourAgo) {
+				// All data is in real-time range (< 1 hour)
+				// Query from memory cache
+				dataPoints = h.queryRealtimeData(nodeID, metric, startTime, endTime)
+			} else if !useRealtimeData {
+				// All data is historical (> 1 hour)
+				// Query from PostgreSQL
+				dataPoints, err = h.queryHistoricalData(ctx, nodeID, metric, startTime, endTime)
+				if err != nil {
+					return nil, fmt.Errorf("failed to query historical data for node %s: %w", nodeID, err)
+				}
+			} else {
+				// Mixed: part real-time, part historical
+				// Query historical data up to 1 hour ago
+				historicalEnd := oneHourAgo
+				if historicalEnd.After(endTime) {
+					historicalEnd = endTime
+				}
+				historicalPoints, _ := h.queryHistoricalData(ctx, nodeID, metric, startTime, historicalEnd)
+
+				// Query real-time data from 1 hour ago to now
+				realtimePoints := h.queryRealtimeData(nodeID, metric, oneHourAgo, endTime)
+
+				// Merge both datasets
+				dataPoints = append(historicalPoints, realtimePoints...)
+			}
+
+			// Calculate statistics if we have data
+			if len(dataPoints) > 0 {
+				avg, max, min = calculateStatistics(dataPoints)
+
+				// Collect values for overall statistics
+				for _, point := range dataPoints {
+					allMetricValues[metric] = append(allMetricValues[metric], point.Value)
+				}
+			}
+
+			nodeMetrics[metric] = ComparisonMetricData{
+				DataPoints: dataPoints,
+				Avg:        avg,
+				Max:        max,
+				Min:        min,
+			}
+		}
+
+		nodesData = append(nodesData, ComparisonNodeData{
+			NodeID:  nodeID,
+			Name:    nodeName,
+			Metrics: nodeMetrics,
+		})
+	}
+
+	// Step 2: Calculate overall statistics
+	statistics := make(map[string]ComparisonMetricStats)
+	for _, metric := range metrics {
+		values := allMetricValues[metric]
+		if len(values) == 0 {
+			continue
+		}
+
+		overallAvg := calculateAvg(values)
+		overallMax := calculateMax(values)
+		overallMin := calculateMin(values)
+
+		// Calculate differences from average for each node
+		differences := make([]ComparisonNodeDifference, 0)
+		for _, nodeData := range nodesData {
+			if metricData, ok := nodeData.Metrics[metric]; ok && len(metricData.DataPoints) > 0 {
+				nodeAvg := metricData.Avg
+				differences = append(differences, ComparisonNodeDifference{
+					NodeID:      nodeData.NodeID,
+					DiffFromAvg: nodeAvg - overallAvg,
+				})
+			}
+		}
+
+		statistics[metric] = ComparisonMetricStats{
+			OverallAvg:  overallAvg,
+			OverallMax:  overallMax,
+			OverallMin:  overallMin,
+			Differences: differences,
+		}
+	}
+
+	// Step 3: Find overlapping time range
+	overlapStart, overlapEnd := findOverlapTimeRange(nodesData)
+
+	// Build response
+	result := &ComparisonData{
+		Nodes:      nodesData,
+		Statistics: statistics,
+	}
+	result.TimeRange.Start = overlapStart.Format(time.RFC3339)
+	result.TimeRange.End = overlapEnd.Format(time.RFC3339)
+
+	return result, nil
+}
+
+// getNodeName retrieves the name of a node
+func (h *DataHandler) getNodeName(ctx context.Context, nodeID string) (string, error) {
+	var nodeName string
+	query := `SELECT name FROM nodes WHERE id = $1`
+	err := h.pool.QueryRow(ctx, query, nodeID).Scan(&nodeName)
+	if err != nil {
+		return "", err
+	}
+	return nodeName, nil
+}
+
+// queryRealtimeData queries real-time data from memory cache
+// Note: In the current implementation, memory cache is not directly accessible from DataHandler
+// This is a placeholder that queries from PostgreSQL for < 1 hour data
+// TODO: Integrate with memory cache in future iterations
+func (h *DataHandler) queryRealtimeData(nodeID string, metric string, startTime, endTime time.Time) []DataPoint {
+	// For now, query from PostgreSQL with < 1 hour filter
+	ctx := context.Background()
+	dataPoints, err := h.queryHistoricalData(ctx, nodeID, metric, startTime, endTime)
+	if err != nil {
+		return []DataPoint{}
+	}
+	return dataPoints
+}
+
+// queryHistoricalData queries historical data from PostgreSQL metrics table
+func (h *DataHandler) queryHistoricalData(
+	ctx context.Context,
+	nodeID string,
+	metric string,
+	startTime time.Time,
+	endTime time.Time,
+) ([]DataPoint, error) {
+	// Map metric name to database column
+	columnMap := map[string]string{
+		"latency":           "latency_ms",
+		"packet_loss_rate":  "packet_loss_rate",
+		"jitter":            "jitter_ms",
+	}
+
+	column, ok := columnMap[metric]
+	if !ok {
+		return nil, fmt.Errorf("invalid metric: %s", metric)
+	}
+
+	query := `
+		SELECT timestamp, ` + column + ` AS value
+		FROM metrics
+		WHERE node_id = $1
+			AND timestamp >= $2
+			AND timestamp <= $3
+			AND ` + column + ` IS NOT NULL
+		ORDER BY timestamp ASC;
+	`
+
+	rows, err := h.pool.Query(ctx, query, nodeID, startTime, endTime)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query metrics: %w", err)
+	}
+	defer rows.Close()
+
+	dataPoints := make([]DataPoint, 0)
+	for rows.Next() {
+		var timestamp time.Time
+		var value float64
+		if err := rows.Scan(&timestamp, &value); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		dataPoints = append(dataPoints, DataPoint{
+			Timestamp: timestamp.Format(time.RFC3339),
+			Value:     value,
+		})
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return dataPoints, nil
+}
+
+// calculateStatistics calculates average, max, and min from data points
+func calculateStatistics(dataPoints []DataPoint) (avg, max, min float64) {
+	if len(dataPoints) == 0 {
+		return 0, 0, 0
+	}
+
+	sum := 0.0
+	max = dataPoints[0].Value
+	min = dataPoints[0].Value
+
+	for _, point := range dataPoints {
+		sum += point.Value
+		if point.Value > max {
+			max = point.Value
+		}
+		if point.Value < min {
+			min = point.Value
+		}
+	}
+
+	avg = sum / float64(len(dataPoints))
+	return avg, max, min
+}
+
+// calculateAvg calculates average from values
+func calculateAvg(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	sum := 0.0
+	for _, v := range values {
+		sum += v
+	}
+	return sum / float64(len(values))
+}
+
+// calculateMax calculates maximum from values
+func calculateMax(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	max := values[0]
+	for _, v := range values {
+		if v > max {
+			max = v
+		}
+	}
+	return max
+}
+
+// calculateMin calculates minimum from values
+func calculateMin(values []float64) float64 {
+	if len(values) == 0 {
+		return 0
+	}
+	min := values[0]
+	for _, v := range values {
+		if v < min {
+			min = v
+		}
+	}
+	return min
+}
+
+// findOverlapTimeRange finds the overlapping time range across all nodes
+func findOverlapTimeRange(nodesData []ComparisonNodeData) (time.Time, time.Time) {
+	if len(nodesData) == 0 {
+		return time.Now(), time.Now()
+	}
+
+	// Find the latest start time and earliest end time across all nodes
+	var latestStart, earliestEnd *time.Time
+
+	for _, nodeData := range nodesData {
+		for _, metricData := range nodeData.Metrics {
+			if len(metricData.DataPoints) == 0 {
+				continue
+			}
+
+			// Parse first and last timestamps
+			firstTime, _ := time.Parse(time.RFC3339, metricData.DataPoints[0].Timestamp)
+			lastTime, _ := time.Parse(time.RFC3339, metricData.DataPoints[len(metricData.DataPoints)-1].Timestamp)
+
+			if latestStart == nil || firstTime.After(*latestStart) {
+				latestStart = &firstTime
+			}
+			if earliestEnd == nil || lastTime.Before(*earliestEnd) {
+				earliestEnd = &lastTime
+			}
+		}
+	}
+
+	// If no data found, return requested range
+	if latestStart == nil || earliestEnd == nil {
+		return time.Now(), time.Now()
+	}
+
+	// Ensure overlap is valid
+	if earliestEnd.Before(*latestStart) {
+		// No overlap, return zero range
+		return *latestStart, *latestStart
+	}
+
+	return *latestStart, *earliestEnd
+}
