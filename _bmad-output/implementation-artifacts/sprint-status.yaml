@@ -105,7 +105,7 @@ development_status:
   7-2-node-comparison-query-api: done
   7-3-node-comparison-frontend-page: done
   7-4-problem-diagnosis-engine: done
-  epic-7-retrospective: optional
+  epic-7-retrospective: done
 
   epic-8: backlog
   8-1-data-export-api: backlog
