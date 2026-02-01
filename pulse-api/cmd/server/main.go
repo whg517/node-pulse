@@ -34,8 +34,8 @@ func main() {
 		log.Printf("[WARN] Database connection failed: %v", err)
 		// Continue without database for now, health check will report disabled
 		// Pass nil directly to avoid interface nil behavior issues
-		// Note: scheduler not created yet, will update health checker after scheduler init
-		healthChecker = health.New(nil, nil)
+		// Note: scheduler and alertSystemChecker not created yet, will update health checker after init
+		healthChecker = health.New(nil, nil, nil)
 	} else {
 		defer database.Close()
 
@@ -47,8 +47,8 @@ func main() {
 		}
 		log.Println("[Migration] Database migrations completed successfully")
 
-		// Note: scheduler not created yet, will update health checker after scheduler init
-		healthChecker = health.New(database, nil)
+		// Note: scheduler and alertSystemChecker not created yet, will update health checker after init
+		healthChecker = health.New(database, nil, nil)
 	}
 
 	// Initialize Gin router
@@ -104,7 +104,19 @@ func main() {
 	}
 	log.Println("[Pulse] Scheduler started")
 
-	// Update health checker with scheduler reference
+	// Update health checker with scheduler reference and alert system checker
+	var alertSystemChecker *health.AlertSystemChecker
+	if database != nil && database.Pool != nil && cacheManager != nil && cacheManager.AlertEngine != nil {
+		webhookLogsQuerier := db.NewWebhookLogsQuerier(database.Pool)
+		alertSuppressionsQuerier := db.NewAlertSuppressionsQuerier(database.Pool)
+		alertSystemChecker = health.NewAlertSystemChecker(
+			cacheManager.AlertEngine,
+			webhookLogsQuerier,
+			alertSuppressionsQuerier,
+		)
+		log.Println("[Pulse] Alert system health checker initialized")
+	}
+
 	healthChecker = health.New(
 		func() health.Checker {
 			if database != nil {
@@ -113,6 +125,7 @@ func main() {
 			return nil
 		}(),
 		sched,
+		alertSystemChecker,
 	)
 
 	// Create server with timeout configuration

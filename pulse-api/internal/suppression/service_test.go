@@ -17,6 +17,7 @@ type MockAlertSuppressionsQuerier struct {
 	checkFunc               func(ctx context.Context, nodeID string, metric string) (*models.AlertSuppression, error)
 	createOrUpdateFunc      func(ctx context.Context, nodeID string, metric string, suppressedUntil time.Time) error
 	deleteExpiredFunc        func(ctx context.Context) (int64, error)
+	countActiveFunc          func(ctx context.Context) (int64, error)
 }
 
 func (m *MockAlertSuppressionsQuerier) CheckSuppression(ctx context.Context, nodeID string, metric string) (*models.AlertSuppression, error) {
@@ -36,6 +37,13 @@ func (m *MockAlertSuppressionsQuerier) CreateOrUpdateSuppression(ctx context.Con
 func (m *MockAlertSuppressionsQuerier) DeleteExpiredSuppressions(ctx context.Context) (int64, error) {
 	if m.deleteExpiredFunc != nil {
 		return m.deleteExpiredFunc(ctx)
+	}
+	return 0, nil
+}
+
+func (m *MockAlertSuppressionsQuerier) CountActiveSuppressions(ctx context.Context) (int64, error) {
+	if m.countActiveFunc != nil {
+		return m.countActiveFunc(ctx)
 	}
 	return 0, nil
 }

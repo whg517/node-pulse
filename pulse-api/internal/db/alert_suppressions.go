@@ -19,6 +19,7 @@ type AlertSuppressionsQuerier interface {
 	CheckSuppression(ctx context.Context, nodeID string, metric string) (*models.AlertSuppression, error)
 	CreateOrUpdateSuppression(ctx context.Context, nodeID string, metric string, suppressedUntil time.Time) error
 	DeleteExpiredSuppressions(ctx context.Context) (int64, error)
+	CountActiveSuppressions(ctx context.Context) (int64, error)
 }
 
 type alertSuppressionsQuerier struct {
@@ -91,4 +92,21 @@ func (q *alertSuppressionsQuerier) DeleteExpiredSuppressions(ctx context.Context
 	}
 
 	return result.RowsAffected(), nil
+}
+
+// CountActiveSuppressions counts the number of active suppression records
+func (q *alertSuppressionsQuerier) CountActiveSuppressions(ctx context.Context) (int64, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM alert_suppressions
+		WHERE suppressed_until > NOW()
+	`
+
+	var count int64
+	err := q.pool.QueryRow(ctx, query).Scan(&count)
+	if err != nil {
+		return 0, errors.New("failed to count active suppressions: " + err.Error())
+	}
+
+	return count, nil
 }

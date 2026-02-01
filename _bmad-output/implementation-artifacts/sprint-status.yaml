@@ -92,7 +92,7 @@ development_status:
   5-5-alert-engine: done
   5-6-alert-suppression-mechanism: done
   5-7-webhook-push: done
-  5-8-health-check-extension: backlog
+  5-8-health-check-extension: done
   epic-5-retrospective: optional
 
   epic-6: backlog

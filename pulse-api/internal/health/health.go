@@ -16,10 +16,11 @@ type Checker interface {
 
 // HealthResponse represents health check response
 type HealthResponse struct {
-	Status      string            `json:"status"`
-	Checks      map[string]string `json:"checks"`
-	Scheduler   *SchedulerStatus  `json:"scheduler,omitempty"`
-	Time        string            `json:"timestamp"`
+	Status       string             `json:"status"`
+	Checks       map[string]string  `json:"checks"`
+	Scheduler    *SchedulerStatus   `json:"scheduler,omitempty"`
+	AlertSystem  *AlertSystemStatus `json:"alert_system,omitempty"`
+	Time         string             `json:"timestamp"`
 }
 
 // SchedulerStatus represents scheduler health status
@@ -38,15 +39,17 @@ type TaskStatusInfo struct {
 
 // HealthChecker manages health checks
 type HealthChecker struct {
-	db        Checker
-	scheduler scheduler.Scheduler
+	db                  Checker
+	scheduler           scheduler.Scheduler
+	alertSystemChecker  *AlertSystemChecker
 }
 
 // New creates a new health checker
-func New(db Checker, sched scheduler.Scheduler) *HealthChecker {
+func New(db Checker, sched scheduler.Scheduler, alertSystemChecker *AlertSystemChecker) *HealthChecker {
 	return &HealthChecker{
-		db:        db,
-		scheduler: sched,
+		db:                 db,
+		scheduler:          sched,
+		alertSystemChecker: alertSystemChecker,
 	}
 }
 
@@ -54,8 +57,10 @@ func New(db Checker, sched scheduler.Scheduler) *HealthChecker {
 func (h *HealthChecker) Handler(c *gin.Context) {
 	ctx := c.Request.Context()
 	isHealthy := true
+	isDegraded := false
 	checks := make(map[string]string)
 	var schedulerStatus *SchedulerStatus
+	var alertSystemStatus *AlertSystemStatus
 
 	// Check database - nil database is not an error, it's disabled
 	if h.db == nil {
@@ -94,22 +99,74 @@ func (h *HealthChecker) Handler(c *gin.Context) {
 		}
 	}
 
+	// Check alert system health
+	if h.alertSystemChecker != nil {
+		alertSystemStatus = &AlertSystemStatus{}
+
+		// Check alert engine with timeout
+		checkCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
+		if engineStatus, err := h.alertSystemChecker.CheckAlertEngine(checkCtx); err == nil {
+			alertSystemStatus.AlertEngine = engineStatus
+			checks["alert_engine"] = engineStatus.Status
+
+			// Determine if degraded or unhealthy
+			if engineStatus.Status == "full" {
+				isHealthy = false
+			} else if engineStatus.Status == "stale" {
+				isDegraded = true
+			}
+		} else {
+			checks["alert_engine"] = "error: " + err.Error()
+		}
+		cancel()
+
+		// Check webhook delivery with timeout
+		checkCtx, cancel = context.WithTimeout(ctx, 500*time.Millisecond)
+		if deliveryStatus, err := h.alertSystemChecker.CheckWebhookDelivery(checkCtx); err == nil {
+			alertSystemStatus.WebhookDelivery = deliveryStatus
+			checks["webhook_delivery"] = deliveryStatus.Status
+
+			// Determine if degraded or unhealthy
+			if deliveryStatus.Status == "unhealthy" {
+				isDegraded = true
+			} else if deliveryStatus.Status == "degraded" {
+				isDegraded = true
+			}
+		} else {
+			checks["webhook_delivery"] = "error: " + err.Error()
+		}
+		cancel()
+
+		// Check alert suppression with timeout
+		checkCtx, cancel = context.WithTimeout(ctx, 500*time.Millisecond)
+		if suppressionStatus, err := h.alertSystemChecker.CheckAlertSuppression(checkCtx); err == nil {
+			alertSystemStatus.AlertSuppression = suppressionStatus
+			checks["alert_suppression"] = suppressionStatus.Status
+		} else {
+			checks["alert_suppression"] = "error: " + err.Error()
+		}
+		cancel()
+	}
+
+	// Determine overall status
 	status := "healthy"
 	if !isHealthy {
 		status = "unhealthy"
-		c.JSON(http.StatusServiceUnavailable, HealthResponse{
-			Status:    status,
-			Checks:    checks,
-			Scheduler: schedulerStatus,
-			Time:      time.Now().UTC().Format(time.RFC3339),
-		})
-		return
+	} else if isDegraded {
+		status = "degraded"
 	}
 
-	c.JSON(http.StatusOK, HealthResponse{
-		Status:    status,
-		Checks:    checks,
-		Scheduler: schedulerStatus,
-		Time:      time.Now().UTC().Format(time.RFC3339),
+	// Return appropriate HTTP status code
+	httpStatus := http.StatusOK
+	if status == "unhealthy" {
+		httpStatus = http.StatusServiceUnavailable
+	}
+
+	c.JSON(httpStatus, HealthResponse{
+		Status:      status,
+		Checks:      checks,
+		Scheduler:   schedulerStatus,
+		AlertSystem: alertSystemStatus,
+		Time:        time.Now().UTC().Format(time.RFC3339),
 	})
 }
