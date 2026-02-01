@@ -60,6 +60,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createAlertRecordsTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -405,6 +409,33 @@ func createWebhookLogsTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_webhook_logs_alert_event_id ON webhook_logs(alert_event_id);
 		CREATE INDEX IF NOT EXISTS idx_webhook_logs_status ON webhook_logs(status);
 		CREATE INDEX IF NOT EXISTS idx_webhook_logs_created_at ON webhook_logs(created_at DESC);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createAlertRecordsTable creates alert_records table with indexes (Story 6.1)
+func createAlertRecordsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS alert_records (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			alert_event_id UUID NOT NULL REFERENCES alert_events(id) ON DELETE CASCADE,
+			node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			metric VARCHAR NOT NULL,
+			level VARCHAR NOT NULL,
+			status VARCHAR NOT NULL DEFAULT 'pending',
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW(),
+			CONSTRAINT chk_alert_record_status CHECK (status IN ('pending', 'in_progress', 'resolved'))
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_alert_records_node_id ON alert_records(node_id);
+		CREATE INDEX IF NOT EXISTS idx_alert_records_level ON alert_records(level);
+		CREATE INDEX IF NOT EXISTS idx_alert_records_status ON alert_records(status);
+		CREATE INDEX IF NOT EXISTS idx_alert_records_created_at ON alert_records(created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_alert_records_node_created ON alert_records(node_id, created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_alert_records_status_created ON alert_records(status, created_at DESC);
 	`
 
 	_, err := pool.Exec(ctx, query)

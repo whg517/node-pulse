@@ -8,7 +8,7 @@ import (
 )
 
 // setupTestDB creates a test database connection pool
-func setupTestDB(t *testing.T) *pgxpool.Pool {
+func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	ctx := context.Background()
 
 	// Use test database from environment or default
@@ -32,5 +32,10 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 		t.Fatalf("Failed to migrate test database: %v", err)
 	}
 
-	return pool
+	// Return cleanup function
+	cleanup := func() {
+		pool.Close()
+	}
+
+	return pool, cleanup
 }

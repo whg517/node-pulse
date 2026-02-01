@@ -24,6 +24,7 @@ type MetricData struct {
 
 // AlertEngine handles alert evaluation and event creation
 type AlertEngine struct {
+	pool                 *pgxpool.Pool
 	alertQuerier        db.AlertQuerier
 	alertEventsQuerier  db.AlertEventsQuerier
 	suppressionService   *suppression.Service
@@ -73,6 +74,7 @@ func NewAlertEngine(
 	webhookPushService := webhook.NewPushService(webhookQuerier, webhookLogsQuerier, "http://localhost:8080")
 
 	return &AlertEngine{
+		pool:                    pool,
 		alertQuerier:            alertQuerier,
 		alertEventsQuerier:      alertEventsQuerier,
 		suppressionService:      suppressionService,
@@ -84,6 +86,11 @@ func NewAlertEngine(
 		ruleCache:               make([]*models.Alert, 0),
 		ruleCacheRefreshInterval: config.RuleCacheRefreshInterval,
 	}
+}
+
+// getPool returns the database pool
+func (e *AlertEngine) getPool() *pgxpool.Pool {
+	return e.pool
 }
 
 // Start starts the alert engine workers
@@ -212,6 +219,27 @@ func (e *AlertEngine) evaluateMetric(data *MetricData) {
 					"threshold", alertEvent.Threshold,
 					"current_value", alertEvent.CurrentValue,
 					"level", alertEvent.Level)
+
+				// Create alert record for lifecycle tracking (Story 6.1)
+				alertRecord := &models.AlertRecord{
+					AlertEventID: alertEvent.ID,
+					NodeID:       alertEvent.NodeID,
+					Metric:       alertEvent.Metric,
+					Level:        alertEvent.Level,
+					Status:       "pending", // Initial status
+				}
+				if recordErr := db.CreateAlertRecord(ctx, e.getPool(), alertRecord); recordErr != nil {
+					slog.Error("Failed to create alert record",
+						"alert_event_id", alertEvent.ID,
+						"node_id", data.NodeID,
+						"metric", rule.Metric,
+						"error", recordErr)
+					// Don't fail the alert if record creation fails
+				} else {
+					slog.Debug("Alert record created",
+						"record_id", alertRecord.ID,
+						"alert_event_id", alertEvent.ID)
+				}
 
 				// Record suppression for future alerts
 				err = e.suppressionService.RecordDefaultSuppression(ctx, data.NodeID, rule.Metric)

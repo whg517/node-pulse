@@ -161,6 +161,19 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// DELETE /api/v1/alerts/rules/:id - Delete alert rule (admin/operator only)
 		alerts.DELETE("/rules/:id", alertHandler.DeleteAlertRuleHandler)
 
+		// Alert record management routes (require auth) (Story 6.1)
+		alertRecordHandler := NewAlertRecordHandler(pool)
+
+		// Alert records group with auth middleware
+		alertRecords := v1.Group("/alerts/records")
+		alertRecords.Use(auth.AuthMiddleware(sessionService))
+
+		// GET /api/v1/alerts/records - Get alert records with filtering (all roles)
+		alertRecords.GET("", alertRecordHandler.GetAlertRecordsHandler)
+
+		// PUT /api/v1/alerts/records/:id/status - Update alert record status (all roles)
+		alertRecords.PUT("/:id/status", alertRecordHandler.UpdateAlertRecordStatusHandler)
+
 		// Webhook management routes (require admin auth only) (Story 5.2)
 		webhookQuerier := db.NewWebhookQuerier(pool)
 		webhookHandler := NewWebhookHandler(webhookQuerier)
