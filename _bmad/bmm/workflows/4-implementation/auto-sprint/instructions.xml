@@ -105,7 +105,7 @@ For each task:
 
    **Task 1: create-story** (only if backlog)
    - Use NEW invoke-task: subagent_type="general-purpose"
-   - Prompt: "Execute Skill tool: skill='bmad-bmm-create-story' for story {{story_key}}"
+   - Prompt: "Execute Skill tool: skill='bmad-bmm-create-story' for story {{story_key}}. CRITICAL: Do NOT generate any intermediate reports, summaries, or documentation files. Only create the story file and update sprint-status.yaml."
    - Auto-respond to any interactions:
      * If asks confirmation → Auto-reply Y (yes)
      * If asks choices → Select optimal option (continue, create, proceed)
@@ -116,7 +116,7 @@ For each task:
 
    **Task 2: dev-story** (if ready-for-dev or in-progress)
    - Use NEW invoke-task: subagent_type="general-purpose"
-   - Prompt: "Execute Skill tool: skill='bmad-bmm-dev-story' for story {{story_key}}"
+   - Prompt: "Execute Skill tool: skill='bmad-bmm-dev-story' for story {{story_key}}. CRITICAL: Do NOT generate any intermediate reports, summaries, or documentation files. Only update code, tests, and sprint-status.yaml."
    - Auto-respond to any interactions:
      * If asks confirmation → Auto-reply Y (yes)
      * If shows test failures → Auto-reply: Fix all issues and re-run tests
@@ -128,7 +128,7 @@ For each task:
 
    **Task 3: code-review** (if review)
    - Use NEW invoke-task: subagent_type="general-purpose"
-   - Prompt: "Execute Skill tool: skill='bmad-bmm-code-review' for story {{story_key}}"
+   - Prompt: "Execute Skill tool: skill='bmad-bmm-code-review' for story {{story_key}}. CRITICAL: Do NOT generate any intermediate reports, summaries, or documentation files. Only update code, tests, story file review findings, and sprint-status.yaml."
    - Auto-respond to any interactions:
      * If asks confirmation → Auto-reply Y (yes)
      * If shows review findings → Auto-reply: Fix all review issues immediately
@@ -153,6 +153,7 @@ For each task:
      4. If commit fails:
         - Show error
         - Auto-reply: Retry with adjusted message
+     CRITICAL: Do NOT generate any intermediate reports or documentation.
      "
    - Wait for subagent completion
    - Display: `[✅] 4. git-commit - Done`
@@ -221,7 +222,7 @@ When ALL [EXECUTE] tasks complete:
    - If epic complete and retrospective not done:
      * Display: "🏁 Epic {epic_key} complete!"
      * Use NEW invoke-task: subagent_type="general-purpose"
-     * Prompt: "Execute Skill tool: skill='bmad-bmm-retrospective' for epic {{epic_key}}. Auto-confirm all prompts."
+     * Prompt: "Execute Skill tool: skill='bmad-bmm-retrospective' for epic {{epic_key}}. Auto-confirm all prompts. CRITICAL: Do NOT generate any intermediate reports or documentation files. Only update sprint-status.yaml to mark retrospective as done."
      * Wait for completion
      * Mark epic as "done"
 
@@ -256,33 +257,40 @@ When ALL stories and epics are "done":
 
 ## Critical Execution Rules
 
-1. **Complete Lifecycle Per Iteration:**
+1. **NO Intermediate Files:**
+   - NEVER generate any intermediate reports, summaries, or documentation
+   - NEVER create temporary files during execution
+   - ONLY update sprint-status.yaml (required state tracking)
+   - ONLY create/update story files and code (actual work)
+   - NO progress reports, NO summary files, NO documentation artifacts
+
+2. **Complete Lifecycle Per Iteration:**
    - Each iteration executes: create-story → dev-story → code-review → git-commit
    - Skip tasks already done based on current status
    - Real-time status updates: [ ] → [⏳] → [✅]
 
-2. **Independent Subagent Per Task:**
+3. **Independent Subagent Per Task:**
    - Each task MUST use NEW invoke-task
    - Fresh subagent for each task
    - No state sharing between tasks
 
-3. **Auto-Respond to Interactions:**
+4. **Auto-Respond to Interactions:**
    - Always choose optimal/positive action
    - Fix all issues immediately
    - Continue execution
    - Never wait for user input unless critical error
 
-4. **Error Handling:**
+5. **Error Handling:**
    - Retry 3 times with 2s delay
    - Then call /bmad-help
    - Then ask user for decision
 
-5. **Continuous Execution:**
+6. **Continuous Execution:**
    - NO max_iterations limit
    - Execute until ALL stories and epics are "done"
    - Never halt between iterations
 
-6. **State Management:**
+7. **State Management:**
    - sprint-status.yaml is single source of truth
    - Reload after each task
    - Refresh from /bmad-bmm-sprint-status between iterations
