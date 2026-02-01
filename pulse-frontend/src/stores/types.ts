@@ -53,3 +53,23 @@ export interface DashboardFilter {
 }
 
 export type TimeRange = '24h' | '7d' | '30d'
+
+export type ExtendedTimeRange = '24h' | '7d' | '30d' | 'custom'
+
+export type GroupByType = 'region' | 'isp' | 'none'
+
+export type MetricType = 'latency_ms' | 'packet_loss_rate' | 'jitter_ms'
+
+// ============== Comparison Types ==============
+export interface ComparisonState {
+  selectedNodeIds: string[]
+  selectedMetrics: MetricType[]
+  timeRange: ExtendedTimeRange
+  customTimeRange?: { start: string; end: string }
+  groupBy: GroupByType
+}
+
+export interface ComparisonFilter {
+  minNodes: number
+  maxNodes: number
+}

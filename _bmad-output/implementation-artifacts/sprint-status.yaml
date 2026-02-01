@@ -103,7 +103,7 @@ development_status:
   epic-7: in-progress
   7-1-comparison-chart-component: done
   7-2-node-comparison-query-api: backlog
-  7-3-node-comparison-frontend-page: backlog
+  7-3-node-comparison-frontend-page: done
   7-4-problem-diagnosis-engine: backlog
   epic-7-retrospective: optional
 

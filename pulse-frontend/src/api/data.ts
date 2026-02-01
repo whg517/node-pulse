@@ -148,3 +148,99 @@ export async function exportData(
     `/api/v1/data/export?${params}`
   )
 }
+
+/**
+ * Comparison Query Types
+ */
+
+export interface ComparisonQueryDTO {
+  node_ids: string[]
+  start_time: string
+  end_time: string
+  metrics: string[]
+}
+
+export interface NodeComparisonMetrics {
+  [metric: string]: {
+    data_points: Array<{ timestamp: string; value: number }>
+    avg: number
+    max: number
+    min: number
+  }
+}
+
+export interface ComparisonNodeData {
+  node_id: string
+  name: string
+  region?: string
+  isp?: string
+  metrics: NodeComparisonMetrics
+}
+
+export interface ComparisonStatistics {
+  [metric: string]: {
+    overall_avg: number
+    overall_max: number
+    overall_min: number
+    differences: Array<{
+      node_id: string
+      diff_from_avg: number
+    }>
+  }
+}
+
+export interface ComparisonResponseDTO {
+  data: {
+    time_range: {
+      start: string
+      end: string
+    }
+    nodes: ComparisonNodeData[]
+    statistics: ComparisonStatistics
+  }
+  message: string
+  timestamp: string
+}
+
+/**
+ * Fetch comparison data for multiple nodes
+ *
+ * Retrieves aggregated metrics data for comparing performance across multiple nodes.
+ * Returns pre-calculated statistics including averages, max/min values, and differences.
+ *
+ * @param query - Comparison query parameters
+ * @returns Comparison data with statistics
+ * @throws ValidationError if query parameters are invalid
+ * @throws AuthenticationError if user is not authenticated
+ *
+ * @example
+ * const { data } = await getComparisonData({
+ *   node_ids: ['node-1', 'node-2', 'node-3'],
+ *   start_time: '2024-01-01T00:00:00Z',
+ *   end_time: '2024-01-02T00:00:00Z',
+ *   metrics: ['latency_ms', 'packet_loss_rate']
+ * })
+ *
+ * console.log('Time range:', data.time_range)
+ * console.log('Nodes:', data.nodes.length)
+ * console.log('Statistics:', data.statistics)
+ */
+export async function getComparisonData(
+  query: ComparisonQueryDTO
+): Promise<ComparisonResponseDTO> {
+  const params = new URLSearchParams()
+
+  // Add node IDs (comma-separated)
+  params.append('node_ids', query.node_ids.join(','))
+
+  // Add time range
+  params.append('start_time', query.start_time)
+  params.append('end_time', query.end_time)
+
+  // Add metrics (comma-separated)
+  params.append('metrics', query.metrics.join(','))
+
+  return apiClient<ComparisonResponseDTO>(
+    `/api/v1/data/comparison?${params}`
+  )
+}

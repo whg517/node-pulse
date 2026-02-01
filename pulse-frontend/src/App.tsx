@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import NodeDetailPage from './pages/NodeDetailPage'
+import NodeComparisonPage from './pages/NodeComparison'
 import AlertRulesPage from './pages/AlertRulesPage'
 import AlertRecordsPage from './pages/AlertRecordsPage'
 import WebhooksPage from './pages/WebhooksPage'
@@ -45,7 +46,7 @@ function App() {
           path="/comparison"
           element={
             <ProtectedRoute>
-              <div>Node Comparison (Coming Soon)</div>
+              <NodeComparisonPage />
             </ProtectedRoute>
           }
         />
