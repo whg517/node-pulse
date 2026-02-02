@@ -86,7 +86,7 @@ func TestCleanupTask_Execute_Success(t *testing.T) {
 	defer mock.Close()
 
 	// Expect DELETE SQL execution with parameterized query
-	mock.ExpectExec("DELETE FROM metrics WHERE timestamp < NOW\\(\\) - INTERVAL \\$1 \\* INTERVAL '1 day'").
+	mock.ExpectExec("DELETE FROM metrics WHERE timestamp < NOW\\(\\) - INTERVAL '1 day' \\* \\$1").
 		WithArgs(7). // RetentionDays argument
 		WillReturnResult(pgxmock.NewResult("DELETE", 1234)) // Deleted 1234 rows
 
@@ -113,7 +113,7 @@ func TestCleanupTask_Execute_DatabaseError(t *testing.T) {
 	defer mock.Close()
 
 	// Simulate database error with parameterized query
-	mock.ExpectExec("DELETE FROM metrics WHERE timestamp < NOW\\(\\) - INTERVAL \\$1 \\* INTERVAL '1 day'").
+	mock.ExpectExec("DELETE FROM metrics WHERE timestamp < NOW\\(\\) - INTERVAL '1 day' \\* \\$1").
 		WithArgs(7). // RetentionDays argument
 		WillReturnError(&pgconn.PgError{
 			Code:    "08006",
@@ -143,7 +143,7 @@ func TestCleanupTask_Execute_SlowQuery(t *testing.T) {
 	defer mock.Close()
 
 	// Expect DELETE SQL execution with parameterized query
-	mock.ExpectExec("DELETE FROM metrics WHERE timestamp < NOW\\(\\) - INTERVAL \\$1 \\* INTERVAL '1 day'").
+	mock.ExpectExec("DELETE FROM metrics WHERE timestamp < NOW\\(\\) - INTERVAL '1 day' \\* \\$1").
 		WithArgs(7). // RetentionDays argument
 		WillReturnResult(pgxmock.NewResult("DELETE", 100))
 
@@ -170,7 +170,7 @@ func TestCleanupTask_Execute_ZeroRows(t *testing.T) {
 	defer mock.Close()
 
 	// No rows to delete - parameterized query with argument
-	mock.ExpectExec("DELETE FROM metrics WHERE timestamp < NOW\\(\\) - INTERVAL \\$1 \\* INTERVAL '1 day'").
+	mock.ExpectExec("DELETE FROM metrics WHERE timestamp < NOW\\(\\) - INTERVAL '1 day' \\* \\$1").
 		WithArgs(7). // RetentionDays argument
 		WillReturnResult(pgxmock.NewResult("DELETE", 0))
 

@@ -57,8 +57,8 @@ func (s *PushService) SendWebhook(ctx context.Context, alertEvent *models.AlertE
 		// Send webhook
 		err := s.sendHTTP(ctx, alertEvent, webhook)
 		if err == nil {
-			// Success - log successful delivery
-			s.logWebhookDelivery(ctx, alertEvent, webhook, "success", 0, "")
+			// Success - log successful delivery with actual retry count
+			s.logWebhookDelivery(ctx, alertEvent, webhook, "success", attempt, "")
 			return nil
 		}
 

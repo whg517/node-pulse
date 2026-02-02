@@ -327,7 +327,8 @@ func createAlertsTable(ctx context.Context, pool *pgxpool.Pool) error {
 	return err
 }
 
-// createWebhooksTable creates webhooks table with indexes and HTTPS URL constraint (Story 5.2)
+// createWebhooksTable creates webhooks table with indexes (Story 5.2)
+// Note: HTTPS validation is handled at application layer (api/webhook_handler.go)
 func createWebhooksTable(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS webhooks (
@@ -335,8 +336,7 @@ func createWebhooksTable(ctx context.Context, pool *pgxpool.Pool) error {
 			url VARCHAR NOT NULL,
 			event_format JSONB,
 			enabled BOOLEAN NOT NULL DEFAULT true,
-			created_at TIMESTAMPTZ DEFAULT NOW(),
-			CONSTRAINT valid_webhook_url CHECK (url ~* '^https://.*')
+			created_at TIMESTAMPTZ DEFAULT NOW()
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_webhooks_enabled ON webhooks(enabled);

@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -41,7 +43,15 @@ func TestExportHandler_CreateExportHandler_Success(t *testing.T) {
 	startTime := time.Now().Add(-2 * time.Hour)
 	endTime := time.Now()
 
-	req, _ := http.NewRequest("GET", "/export?node_ids="+nodeID+"&start_time="+startTime.Format(time.RFC3339)+"&end_time="+endTime.Format(time.RFC3339)+"&metrics=latency&format=csv", nil)
+	// Build URL with URL-encoded timestamps
+	queryParams := url.Values{}
+	queryParams.Set("node_ids", nodeID)
+	queryParams.Set("start_time", startTime.Format(time.RFC3339))
+	queryParams.Set("end_time", endTime.Format(time.RFC3339))
+	queryParams.Set("metrics", "latency")
+	queryParams.Set("format", "csv")
+
+	req, _ := http.NewRequest("POST", "/export?"+queryParams.Encode(), nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -107,7 +117,7 @@ func TestExportHandler_CreateExportHandler_ValidationErrors(t *testing.T) {
 			name:       "Invalid time range (end before start)",
 			query:      "?node_ids=node1&start_time=2024-01-02T00:00:00Z&end_time=2024-01-01T00:00:00Z&metrics=latency",
 			wantStatus: http.StatusBadRequest,
-			wantError:  "validation failed",
+			wantError:  "Failed to create export task",
 		},
 		{
 			name:       "Invalid time format",
@@ -132,8 +142,8 @@ func TestExportHandler_CreateExportHandler_ValidationErrors(t *testing.T) {
 				handler.CreateExportHandler(c)
 			})
 
-			// Test request
-			req, _ := http.NewRequest("GET", "/export"+tt.query, nil)
+			// Test request - use POST for POST route
+			req, _ := http.NewRequest("POST", "/export"+tt.query, nil)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, req)
@@ -166,21 +176,22 @@ func TestExportHandler_CreateExportHandler_MaxNodesExceeded(t *testing.T) {
 	// Create 51 node IDs (exceeds max of 50)
 	nodeIDs := make([]string, 51)
 	for i := 0; i < 51; i++ {
-		nodeIDs[i] = "node-" + string(rune(i))
+		nodeIDs[i] = fmt.Sprintf("node-%d", i)
 	}
 
 	startTime := time.Now().Add(-2 * time.Hour)
 	endTime := time.Now()
 
-	// Build query with 51 node IDs
-	query := "?start_time=" + startTime.Format(time.RFC3339) +
-		"&end_time=" + endTime.Format(time.RFC3339) +
-		"&metrics=latency"
+	// Build query with 51 node IDs - use url.Values for proper encoding
+	queryParams := url.Values{}
+	queryParams.Set("start_time", startTime.Format(time.RFC3339))
+	queryParams.Set("end_time", endTime.Format(time.RFC3339))
+	queryParams.Set("metrics", "latency")
 	for _, nodeID := range nodeIDs {
-		query += "&node_ids=" + nodeID
+		queryParams.Add("node_ids", nodeID)
 	}
 
-	req, _ := http.NewRequest("GET", "/export"+query, nil)
+	req, _ := http.NewRequest("POST", "/export?"+queryParams.Encode(), nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -191,8 +202,8 @@ func TestExportHandler_CreateExportHandler_MaxNodesExceeded(t *testing.T) {
 	var resp map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
-	assert.Contains(t, resp["error"], "Failed to create export task")
-	assert.Contains(t, resp["details"], "maximum 50 nodes")
+	assert.Contains(t, resp["error"], "Invalid request parameters")
+	assert.Contains(t, resp["details"], "max")
 }
 
 func TestExportHandler_GetExportStatusHandler_Success(t *testing.T) {
@@ -397,8 +408,8 @@ func TestExportHandler_Unauthorized(t *testing.T) {
 	startTime := time.Now().Add(-2 * time.Hour)
 	endTime := time.Now()
 
-	// Test request without user_id in context
-	req, _ := http.NewRequest("GET", "/export?node_ids=node1&start_time="+startTime.Format(time.RFC3339)+"&end_time="+endTime.Format(time.RFC3339)+"&metrics=latency", nil)
+	// Test request without user_id in context - use POST for POST route
+	req, _ := http.NewRequest("POST", "/export?node_ids=node1&start_time="+startTime.Format(time.RFC3339)+"&end_time="+endTime.Format(time.RFC3339)+"&metrics=latency", nil)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)

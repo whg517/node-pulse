@@ -77,7 +77,7 @@ func (c *CleanupTask) Execute(ctx context.Context) error {
 	}
 
 	// Execute cleanup SQL with parameterized query to prevent SQL injection
-	sql := "DELETE FROM metrics WHERE timestamp < NOW() - INTERVAL $1 * INTERVAL '1 day'"
+	sql := "DELETE FROM metrics WHERE timestamp < NOW() - INTERVAL '1 day' * $1"
 	result, err := c.db.Exec(ctx, sql, c.cfg.RetentionDays)
 	if err != nil {
 		c.lastError = err

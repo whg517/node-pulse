@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -86,15 +87,16 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Create test data
-	nodeUUID, _ := uuid.Parse("test-node-id")
+	// Create test data with valid UUIDs
+	nodeUUID := uuid.New()
 	err := db.CreateNode(ctx, pool, nodeUUID, "Test Node", "192.168.1.1", "us-east", nil)
 	require.NoError(t, err)
 
 	// Create alert event
+	alertEventID := uuid.New().String()
 	alertEvent := &models.AlertEvent{
-		ID:           "test-alert-event-id",
-		NodeID:       "test-node-id",
+		ID:           alertEventID,
+		NodeID:       nodeUUID.String(),
 		Metric:       "latency",
 		Threshold:    100.0,
 		CurrentValue: 150.0,
@@ -108,7 +110,7 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 	// Create alert record
 	record := &models.AlertRecord{
 		AlertEventID: alertEvent.ID,
-		NodeID:       "test-node-id",
+		NodeID:       nodeUUID.String(),
 		Metric:       alertEvent.Metric,
 		Level:        alertEvent.Level,
 		Status:       "pending",
@@ -121,6 +123,11 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
+	// Debug: print response if not OK
+	if w.Code != http.StatusOK {
+		t.Logf("Response code: %d, Body: %s", w.Code, w.Body.String())
+	}
+
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response map[string]interface{}
@@ -131,8 +138,8 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 	data := response["data"].([]interface{})
 	assert.GreaterOrEqual(t, len(data), 1, "Should return at least 1 record")
 
-	// Test filtering by node_id
-	req, _ = http.NewRequest("GET", "/api/v1/alerts/records?node_id=test-node-id", nil)
+	// Test filtering by node_id - use the actual UUID
+	req, _ = http.NewRequest("GET", "/api/v1/alerts/records?node_id="+nodeUUID.String(), nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -215,7 +222,8 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 	// Test valid time range filtering
 	startTime := time.Now().Add(-1 * time.Hour).Format(time.RFC3339)
 	endTime := time.Now().Format(time.RFC3339)
-	req, _ = http.NewRequest("GET", "/api/v1/alerts/records?start_time="+startTime+"&end_time="+endTime, nil)
+	// URL-encode timestamps to handle + in timezone
+	req, _ = http.NewRequest("GET", "/api/v1/alerts/records?start_time="+url.QueryEscape(startTime)+"&end_time="+url.QueryEscape(endTime), nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -248,14 +256,15 @@ func TestUpdateAlertRecordStatusHandler(t *testing.T) {
 
 	ctx := context.Background()
 
-	// Create test data
-	nodeUUID, _ := uuid.Parse("test-node-id-2")
+	// Create test data with valid UUIDs
+	nodeUUID := uuid.New()
 	err := db.CreateNode(ctx, pool, nodeUUID, "Test Node 2", "192.168.1.2", "us-east", nil)
 	require.NoError(t, err)
 
+	alertEventID := uuid.New().String()
 	alertEvent := &models.AlertEvent{
-		ID:           "test-alert-event-id-2",
-		NodeID:       "test-node-id-2",
+		ID:           alertEventID,
+		NodeID:       nodeUUID.String(),
 		Metric:       "latency",
 		Threshold:    100.0,
 		CurrentValue: 150.0,
@@ -268,7 +277,7 @@ func TestUpdateAlertRecordStatusHandler(t *testing.T) {
 
 	record := &models.AlertRecord{
 		AlertEventID: alertEvent.ID,
-		NodeID:       "test-node-id-2",
+		NodeID:       nodeUUID.String(),
 		Metric:       alertEvent.Metric,
 		Level:        alertEvent.Level,
 		Status:       "pending",
@@ -323,7 +332,7 @@ func TestUpdateAlertRecordStatusHandler(t *testing.T) {
 	// Test updating non-existent record
 	reqBody = map[string]string{"status": "resolved"}
 	jsonBody, _ = json.Marshal(reqBody)
-	req, _ = http.NewRequest("PUT", "/api/v1/alerts/records/non-existent-id/status", bytes.NewBuffer(jsonBody))
+	req, _ = http.NewRequest("PUT", "/api/v1/alerts/records/"+uuid.New().String()+"/status", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)

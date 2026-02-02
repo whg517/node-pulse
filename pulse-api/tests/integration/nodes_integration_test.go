@@ -44,7 +44,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	// Online node (2 minutes ago)
 	onlineNodeID := uuid.New()
 	_, err = pool.Exec(context.Background(),
-		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())",
+		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())",
 		onlineNodeID, "在线测试节点", "192.168.1.100", "us-east", "{}", now.Add(-2*time.Minute), now.Add(-2*time.Minute), "online",
 	)
 	require.NoError(t, err)
@@ -52,7 +52,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	// Offline node (10 minutes ago)
 	offlineNodeID := uuid.New()
 	_, err = pool.Exec(context.Background(),
-		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())",
+		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())",
 		offlineNodeID, "离线测试节点", "192.168.1.101", "us-east", "{}", now.Add(-10*time.Minute), now.Add(-10*time.Minute), "offline",
 	)
 	require.NoError(t, err)
@@ -60,8 +60,8 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	// Connecting node (no heartbeat)
 	connectingNodeID := uuid.New()
 	_, err = pool.Exec(context.Background(),
-		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NULL, NULL, $7, NOW(), NOW())",
-		connectingNodeID, "连接中测试节点", "192.168.1.102", "us-east", "{}", nil, nil, "connecting",
+		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NULL, NULL, $6, NOW(), NOW())",
+		connectingNodeID, "连接中测试节点", "192.168.1.102", "us-east", "{}", "connecting",
 	)
 	require.NoError(t, err)
 
@@ -250,7 +250,7 @@ func TestGetNodeStatus_ResponseFormat(t *testing.T) {
 	nodeID := uuid.New()
 	now := time.Now()
 	pool.Exec(context.Background(),
-		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())",
+		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())",
 		nodeID, "格式测试节点", "192.168.1.99", "us-west", "{}", now.Add(-1*time.Minute), now, "online",
 	)
 

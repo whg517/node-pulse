@@ -279,3 +279,8 @@ func isRateLimited(ip string) bool {
 
 	return false
 }
+
+// ClearRateLimitStore clears the rate limit store (for testing purposes)
+func ClearRateLimitStore() {
+	RateLimitStore = make(map[string]RateLimitInfo)
+}

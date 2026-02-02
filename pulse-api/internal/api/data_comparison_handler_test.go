@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
@@ -29,6 +31,11 @@ func TestGetComparisonHandler_Success(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+
+	// Run migrations to ensure tables exist
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
 
 	// Create test nodes
 	nodeIDs := createTestNodes(t, ctx, pool, 3)
@@ -46,7 +53,13 @@ func TestGetComparisonHandler_Success(t *testing.T) {
 	startTime := time.Now().Add(-2 * time.Hour).Format(time.RFC3339)
 	endTime := time.Now().Format(time.RFC3339)
 
-	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids="+nodeIDs[0]+","+nodeIDs[1]+"&start_time="+startTime+"&end_time="+endTime+"&metrics=latency", nil)
+	// Build URL with repeated node_ids parameters for Gin []string binding
+	// URL-encode timestamps to preserve + in timezone offset
+	url := "/api/v1/data/comparison?start_time=" + url.QueryEscape(startTime) + "&end_time=" + url.QueryEscape(endTime) + "&metrics=latency"
+	for _, nodeID := range []string{nodeIDs[0], nodeIDs[1]} {
+		url += "&node_ids=" + nodeID
+	}
+	req, _ := http.NewRequest("GET", url, nil)
 	c.Request = req
 
 	// Execute handler
@@ -123,7 +136,16 @@ func TestGetComparisonHandler_MultipleMetrics(t *testing.T) {
 	startTime := time.Now().Add(-2 * time.Hour).Format(time.RFC3339)
 	endTime := time.Now().Format(time.RFC3339)
 
-	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids="+nodeIDs[0]+","+nodeIDs[1]+"&start_time="+startTime+"&end_time="+endTime+"&metrics=latency,packet_loss_rate,jitter", nil)
+	// Build URL with repeated node_ids and metrics parameters for Gin []string binding
+	// URL-encode timestamps to preserve + in timezone offset
+	url := "/api/v1/data/comparison?start_time=" + url.QueryEscape(startTime) + "&end_time=" + url.QueryEscape(endTime)
+	for _, nodeID := range []string{nodeIDs[0], nodeIDs[1]} {
+		url += "&node_ids=" + nodeID
+	}
+	for _, metric := range []string{"latency", "packet_loss_rate", "jitter"} {
+		url += "&metrics=" + metric
+	}
+	req, _ := http.NewRequest("GET", url, nil)
 	c.Request = req
 
 	// Execute handler
@@ -180,8 +202,13 @@ func TestGetComparisonHandler_MaxFiveNodes(t *testing.T) {
 	startTime := time.Now().Add(-2 * time.Hour).Format(time.RFC3339)
 	endTime := time.Now().Format(time.RFC3339)
 
-	nodeIDsParam := nodeIDs[0] + "," + nodeIDs[1] + "," + nodeIDs[2] + "," + nodeIDs[3] + "," + nodeIDs[4]
-	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids="+nodeIDsParam+"&start_time="+startTime+"&end_time="+endTime+"&metrics=latency", nil)
+	// Build URL with repeated node_ids parameters for Gin []string binding
+	// URL-encode timestamps to preserve + in timezone offset
+	url := "/api/v1/data/comparison?start_time=" + url.QueryEscape(startTime) + "&end_time=" + url.QueryEscape(endTime) + "&metrics=latency"
+	for _, nodeID := range nodeIDs {
+		url += "&node_ids=" + nodeID
+	}
+	req, _ := http.NewRequest("GET", url, nil)
 	c.Request = req
 
 	// Execute handler
@@ -207,9 +234,10 @@ func TestGetComparisonHandler_TooManyNodes(t *testing.T) {
 	startTime := time.Now().Add(-2 * time.Hour).Format(time.RFC3339)
 	endTime := time.Now().Format(time.RFC3339)
 
-	// Create 6 node IDs (comma-separated)
-	nodeIDsParam := "node1,node2,node3,node4,node5,node6"
-	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids="+nodeIDsParam+"&start_time="+startTime+"&end_time="+endTime+"&metrics=latency", nil)
+	// Use repeated node_ids parameters for correct []string binding (6 nodes should fail max=5 validation)
+	url := "/api/v1/data/comparison?start_time=" + url.QueryEscape(startTime) + "&end_time=" + url.QueryEscape(endTime) + "&metrics=latency"
+	url += "&node_ids=node1&node_ids=node2&node_ids=node3&node_ids=node4&node_ids=node5&node_ids=node6"
+	req, _ := http.NewRequest("GET", url, nil)
 	c.Request = req
 
 	// Execute handler
@@ -232,7 +260,7 @@ func TestGetComparisonHandler_MinTwoNodes(t *testing.T) {
 	startTime := time.Now().Add(-2 * time.Hour).Format(time.RFC3339)
 	endTime := time.Now().Format(time.RFC3339)
 
-	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids=node1&start_time="+startTime+"&end_time="+endTime+"&metrics=latency", nil)
+	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids=node1&start_time="+url.QueryEscape(startTime)+"&end_time="+url.QueryEscape(endTime)+"&metrics=latency", nil)
 	c.Request = req
 
 	// Execute handler
@@ -255,7 +283,10 @@ func TestGetComparisonHandler_InvalidTimeRange(t *testing.T) {
 	startTime := time.Now().Format(time.RFC3339)
 	endTime := time.Now().Add(-2 * time.Hour).Format(time.RFC3339)
 
-	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids=node1,node2&start_time="+startTime+"&end_time="+endTime+"&metrics=latency", nil)
+	// Use repeated node_ids parameters for correct []string binding
+	url := "/api/v1/data/comparison?start_time=" + url.QueryEscape(startTime) + "&end_time=" + url.QueryEscape(endTime) + "&metrics=latency"
+	url += "&node_ids=node1&node_ids=node2"
+	req, _ := http.NewRequest("GET", url, nil)
 	c.Request = req
 
 	// Execute handler
@@ -267,7 +298,7 @@ func TestGetComparisonHandler_InvalidTimeRange(t *testing.T) {
 	var response map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
-	assert.Contains(t, response["error"], "Invalid time range")
+	assert.Contains(t, response["details"], "end_time must be after start_time")
 }
 
 func TestGetComparisonHandler_InvalidMetric(t *testing.T) {
@@ -283,7 +314,10 @@ func TestGetComparisonHandler_InvalidMetric(t *testing.T) {
 	startTime := time.Now().Add(-2 * time.Hour).Format(time.RFC3339)
 	endTime := time.Now().Format(time.RFC3339)
 
-	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids=node1,node2&start_time="+startTime+"&end_time="+endTime+"&metrics=invalid_metric", nil)
+	// Use repeated node_ids parameters for correct []string binding
+	url := "/api/v1/data/comparison?start_time=" + url.QueryEscape(startTime) + "&end_time=" + url.QueryEscape(endTime) + "&metrics=invalid_metric"
+	url += "&node_ids=node1&node_ids=node2"
+	req, _ := http.NewRequest("GET", url, nil)
 	c.Request = req
 
 	// Execute handler
@@ -295,7 +329,7 @@ func TestGetComparisonHandler_InvalidMetric(t *testing.T) {
 	var response map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
-	assert.Contains(t, response["error"], "Invalid metric")
+	assert.Contains(t, response["details"], "not valid")
 }
 
 func TestGetComparisonHandler_InvalidStartTimeFormat(t *testing.T) {
@@ -308,7 +342,10 @@ func TestGetComparisonHandler_InvalidStartTimeFormat(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 
-	req, _ := http.NewRequest("GET", "/api/v1/data/comparison?node_ids=node1,node2&start_time=invalid&end_time=2024-01-01T00:00:00Z&metrics=latency", nil)
+	// Use repeated node_ids parameters for correct []string binding
+	url := "/api/v1/data/comparison?start_time=invalid&end_time=" + url.QueryEscape("2024-01-01T00:00:00Z") + "&metrics=latency"
+	url += "&node_ids=node1&node_ids=node2"
+	req, _ := http.NewRequest("GET", url, nil)
 	c.Request = req
 
 	// Execute handler
@@ -320,7 +357,7 @@ func TestGetComparisonHandler_InvalidStartTimeFormat(t *testing.T) {
 	var response map[string]interface{}
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
-	assert.Contains(t, response["error"], "Invalid start_time format")
+	assert.Contains(t, response["details"], "ISO 8601 format")
 }
 
 func TestGetComparisonHandler_MissingRequiredParameter(t *testing.T) {
@@ -341,17 +378,17 @@ func TestGetComparisonHandler_MissingRequiredParameter(t *testing.T) {
 		},
 		{
 			name:       "Missing start_time",
-			url:        "/api/v1/data/comparison?node_ids=node1,node2&end_time=2024-01-01T01:00:00Z&metrics=latency",
+			url:        "/api/v1/data/comparison?node_ids=node1&node_ids=node2&end_time=2024-01-01T01:00:00Z&metrics=latency",
 			errorField: "start_time",
 		},
 		{
 			name:       "Missing end_time",
-			url:        "/api/v1/data/comparison?node_ids=node1,node2&start_time=2024-01-01T00:00:00Z&metrics=latency",
+			url:        "/api/v1/data/comparison?node_ids=node1&node_ids=node2&start_time=2024-01-01T00:00:00Z&metrics=latency",
 			errorField: "end_time",
 		},
 		{
 			name:       "Missing metrics",
-			url:        "/api/v1/data/comparison?node_ids=node1,node2&start_time=2024-01-01T00:00:00Z&end_time=2024-01-01T01:00:00Z",
+			url:        "/api/v1/data/comparison?node_ids=node1&node_ids=node2&start_time=2024-01-01T00:00:00Z&end_time=2024-01-01T01:00:00Z",
 			errorField: "metrics",
 		},
 	}

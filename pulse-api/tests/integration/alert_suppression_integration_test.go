@@ -23,7 +23,7 @@ func setupSuppressionTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	// Connect to test database
 	testDBURL := os.Getenv("TEST_DATABASE_URL")
 	if testDBURL == "" {
-		testDBURL = "postgres://postgres:postgres@localhost:5432/node_pulse_test?sslmode=disable"
+		testDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
 	}
 
 	pool, err := pgxpool.New(ctx, testDBURL)
@@ -88,6 +88,12 @@ func TestAlertSuppression_Integration(t *testing.T) {
 	// Give workers time to initialize
 	time.Sleep(100 * time.Millisecond)
 
+	// Helper function to clean alert data between sub-tests
+	cleanAlertData := func() {
+		pool.Exec(ctx, "DELETE FROM alert_suppressions")
+		pool.Exec(ctx, "DELETE FROM alert_events")
+	}
+
 	t.Run("First alert should not be suppressed", func(t *testing.T) {
 		metricData := &alert.MetricData{
 			NodeID:         nodeID.String(),
@@ -112,6 +118,7 @@ func TestAlertSuppression_Integration(t *testing.T) {
 	})
 
 	t.Run("Second alert within suppression window should be suppressed", func(t *testing.T) {
+		// Don't clean - this test depends on previous test's suppression
 		// Send another alert immediately (within 5 minute window)
 		metricData := &alert.MetricData{
 			NodeID:         nodeID.String(),
@@ -136,6 +143,7 @@ func TestAlertSuppression_Integration(t *testing.T) {
 	})
 
 	t.Run("Cleanup expired suppressions", func(t *testing.T) {
+		cleanAlertData() // Clean data from previous tests
 		suppressionQuerier := db.NewAlertSuppressionsQuerier(pool)
 
 		// Create an expired suppression record manually
@@ -154,6 +162,8 @@ func TestAlertSuppression_Integration(t *testing.T) {
 	})
 
 	t.Run("Different metric should not be suppressed", func(t *testing.T) {
+		cleanAlertData() // Clean data from previous tests
+
 		// Create alert rule for packet loss
 		packetLossRule := &models.Alert{
 			Metric:    "packet_loss_rate",
@@ -164,6 +174,15 @@ func TestAlertSuppression_Integration(t *testing.T) {
 		}
 		err = alertQuerier.CreateAlert(ctx, packetLossRule)
 		require.NoError(t, err)
+
+		// Create a fresh alert engine to pick up the new packet_loss rule
+		config := alert.DefaultEngineConfig()
+		config.WorkerPoolSize = 2
+		config.MetricChannelBufferSize = 100
+		freshAlertEngine := alert.NewAlertEngine(pool, alertQuerier, config)
+		freshAlertEngine.Start()
+		defer freshAlertEngine.Stop()
+		time.Sleep(100 * time.Millisecond)
 
 		// Wait for rule cache refresh
 		time.Sleep(200 * time.Millisecond)
@@ -177,7 +196,7 @@ func TestAlertSuppression_Integration(t *testing.T) {
 			Timestamp:      time.Now(),
 		}
 
-		success := alertEngine.EvaluateMetrics(metricData)
+		success := freshAlertEngine.EvaluateMetrics(metricData)
 		assert.True(t, success, "Metric should be queued successfully")
 
 		// Wait for evaluation
@@ -191,6 +210,8 @@ func TestAlertSuppression_Integration(t *testing.T) {
 	})
 
 	t.Run("Different node should not be suppressed", func(t *testing.T) {
+		cleanAlertData() // Clean data from previous tests
+
 		// Create second node
 		nodeID2 := uuid.New()
 		err := nodeQuerier.CreateNode(ctx, nodeID2, "test-node-2", "192.168.1.101", "us-east", map[string]any{
@@ -210,6 +231,15 @@ func TestAlertSuppression_Integration(t *testing.T) {
 		err = alertQuerier.CreateAlert(ctx, node2LatencyRule)
 		require.NoError(t, err)
 
+		// Create a fresh alert engine to pick up the new rule for node2
+		config := alert.DefaultEngineConfig()
+		config.WorkerPoolSize = 2
+		config.MetricChannelBufferSize = 100
+		freshAlertEngine := alert.NewAlertEngine(pool, alertQuerier, config)
+		freshAlertEngine.Start()
+		defer freshAlertEngine.Stop()
+		time.Sleep(100 * time.Millisecond)
+
 		// Wait for rule cache refresh
 		time.Sleep(200 * time.Millisecond)
 
@@ -222,7 +252,7 @@ func TestAlertSuppression_Integration(t *testing.T) {
 			Timestamp:      time.Now(),
 		}
 
-		success := alertEngine.EvaluateMetrics(metricData)
+		success := freshAlertEngine.EvaluateMetrics(metricData)
 		assert.True(t, success, "Metric should be queued successfully")
 
 		// Wait for evaluation
@@ -245,7 +275,8 @@ func TestSuppressionService_Unit(t *testing.T) {
 		suppressionQuerier := db.NewAlertSuppressionsQuerier(pool)
 		service := suppression.NewService(suppressionQuerier)
 
-		suppressed, err := service.ShouldSuppress(ctx, "test-node", "latency")
+		testNodeID := uuid.New().String()
+		suppressed, err := service.ShouldSuppress(ctx, testNodeID, "latency")
 		require.NoError(t, err)
 		assert.False(t, suppressed, "Should not suppress when no record exists")
 	})
@@ -258,11 +289,17 @@ func TestSuppressionService_Unit(t *testing.T) {
 		suppressionQuerier := db.NewAlertSuppressionsQuerier(pool)
 		service := suppression.NewService(suppressionQuerier)
 
-		err := service.RecordDefaultSuppression(ctx, "test-node", "latency")
+		// Create a test node first (required for foreign key constraint)
+		nodeQuerier := db.NewPoolQuerier(pool)
+		testNodeID := uuid.New()
+		err := nodeQuerier.CreateNode(ctx, testNodeID, "test-node", "192.168.1.1", "us-west", nil)
+		require.NoError(t, err)
+
+		err = service.RecordDefaultSuppression(ctx, testNodeID.String(), "latency")
 		require.NoError(t, err)
 
 		// Verify suppression was created
-		suppression, err := suppressionQuerier.CheckSuppression(ctx, "test-node", "latency")
+		suppression, err := suppressionQuerier.CheckSuppression(ctx, testNodeID.String(), "latency")
 		require.NoError(t, err)
 		assert.NotNil(t, suppression, "Suppression should be created")
 		assert.True(t, time.Now().Before(suppression.SuppressedUntil), "Suppression should be active")
@@ -277,12 +314,18 @@ func TestSuppressionService_Unit(t *testing.T) {
 		suppressionQuerier := db.NewAlertSuppressionsQuerier(pool)
 		service := suppression.NewService(suppressionQuerier)
 
+		// Create a test node first (required for foreign key constraint)
+		nodeQuerier := db.NewPoolQuerier(pool)
+		testNodeID := uuid.New()
+		err := nodeQuerier.CreateNode(ctx, testNodeID, "test-node", "192.168.1.1", "us-west", nil)
+		require.NoError(t, err)
+
 		// Create suppression
-		err := service.RecordDefaultSuppression(ctx, "test-node", "latency")
+		err = service.RecordDefaultSuppression(ctx, testNodeID.String(), "latency")
 		require.NoError(t, err)
 
 		// Check suppression
-		suppressed, err := service.ShouldSuppress(ctx, "test-node", "latency")
+		suppressed, err := service.ShouldSuppress(ctx, testNodeID.String(), "latency")
 		require.NoError(t, err)
 		assert.True(t, suppressed, "Should suppress within window")
 	})
@@ -294,12 +337,22 @@ func TestSuppressionService_Unit(t *testing.T) {
 
 		suppressionQuerier := db.NewAlertSuppressionsQuerier(pool)
 
+		// Create test nodes first (required for foreign key constraint)
+		nodeQuerier := db.NewPoolQuerier(pool)
+		testNodeID := uuid.New()
+		err := nodeQuerier.CreateNode(ctx, testNodeID, "test-node-1", "192.168.1.1", "us-west", nil)
+		require.NoError(t, err)
+
+		testNodeID2 := uuid.New()
+		err = nodeQuerier.CreateNode(ctx, testNodeID2, "test-node-2", "192.168.1.2", "us-west", nil)
+		require.NoError(t, err)
+
 		// Create expired suppression
-		err := suppressionQuerier.CreateOrUpdateSuppression(ctx, "test-node-1", "latency", time.Now().Add(-1*time.Minute))
+		err = suppressionQuerier.CreateOrUpdateSuppression(ctx, testNodeID.String(), "latency", time.Now().Add(-1*time.Minute))
 		require.NoError(t, err)
 
 		// Create active suppression
-		err = suppressionQuerier.CreateOrUpdateSuppression(ctx, "test-node-2", "latency", time.Now().Add(5*time.Minute))
+		err = suppressionQuerier.CreateOrUpdateSuppression(ctx, testNodeID2.String(), "latency", time.Now().Add(5*time.Minute))
 		require.NoError(t, err)
 
 		// Run cleanup
@@ -308,10 +361,10 @@ func TestSuppressionService_Unit(t *testing.T) {
 		assert.Equal(t, int64(1), deleted, "Should delete 1 expired suppression")
 
 		// Verify expired is gone, active remains
-		_, err = suppressionQuerier.CheckSuppression(ctx, "test-node-1", "latency")
+		_, err = suppressionQuerier.CheckSuppression(ctx, testNodeID.String(), "latency")
 		assert.Error(t, err, "Expired suppression should be deleted")
 
-		suppression, err := suppressionQuerier.CheckSuppression(ctx, "test-node-2", "latency")
+		suppression, err := suppressionQuerier.CheckSuppression(ctx, testNodeID2.String(), "latency")
 		require.NoError(t, err)
 		assert.NotNil(t, suppression, "Active suppression should remain")
 	})

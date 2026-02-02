@@ -2,10 +2,12 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +35,7 @@ func (suite *HealthCheckIntegrationTestSuite) SetupSuite() {
 	// Connect to test database
 	testDBURL := os.Getenv("TEST_DATABASE_URL")
 	if testDBURL == "" {
-		testDBURL = "postgres://postgres:postgres@localhost:5432/node_pulse_test?sslmode=disable"
+		testDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
 	}
 
 	pool, err := pgxpool.New(suite.ctx, testDBURL)
@@ -135,7 +137,7 @@ func (suite *HealthCheckIntegrationTestSuite) TestAlertSystemChecker_CheckWebhoo
 	for i := 0; i < 70; i++ {
 		log := &models.WebhookLog{
 			WebhookID:     webhook.ID,
-			AlertEventID:  "test-event-success-" + string(rune(i)),
+			AlertEventID:  uuid.New().String(),
 			Status:        "success",
 			RetryCount:    0,
 			ErrorMessage: "",
@@ -148,7 +150,7 @@ func (suite *HealthCheckIntegrationTestSuite) TestAlertSystemChecker_CheckWebhoo
 	for i := 0; i < 30; i++ {
 		log := &models.WebhookLog{
 			WebhookID:     webhook.ID,
-			AlertEventID:  "test-event-failure-" + string(rune(i)),
+			AlertEventID:  uuid.New().String(),
 			Status:        "failure",
 			RetryCount:    3,
 			ErrorMessage: "timeout",
@@ -189,12 +191,17 @@ func (suite *HealthCheckIntegrationTestSuite) TestAlertSystemChecker_CheckAlertS
 }
 
 func (suite *HealthCheckIntegrationTestSuite) TestAlertSystemChecker_CheckAlertSuppression_WithSuppressions() {
-	// Create 3 active suppressions
-	nodes := []string{"node-1", "node-2", "node-3"}
-	for _, nodeID := range nodes {
-		err := suite.alertSuppressionsQuerier.CreateOrUpdateSuppression(
+	// Create 3 active suppressions (must first create nodes for foreign key constraint)
+	nodes := []uuid.UUID{uuid.New(), uuid.New(), uuid.New()}
+	nodeQuerier := db.NewPoolQuerier(suite.pool)
+	for i, nodeID := range nodes {
+		nodeName := fmt.Sprintf("health-check-node-%d", i)
+		err := nodeQuerier.CreateNode(suite.ctx, nodeID, nodeName, "192.168.1.100", "us-west", nil)
+		require.NoError(suite.T(), err)
+
+		err = suite.alertSuppressionsQuerier.CreateOrUpdateSuppression(
 			suite.ctx,
-			nodeID,
+			nodeID.String(),
 			"latency",
 			time.Now().Add(5*time.Minute),
 		)

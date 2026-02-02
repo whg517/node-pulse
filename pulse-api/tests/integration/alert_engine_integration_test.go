@@ -23,7 +23,7 @@ func setupAlertEngineTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	// Connect to test database
 	testDBURL := os.Getenv("TEST_DATABASE_URL")
 	if testDBURL == "" {
-		testDBURL = "postgres://postgres:postgres@localhost:5432/node_pulse_test?sslmode=disable"
+		testDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
 	}
 
 	pool, err := pgxpool.New(ctx, testDBURL)

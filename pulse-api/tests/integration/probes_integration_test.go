@@ -22,6 +22,9 @@ func TestCreateProbe_Integration(t *testing.T) {
 	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
 
+	// Clear rate limit store to avoid 429 errors from previous tests
+	auth.ClearRateLimitStore()
+
 	// Create test user and login
 	username := "probe_test_user"
 	password := "testpass123"
@@ -201,6 +204,9 @@ func TestGetProbes_Integration(t *testing.T) {
 	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
 
+	// Clear rate limit store to avoid 429 errors from previous tests
+	auth.ClearRateLimitStore()
+
 	// Create test user and login
 	username := "get_probes_user"
 	password := "testpass123"
@@ -306,6 +312,9 @@ func TestGetProbes_Integration(t *testing.T) {
 func TestUpdateDeleteProbe_Integration(t *testing.T) {
 	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
+
+	// Clear rate limit store to avoid 429 errors from previous tests
+	auth.ClearRateLimitStore()
 
 	// Create test user and login
 	username := "update_probe_user"
@@ -444,6 +453,9 @@ func TestProbeConstraints_Integration(t *testing.T) {
 	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
 
+	// Clear rate limit store to avoid 429 errors from previous tests
+	auth.ClearRateLimitStore()
+
 	// Create test user and login
 	username := "probe_constraints_user"
 	password := "testpass123"
@@ -478,6 +490,11 @@ func TestProbeConstraints_Integration(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
+	// Debug: log response status and body if login failed
+	if w.Code != http.StatusOK {
+		t.Logf("Login failed with status %d: %s", w.Code, w.Body.String())
+	}
+
 	cookies := w.Result().Cookies()
 	var sessionID string
 	for _, cookie := range cookies {
@@ -485,6 +502,9 @@ func TestProbeConstraints_Integration(t *testing.T) {
 			sessionID = cookie.Value
 			break
 		}
+	}
+	if sessionID == "" {
+		t.Logf("No session cookie found. Response status: %d, Body: %s", w.Code, w.Body.String())
 	}
 	require.NotEmpty(t, sessionID)
 

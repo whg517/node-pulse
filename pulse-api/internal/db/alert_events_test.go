@@ -29,7 +29,19 @@ func setupAlertEventsTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 		return nil, nil
 	}
 
-	// Run migrations
+	// Clean up any existing tables to ensure fresh schema
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_events CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alerts CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS webhooks CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS webhook_logs CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_suppressions CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
+
+	// Run migrations to create fresh tables with proper constraints
 	err = Migrate(ctx, pool)
 	if err != nil {
 		pool.Close()
@@ -117,8 +129,10 @@ func TestAlertEventsQuerier_CreateAlertEvent(t *testing.T) {
 	})
 
 	t.Run("Create alert event with invalid node ID", func(t *testing.T) {
+		// Use a random UUID that definitely doesn't exist
+		invalidNodeID := uuid.New()
 		event := &models.AlertEvent{
-			NodeID:       "00000000-0000-0000-0000-000000000000", // Non-existent node
+			NodeID:       invalidNodeID.String(), // Non-existent node
 			Metric:       "latency",
 			Threshold:    100.0,
 			CurrentValue: 150.0,

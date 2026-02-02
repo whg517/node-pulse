@@ -164,12 +164,15 @@ func TestScheduler_GracefulStop(t *testing.T) {
 	// Task that takes time to complete
 	taskRunning := make(chan struct{})
 	taskCanFinish := make(chan struct{})
+	var taskRunningOnce sync.Once
 
 	task := &MockTask{
 		name:     "slow-task",
 		interval: 100 * time.Millisecond,
 		executeFn: func(ctx context.Context) error {
-			close(taskRunning)
+			taskRunningOnce.Do(func() {
+				close(taskRunning)
+			})
 			<-taskCanFinish // Wait for signal
 			return nil
 		},

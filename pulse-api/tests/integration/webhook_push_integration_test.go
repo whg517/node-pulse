@@ -27,7 +27,7 @@ func setupWebhookPushTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	// Connect to test database
 	testDBURL := os.Getenv("TEST_DATABASE_URL")
 	if testDBURL == "" {
-		testDBURL = "postgres://postgres:postgres@localhost:5432/node_pulse_test?sslmode=disable"
+		testDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
 	}
 
 	pool, err := pgxpool.New(ctx, testDBURL)
@@ -85,6 +85,16 @@ func TestWebhookPush_Integration(t *testing.T) {
 	// Track webhook deliveries
 	var webhookDeliveries []map[string]any
 	var webhookMutex sync.Mutex
+
+	// Helper function to clean alert data between sub-tests
+	cleanAlertData := func() {
+		pool.Exec(ctx, "DELETE FROM alert_suppressions")
+		pool.Exec(ctx, "DELETE FROM alert_events")
+		pool.Exec(ctx, "DELETE FROM webhook_logs")
+		webhookMutex.Lock()
+		webhookDeliveries = nil
+		webhookMutex.Unlock()
+	}
 
 	// Create test webhook server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -203,6 +213,7 @@ func TestWebhookPush_Integration(t *testing.T) {
 	})
 
 	t.Run("Multiple webhooks should all be triggered", func(t *testing.T) {
+		cleanAlertData() // Clean data from previous test
 		// Create additional webhooks
 		webhook2 := &models.Webhook{
 			URL:     server.URL,
@@ -248,6 +259,7 @@ func TestWebhookPush_Integration(t *testing.T) {
 	})
 
 	t.Run("Disabled webhook should not be triggered", func(t *testing.T) {
+		cleanAlertData() // Clean data from previous test
 		// Disable the first webhook
 		enabled := false
 		update := &models.UpdateWebhookRequest{
@@ -289,6 +301,7 @@ func TestWebhookPush_Integration(t *testing.T) {
 	})
 
 	t.Run("Suppressed alerts should not trigger webhooks", func(t *testing.T) {
+		cleanAlertData() // Clean data from previous test
 		// Re-enable webhook1
 		enabled := true
 		update := &models.UpdateWebhookRequest{
@@ -404,7 +417,8 @@ func TestWebhookPush_RetryLogic(t *testing.T) {
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
 	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:8080")
 
-	// Create alert event
+	// Create alert event in database (required for foreign key constraint)
+	alertEventsQuerier := db.NewAlertEventsQuerier(pool)
 	alertEvent := &models.AlertEvent{
 		ID:           uuid.New().String(),
 		NodeID:       nodeID.String(),
@@ -414,6 +428,8 @@ func TestWebhookPush_RetryLogic(t *testing.T) {
 		Level:        "P0",
 		CreatedAt:    time.Now(),
 	}
+	err = alertEventsQuerier.CreateAlertEvent(ctx, alertEvent)
+	require.NoError(t, err)
 
 	t.Run("Webhook should succeed after retries", func(t *testing.T) {
 		startTime := time.Now()
@@ -513,7 +529,8 @@ func TestWebhookPush_ConcurrentDelivery(t *testing.T) {
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
 	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:8080")
 
-	// Create alert event
+	// Create alert event in database (required for foreign key constraint)
+	alertEventsQuerier := db.NewAlertEventsQuerier(pool)
 	alertEvent := &models.AlertEvent{
 		ID:           uuid.New().String(),
 		NodeID:       nodeID.String(),
@@ -523,6 +540,8 @@ func TestWebhookPush_ConcurrentDelivery(t *testing.T) {
 		Level:        "P0",
 		CreatedAt:    time.Now(),
 	}
+	err = alertEventsQuerier.CreateAlertEvent(ctx, alertEvent)
+	require.NoError(t, err)
 
 	t.Run("Multiple webhooks should be delivered concurrently", func(t *testing.T) {
 		startTime := time.Now()

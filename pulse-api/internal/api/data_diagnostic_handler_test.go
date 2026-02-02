@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/diagnostic"
 	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
@@ -30,6 +31,11 @@ func TestGetDiagnosisHandler_Success_NodeLocalFailure(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+
+	// Run migrations to ensure tables exist
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
 
 	// Create test nodes in different regions
 	nodeIDs := createTestNodesForDiagnosis(t, ctx, pool)
@@ -98,6 +104,11 @@ func TestGetDiagnosisHandler_Success_CrossBorderLink(t *testing.T) {
 	}
 	defer pool.Close()
 
+	// Run migrations to ensure tables exist
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
+
 	// Create test nodes
 	nodeIDs := createTestNodesForDiagnosis(t, ctx, pool)
 
@@ -157,6 +168,11 @@ func TestGetDiagnosisHandler_Success_ISPRouting(t *testing.T) {
 	}
 	defer pool.Close()
 
+	// Run migrations to ensure tables exist
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
+
 	// Create test nodes (6 nodes for ISP pattern)
 	nodeIDs := createTestNodesForDiagnosis(t, ctx, pool)
 
@@ -214,6 +230,11 @@ func TestGetDiagnosisHandler_MinThreeNodes(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+
+	// Run migrations to ensure tables exist
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
 
 	// Create only 2 test nodes (insufficient for diagnosis)
 	allNodeIDs := createTestNodesForDiagnosis(t, ctx, pool)
@@ -286,6 +307,11 @@ func TestGetDiagnosisHandler_NoDataFound(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+
+	// Run migrations to ensure tables exist
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
 
 	// Create test nodes but don't insert any metrics
 	nodeIDs := createTestNodesForDiagnosis(t, ctx, pool)

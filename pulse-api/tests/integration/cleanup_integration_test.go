@@ -12,6 +12,7 @@ import (
 
 	"github.com/kevin/node-pulse/pulse-api/internal/cleanup"
 	"github.com/kevin/node-pulse/pulse-api/internal/config"
+	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
@@ -26,6 +27,10 @@ func TestCleanupTask_Integration(t *testing.T) {
 
 	// Run migrations
 	ctx := context.Background()
+	if err := db.Migrate(ctx, pool); err != nil {
+		t.Fatalf("Failed to migrate test database: %v", err)
+	}
+
 	if err := pool.Ping(ctx); err != nil {
 		t.Skipf("Database not ready: %v", err)
 		return

@@ -45,7 +45,8 @@ func TestExportService_CreateExport_Success(t *testing.T) {
 	assert.Equal(t, []string{nodeID}, task.NodeIDs)
 	assert.Equal(t, []string{"latency"}, task.Metrics)
 	assert.Equal(t, "csv", task.Format)
-	assert.Equal(t, "pending", task.Status)
+	// Status can be "pending" or "processing" since async processing starts immediately
+	assert.Contains(t, []string{"pending", "processing"}, task.Status)
 	assert.NotZero(t, task.CreatedAt)
 }
 
