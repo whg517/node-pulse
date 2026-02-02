@@ -39,6 +39,20 @@ func NewNodeHandler(nodeQuerier db.NodesQuerier) *NodeHandler {
 }
 
 // CreateNodeHandler handles POST /api/v1/nodes
+// @Summary		Create a new node
+// @Description	Creates a new monitoring node. If a node with the same name and IP exists, it will be updated instead.
+// @Tags			nodes
+// @Accept			json
+// @Produce		json
+// @Param			request	body		models.CreateNodeRequest	true	"Node creation request"
+// @Success		201		{object}	models.Node	"Node created successfully"
+// @Success		200		{object}	models.Node	"Node updated successfully (duplicate found)"
+// @Failure		400		{object}	models.ErrorResponse	"Invalid request parameters"
+// @Failure		401		{object}	models.ErrorResponse	"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse	"Forbidden (requires admin or operator role)"
+// @Failure		500		{object}	models.ErrorResponse	"Internal server error"
+// @Security		BearerAuth
+// @Router			/nodes [post]
 func (h *NodeHandler) CreateNodeHandler(c *gin.Context) {
 	// RBAC is handled by middleware - only admin/operator can reach this handler
 
@@ -238,6 +252,17 @@ func (h *NodeHandler) CreateNodeHandler(c *gin.Context) {
 }
 
 // GetNodesHandler handles GET /api/v1/nodes
+// @Summary		List all nodes
+// @Description	Retrieves a list of all nodes. Supports filtering by region.
+// @Tags			nodes
+// @Accept			json
+// @Produce		json
+// @Param			region		query		string	false	"Filter by region"	example(us-west)
+// @Success		200		{array}		models.Node	"List of nodes"
+// @Failure		401		{object}	models.ErrorResponse	"Unauthorized"
+// @Failure		500		{object}	models.ErrorResponse	"Internal server error"
+// @Security		BearerAuth
+// @Router			/nodes [get]
 func (h *NodeHandler) GetNodesHandler(c *gin.Context) {
 	// All roles can view nodes (admin, operator, viewer) - auth is handled by middleware
 
@@ -310,6 +335,19 @@ func (h *NodeHandler) GetNodesHandler(c *gin.Context) {
 }
 
 // GetNodeByIDHandler handles GET /api/v1/nodes/:id
+// @Summary		Get node by ID
+// @Description	Retrieves detailed information about a specific node by its UUID.
+// @Tags			nodes
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string	true	"Node UUID"
+// @Success		200		{object}	models.Node	"Node details"
+// @Failure		400		{object}	models.ErrorResponse	"Invalid UUID format"
+// @Failure		401		{object}	models.ErrorResponse	"Unauthorized"
+// @Failure		404		{object}	models.ErrorResponse	"Node not found"
+// @Failure		500		{object}	models.ErrorResponse	"Internal server error"
+// @Security		BearerAuth
+// @Router			/nodes/{id} [get]
 func (h *NodeHandler) GetNodeByIDHandler(c *gin.Context) {
 	// All roles can view nodes (admin, operator, viewer) - auth is handled by middleware
 

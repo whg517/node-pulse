@@ -3,6 +3,8 @@ package api
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	ginSwagger "github.com/swaggo/gin-swagger"
+	swaggerFiles "github.com/swaggo/files"
 
 	"github.com/kevin/node-pulse/pulse-api/internal/alert"
 	"github.com/kevin/node-pulse/pulse-api/internal/cache"
@@ -25,6 +27,9 @@ type CacheManager struct {
 
 // SetupRoutes configures all API routes and returns cache manager for shutdown
 func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *pgxpool.Pool) *CacheManager {
+	// Apply CORS middleware (must be first)
+	router.Use(middleware.CORSMiddleware())
+
 	// Initialize rate limiter
 	middleware.InitRateLimiter()
 
@@ -67,6 +72,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	router.Use(middleware.PerformanceMiddleware(perfConfig))
 	router.Use(middleware.InjectCollector(metricsCollector))
 
+	// Swagger documentation route (public)
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
@@ -96,7 +104,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Nodes group with auth middleware
 		nodes := v1.Group("/nodes")
-		nodes.Use(auth.AuthMiddleware(sessionService))
+		nodes.Use(middleware.AuthMiddleware(sessionService))
 
 		// GET /api/v1/nodes - Get all nodes (all roles)
 		nodes.GET("", nodeHandler.GetNodesHandler)
@@ -109,7 +117,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		nodes.GET("/:id", nodeHandler.GetNodeByIDHandler)
 
 		// Create/Update/Delete routes require RBAC (admin or operator)
-		nodes.Use(auth.RBACMiddleware([]string{"admin", "operator"}))
+		nodes.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 
 		// POST /api/v1/nodes - Create node (admin/operator only)
 		nodes.POST("", nodeHandler.CreateNodeHandler)
@@ -126,7 +134,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Probes group with auth middleware
 		probes := v1.Group("/probes")
-		probes.Use(auth.AuthMiddleware(sessionService))
+		probes.Use(middleware.AuthMiddleware(sessionService))
 
 		// GET /api/v1/probes - Get all probes (all roles)
 		probes.GET("", probeHandler.GetProbesHandler)
@@ -135,7 +143,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		probes.GET("/:id", probeHandler.GetProbeByIDHandler)
 
 		// Create/Update/Delete routes require RBAC (admin or operator)
-		probes.Use(auth.RBACMiddleware([]string{"admin", "operator"}))
+		probes.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 
 		// POST /api/v1/probes - Create probe (admin/operator only)
 		probes.POST("", probeHandler.CreateProbeHandler)
@@ -149,7 +157,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Data query routes (require auth)
 		dataHandler := NewDataHandler(pool, memoryCache)
 		data := v1.Group("/data")
-		data.Use(auth.AuthMiddleware(sessionService))
+		data.Use(middleware.AuthMiddleware(sessionService))
 
 		// GET /api/v1/data/metrics - Get real-time metrics (all roles)
 		data.GET("/metrics", dataHandler.GetMetricsHandler)
@@ -171,8 +179,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Export group with auth and RBAC middleware (admin only)
 		exports := v1.Group("/data/export")
-		exports.Use(auth.AuthMiddleware(sessionService))
-		exports.Use(auth.RBACMiddleware([]string{"admin"}))
+		exports.Use(middleware.AuthMiddleware(sessionService))
+		exports.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
 			// POST /api/v1/data/export - Create export task (admin only)
 			exports.POST("", exportHandler.CreateExportHandler)
@@ -189,7 +197,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Alerts group with auth middleware
 		alerts := v1.Group("/alerts")
-		alerts.Use(auth.AuthMiddleware(sessionService))
+		alerts.Use(middleware.AuthMiddleware(sessionService))
 
 		// GET /api/v1/alerts/rules - Get all alert rules (all roles)
 		alerts.GET("/rules", alertHandler.GetAlertRulesHandler)
@@ -198,7 +206,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		alerts.GET("/rules/:id", alertHandler.GetAlertRuleByIDHandler)
 
 		// Create/Update/Delete routes require RBAC (admin or operator)
-		alerts.Use(auth.RBACMiddleware([]string{"admin", "operator"}))
+		alerts.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 
 		// POST /api/v1/alerts/rules - Create alert rule (admin/operator only)
 		alerts.POST("/rules", alertHandler.CreateAlertRuleHandler)
@@ -214,7 +222,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Alert records group with auth middleware
 		alertRecords := v1.Group("/alerts/records")
-		alertRecords.Use(auth.AuthMiddleware(sessionService))
+		alertRecords.Use(middleware.AuthMiddleware(sessionService))
 
 		// GET /api/v1/alerts/records - Get alert records with filtering (all roles)
 		alertRecords.GET("", alertRecordHandler.GetAlertRecordsHandler)
@@ -228,8 +236,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Webhooks group with auth and RBAC middleware (admin only)
 		webhooks := v1.Group("/webhooks")
-		webhooks.Use(auth.AuthMiddleware(sessionService))
-		webhooks.Use(auth.RBACMiddleware([]string{"admin"}))
+		webhooks.Use(middleware.AuthMiddleware(sessionService))
+		webhooks.Use(middleware.RBACMiddleware([]string{"admin"}))
 
 		// GET /api/v1/webhooks - Get all webhook configurations (admin only)
 		webhooks.GET("", webhookHandler.GetWebhooksHandler)
@@ -249,7 +257,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Performance metrics routes (require auth) (Story 8.3, 8.4)
 		// Metrics group with auth middleware (all roles)
 		metricsGroup := v1.Group("/metrics")
-		metricsGroup.Use(auth.AuthMiddleware(sessionService))
+		metricsGroup.Use(middleware.AuthMiddleware(sessionService))
 		{
 			// GET /api/v1/metrics/performance - Get performance metrics (all roles)
 			metricsGroup.GET("/performance", metricsHandler.GetPerformanceMetrics)

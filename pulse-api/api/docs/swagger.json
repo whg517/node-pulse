@@ -1,0 +1,536 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Node Pulse is a distributed monitoring system for tracking node health, metrics, and alerts in real-time.\n\n## Features\n- Real-time beacon heartbeat monitoring\n- Multi-metric data collection and analysis\n- Configurable alert rules with suppression\n- Webhook notifications for alerts\n- Historical data queries and export\n- Role-based access control (RBAC)\n\n## Authentication\nMost endpoints require authentication. Use the `/api/v1/auth/login` endpoint to obtain a session token.\nInclude the token in the `Authorization` header: `Bearer \u003cyour-token\u003e`",
+        "title": "Node Pulse API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "https://github.com/kevin/node-pulse",
+            "email": "support@example.com"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/api/v1",
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "description": "Authenticates a user and returns a session token. Supports username/password authentication.\n\n**Rate Limiting:** Maximum 5 failed attempts per IP per 15 minutes.\n**Account Lockout:** 6 failed attempts will lock the account for 10 minutes.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "Login credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Login successful",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request format",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid credentials",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "423": {
+                        "description": "Account locked",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Returns the health status of the API service, including database, scheduler, and alert system components.\n\n**Status values:**\n- `healthy`: All components are operational\n- `degraded`: Some components are non-critically failing\n- `unhealthy`: Critical components are failing",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "Health status",
+                        "schema": {
+                            "$ref": "#/definitions/internal_health.HealthResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/nodes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves a list of all nodes. Supports filtering by region.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nodes"
+                ],
+                "summary": "List all nodes",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "example": "us-west",
+                        "description": "Filter by region",
+                        "name": "region",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of nodes",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.Node"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new monitoring node. If a node with the same name and IP exists, it will be updated instead.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nodes"
+                ],
+                "summary": "Create a new node",
+                "parameters": [
+                    {
+                        "description": "Node creation request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.CreateNodeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Node updated successfully (duplicate found)",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.Node"
+                        }
+                    },
+                    "201": {
+                        "description": "Node created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.Node"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden (requires admin or operator role)",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/nodes/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves detailed information about a specific node by its UUID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "nodes"
+                ],
+                "summary": "Get node by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Node UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Node details",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.Node"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid UUID format",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Node not found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "github_com_kevin_node-pulse_pulse-api_internal_models.CreateNodeRequest": {
+            "type": "object",
+            "required": [
+                "ip",
+                "name",
+                "region"
+            ],
+            "properties": {
+                "ip": {
+                    "type": "string",
+                    "maxLength": 45
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "region": {
+                    "type": "string",
+                    "maxLength": 100
+                },
+                "tags": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            }
+        },
+        "github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "string"
+                },
+                "details": {},
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_kevin_node-pulse_pulse-api_internal_models.LoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_kevin_node-pulse_pulse-api_internal_models.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "properties": {
+                        "role": {
+                            "type": "string"
+                        },
+                        "user_id": {
+                            "type": "string"
+                        },
+                        "username": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_kevin_node-pulse_pulse-api_internal_models.Node": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "ip": {
+                    "type": "string"
+                },
+                "last_heartbeat": {
+                    "description": "Beacon heartbeat time",
+                    "type": "string"
+                },
+                "last_report_time": {
+                    "description": "Data write time",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "region": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "online/offline/connecting",
+                    "type": "string"
+                },
+                "tags": {
+                    "description": "JSONB stored as string",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_health.AlertEngineStatus": {
+            "type": "object",
+            "properties": {
+                "cached_rules": {
+                    "type": "integer"
+                },
+                "metric_channel_capacity": {
+                    "type": "integer"
+                },
+                "metric_channel_depth": {
+                    "type": "integer"
+                },
+                "rule_cache_last_refresh": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "ok, stale, full",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_health.AlertSuppressionStatus": {
+            "type": "object",
+            "properties": {
+                "active_suppression_count": {
+                    "type": "integer"
+                },
+                "status": {
+                    "description": "ok, error",
+                    "type": "string"
+                }
+            }
+        },
+        "internal_health.AlertSystemStatus": {
+            "type": "object",
+            "properties": {
+                "alert_engine": {
+                    "$ref": "#/definitions/internal_health.AlertEngineStatus"
+                },
+                "alert_suppression": {
+                    "$ref": "#/definitions/internal_health.AlertSuppressionStatus"
+                },
+                "webhook_delivery": {
+                    "$ref": "#/definitions/internal_health.WebhookDeliveryStatus"
+                }
+            }
+        },
+        "internal_health.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "alert_system": {
+                    "$ref": "#/definitions/internal_health.AlertSystemStatus"
+                },
+                "checks": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "scheduler": {
+                    "$ref": "#/definitions/internal_health.SchedulerStatus"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_health.SchedulerStatus": {
+            "type": "object",
+            "properties": {
+                "running": {
+                    "type": "boolean"
+                },
+                "tasks": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/internal_health.TaskStatusInfo"
+                    }
+                }
+            }
+        },
+        "internal_health.TaskStatusInfo": {
+            "type": "object",
+            "properties": {
+                "is_running": {
+                    "type": "boolean"
+                },
+                "last_error": {
+                    "type": "string"
+                },
+                "last_run": {
+                    "type": "string"
+                },
+                "run_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_health.WebhookDeliveryStatus": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "description": "healthy, degraded, unhealthy, nodata",
+                    "type": "string"
+                },
+                "success_count": {
+                    "type": "integer"
+                },
+                "success_rate": {
+                    "description": "0-100",
+                    "type": "number"
+                },
+                "total_count": {
+                    "type": "integer"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Enter the token with the `Bearer ` prefix, e.g. \"Bearer abcde12345\"",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

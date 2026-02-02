@@ -1,4 +1,4 @@
-package auth
+package middleware
 
 import (
 	"net/http"
@@ -51,4 +51,41 @@ func RBACMiddleware(requiredRoles []string) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// RequireRole checks if the current user has any of the required roles
+// Returns true if the user has permission, false otherwise
+func RequireRole(c *gin.Context, requiredRoles ...string) bool {
+	role, exists := c.Get("role")
+	if !exists {
+		return false
+	}
+
+	roleStr, ok := role.(string)
+	if !ok {
+		return false
+	}
+
+	for _, requiredRole := range requiredRoles {
+		if roleStr == requiredRole {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HasRole checks if the current user has a specific role
+func HasRole(c *gin.Context, role string) bool {
+	return RequireRole(c, role)
+}
+
+// IsAdmin checks if the current user is an admin
+func IsAdmin(c *gin.Context) bool {
+	return HasRole(c, "admin")
+}
+
+// IsOperator checks if the current user is an operator
+func IsOperator(c *gin.Context) bool {
+	return HasRole(c, "operator")
 }

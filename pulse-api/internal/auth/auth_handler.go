@@ -27,6 +27,22 @@ func NewAuthHandler(pool *pgxpool.Pool) *AuthHandler {
 }
 
 // PostLogin handles POST /api/v1/auth/login
+// @Summary		User login
+// @Description	Authenticates a user and returns a session token. Supports username/password authentication.
+// @Description
+// @Description	**Rate Limiting:** Maximum 5 failed attempts per IP per 15 minutes.
+// @Description	**Account Lockout:** 6 failed attempts will lock the account for 10 minutes.
+// @Tags			auth
+// @Accept			json
+// @Produce		json
+// @Param			request	body		models.LoginRequest	true	"Login credentials"
+// @Success		200		{object}	models.LoginResponse	"Login successful"
+// @Failure		400		{object}	models.ErrorResponse	"Invalid request format"
+// @Failure		401		{object}	models.ErrorResponse	"Invalid credentials"
+// @Failure		423		{object}	models.ErrorResponse	"Account locked"
+// @Failure		429		{object}	models.ErrorResponse	"Rate limit exceeded"
+// @Failure		500		{object}	models.ErrorResponse	"Internal server error"
+// @Router			/auth/login [post]
 func (h *AuthHandler) PostLogin(c *gin.Context) {
 	ctx := c.Request.Context()
 

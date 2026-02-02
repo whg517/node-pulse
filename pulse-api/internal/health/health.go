@@ -54,6 +54,18 @@ func New(db Checker, sched scheduler.Scheduler, alertSystemChecker *AlertSystemC
 }
 
 // Handler returns a Gin handler for health check
+// @Summary		Health check
+// @Description	Returns the health status of the API service, including database, scheduler, and alert system components.
+// @Description
+// @Description	**Status values:**
+// @Description	- `healthy`: All components are operational
+// @Description	- `degraded`: Some components are non-critically failing
+// @Description	- `unhealthy`: Critical components are failing
+// @Tags			health
+// @Accept			json
+// @Produce		json
+// @Success		200	{object}	HealthResponse	"Health status"
+// @Router			/health [get]
 func (h *HealthChecker) Handler(c *gin.Context) {
 	ctx := c.Request.Context()
 	isHealthy := true
