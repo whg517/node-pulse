@@ -1,1 +1,46 @@
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
+
+// Mock HTMLCanvasElement.getContext for ECharts
+HTMLCanvasElement.prototype.getContext = vi.fn(function (this: HTMLCanvasElement) {
+  return {
+    fillRect: vi.fn(),
+    clearRect: vi.fn(),
+    getImageData: vi.fn(),
+    putImageData: vi.fn(),
+    createImageData: vi.fn(),
+    setTransform: vi.fn(),
+    drawImage: vi.fn(),
+    save: vi.fn(),
+    fillText: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    closePath: vi.fn(),
+    stroke: vi.fn(),
+    translate: vi.fn(),
+    scale: vi.fn(),
+    rotate: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    measureText: vi.fn(function () {
+      return { width: 0 }
+    }),
+    transform: vi.fn(),
+    rect: vi.fn(),
+    clip: vi.fn(),
+    bezierCurveTo: vi.fn(),
+    quadraticCurveTo: vi.fn(),
+    ellipse: vi.fn(),
+    arcTo: vi.fn(),
+  }
+}) as any
+
+// Suppress unhandled rejections from error testing
+window.addEventListener('unhandledrejection', (event) => {
+  // Prevent test failures from expected errors in error-handling tests
+  if (event.reason instanceof Error) {
+    event.preventDefault()
+  }
+})

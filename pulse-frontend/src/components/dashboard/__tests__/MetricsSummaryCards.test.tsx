@@ -155,7 +155,8 @@ describe('MetricsSummaryCards', () => {
       const zeroDecimalValues = screen.getAllByText('0.00')
       expect(zeroDecimalValues.length).toBeGreaterThan(0)
 
-      expect(screen.getByText('Across 0 nodes')).toBeInTheDocument()
+      const nodeCounts = screen.getAllByText('Across 0 nodes')
+      expect(nodeCounts.length).toBe(3)
     })
 
     it('should handle single data point correctly', () => {

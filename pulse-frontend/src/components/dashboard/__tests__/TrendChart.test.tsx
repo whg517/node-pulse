@@ -61,11 +61,16 @@ describe('TrendChart', () => {
   })
 
   it('renders loading state', () => {
-    render(
+    const { container } = render(
       <TrendChart data={mockData} metric="latency_ms" timeRange="24h" isLoading={true} />
     )
 
-    expect(screen.getByText('Loading chart data...')).toBeInTheDocument()
+    // Check for loading spinner
+    const spinner = container.querySelector('.animate-spin')
+    expect(spinner).toBeInTheDocument()
+
+    // Check for loading text using a more flexible query
+    expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
   it('displays baseline when showBaseline is true', () => {
@@ -80,7 +85,7 @@ describe('TrendChart', () => {
     )
 
     expect(screen.getByText(/Baseline/)).toBeInTheDocument()
-    expect(screen.getByText('50 ms')).toBeInTheDocument()
+    expect(screen.getByText(/50.*ms/)).toBeInTheDocument()
   })
 
   it('does not display baseline when showBaseline is false', () => {

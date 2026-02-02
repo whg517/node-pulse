@@ -112,12 +112,24 @@ export default function TrendChart({
     }
   }
 
-  // Initialize chart
+  // Initialize chart only when data exists, not loading, and ref is available
   useEffect(() => {
     if (!chartRef.current) return
 
-    // Initialize ECharts instance
-    chartInstance.current = echarts.init(chartRef.current)
+    // Only initialize if we have data and not loading
+    if (!data || data.length === 0 || isLoading) {
+      // Dispose existing chart if no data or loading
+      if (chartInstance.current) {
+        chartInstance.current.dispose()
+        chartInstance.current = null
+      }
+      return
+    }
+
+    // Initialize ECharts instance if not already initialized
+    if (!chartInstance.current) {
+      chartInstance.current = echarts.init(chartRef.current)
+    }
 
     // Cleanup on unmount
     return () => {
@@ -126,7 +138,7 @@ export default function TrendChart({
         chartInstance.current = null
       }
     }
-  }, [])
+  }, [data, isLoading])
 
   // Update chart when data or time range changes
   useEffect(() => {

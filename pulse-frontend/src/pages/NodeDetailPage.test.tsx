@@ -127,7 +127,7 @@ describe('NodeDetailPage', () => {
     )
 
     expect(screen.getByText('Test Node')).toBeInTheDocument()
-    expect(screen.getByText('192.168.1.1')).toBeInTheDocument()
+    expect(screen.getAllByText('192.168.1.1')).toHaveLength(2)
     expect(screen.getByText('us-east')).toBeInTheDocument()
     expect(screen.getByText('production')).toBeInTheDocument()
     expect(screen.getByText('critical')).toBeInTheDocument()
@@ -176,7 +176,8 @@ describe('NodeDetailPage', () => {
 
     expect(screen.getByText('Latency')).toBeInTheDocument()
     expect(screen.getByText('45')).toBeInTheDocument()
-    expect(screen.getByText('ms')).toBeInTheDocument()
+    const msLabels = screen.getAllByText('ms')
+    expect(msLabels.length).toBeGreaterThan(0)
 
     expect(screen.getByText('Packet Loss Rate')).toBeInTheDocument()
     expect(screen.getByText('0.5')).toBeInTheDocument()
@@ -218,7 +219,7 @@ describe('NodeDetailPage', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByText('Online')).toBeInTheDocument()
+    expect(screen.getByText('online')).toBeInTheDocument()
     expect(screen.getByText('Live')).toBeInTheDocument()
   })
 

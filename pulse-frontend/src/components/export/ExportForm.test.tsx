@@ -304,21 +304,34 @@ describe('ExportForm', () => {
 
     it('handles submission errors gracefully', async () => {
       const user = userEvent.setup()
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      // Track if error was thrown
+      let errorThrown = false
       const onSubmitWithError = vi.fn().mockImplementation(async () => {
+        errorThrown = true
         throw new Error('API Error')
       })
+
       render(<ExportForm {...defaultProps} onSubmit={onSubmitWithError} />)
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
       await user.click(screen.getByRole('button', { name: /^export$/i }))
 
-      // The error is thrown but we don't need to catch it for this test
-      // Just verify the submit was called
-      await waitFor(() => {
-        expect(onSubmitWithError).toHaveBeenCalled()
-      }).catch(() => {
-        // Error expected, test passes if we get here
-      })
+      // Wait for async operations
+      await new Promise(resolve => setTimeout(resolve, 20))
+
+      // Verify the submit was called and error was thrown
+      expect(onSubmitWithError).toHaveBeenCalled()
+      expect(errorThrown).toBe(true)
+
+      // Verify error was logged to console
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Failed to submit export:',
+        expect.any(Error)
+      )
+
+      consoleErrorSpy.mockRestore()
     })
   })
 })
