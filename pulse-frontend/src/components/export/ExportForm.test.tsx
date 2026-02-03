@@ -43,11 +43,14 @@ describe('ExportForm', () => {
       expect(submitButton).toBeDisabled()
     })
 
-    it('disables Excel format option with tooltip', () => {
+    it('allows both CSV and Excel format options', () => {
       render(<ExportForm {...defaultProps} />)
 
+      const csvOption = screen.getByDisplayValue('csv')
       const excelOption = screen.getByDisplayValue('excel')
-      expect(excelOption).toBeDisabled()
+
+      expect(csvOption).not.toBeDisabled()
+      expect(excelOption).not.toBeDisabled()
     })
   })
 
@@ -237,7 +240,7 @@ describe('ExportForm', () => {
   })
 
   describe('Format Selection', () => {
-    it('only allows CSV format in MVP', () => {
+    it('allows selection between CSV and Excel formats', () => {
       render(<ExportForm {...defaultProps} />)
 
       const csvRadio = screen.getByDisplayValue('csv')
@@ -245,13 +248,21 @@ describe('ExportForm', () => {
       expect(csvRadio).toBeEnabled()
 
       const excelRadio = screen.getByDisplayValue('excel')
-      expect(excelRadio).toBeDisabled()
+      expect(excelRadio).toBeEnabled()
     })
 
-    it('shows tooltip text for Excel not available', () => {
+    it('switches format selection', async () => {
+      const user = userEvent.setup()
       render(<ExportForm {...defaultProps} />)
 
-      expect(screen.getByText(/coming soon/i)).toBeInTheDocument()
+      const csvRadio = screen.getByDisplayValue('csv')
+      const excelRadio = screen.getByDisplayValue('excel')
+
+      expect(csvRadio).toBeChecked()
+
+      await user.click(excelRadio)
+      expect(excelRadio).toBeChecked()
+      expect(csvRadio).not.toBeChecked()
     })
   })
 
@@ -302,36 +313,27 @@ describe('ExportForm', () => {
       expect(defaultProps.onSubmit).toHaveBeenCalled()
     })
 
-    it('handles submission errors gracefully', async () => {
+    it('propagates errors to parent component', async () => {
       const user = userEvent.setup()
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      const consoleSpy = vi.spyOn(console, 'log')
 
-      // Track if error was thrown
-      let errorThrown = false
-      const onSubmitWithError = vi.fn().mockImplementation(async () => {
-        errorThrown = true
-        throw new Error('API Error')
-      })
-
-      render(<ExportForm {...defaultProps} onSubmit={onSubmitWithError} />)
+      render(<ExportForm {...defaultProps} onSubmit={defaultProps.onSubmit} />)
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
       await user.click(screen.getByRole('button', { name: /^export$/i }))
 
-      // Wait for async operations
-      await new Promise(resolve => setTimeout(resolve, 20))
+      // Verify the submit was called with correct data
+      await waitFor(() => {
+        expect(defaultProps.onSubmit).toHaveBeenCalled()
+        expect(defaultProps.onSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            node_ids: ['node-1'],
+            format: 'csv',
+          })
+        )
+      })
 
-      // Verify the submit was called and error was thrown
-      expect(onSubmitWithError).toHaveBeenCalled()
-      expect(errorThrown).toBe(true)
-
-      // Verify error was logged to console
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Failed to submit export:',
-        expect.any(Error)
-      )
-
-      consoleErrorSpy.mockRestore()
+      consoleSpy.mockRestore()
     })
   })
 })

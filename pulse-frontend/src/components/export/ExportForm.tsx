@@ -101,18 +101,14 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
 
     const { start, end } = getTimeRange()
 
-    try {
-      await onSubmit({
-        node_ids: selectedNodeIds,
-        start_time: start,
-        end_time: end,
-        metrics: selectedMetrics,
-        format,
-      })
-    } catch (error) {
-      console.error('Failed to submit export:', error)
-      throw error
-    }
+    // Let errors propagate to parent for handling
+    await onSubmit({
+      node_ids: selectedNodeIds,
+      start_time: start,
+      end_time: end,
+      metrics: selectedMetrics,
+      format,
+    })
   }
 
   /**
@@ -320,18 +316,17 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
             />
             <span className="text-sm text-gray-900">CSV</span>
           </label>
-          <label className="flex items-center space-x-2 cursor-not-allowed opacity-50">
+          <label className="flex items-center space-x-2 cursor-pointer">
             <input
               type="radio"
               name="format"
               value="excel"
               checked={format === 'excel'}
               onChange={() => setFormat('excel')}
-              disabled={true}
+              disabled={loading}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
             />
             <span className="text-sm text-gray-900">Excel</span>
-            <span className="text-xs text-gray-500 ml-2">(Coming Soon)</span>
           </label>
         </div>
       </div>

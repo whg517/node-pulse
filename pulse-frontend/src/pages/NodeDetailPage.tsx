@@ -145,9 +145,25 @@ export default function NodeDetailPage() {
           jitter_ms: jitterDataPoints,
         })
 
-        // TODO: Implement baseline calculation when API supports it
-        // For now, baselines remain empty for all time ranges
-        setBaselines({})
+        // Calculate baselines for longer time ranges (7d and 30d)
+        if (timeRange === '7d' || timeRange === '30d') {
+          const calculateBaseline = (dataPoints: DataPoint[]): number | undefined => {
+            if (dataPoints.length === 0) return undefined
+
+            // Calculate average (baseline)
+            const sum = dataPoints.reduce((acc, dp) => acc + dp.value, 0)
+            return sum / dataPoints.length
+          }
+
+          setBaselines({
+            latency_ms: calculateBaseline(latencyDataPoints),
+            packet_loss_rate: calculateBaseline(lossDataPoints),
+            jitter_ms: calculateBaseline(jitterDataPoints),
+          })
+        } else {
+          // No baseline for 24h view
+          setBaselines({})
+        }
       } catch (err) {
         console.error('Failed to fetch historical data:', err)
         setHistoryError('Failed to load historical data. Please try again.')
@@ -164,14 +180,42 @@ export default function NodeDetailPage() {
     setTimeRange(newRange)
   }
 
-  // Determine problem type based on metrics (placeholder until Story 7.4)
+  // Determine problem type based on metrics
+  // Note: This is a simplified client-side diagnosis. A full diagnosis engine
+  // (Story 7.4) would require backend support for:
+  // - Comparison with other nodes in the same region
+  // - Historical pattern analysis
+  // - Cross-border link detection
+  // - Carrier routing analysis
   const getProblemType = (): ProblemType => {
     if (!metrics || !nodeStatus) return 'none'
 
-    const { packet_loss_rate, latency_ms } = metrics
+    const { packet_loss_rate, latency_ms, jitter_ms } = metrics
 
-    if (packet_loss_rate > 5 || latency_ms > 500) {
-      // This is a placeholder - real diagnosis will be implemented in Story 7.4
+    // Critical: Complete outage or severe degradation
+    if (nodeStatus.status === 'offline' || packet_loss_rate > 50) {
+      return 'node_local'
+    }
+
+    // Severe: Very high packet loss
+    if (packet_loss_rate > 10) {
+      return 'node_local'
+    }
+
+    // Severe: Very high latency
+    if (latency_ms > 1000) {
+      // Could be cross-border or routing issue
+      // Without comparison data, we assume node local
+      return 'node_local'
+    }
+
+    // Warning: Elevated metrics
+    if (packet_loss_rate > 3 || latency_ms > 300 || jitter_ms > 100) {
+      return 'node_local'
+    }
+
+    // Mild: Slightly elevated metrics
+    if (packet_loss_rate > 1 || latency_ms > 150 || jitter_ms > 50) {
       return 'node_local'
     }
 
@@ -180,7 +224,34 @@ export default function NodeDetailPage() {
 
   const getConfidence = (): ConfidenceLevel => {
     if (!metrics || !nodeStatus) return 'low'
-    return 'medium' // Placeholder - will be calculated in Story 7.4
+
+    const { packet_loss_rate, latency_ms, jitter_ms } = metrics
+    const severityScore = Math.max(
+      packet_loss_rate / 10, // Normalize to 0-10 scale
+      latency_ms / 200,
+      jitter_ms / 50
+    )
+
+    // High confidence for clear cases
+    if (
+      nodeStatus.status === 'offline' ||
+      packet_loss_rate > 10 ||
+      latency_ms > 500
+    ) {
+      return 'high'
+    }
+
+    // Medium confidence for warning levels
+    if (severityScore > 2) {
+      return 'medium'
+    }
+
+    // Low confidence for mild issues
+    if (severityScore > 1) {
+      return 'low'
+    }
+
+    return 'low'
   }
 
   // Format timestamp
@@ -530,8 +601,9 @@ export default function NodeDetailPage() {
               isExpanded={false}
             />
             <p className="mt-4 text-sm text-gray-600 italic">
-              Note: Automated problem diagnosis will be available in Story 7.4 (Problem Diagnosis Engine).
-              Current assessment is based on simple threshold rules.
+              Note: Current diagnosis uses client-side analysis of node metrics. A more advanced diagnosis engine
+              (Story 7.4) will provide cross-node comparison, historical pattern analysis, and routing path detection
+              for more accurate problem localization.
             </p>
           </div>
         </div>

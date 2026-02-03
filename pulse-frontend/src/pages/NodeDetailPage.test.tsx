@@ -338,7 +338,7 @@ describe('NodeDetailPage', () => {
     )
 
     expect(screen.getByText('Problem Diagnosis')).toBeInTheDocument()
-    expect(screen.getByText(/Note: Automated problem diagnosis/)).toBeInTheDocument()
+    expect(screen.getByText(/Note: Current diagnosis uses client-side analysis/)).toBeInTheDocument()
   })
 
   it('formats last heartbeat timestamp correctly', () => {

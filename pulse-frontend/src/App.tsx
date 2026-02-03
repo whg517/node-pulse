@@ -3,8 +3,10 @@ import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import NodeDetailPage from './pages/NodeDetailPage'
 import NodeComparisonPage from './pages/NodeComparison'
+import NodeManagementPage from './pages/NodeManagementPage'
 import AlertRulesPage from './pages/AlertRulesPage'
 import AlertRecordsPage from './pages/AlertRecordsPage'
+import AlertHistoryPage from './pages/AlertHistoryPage'
 import WebhooksPage from './pages/WebhooksPage'
 import DataExportPage from './pages/DataExportPage'
 import PerformanceDashboard from './pages/PerformanceDashboard'
@@ -32,7 +34,7 @@ function App() {
           path="/nodes"
           element={
             <ProtectedRoute>
-              <div>Node Management (Coming Soon)</div>
+              <NodeManagementPage />
             </ProtectedRoute>
           }
         />
@@ -72,7 +74,7 @@ function App() {
           path="/alerts/history"
           element={
             <ProtectedRoute>
-              <div>Alert History (Coming Soon)</div>
+              <AlertHistoryPage />
             </ProtectedRoute>
           }
         />
