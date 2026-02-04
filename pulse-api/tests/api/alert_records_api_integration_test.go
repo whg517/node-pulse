@@ -18,11 +18,21 @@ import (
 
 	"github.com/kevin/node-pulse/pulse-api/internal/api"
 	"github.com/kevin/node-pulse/pulse-api/internal/auth"
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 func setupTestDBForAlertRecords(t *testing.T) (*pgxpool.Pool, func()) {
+	testutil.SetupTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
 	ctx := context.Background()
 	testDSN := "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
 
@@ -42,6 +52,7 @@ func setupTestDBForAlertRecords(t *testing.T) (*pgxpool.Pool, func()) {
 
 	cleanup := func() {
 		pool.Close()
+		testutil.TeardownTestConfig()
 	}
 
 	return pool, cleanup

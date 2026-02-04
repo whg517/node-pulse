@@ -16,13 +16,22 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/export"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 func TestExportHandler_CreateExportHandler_Success(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
+
 	pool := setupTestDB(t)
 
 	exportService := export.NewExportService(pool)
@@ -60,7 +69,7 @@ func TestExportHandler_CreateExportHandler_Success(t *testing.T) {
 	assert.Equal(t, http.StatusAccepted, w.Code)
 
 	var resp CreateExportResponse
-	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, "Export task created successfully", resp.Message)
 	assert.NotEmpty(t, resp.Data.ID)
@@ -131,6 +140,13 @@ func TestExportHandler_CreateExportHandler_ValidationErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Setup
 			gin.SetMode(gin.TestMode)
+			testutil.SetupTestConfig()
+			defer testutil.TeardownTestConfig()
+
+			// Load configuration
+			_, err := config.Load()
+			require.NoError(t, err, "Failed to load config")
+
 			pool := setupTestDB(t)
 
 			exportService := export.NewExportService(pool)
@@ -152,7 +168,7 @@ func TestExportHandler_CreateExportHandler_ValidationErrors(t *testing.T) {
 			assert.Equal(t, tt.wantStatus, w.Code)
 
 			var resp map[string]interface{}
-			err := json.Unmarshal(w.Body.Bytes(), &resp)
+			err = json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
 			assert.Contains(t, resp["error"], tt.wantError)
 		})
@@ -162,6 +178,13 @@ func TestExportHandler_CreateExportHandler_ValidationErrors(t *testing.T) {
 func TestExportHandler_CreateExportHandler_MaxNodesExceeded(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
+
 	pool := setupTestDB(t)
 
 	exportService := export.NewExportService(pool)
@@ -200,7 +223,7 @@ func TestExportHandler_CreateExportHandler_MaxNodesExceeded(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 
 	var resp map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Contains(t, resp["error"], "Invalid request parameters")
 	assert.Contains(t, resp["details"], "max")
@@ -209,6 +232,13 @@ func TestExportHandler_CreateExportHandler_MaxNodesExceeded(t *testing.T) {
 func TestExportHandler_GetExportStatusHandler_Success(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
+
 	pool := setupTestDB(t)
 
 	exportService := export.NewExportService(pool)
@@ -259,6 +289,13 @@ func TestExportHandler_GetExportStatusHandler_Success(t *testing.T) {
 func TestExportHandler_GetExportStatusHandler_NotFound(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
+
 	pool := setupTestDB(t)
 
 	exportService := export.NewExportService(pool)
@@ -277,7 +314,7 @@ func TestExportHandler_GetExportStatusHandler_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, w.Code)
 
 	var resp map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, "Export not found", resp["error"])
 }
@@ -285,6 +322,13 @@ func TestExportHandler_GetExportStatusHandler_NotFound(t *testing.T) {
 func TestExportHandler_DownloadExportHandler_Success(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
+
 	pool := setupTestDB(t)
 
 	exportService := export.NewExportService(pool)
@@ -351,6 +395,13 @@ Download:
 func TestExportHandler_DownloadExportHandler_NotReady(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
+
 	pool := setupTestDB(t)
 
 	exportService := export.NewExportService(pool)
@@ -397,6 +448,13 @@ func TestExportHandler_DownloadExportHandler_NotReady(t *testing.T) {
 func TestExportHandler_Unauthorized(t *testing.T) {
 	// Setup
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
+
 	pool := setupTestDB(t)
 
 	exportService := export.NewExportService(pool)
@@ -418,7 +476,7 @@ func TestExportHandler_Unauthorized(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 
 	var resp map[string]interface{}
-	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, "Unauthorized", resp["error"])
 }

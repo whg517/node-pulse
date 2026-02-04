@@ -18,6 +18,15 @@ import (
 
 // TestCleanupTask_Integration tests the cleanup task with real database
 func TestCleanupTask_Integration(t *testing.T) {
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
 	pool, err := pgxpool.New(context.Background(), testutil.GetTestDBURL())
 	if err != nil {
 		t.Skip("No database connection")

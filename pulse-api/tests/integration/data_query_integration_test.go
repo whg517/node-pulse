@@ -82,6 +82,14 @@ func TestDataQueryEndpoints_Integration(t *testing.T) {
 		require.NoError(t, err)
 	}
 
+	// Create a test probe for metrics
+	probeID := uuid.New()
+	_, err = pool.Exec(context.Background(),
+		"INSERT INTO probes (id, node_id, type, target, port, interval_seconds, count, timeout_seconds, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())",
+		probeID, node1ID, "TCP", "example.com", 80, 60, 5, 5,
+	)
+	require.NoError(t, err)
+
 	// Insert test metrics data
 	baseTime := now.Add(-1 * time.Hour)
 	for i := 0; i < 60; i++ {
@@ -94,9 +102,9 @@ func TestDataQueryEndpoints_Integration(t *testing.T) {
 			jitter := 2.0 + float64(i%10)*0.5
 
 			_, err = pool.Exec(context.Background(),
-				`INSERT INTO metrics (node_id, timestamp, latency_ms, packet_loss_rate, jitter_ms)
-				VALUES ($1, $2, $3, $4, $5)`,
-				nodeID, timestamp, latency, packetLoss, jitter,
+				`INSERT INTO metrics (probe_id, node_id, timestamp, latency_ms, packet_loss_rate, jitter_ms)
+				VALUES ($1, $2, $3, $4, $5, $6)`,
+				probeID, nodeID, timestamp, latency, packetLoss, jitter,
 			)
 			require.NoError(t, err)
 		}

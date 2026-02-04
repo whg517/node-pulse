@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"database/sql"
-	"os"
 	"testing"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/assert"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
@@ -208,6 +208,10 @@ func TestSessionsTableCreation(t *testing.T) {
 
 // TestSeedAdminUser tests that admin user is created with correct properties
 func TestSeedAdminUser(t *testing.T) {
+	// Setup test config
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
 	ctx := context.Background()
 
 	pool, err := pgxpool.New(ctx, testutil.GetTestDBURL())
@@ -217,7 +221,9 @@ func TestSeedAdminUser(t *testing.T) {
 	}
 	defer pool.Close()
 
-	adminUsername := os.Getenv("ADMIN_USERNAME")
+	// Load config to get admin username
+	cfg := config.MustLoad()
+	adminUsername := cfg.Admin.Username
 	if adminUsername == "" {
 		adminUsername = "admin"
 	}

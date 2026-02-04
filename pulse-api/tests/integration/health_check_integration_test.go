@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -14,9 +13,11 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/kevin/node-pulse/pulse-api/internal/alert"
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/health"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 type HealthCheckIntegrationTestSuite struct {
@@ -30,13 +31,16 @@ type HealthCheckIntegrationTestSuite struct {
 }
 
 func (suite *HealthCheckIntegrationTestSuite) SetupSuite() {
+	testutil.SetupTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(suite.T(), err, "Failed to load config")
+
 	suite.ctx = context.Background()
 
 	// Connect to test database
-	testDBURL := os.Getenv("TEST_DATABASE_URL")
-	if testDBURL == "" {
-		testDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
-	}
+	testDBURL := testutil.GetTestDBURL()
 
 	pool, err := pgxpool.New(suite.ctx, testDBURL)
 	require.NoError(suite.T(), err, "Failed to connect to test database")
@@ -86,6 +90,7 @@ func (suite *HealthCheckIntegrationTestSuite) TearDownTest() {
 
 func (suite *HealthCheckIntegrationTestSuite) TearDownSuite() {
 	suite.pool.Close()
+	testutil.TeardownTestConfig()
 }
 
 func (suite *HealthCheckIntegrationTestSuite) TestAlertSystemChecker_CheckAlertEngine() {

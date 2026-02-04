@@ -3,7 +3,6 @@ package integration
 import (
 	"context"
 	"fmt"
-	"os"
 	"testing"
 	"time"
 
@@ -13,18 +12,25 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kevin/node-pulse/pulse-api/internal/alert"
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 func setupAlertEngineTestDB(t *testing.T) (*pgxpool.Pool, func()) {
+	testutil.SetupTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
 	ctx := context.Background()
 
 	// Connect to test database
-	testDBURL := os.Getenv("TEST_DATABASE_URL")
-	if testDBURL == "" {
-		testDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
-	}
+	testDBURL := testutil.GetTestDBURL()
 
 	pool, err := pgxpool.New(ctx, testDBURL)
 	require.NoError(t, err, "Failed to connect to test database")
@@ -45,6 +51,7 @@ func setupAlertEngineTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 		pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
 		pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
 		pool.Close()
+		testutil.TeardownTestConfig()
 	}
 
 	return pool, cleanup

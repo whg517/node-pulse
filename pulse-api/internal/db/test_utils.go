@@ -5,14 +5,23 @@ import (
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 // setupTestDB creates a test database connection pool
 func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
+	// Setup test config
+	testutil.SetupTestConfig()
+
+	// Load config before migrations (seedAdminUser needs config)
+	config.MustLoad()
+
 	ctx := context.Background()
 
 	// Use test database from environment or default
-	testDSN := "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
+	testDSN := testutil.GetTestDBURL()
 
 	pool, err := pgxpool.New(ctx, testDSN)
 	if err != nil {
@@ -35,6 +44,7 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	// Return cleanup function
 	cleanup := func() {
 		pool.Close()
+		testutil.TeardownTestConfig()
 	}
 
 	return pool, cleanup

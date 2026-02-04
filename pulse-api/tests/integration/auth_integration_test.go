@@ -18,6 +18,7 @@ import (
 
 	"github.com/kevin/node-pulse/pulse-api/internal/api"
 	"github.com/kevin/node-pulse/pulse-api/internal/auth"
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/health"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
@@ -26,6 +27,14 @@ import (
 
 // setupTestRouter creates a test router with database connection
 func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool, *api.CacheManager) {
+	testutil.SetupTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
 	pool, err := pgxpool.New(context.Background(), testutil.GetTestDBURL())
 	if err != nil {
 		t.Skip("No database connection")
@@ -47,6 +56,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool, *api.CacheManage
 			cacheManager.BatchWriter.Stop()
 			cacheManager.MemoryCache.Stop()
 		}
+		testutil.TeardownTestConfig()
 	})
 
 	return router, pool, cacheManager

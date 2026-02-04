@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/diagnostic"
 	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
@@ -22,6 +23,12 @@ import (
 
 func TestGetDiagnosisHandler_Success_NodeLocalFailure(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
 
 	// Setup test database
 	ctx := context.Background()
@@ -94,6 +101,12 @@ func TestGetDiagnosisHandler_Success_NodeLocalFailure(t *testing.T) {
 
 func TestGetDiagnosisHandler_Success_CrossBorderLink(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
 
 	// Setup test database
 	ctx := context.Background()
@@ -158,6 +171,12 @@ func TestGetDiagnosisHandler_Success_CrossBorderLink(t *testing.T) {
 
 func TestGetDiagnosisHandler_Success_ISPRouting(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
 
 	// Setup test database
 	ctx := context.Background()
@@ -221,6 +240,12 @@ func TestGetDiagnosisHandler_Success_ISPRouting(t *testing.T) {
 
 func TestGetDiagnosisHandler_MinThreeNodes(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
 
 	// Setup test database
 	ctx := context.Background()
@@ -298,6 +323,12 @@ func TestGetDiagnosisHandler_MissingNodeIDs(t *testing.T) {
 
 func TestGetDiagnosisHandler_NoDataFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	require.NoError(t, err, "Failed to load config")
 
 	// Setup test database
 	ctx := context.Background()

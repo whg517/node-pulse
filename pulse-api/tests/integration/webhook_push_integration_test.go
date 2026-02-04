@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"sync"
 	"testing"
 	"time"
@@ -18,6 +17,7 @@ import (
 	"github.com/kevin/node-pulse/pulse-api/internal/alert"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 	"github.com/kevin/node-pulse/pulse-api/internal/webhook"
 )
 
@@ -25,10 +25,7 @@ func setupWebhookPushTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	ctx := context.Background()
 
 	// Connect to test database
-	testDBURL := os.Getenv("TEST_DATABASE_URL")
-	if testDBURL == "" {
-		testDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
-	}
+	testDBURL := testutil.GetTestDBURL()
 
 	pool, err := pgxpool.New(ctx, testDBURL)
 	require.NoError(t, err, "Failed to connect to test database")

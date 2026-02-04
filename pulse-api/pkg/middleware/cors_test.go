@@ -8,6 +8,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 func TestCORSMiddleware(t *testing.T) {
@@ -60,7 +63,15 @@ func TestCORSMiddleware(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Setup test config
+			testutil.SetupTestConfig()
+			defer testutil.TeardownTestConfig()
+
+			// Load config
+			config.MustLoad()
+
 			// Unset CORS env to use defaults
+			os.Unsetenv("PULSE_CORS_ALLOWED_ORIGINS")
 			os.Unsetenv("CORS_ALLOWED_ORIGINS")
 
 			router := gin.New()
@@ -95,9 +106,16 @@ func TestCORSMiddleware(t *testing.T) {
 func TestCORSMiddleware_CustomOrigins(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Setup test config
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
 	// Set custom allowed origins
-	os.Setenv("CORS_ALLOWED_ORIGINS", "https://example.com,https://app.example.com")
-	defer os.Unsetenv("CORS_ALLOWED_ORIGINS")
+	os.Setenv("PULSE_CORS_ALLOWED_ORIGINS", "https://example.com,https://app.example.com")
+	defer os.Unsetenv("PULSE_CORS_ALLOWED_ORIGINS")
+
+	// Load config with custom env vars
+	config.MustLoad()
 
 	router := gin.New()
 	router.Use(CORSMiddleware())
@@ -155,9 +173,16 @@ func TestCORSMiddleware_CustomOrigins(t *testing.T) {
 func TestCORSMiddleware_Wildcard(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Setup test config
+	testutil.SetupTestConfig()
+	defer testutil.TeardownTestConfig()
+
 	// Set wildcard to allow all origins
-	os.Setenv("CORS_ALLOWED_ORIGINS", "*")
-	defer os.Unsetenv("CORS_ALLOWED_ORIGINS")
+	os.Setenv("PULSE_CORS_ALLOWED_ORIGINS", "*")
+	defer os.Unsetenv("PULSE_CORS_ALLOWED_ORIGINS")
+
+	// Load config with custom env vars
+	config.MustLoad()
 
 	router := gin.New()
 	router.Use(CORSMiddleware())

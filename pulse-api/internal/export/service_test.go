@@ -10,8 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/db"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
+	"github.com/kevin/node-pulse/pulse-api/internal/testutil"
 )
 
 func TestExportService_CreateExport_Success(t *testing.T) {
@@ -408,6 +410,15 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 }
 
 func setupTestDBWithCleanup(t *testing.T) (*pgxpool.Pool, func()) {
+	// Setup test config first
+	testutil.SetupTestConfig()
+
+	// Load configuration
+	_, err := config.Load()
+	if err != nil {
+		t.Fatalf("Failed to load config: %v", err)
+	}
+
 	ctx := context.Background()
 
 	// Use test database from environment or default
@@ -435,6 +446,7 @@ func setupTestDBWithCleanup(t *testing.T) (*pgxpool.Pool, func()) {
 	// Return cleanup function
 	cleanup := func() {
 		pool.Close()
+		testutil.TeardownTestConfig()
 	}
 
 	return pool, cleanup
