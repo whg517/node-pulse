@@ -3,12 +3,12 @@ package auth
 import (
 	"context"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 	"github.com/kevin/node-pulse/pulse-api/internal/models"
 )
 
@@ -140,7 +140,8 @@ func (h *AuthHandler) PostLogin(c *gin.Context) {
 	}
 
 	// Set session cookie
-	secureFlag := os.Getenv("ENV") == "production"
+	cfg := config.Get()
+	secureFlag := cfg.IsProduction()
 	c.SetCookie(
 		"session_id",
 		sessionID,
@@ -240,7 +241,8 @@ func (h *AuthHandler) PostLogout(c *gin.Context) {
 	}
 
 	// Clear session cookie
-	secureFlag := os.Getenv("ENV") == "production"
+	cfg := config.Get()
+	secureFlag := cfg.IsProduction()
 	c.SetCookie(
 		"session_id",
 		"",
