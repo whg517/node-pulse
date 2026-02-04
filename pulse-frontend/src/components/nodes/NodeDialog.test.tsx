@@ -1,8 +1,17 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { NodeDialog } from './NodeDialog'
 import type { NodeDTO } from '../../api/types'
+
+// Helper functions for querying within container
+function getInputByLabel(container: HTMLElement, labelText: string) {
+  return within(container).getByRole('textbox', { name: new RegExp(labelText, 'i') })
+}
+
+function getTextareaByLabel(container: HTMLElement, labelText: string) {
+  return within(container).getByRole('textbox', { name: new RegExp(labelText, 'i') })
+}
 
 describe('NodeDialog', () => {
   const mockNode: NodeDTO = {
@@ -56,19 +65,26 @@ describe('NodeDialog', () => {
     })
 
     it('validates name length', async () => {
+      const onSubmit = vi.fn()
       const { container } = render(
         <NodeDialog
           mode="create"
-          onSubmit={vi.fn()}
+          onSubmit={onSubmit}
           onCancel={vi.fn()}
         />
       )
 
       const nameInput = getInputByLabel(container, 'Name')
+      const ipInput = getInputByLabel(container, 'IP Address')
+      const regionInput = getInputByLabel(container, 'Region')
 
       // Test too short
       fireEvent.change(nameInput, { target: { value: 'A' } })
-      fireEvent.blur(nameInput)
+      fireEvent.change(ipInput, { target: { value: '192.168.1.1' } })
+      fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
+
+      const submitButton = screen.getByText('Create Node')
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByText('Name must be at least 2 characters')).toBeInTheDocument()
@@ -77,7 +93,7 @@ describe('NodeDialog', () => {
       // Test too long
       const longName = 'A'.repeat(101)
       fireEvent.change(nameInput, { target: { value: longName } })
-      fireEvent.blur(nameInput)
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByText('Name must be less than 100 characters')).toBeInTheDocument()
@@ -85,17 +101,25 @@ describe('NodeDialog', () => {
     })
 
     it('validates IP address format', async () => {
+      const onSubmit = vi.fn()
       const { container } = render(
         <NodeDialog
           mode="create"
-          onSubmit={vi.fn()}
+          onSubmit={onSubmit}
           onCancel={vi.fn()}
         />
       )
 
       const ipInput = getInputByLabel(container, 'IP Address')
+      const nameInput = getInputByLabel(container, 'Name')
+      const regionInput = getInputByLabel(container, 'Region')
+
+      fireEvent.change(nameInput, { target: { value: 'Test Node' } })
       fireEvent.change(ipInput, { target: { value: 'invalid-ip' } })
-      fireEvent.blur(ipInput)
+      fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
+
+      const submitButton = screen.getByText('Create Node')
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByText('Invalid IP address format')).toBeInTheDocument()
@@ -103,17 +127,25 @@ describe('NodeDialog', () => {
     })
 
     it('accepts valid IPv4 addresses', async () => {
+      const onSubmit = vi.fn()
       const { container } = render(
         <NodeDialog
           mode="create"
-          onSubmit={vi.fn()}
+          onSubmit={onSubmit}
           onCancel={vi.fn()}
         />
       )
 
       const ipInput = getInputByLabel(container, 'IP Address')
+      const nameInput = getInputByLabel(container, 'Name')
+      const regionInput = getInputByLabel(container, 'Region')
+
+      fireEvent.change(nameInput, { target: { value: 'Test Node' } })
       fireEvent.change(ipInput, { target: { value: '192.168.1.100' } })
-      fireEvent.blur(ipInput)
+      fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
+
+      const submitButton = screen.getByText('Create Node')
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.queryByText('Invalid IP address format')).not.toBeInTheDocument()
@@ -121,17 +153,25 @@ describe('NodeDialog', () => {
     })
 
     it('accepts valid IPv6 addresses', async () => {
+      const onSubmit = vi.fn()
       const { container } = render(
         <NodeDialog
           mode="create"
-          onSubmit={vi.fn()}
+          onSubmit={onSubmit}
           onCancel={vi.fn()}
         />
       )
 
       const ipInput = getInputByLabel(container, 'IP Address')
+      const nameInput = getInputByLabel(container, 'Name')
+      const regionInput = getInputByLabel(container, 'Region')
+
+      fireEvent.change(nameInput, { target: { value: 'Test Node' } })
       fireEvent.change(ipInput, { target: { value: '2001:0db8:85a3:0000:0000:8a2e:0370:7334' } })
-      fireEvent.blur(ipInput)
+      fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
+
+      const submitButton = screen.getByText('Create Node')
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.queryByText('Invalid IP address format')).not.toBeInTheDocument()
@@ -139,19 +179,26 @@ describe('NodeDialog', () => {
     })
 
     it('validates region length', async () => {
+      const onSubmit = vi.fn()
       const { container } = render(
         <NodeDialog
           mode="create"
-          onSubmit={vi.fn()}
+          onSubmit={onSubmit}
           onCancel={vi.fn()}
         />
       )
 
       const regionInput = getInputByLabel(container, 'Region')
+      const nameInput = getInputByLabel(container, 'Name')
+      const ipInput = getInputByLabel(container, 'IP Address')
 
       // Test too short
+      fireEvent.change(nameInput, { target: { value: 'Test Node' } })
+      fireEvent.change(ipInput, { target: { value: '192.168.1.1' } })
       fireEvent.change(regionInput, { target: { value: 'A' } })
-      fireEvent.blur(regionInput)
+
+      const submitButton = screen.getByText('Create Node')
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByText('Region must be at least 2 characters')).toBeInTheDocument()
@@ -160,7 +207,7 @@ describe('NodeDialog', () => {
       // Test too long
       const longRegion = 'A'.repeat(51)
       fireEvent.change(regionInput, { target: { value: longRegion } })
-      fireEvent.blur(regionInput)
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByText('Region must be less than 50 characters')).toBeInTheDocument()
@@ -168,19 +215,29 @@ describe('NodeDialog', () => {
     })
 
     it('validates tags count', async () => {
+      const onSubmit = vi.fn()
       const { container } = render(
         <NodeDialog
           mode="create"
-          onSubmit={vi.fn()}
+          onSubmit={onSubmit}
           onCancel={vi.fn()}
         />
       )
 
       const tagsInput = getTextareaByLabel(container, 'Tags')
+      const nameInput = getInputByLabel(container, 'Name')
+      const ipInput = getInputByLabel(container, 'IP Address')
+      const regionInput = getInputByLabel(container, 'Region')
+
       const elevenTags = Array.from({ length: 11 }, (_, i) => `tag${i}`).join(', ')
 
+      fireEvent.change(nameInput, { target: { value: 'Test Node' } })
+      fireEvent.change(ipInput, { target: { value: '192.168.1.1' } })
+      fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
       fireEvent.change(tagsInput, { target: { value: elevenTags } })
-      fireEvent.blur(tagsInput)
+
+      const submitButton = screen.getByText('Create Node')
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByText('Maximum 10 tags allowed')).toBeInTheDocument()
@@ -188,19 +245,29 @@ describe('NodeDialog', () => {
     })
 
     it('validates individual tag length', async () => {
+      const onSubmit = vi.fn()
       const { container } = render(
         <NodeDialog
           mode="create"
-          onSubmit={vi.fn()}
+          onSubmit={onSubmit}
           onCancel={vi.fn()}
         />
       )
 
       const tagsInput = getTextareaByLabel(container, 'Tags')
+      const nameInput = getInputByLabel(container, 'Name')
+      const ipInput = getInputByLabel(container, 'IP Address')
+      const regionInput = getInputByLabel(container, 'Region')
+
       const longTag = 'A'.repeat(31)
 
+      fireEvent.change(nameInput, { target: { value: 'Test Node' } })
+      fireEvent.change(ipInput, { target: { value: '192.168.1.1' } })
+      fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
       fireEvent.change(tagsInput, { target: { value: longTag } })
-      fireEvent.blur(tagsInput)
+
+      const submitButton = screen.getByText('Create Node')
+      fireEvent.click(submitButton)
 
       await waitFor(() => {
         expect(screen.getByText('Each tag must be less than 30 characters')).toBeInTheDocument()

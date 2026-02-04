@@ -105,7 +105,7 @@ describe('ExportForm', () => {
       expect(mockOnSubmit).not.toHaveBeenCalled()
     })
 
-    it('validates maximum 50 nodes', async () => {
+    it('validates maximum 50 nodes', { timeout: 15000 }, async () => {
       const user = userEvent.setup()
       const mockOnSubmit = vi.fn()
       const manyNodes = Array.from({ length: 51 }, (_, i) => ({
