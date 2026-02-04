@@ -40,3 +40,28 @@ func (c *Config) GetWriteTimeout() int {
 func (c *Config) GetIdleTimeout() int {
 	return c.Server.IdleTimeout
 }
+
+// GetCORSConfig returns the CORS configuration
+func (c *Config) GetCORSConfig() *config.CORSConfig {
+	return &c.CORS
+}
+
+// GetAdminConfig returns the admin configuration
+func (c *Config) GetAdminConfig() *config.AdminConfig {
+	return &c.Admin
+}
+
+// GetSessionConfig returns the session configuration
+func (c *Config) GetSessionConfig() *config.SessionConfig {
+	return &c.Session
+}
+
+// IsProduction returns true if running in production mode
+func (c *Config) IsProduction() bool {
+	return c.IsProduction()
+}
+
+// IsDevelopment returns true if running in development mode
+func (c *Config) IsDevelopment() bool {
+	return c.IsDevelopment()
+}
