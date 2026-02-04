@@ -1,0 +1,111 @@
+# ==================================
+# Node-Pulse API Configuration File
+# ==================================
+# This is an example configuration file for the pulse-api application.
+# Copy this file to config.yaml and update with your values.
+#
+# WARNING: DO NOT commit config.yaml with credentials to version control!
+#          Use environment variables for sensitive data in production.
+#
+# Configuration Priority:
+# 1. Environment variables (highest priority)
+# 2. config.yaml file
+# 3. Default values (lowest priority)
+#
+# Search paths for config.yaml:
+# - CONFIG_PATH environment variable
+# - ./config.yaml (current working directory)
+# - /etc/node-pulse/config.yaml (system-wide)
+
+# ==================================
+# Server Configuration
+# ==================================
+server:
+  port: "8080"              # Server port
+  read_timeout: 15          # Read timeout in seconds
+  write_timeout: 15         # Write timeout in seconds
+  idle_timeout: 60          # Idle timeout in seconds
+  mode: "debug"             # Server mode: debug, release, test
+
+# ==================================
+# Database Configuration
+# ==================================
+database:
+  url: "postgres://user:password@localhost:5432/nodepulse?sslmode=disable"
+  max_connections: 10       # Maximum database connections
+  min_connections: 1        # Minimum database connections
+  conn_max_lifetime: 3600   # Connection max lifetime in seconds
+  conn_max_idle_time: 300   # Connection max idle time in seconds
+
+# ==================================
+# Cleanup Configuration
+# ==================================
+cleanup:
+  enabled: true             # Enable automatic cleanup tasks
+  interval_seconds: 3600    # Cleanup interval in seconds (1 hour)
+  retention_days: 7         # Data retention days
+  slow_threshold_ms: 30000  # Slow query threshold in milliseconds
+
+# ==================================
+# Logging Configuration
+# ==================================
+log:
+  level: "info"             # Log level: debug, info, warn, error
+  format: "text"            # Log format: text, json
+  output: "stdout"          # Log output: stdout, stderr, or file path
+
+# ==================================
+# CORS Configuration
+# ==================================
+cors:
+  allowed_origins: "http://localhost:3000,http://localhost:5173"
+  allowed_methods: "GET,POST,PUT,DELETE,OPTIONS"
+  allowed_headers: "Content-Type,Authorization"
+  max_age: 86400            # CORS max age in seconds (24 hours)
+
+# ==================================
+# Admin User Configuration
+# ==================================
+admin:
+  username: "admin"         # Default admin username
+  password: "admin123"      # Default admin password
+  # WARNING: Use strong passwords in production!
+  #          Consider using environment variables instead.
+
+# ==================================
+# Session Configuration
+# ==================================
+session:
+  secret: ""                # Session secret (auto-generated if empty)
+  expiration_hours: 24      # Session expiration time in hours
+  cookie_secure: false      # Cookie secure flag (auto-derived from server.mode)
+  cookie_samesite: "Lax"    # Cookie SameSite policy: Strict, Lax, None
+
+# ==================================
+# JWT Configuration
+# ==================================
+jwt:
+  secret: ""                # JWT secret (auto-generated if empty)
+  expiration_hours: 24      # JWT expiration time in hours
+
+# ==================================
+# Production Deployment Notes
+# ==================================
+# 1. Use environment variables for all sensitive data:
+#    - PULSE_ADMIN_USERNAME
+#    - PULSE_ADMIN_PASSWORD
+#    - PULSE_SESSION_SECRET
+#    - PULSE_JWT_SECRET
+#    - PULSE_DATABASE_URL
+#
+# 2. Generate strong secrets:
+#    - Session: openssl rand -hex 32
+#    - JWT: openssl rand -hex 32
+#
+# 3. Set server mode to production:
+#    - PULSE_SERVER_MODE=release
+#
+# 4. Review and update CORS settings for your domain.
+#
+# 5. Use environment variables instead of config.yaml for production.
+#    Config files should only be used for local development.
