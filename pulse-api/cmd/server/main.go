@@ -1,24 +1,10 @@
 package main
 
 import (
-	"context"
 	"log"
-	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/gin-gonic/gin"
-
-	"github.com/kevin/node-pulse/pulse-api/internal/api"
+	"github.com/kevin/node-pulse/pulse-api/internal/server"
 	_ "github.com/kevin/node-pulse/pulse-api/api/docs" // Swagger docs
-	"github.com/kevin/node-pulse/pulse-api/internal/cleanup"
-	"github.com/kevin/node-pulse/pulse-api/internal/config"
-	"github.com/kevin/node-pulse/pulse-api/internal/db"
-	"github.com/kevin/node-pulse/pulse-api/internal/health"
-	"github.com/kevin/node-pulse/pulse-api/internal/scheduler"
-	"github.com/kevin/node-pulse/pulse-api/internal/suppression"
 )
 
 // @title			Node Pulse API
@@ -54,170 +40,18 @@ import (
 // @description					Enter the token with the `Bearer ` prefix, e.g. "Bearer abcde12345"
 
 func main() {
-	// Get port from environment or use default
-	port := os.Getenv("PULSE_PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	// Initialize database
-	database, err := db.New(os.Getenv("DATABASE_URL"))
-	var healthChecker *health.HealthChecker
+	// Build and start server using Builder pattern
+	srv, err := server.NewBuilder().
+		Build()
 	if err != nil {
-		log.Printf("[WARN] Database connection failed: %v", err)
-		// Continue without database for now, health check will report disabled
-		// Pass nil directly to avoid interface nil behavior issues
-		// Note: scheduler and alertSystemChecker not created yet, will update health checker after init
-		healthChecker = health.New(nil, nil, nil)
-	} else {
-		defer database.Close()
-
-		// Run migrations
-		log.Println("[Migration] Running database migrations...")
-		ctx := context.Background()
-		if err := db.Migrate(ctx, database.Pool); err != nil {
-			log.Fatalf("[Migration] Failed to run migrations: %v", err)
-		}
-		log.Println("[Migration] Database migrations completed successfully")
-
-		// Note: scheduler and alertSystemChecker not created yet, will update health checker after init
-		healthChecker = health.New(database, nil, nil)
+		log.Fatalf("[ERROR] Failed to build server: %v", err)
 	}
 
-	// Initialize Gin router
-	router := gin.Default()
-
-	// Setup routes and get cache manager for shutdown
-	cacheManager := api.SetupRoutes(router, healthChecker, database.Pool)
-
-	// Initialize scheduler for background tasks (Story 3.12)
-	sched, err := scheduler.NewScheduler()
-	if err != nil {
-		log.Fatalf("[Pulse] Failed to create scheduler: %v", err)
+	// Start the server
+	if err := srv.Start(); err != nil {
+		log.Fatalf("[ERROR] Failed to start server: %v", err)
 	}
 
-	// Load cleanup configuration
-	cleanupConfig, err := config.LoadCleanupConfig()
-	if err != nil {
-		log.Fatalf("[Pulse] Failed to load cleanup config: %v", err)
-	}
-
-	// Create and register cleanup task if enabled
-	var cleanupTask *cleanup.CleanupTask
-	if cleanupConfig.Enabled && database != nil && database.Pool != nil {
-		cleanupTask, err = cleanup.NewCleanupTask(cleanupConfig, database.Pool, log.Default())
-		if err != nil {
-			log.Fatalf("[Pulse] Failed to create cleanup task: %v", err)
-		}
-
-		if cleanupTask != nil {
-			if err := sched.RegisterTask(cleanupTask); err != nil {
-				log.Fatalf("[Pulse] Failed to register cleanup task: %v", err)
-			}
-			log.Printf("[Pulse] Cleanup task registered (interval: %ds, retention: %ddays)",
-				cleanupConfig.IntervalSeconds, cleanupConfig.RetentionDays)
-		}
-	}
-
-	// Create and register suppression cleanup task
-	if database != nil && database.Pool != nil {
-		suppressionCleanupTask := suppression.NewCleanupTask(db.NewAlertSuppressionsQuerier(database.Pool))
-		if err := sched.RegisterTask(suppressionCleanupTask); err != nil {
-			log.Fatalf("[Pulse] Failed to register suppression cleanup task: %v", err)
-		}
-		log.Println("[Pulse] Suppression cleanup task registered (interval: 1h)")
-	}
-
-	// Start scheduler in background
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if err := sched.Start(ctx); err != nil {
-		log.Fatalf("[Pulse] Failed to start scheduler: %v", err)
-	}
-	log.Println("[Pulse] Scheduler started")
-
-	// Update health checker with scheduler reference and alert system checker
-	var alertSystemChecker *health.AlertSystemChecker
-	if database != nil && database.Pool != nil && cacheManager != nil && cacheManager.AlertEngine != nil {
-		webhookLogsQuerier := db.NewWebhookLogsQuerier(database.Pool)
-		alertSuppressionsQuerier := db.NewAlertSuppressionsQuerier(database.Pool)
-		alertSystemChecker = health.NewAlertSystemChecker(
-			cacheManager.AlertEngine,
-			webhookLogsQuerier,
-			alertSuppressionsQuerier,
-		)
-		log.Println("[Pulse] Alert system health checker initialized")
-	}
-
-	healthChecker = health.New(
-		func() health.Checker {
-			if database != nil {
-				return database
-			}
-			return nil
-		}(),
-		sched,
-		alertSystemChecker,
-	)
-
-	// Create server with timeout configuration
-	srv := &http.Server{
-		Addr:         ":" + port,
-		Handler:      router,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 15 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	// Start server in a goroutine
-	go func() {
-		log.Printf("[Pulse] API server starting on port %s...", port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("[Pulse] Failed to start server: %v", err)
-		}
-	}()
-
-	// Wait for interrupt signal to gracefully shutdown the server
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-	log.Println("[Pulse] Shutting down server...")
-
-	// Graceful shutdown with timeout
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	// Stop cache components (Story 3.2)
-	if cacheManager != nil {
-		log.Println("[Pulse] Stopping alert engine...")
-		if cacheManager.AlertEngine != nil {
-			cacheManager.AlertEngine.Stop()
-		}
-		log.Println("[Pulse] Stopping batch writer...")
-		cacheManager.BatchWriter.Stop()
-		log.Println("[Pulse] Stopping memory cache...")
-		cacheManager.MemoryCache.Stop()
-		log.Println("[Pulse] Stopping export service...")
-		if cacheManager.ExportService != nil {
-			cacheManager.ExportService.Shutdown()
-		}
-		log.Println("[Pulse] Stopping metrics collector...")
-		if cacheManager.MetricsCollector != nil {
-			cacheManager.MetricsCollector.Stop()
-		}
-	}
-
-	// Stop scheduler and cleanup task (Story 3.12)
-	log.Println("[Pulse] Stopping scheduler...")
-	if err := sched.Stop(); err != nil {
-		log.Printf("[Pulse] Error stopping scheduler: %v", err)
-	}
-
-	// Shutdown HTTP server
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		log.Printf("[Pulse] Server forced to shutdown: %v", err)
-	}
-
-	log.Println("[Pulse] Server exited")
+	// Wait for shutdown signal
+	srv.WaitForShutdown()
 }
