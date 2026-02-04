@@ -25,6 +25,10 @@ go.work
 .env
 .env.test
 
+# Configuration files (may contain sensitive data)
+config.yaml
+config.yml
+
 # IDE
 .vscode/
 .idea/
