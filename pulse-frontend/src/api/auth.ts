@@ -6,10 +6,10 @@
  */
 
 import { apiClient } from './client'
-import type { LoginRequest, LoginResponse, LogoutResponse } from '../types/auth'
+import type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse } from '../types/auth'
 import { AuthenticationError } from './errors'
 
-export type { LoginRequest, LoginResponse, LogoutResponse }
+export type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse }
 
 const SESSION_COOKIE_NAME = 'session_id'
 
@@ -82,3 +82,40 @@ export async function logout(): Promise<LogoutResponse> {
  * Used by the server to set and read the session cookie
  */
 export { SESSION_COOKIE_NAME }
+
+/**
+ * Get current user
+ *
+ * Retrieves the currently authenticated user's information.
+ * Session Cookie is automatically sent by the browser.
+ *
+ * @returns Current user response
+ * @throws AuthenticationError if not authenticated
+ * @throws ApiError if request fails
+ *
+ * @example
+ * try {
+ *   const { data } = await getMe()
+ *   console.log('Current user:', data.username)
+ * } catch (error) {
+ *   if (isAuthenticationError(error)) {
+ *     console.error('Not authenticated')
+ *   }
+ * }
+ */
+export async function getMe(): Promise<GetMeResponse> {
+  try {
+    return await apiClient<GetMeResponse>('/api/v1/auth/me', {
+      method: 'GET',
+    })
+  } catch (error) {
+    // Ensure authentication errors are properly typed
+    if (error instanceof Error && error.name === 'AuthenticationError') {
+      throw error
+    }
+    // Wrap other errors as AuthenticationError
+    throw new AuthenticationError(
+      error instanceof Error ? error.message : 'Failed to get user information'
+    )
+  }
+}

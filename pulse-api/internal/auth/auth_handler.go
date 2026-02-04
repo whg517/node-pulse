@@ -167,6 +167,57 @@ func (h *AuthHandler) PostLogin(c *gin.Context) {
 	})
 }
 
+// GetMe handles GET /api/v1/auth/me
+// @Summary		Get current user
+// @Description	Returns the currently authenticated user's information based on session cookie.
+// @Tags			auth
+// @Accept			json
+// @Produce		json
+// @Success		200		{object}	models.GetMeResponse	"Success"
+// @Failure		401		{object}	models.ErrorResponse	"Unauthorized"
+// @Failure		500		{object}	models.ErrorResponse	"Internal server error"
+// @Router			/auth/me [get]
+func (h *AuthHandler) GetMe(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// Get user ID from context (set by AuthMiddleware)
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "ERR_UNAUTHORIZED",
+			Message: "Authentication required",
+			Details: nil,
+		})
+		return
+	}
+
+	// Look up user to get username and role
+	user, err := h.lookupUserByID(ctx, userID.(string))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to retrieve user information",
+			Details: nil,
+		})
+		return
+	}
+
+	// Return user information
+	c.JSON(http.StatusOK, models.GetMeResponse{
+		Data: struct {
+			UserID   string `json:"user_id"`
+			Username string `json:"username"`
+			Role     string `json:"role"`
+		}{
+			UserID:   user.UserID,
+			Username: user.Username,
+			Role:     user.Role,
+		},
+		Message:   "Success",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
 // PostLogout handles POST /api/v1/auth/logout
 func (h *AuthHandler) PostLogout(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -216,6 +267,33 @@ func (h *AuthHandler) lookupUser(ctx context.Context, username string) (*models.
 	`
 
 	err := h.pool.QueryRow(ctx, query, username).Scan(
+		&user.UserID,
+		&user.Username,
+		&user.PasswordHash,
+		&user.Role,
+		&user.FailedLoginAttempts,
+		&user.LockedUntil,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
+// lookupUserByID retrieves user by user ID from database
+func (h *AuthHandler) lookupUserByID(ctx context.Context, userID string) (*models.User, error) {
+	var user models.User
+	query := `
+		SELECT user_id, username, password_hash, role, failed_login_attempts, locked_until, created_at, updated_at
+		FROM users
+		WHERE user_id = $1
+	`
+
+	err := h.pool.QueryRow(ctx, query, userID).Scan(
 		&user.UserID,
 		&user.Username,
 		&user.PasswordHash,

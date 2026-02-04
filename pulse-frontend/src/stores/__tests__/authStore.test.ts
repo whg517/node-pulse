@@ -7,6 +7,7 @@ import * as authApi from '../../api/auth'
 vi.mock('../../api/auth', () => ({
   login: vi.fn(),
   logout: vi.fn(),
+  getMe: vi.fn(),
 }))
 
 describe('useAuthStore', () => {
@@ -18,6 +19,7 @@ describe('useAuthStore', () => {
       role: null,
       sessionId: null,
       sessionExpiry: null,
+      isLoading: false,
     })
     vi.clearAllMocks()
   })
@@ -30,6 +32,7 @@ describe('useAuthStore', () => {
     expect(result.current.role).toBeNull()
     expect(result.current.sessionId).toBeNull()
     expect(result.current.sessionExpiry).toBeNull()
+    expect(result.current.isLoading).toBe(false)
   })
 
   it('should handle login successfully', async () => {
@@ -222,5 +225,113 @@ describe('useAuthStore', () => {
 
     const isValid = result.current.checkSession()
     expect(isValid).toBe(false)
+  })
+
+  it('should restore session successfully', async () => {
+    const mockGetMeResponse = {
+      data: {
+        user_id: 'user-789',
+        username: 'restoreduser',
+        role: 'viewer' as const,
+      },
+      message: 'Success',
+      timestamp: '2024-01-01T00:00:00Z',
+    }
+
+    vi.mocked(authApi.getMe).mockResolvedValue(mockGetMeResponse)
+
+    const { result } = renderHook(() => useAuthStore())
+
+    await act(async () => {
+      await result.current.restoreSession()
+    })
+
+    expect(result.current.user).toEqual({
+      id: 'user-789',
+      username: 'restoreduser',
+      role: 'viewer',
+    })
+    expect(result.current.isAuthenticated).toBe(true)
+    expect(result.current.role).toBe('viewer')
+    expect(result.current.sessionId).toBe('user-789')
+    expect(result.current.sessionExpiry).toBeDefined()
+    expect(result.current.sessionExpiry).toBeGreaterThan(Date.now())
+    expect(result.current.isLoading).toBe(false)
+  })
+
+  it('should handle session restoration failure', async () => {
+    vi.mocked(authApi.getMe).mockRejectedValue(new Error('Unauthorized'))
+
+    const { result } = renderHook(() => useAuthStore())
+
+    // Set up authenticated state first
+    useAuthStore.setState({
+      user: {
+        id: 'user-123',
+        username: 'testuser',
+        role: 'admin',
+      },
+      isAuthenticated: true,
+      role: 'admin',
+      sessionId: 'user-123',
+      sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+      isLoading: false,
+    })
+
+    await act(async () => {
+      await result.current.restoreSession()
+    })
+
+    expect(result.current.user).toBeNull()
+    expect(result.current.isAuthenticated).toBe(false)
+    expect(result.current.role).toBeNull()
+    expect(result.current.sessionId).toBeNull()
+    expect(result.current.sessionExpiry).toBeNull()
+    expect(result.current.isLoading).toBe(false)
+  })
+
+  it('should set loading state during session restoration', async () => {
+    const mockGetMeResponse = {
+      data: {
+        user_id: 'user-789',
+        username: 'restoreduser',
+        role: 'operator' as const,
+      },
+      message: 'Success',
+      timestamp: '2024-01-01T00:00:00Z',
+    }
+
+    // Create a promise that we can control
+    let resolveGetMe: (value: any) => void
+    const getMePromise = new Promise<any>((resolve) => {
+      resolveGetMe = resolve
+    })
+
+    vi.mocked(authApi.getMe).mockReturnValue(getMePromise)
+
+    const { result } = renderHook(() => useAuthStore())
+
+    // Start restoration
+    const restorationPromise = act(async () => {
+      result.current.restoreSession()
+    })
+
+    // Wait a tick for state to update
+    await act(async () => {
+      await new Promise(resolve => setTimeout(resolve, 0))
+    })
+
+    // Check that isLoading is true during restoration
+    expect(result.current.isLoading).toBe(true)
+
+    // Resolve the getMe call
+    await act(async () => {
+      resolveGetMe!(mockGetMeResponse)
+      await restorationPromise
+    })
+
+    // Check that isLoading is false after restoration
+    expect(result.current.isLoading).toBe(false)
+    expect(result.current.isAuthenticated).toBe(true)
   })
 })

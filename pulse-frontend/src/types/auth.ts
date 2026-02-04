@@ -15,6 +15,16 @@ export interface LoginResponse {
   timestamp: string
 }
 
+export interface GetMeResponse {
+  data: {
+    user_id: string
+    username: string
+    role: 'admin' | 'operator' | 'viewer'
+  }
+  message: string
+  timestamp: string
+}
+
 export interface LoginErrorResponse {
   code: 'ERR_INVALID_CREDENTIALS' | 'ERR_ACCOUNT_LOCKED' | 'ERR_RATE_LIMITED'
   message: string

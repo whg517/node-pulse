@@ -407,3 +407,138 @@ func TestIntegration_SessionExpiration(t *testing.T) {
 	// Assert - Session should be considered expired
 	assert.Equal(t, 0, sessionCount, "Expired session should not be found")
 }
+
+// TestIntegration_GetMe_WithValidSession tests GET /api/v1/auth/me with valid session
+func TestIntegration_GetMe_WithValidSession(t *testing.T) {
+	router, pool, _ := setupTestRouter(t)
+	if router == nil {
+		return
+	}
+	defer pool.Close()
+
+	// Arrange - Create test user and login
+	testUserID := uuid.New()
+	testPassword := "testPassword"
+	passwordHash, _ := auth.HashPassword(testPassword)
+	testUsername := fmt.Sprintf("getme_test_%s", testUserID.String()[:8])
+
+	_, _ = pool.Exec(context.Background(), `
+		INSERT INTO users (user_id, username, password_hash, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
+	`, testUserID, testUsername, passwordHash, "admin")
+	defer cleanupTestUser(pool, testUsername)
+
+	// Login to get session
+	loginReq := models.LoginRequest{
+		Username: testUsername,
+		Password: testPassword,
+	}
+	loginBody, _ := json.Marshal(loginReq)
+	loginHTTPReq, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(loginBody))
+	loginHTTPReq.Header.Set("Content-Type", "application/json")
+	wLogin := httptest.NewRecorder()
+	router.ServeHTTP(wLogin, loginHTTPReq)
+
+	require.Equal(t, http.StatusOK, wLogin.Code, "Login should succeed")
+
+	// Get session cookie
+	cookies := wLogin.Result().Cookies()
+	require.Len(t, cookies, 1, "Should have session cookie")
+	sessionID := cookies[0].Value
+
+	// Act - Call GET /api/v1/auth/me with session
+	req, _ := http.NewRequest("GET", "/api/v1/auth/me", nil)
+	req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Assert - 200 OK with user data
+	assert.Equal(t, http.StatusOK, w.Code, "Should return 200 OK")
+	var resp models.GetMeResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err, "Should parse response")
+	assert.Equal(t, "Success", resp.Message, "Message should be 'Success'")
+	assert.Equal(t, testUsername, resp.Data.Username, "Username should match")
+	assert.Equal(t, "admin", resp.Data.Role, "Role should be admin")
+	assert.NotEmpty(t, resp.Data.UserID, "UserID should not be empty")
+}
+
+// TestIntegration_GetMe_WithoutSession tests GET /api/v1/auth/me without session
+func TestIntegration_GetMe_WithoutSession(t *testing.T) {
+	router, pool, _ := setupTestRouter(t)
+	if router == nil {
+		return
+	}
+	defer pool.Close()
+
+	// Act - Call GET /api/v1/auth/me without session cookie
+	req, _ := http.NewRequest("GET", "/api/v1/auth/me", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Assert - 401 Unauthorized
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "Should return 401")
+	var resp models.ErrorResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, "ERR_UNAUTHORIZED", resp.Code, "Error code should be ERR_UNAUTHORIZED")
+}
+
+// TestIntegration_GetMe_WithExpiredSession tests GET /api/v1/auth/me with expired session
+func TestIntegration_GetMe_WithExpiredSession(t *testing.T) {
+	router, pool, _ := setupTestRouter(t)
+	if router == nil {
+		return
+	}
+	defer pool.Close()
+
+	// Arrange - Create user and login
+	testUserID := uuid.New()
+	testPassword := "testPassword"
+	passwordHash, _ := auth.HashPassword(testPassword)
+	testUsername := fmt.Sprintf("getme_expire_%s", testUserID.String()[:8])
+
+	_, _ = pool.Exec(context.Background(), `
+		INSERT INTO users (user_id, username, password_hash, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
+	`, testUserID, testUsername, passwordHash, "operator")
+	defer cleanupTestUser(pool, testUsername)
+
+	// Login to get session
+	loginReq := models.LoginRequest{
+		Username: testUsername,
+		Password: testPassword,
+	}
+	loginBody, _ := json.Marshal(loginReq)
+	loginHTTPReq, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(loginBody))
+	loginHTTPReq.Header.Set("Content-Type", "application/json")
+	wLogin := httptest.NewRecorder()
+	router.ServeHTTP(wLogin, loginHTTPReq)
+
+	require.Equal(t, http.StatusOK, wLogin.Code, "Login should succeed")
+
+	// Get session cookie
+	cookies := wLogin.Result().Cookies()
+	require.Len(t, cookies, 1, "Should have session cookie")
+	sessionID := cookies[0].Value
+
+	// Expire the session in database
+	_, err := pool.Exec(context.Background(), `
+		UPDATE sessions SET expired_at = NOW() - INTERVAL '1 second'
+		WHERE session_id = $1
+	`, sessionID)
+	require.NoError(t, err, "Should expire session")
+
+	// Act - Call GET /api/v1/auth/me with expired session
+	req, _ := http.NewRequest("GET", "/api/v1/auth/me", nil)
+	req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Assert - 401 Unauthorized
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "Should return 401 for expired session")
+	var resp models.ErrorResponse
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, "ERR_INVALID_SESSION", resp.Code, "Error code should be ERR_INVALID_SESSION")
+}

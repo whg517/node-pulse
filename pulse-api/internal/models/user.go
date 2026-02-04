@@ -31,6 +31,17 @@ type LoginResponse struct {
 	Timestamp string `json:"timestamp"`
 }
 
+// GetMeResponse represents successful get current user response
+type GetMeResponse struct {
+	Data struct {
+		UserID   string `json:"user_id"`
+		Username string `json:"username"`
+		Role     string `json:"role"`
+	} `json:"data"`
+	Message   string `json:"message"`
+	Timestamp string `json:"timestamp"`
+}
+
 // ErrorResponse represents error response
 type ErrorResponse struct {
 	Code    string `json:"code"`

@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import { login as apiLogin, logout as apiLogout } from '../api/auth'
+import { login as apiLogin, logout as apiLogout, getMe as apiGetMe } from '../api/auth'
 import { SESSION_EXPIRY_HOURS } from '../config/constants'
 import type { User } from './types'
 
@@ -10,6 +10,7 @@ export interface AuthState {
   role: 'admin' | 'operator' | 'viewer' | null
   sessionId: string | null
   sessionExpiry: number | null
+  isLoading: boolean
 }
 
 export interface AuthActions {
@@ -18,6 +19,7 @@ export interface AuthActions {
   setUser: (user: User) => void
   clearAuth: () => void
   checkSession: () => boolean
+  restoreSession: () => Promise<void>
 }
 
 type AuthStore = AuthState & AuthActions
@@ -30,6 +32,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   role: null,
   sessionId: null,
   sessionExpiry: null,
+  isLoading: false,
 
   // Actions
   login: async (username: string, password: string) => {
@@ -104,5 +107,38 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
 
     return isValid
+  },
+
+  restoreSession: async () => {
+    set({ isLoading: true })
+    try {
+      const response = await apiGetMe()
+      const expiry = Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000
+
+      const user: User = {
+        id: response.data.user_id,
+        username: response.data.username,
+        role: response.data.role,
+      }
+
+      set({
+        user,
+        isAuthenticated: true,
+        role: response.data.role,
+        sessionId: response.data.user_id,
+        sessionExpiry: expiry,
+        isLoading: false,
+      })
+    } catch (error) {
+      // Session is invalid or expired
+      set({
+        user: null,
+        isAuthenticated: false,
+        role: null,
+        sessionId: null,
+        sessionExpiry: null,
+        isLoading: false,
+      })
+    }
   },
 }))

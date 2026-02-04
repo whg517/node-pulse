@@ -91,14 +91,15 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Auth endpoints (public)
 		authHandler := auth.NewAuthHandler(pool)
+		sessionService := auth.NewSessionService(pool)
 		authGroup := v1.Group("/auth")
 		{
 			authGroup.POST("/login", authHandler.PostLogin)
 			authGroup.POST("/logout", authHandler.PostLogout)
+			authGroup.GET("/me", middleware.AuthMiddleware(sessionService), authHandler.GetMe)
 		}
 
 		// Node management routes (require auth)
-		sessionService := auth.NewSessionService(pool)
 		nodeQuerier := db.NewPoolQuerier(pool)
 		nodeHandler := NewNodeHandler(nodeQuerier)
 

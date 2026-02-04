@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import NodeDetailPage from './pages/NodeDetailPage'
@@ -11,8 +12,16 @@ import WebhooksPage from './pages/WebhooksPage'
 import DataExportPage from './pages/DataExportPage'
 import PerformanceDashboard from './pages/PerformanceDashboard'
 import ProtectedRoute from './components/common/ProtectedRoute'
+import { useAuthStore } from './stores/authStore'
 
 function App() {
+  const restoreSession = useAuthStore((state) => state.restoreSession)
+
+  // Restore session on app startup
+  useEffect(() => {
+    restoreSession()
+  }, [restoreSession])
+
   return (
     <BrowserRouter>
       <Routes>
