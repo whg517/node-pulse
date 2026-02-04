@@ -3,11 +3,11 @@ package db
 import (
 	"context"
 	"log"
-	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 	"github.com/google/uuid"
+	"github.com/kevin/node-pulse/pulse-api/internal/config"
 )
 
 // Migrate creates all database tables and indexes
@@ -136,12 +136,14 @@ func createNodesTable(ctx context.Context, pool *pgxpool.Pool) error {
 
 // seedAdminUser creates the default admin user
 func seedAdminUser(ctx context.Context, pool *pgxpool.Pool) error {
-	adminUsername := os.Getenv("ADMIN_USERNAME")
+	cfg := config.Get()
+
+	adminUsername := cfg.Admin.Username
 	if adminUsername == "" {
 		adminUsername = "admin"
 	}
 
-	adminPassword := os.Getenv("ADMIN_PASSWORD")
+	adminPassword := cfg.Admin.Password
 	if adminPassword == "" {
 		adminPassword = "admin123" // Default password for development
 	}
