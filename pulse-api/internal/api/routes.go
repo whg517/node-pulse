@@ -99,6 +99,18 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			authGroup.GET("/me", middleware.AuthMiddleware(sessionService), authHandler.GetMe)
 		}
 
+		// Config management routes (require admin auth only)
+		configGroup := v1.Group("/config")
+		configGroup.Use(middleware.AuthMiddleware(sessionService))
+		configGroup.Use(middleware.RBACMiddleware([]string{"admin"}))
+		{
+			// GET /api/v1/config - Get current configuration (admin only, passwords redacted)
+			configGroup.GET("", GetConfigHandler)
+
+			// GET /api/v1/config/validate - Validate configuration (admin only)
+			configGroup.GET("/validate", ValidateConfigHandler)
+		}
+
 		// Node management routes (require auth)
 		nodeQuerier := db.NewPoolQuerier(pool)
 		nodeHandler := NewNodeHandler(nodeQuerier)
