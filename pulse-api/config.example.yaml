@@ -68,9 +68,10 @@ cors:
 # ==================================
 admin:
   username: "admin"         # Default admin username
-  password: "admin123"      # Default admin password
+  password: "Admin123"      # Default admin password
   # WARNING: Use strong passwords in production!
   #          Consider using environment variables instead.
+  #          Password must be 8-32 chars with uppercase, lowercase, and digit.
 
 # ==================================
 # Session Configuration

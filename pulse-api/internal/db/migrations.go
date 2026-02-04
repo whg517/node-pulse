@@ -8,6 +8,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"github.com/google/uuid"
 	"github.com/kevin/node-pulse/pulse-api/internal/config"
+	"github.com/kevin/node-pulse/pulse-api/internal/auth"
 )
 
 // Migrate creates all database tables and indexes
@@ -145,7 +146,14 @@ func seedAdminUser(ctx context.Context, pool *pgxpool.Pool) error {
 
 	adminPassword := cfg.Admin.Password
 	if adminPassword == "" {
-		adminPassword = "admin123" // Default password for development
+		adminPassword = "Admin123" // Default password for development
+	}
+
+	// Validate admin password meets security requirements
+	if err := auth.ValidatePassword(adminPassword); err != nil {
+		log.Printf("[WARN] [Migration] Admin password validation failed: %v", err)
+		log.Printf("[WARN] [Migration] Using default admin password is NOT recommended for production!")
+		// Note: We don't fail here to allow development setups, but log a warning
 	}
 
 	// Hash password with bcrypt (cost factor 12)

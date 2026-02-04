@@ -9,6 +9,256 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// TestValidatePassword_ValidPasswords tests valid passwords that meet all requirements
+func TestValidatePassword_ValidPasswords(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "Minimum valid password",
+			password: "Passw0rd",
+		},
+		{
+			name:     "Password with special characters",
+			password: "P@ssw0rd!#$",
+		},
+		{
+			name:     "Long password within limit",
+			password: "ThisIsAVeryLongPassword123",
+		},
+		{
+			name:     "Password with numbers in middle",
+			password: "Pass123word",
+		},
+		{
+			name:     "Exactly 8 characters",
+			password: "Test1234",
+		},
+		{
+			name:     "Exactly 32 characters",
+			password: "Abcdefgh12345678NineTenChar2",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := ValidatePassword(tt.password)
+
+			// Assert
+			assert.NoError(t, err, "Password should be valid: %s", tt.password)
+		})
+	}
+}
+
+// TestValidatePassword_TooShort tests passwords shorter than 8 characters
+func TestValidatePassword_TooShort(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "7 characters",
+			password: "Passw0r",
+		},
+		{
+			name:     "1 character",
+			password: "A",
+		},
+		{
+			name:     "Empty password",
+			password: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := ValidatePassword(tt.password)
+
+			// Assert
+			assert.Error(t, err, "Password should be too short")
+			assert.Equal(t, ErrPasswordTooShort, err, "Should return ErrPasswordTooShort")
+		})
+	}
+}
+
+// TestValidatePassword_TooLong tests passwords longer than 32 characters
+func TestValidatePassword_TooLong(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "33 characters",
+			password: "ThisPasswordIsExactly33CharactersLong1",
+		},
+		{
+			name:     "Very long password",
+			password: strings.Repeat("Aa1", 20), // 60 characters
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := ValidatePassword(tt.password)
+
+			// Assert
+			assert.Error(t, err, "Password should be too long")
+			assert.Equal(t, ErrPasswordTooLong, err, "Should return ErrPasswordTooLong")
+		})
+	}
+}
+
+// TestValidatePassword_MissingUppercase tests passwords without uppercase letters
+func TestValidatePassword_MissingUppercase(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "All lowercase",
+			password: "password123",
+		},
+		{
+			name:     "Lowercase and numbers",
+			password: "test123456",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := ValidatePassword(tt.password)
+
+			// Assert
+			assert.Error(t, err, "Password should require uppercase")
+			assert.Equal(t, ErrPasswordMissingUppercase, err, "Should return ErrPasswordMissingUppercase")
+		})
+	}
+}
+
+// TestValidatePassword_MissingLowercase tests passwords without lowercase letters
+func TestValidatePassword_MissingLowercase(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "All uppercase",
+			password: "PASSWORD123",
+		},
+		{
+			name:     "Uppercase and numbers",
+			password: "TEST123456",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := ValidatePassword(tt.password)
+
+			// Assert
+			assert.Error(t, err, "Password should require lowercase")
+			assert.Equal(t, ErrPasswordMissingLowercase, err, "Should return ErrPasswordMissingLowercase")
+		})
+	}
+}
+
+// TestValidatePassword_MissingDigit tests passwords without digits
+func TestValidatePassword_MissingDigit(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+	}{
+		{
+			name:     "Only letters",
+			password: "Password",
+		},
+		{
+			name:     "Mixed case without numbers",
+			password: "MyPassword",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := ValidatePassword(tt.password)
+
+			// Assert
+			assert.Error(t, err, "Password should require digit")
+			assert.Equal(t, ErrPasswordMissingDigit, err, "Should return ErrPasswordMissingDigit")
+		})
+	}
+}
+
+// TestValidatePassword_FirstError tests that validation stops at first error
+func TestValidatePassword_FirstError(t *testing.T) {
+	tests := []struct {
+		name           string
+		password       string
+		expectedError  error
+	}{
+		{
+			name:          "Too short (checked first)",
+			password:      "Ab1",
+			expectedError: ErrPasswordTooShort,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := ValidatePassword(tt.password)
+
+			// Assert
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
+// TestValidatePassword_MultipleRequirementsMissing tests passwords missing multiple requirements
+func TestValidatePassword_MultipleRequirementsMissing(t *testing.T) {
+	tests := []struct {
+		name     string
+		password string
+		// Returns first error encountered
+		expectedError error
+	}{
+		{
+			name:          "Too short and no uppercase, no digit",
+			password:      "abc",
+			expectedError: ErrPasswordTooShort,
+		},
+		{
+			name:          "No uppercase, no lowercase",
+			password:      "12345678",
+			expectedError: ErrPasswordMissingUppercase,
+		},
+		{
+			name:          "No lowercase, no digit",
+			password:      "ABCDEFGH",
+			expectedError: ErrPasswordMissingLowercase,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			err := ValidatePassword(tt.password)
+
+			// Assert
+			assert.Error(t, err)
+			assert.Equal(t, tt.expectedError, err)
+		})
+	}
+}
+
 // TestHashPassword tests password hashing
 func TestHashPassword(t *testing.T) {
 	// Arrange

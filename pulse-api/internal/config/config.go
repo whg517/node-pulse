@@ -353,7 +353,7 @@ func defaultConfig() *Config {
 		},
 		Admin: AdminConfig{
 			Username: "admin",
-			Password: "admin123",
+			Password: "Admin123",
 		},
 		Session: SessionConfig{
 			Secret:          "", // Will be auto-generated if empty
