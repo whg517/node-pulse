@@ -1,4 +1,6 @@
 import type { MetricsDTO } from '../../api/types'
+import { memo } from 'react'
+import { memoCompare } from '../../utils/deepEqual'
 
 interface MetricsSummaryCardsProps {
   metrics: MetricsDTO[]
@@ -86,11 +88,14 @@ function getMetricColor(value: number, threshold: number): {
  * @example
  * <MetricsSummaryCards metrics={metrics} />
  */
-export function MetricsSummaryCards({
+export const MetricsSummaryCards = memo(function MetricsSummaryCards({
   metrics,
   isLoading,
 }: MetricsSummaryCardsProps) {
-  const summary = calculateMetrics(metrics)
+  // Defensive check: ensure metrics is an array
+  const safeMetrics = Array.isArray(metrics) ? metrics : []
+
+  const summary = calculateMetrics(safeMetrics)
 
   const latencyColor = getMetricColor(summary.averageLatency, 200)
   const packetLossColor = getMetricColor(summary.averagePacketLoss, 5)
@@ -252,4 +257,4 @@ export function MetricsSummaryCards({
       </div>
     </div>
   )
-}
+}, memoCompare)

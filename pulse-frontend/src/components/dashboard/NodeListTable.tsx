@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
+import { memo } from 'react'
 import { HealthStatusBadge } from './HealthStatusBadge'
 import { determineHealthStatus } from '../../utils/healthStatus'
+import { memoCompare } from '../../utils/deepEqual'
 import type { NodeDTO } from '../../api/types'
 import type { MetricsDTO } from '../../api/types'
 
@@ -23,11 +25,15 @@ interface NodeListTableProps {
  * @example
  * <NodeListTable nodes={nodes} metrics={metrics} />
  */
-export function NodeListTable({ nodes, metrics, isLoading }: NodeListTableProps) {
+export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoading }: NodeListTableProps) {
   const navigate = useNavigate()
 
+  // Defensive check: ensure nodes and metrics are arrays
+  const safeNodes = Array.isArray(nodes) ? nodes : []
+  const safeMetrics = Array.isArray(metrics) ? metrics : []
+
   // Create a map of node_id to metrics for quick lookup
-  const metricsMap = new Map(metrics.map(m => [m.node_id, m]))
+  const metricsMap = new Map(safeMetrics.map(m => [m.node_id, m]))
 
   const handleRowClick = (nodeId: string) => {
     navigate(`/nodes/${nodeId}`)
@@ -48,7 +54,7 @@ export function NodeListTable({ nodes, metrics, isLoading }: NodeListTableProps)
     )
   }
 
-  if (nodes.length === 0) {
+  if (safeNodes.length === 0) {
     return (
       <div className="bg-white shadow rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">Node List</h3>
@@ -121,7 +127,7 @@ export function NodeListTable({ nodes, metrics, isLoading }: NodeListTableProps)
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {nodes.map(node => {
+            {safeNodes.map(node => {
               const metrics = metricsMap.get(node.id)
               const healthStatus = metrics
                 ? determineHealthStatus({
@@ -178,4 +184,4 @@ export function NodeListTable({ nodes, metrics, isLoading }: NodeListTableProps)
       </div>
     </div>
   )
-}
+}, memoCompare)

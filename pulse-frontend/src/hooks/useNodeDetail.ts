@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { fetchNode, fetchNodeStatus, fetchMetrics } from '../api'
 import type { NodeDTO, MetricsDTO } from '../api/types'
+import { deepEqual } from '../utils/deepEqual'
 
 export interface NodeDetailData {
   node: NodeDTO | null
@@ -43,6 +44,11 @@ export function useNodeDetail(
 
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const isMountedRef = useRef(true)
+  const prevDataRef = useRef<{
+    node: NodeDTO | null
+    nodeStatus: { status: string; last_heartbeat: string } | null
+    metrics: MetricsDTO | null
+  } | null>(null)
 
   const fetchData = async () => {
     if (!isMountedRef.current || !nodeId) return
@@ -59,14 +65,34 @@ export function useNodeDetail(
 
       if (!isMountedRef.current) return
 
-      setData({
-        node: nodeResponse.data,
-        nodeStatus: statusResponse.data,
-        metrics: metricsResponse.data[0] || null,
-        isLoading: false,
-        error: null,
-        isPolling: true,
-      })
+      const newNode = nodeResponse.data
+      const newStatus = statusResponse.data
+      const newMetrics = metricsResponse.data[0] || null
+
+      // Only update state if data has actually changed (deep comparison)
+      const prevData = prevDataRef.current
+      const nodeChanged = !prevData || !deepEqual(prevData.node, newNode)
+      const statusChanged = !prevData || !deepEqual(prevData.nodeStatus, newStatus)
+      const metricsChanged = !prevData || !deepEqual(prevData.metrics, newMetrics)
+
+      if (nodeChanged || statusChanged || metricsChanged) {
+        prevDataRef.current = {
+          node: newNode,
+          nodeStatus: newStatus,
+          metrics: newMetrics,
+        }
+        setData({
+          node: newNode,
+          nodeStatus: newStatus,
+          metrics: newMetrics,
+          isLoading: false,
+          error: null,
+          isPolling: true,
+        })
+      } else {
+        // Data unchanged, just ensure loading state is false
+        setData(prev => ({ ...prev, isLoading: false, isPolling: true }))
+      }
     } catch (error) {
       if (!isMountedRef.current) return
 

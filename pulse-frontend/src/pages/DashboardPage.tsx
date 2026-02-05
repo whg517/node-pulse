@@ -121,9 +121,9 @@ export default function DashboardPage() {
 
         {/* Auto-refresh indicator */}
         {!isLoading && nodes.length > 0 && (
-          <div className="mt-6 text-center text-sm text-gray-500">
+          <div className="mt-6 text-center text-sm text-gray-500 flex items-center justify-center">
             <svg
-              className="inline-block h-4 w-4 mr-1 animate-spin"
+              className="inline-block h-4 w-4 mr-1 text-blue-500"
               fill="none"
               viewBox="0 0 24 24"
               aria-hidden="true"

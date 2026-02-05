@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { fetchNodes, fetchMetrics } from '../api'
 import type { NodeDTO, MetricsDTO } from '../api/types'
+import { deepEqual } from '../utils/deepEqual'
 
 export interface DashboardData {
   nodes: NodeDTO[]
@@ -37,6 +38,7 @@ export function useDashboardData(pollingInterval = 5000): UseDashboardDataResult
 
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const isMountedRef = useRef(true)
+  const prevDataRef = useRef<{ nodes: NodeDTO[]; metrics: MetricsDTO[] } | null>(null)
 
   const fetchData = async () => {
     if (!isMountedRef.current) return
@@ -52,13 +54,27 @@ export function useDashboardData(pollingInterval = 5000): UseDashboardDataResult
 
       if (!isMountedRef.current) return
 
-      setData({
-        nodes: nodesResponse.data,
-        metrics: metricsResponse.data,
-        isLoading: false,
-        error: null,
-        isPolling: true,
-      })
+      const newNodes = nodesResponse.data
+      const newMetrics = metricsResponse.data
+
+      // Only update state if data has actually changed (deep comparison)
+      const prevData = prevDataRef.current
+      const nodesChanged = !prevData || !deepEqual(prevData.nodes, newNodes)
+      const metricsChanged = !prevData || !deepEqual(prevData.metrics, newMetrics)
+
+      if (nodesChanged || metricsChanged) {
+        prevDataRef.current = { nodes: newNodes, metrics: newMetrics }
+        setData({
+          nodes: newNodes,
+          metrics: newMetrics,
+          isLoading: false,
+          error: null,
+          isPolling: true,
+        })
+      } else {
+        // Data unchanged, just ensure loading state is false
+        setData(prev => ({ ...prev, isLoading: false, isPolling: true }))
+      }
     } catch (error) {
       if (!isMountedRef.current) return
 

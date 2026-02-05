@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom'
+import { memo } from 'react'
 import { HealthStatusBadge } from './HealthStatusBadge'
 import { determineHealthStatus, type HealthStatus } from '../../utils/healthStatus'
+import { memoCompare } from '../../utils/deepEqual'
 import type { NodeDTO } from '../../api/types'
 import type { MetricsDTO } from '../../api/types'
 
@@ -79,14 +81,18 @@ function getKeyMetric(_node: NodeDTO, metrics?: MetricsDTO): string {
  * @example
  * <TopAnomaliesList nodes={nodes} metrics={metrics} />
  */
-export function TopAnomaliesList({ nodes, metrics, isLoading }: TopAnomaliesListProps) {
+export const TopAnomaliesList = memo(function TopAnomaliesList({ nodes, metrics, isLoading }: TopAnomaliesListProps) {
   const navigate = useNavigate()
 
+  // Defensive check: ensure nodes and metrics are arrays
+  const safeNodes = Array.isArray(nodes) ? nodes : []
+  const safeMetrics = Array.isArray(metrics) ? metrics : []
+
   // Create a map of node_id to metrics
-  const metricsMap = new Map(metrics.map(m => [m.node_id, m]))
+  const metricsMap = new Map(safeMetrics.map(m => [m.node_id, m]))
 
   // Calculate health status and severity for each node
-  const nodesWithHealth: NodeWithHealth[] = nodes.map(node => {
+  const nodesWithHealth: NodeWithHealth[] = safeNodes.map(node => {
     const metrics = metricsMap.get(node.id)
     const healthStatus = metrics
       ? determineHealthStatus({
@@ -206,4 +212,4 @@ export function TopAnomaliesList({ nodes, metrics, isLoading }: TopAnomaliesList
       </ul>
     </div>
   )
-}
+}, memoCompare)
