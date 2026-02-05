@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/kevin/node-pulse/pulse-api/internal/cache"
@@ -280,37 +281,58 @@ func (h *DataHandler) calculateBaseline(dataPoints []DataPoint) float64 {
 // GetMetricsHandler handles GET /api/v1/data/metrics
 // Returns real-time metrics from memory cache
 func (h *DataHandler) GetMetricsHandler(c *gin.Context) {
-	// Parse node IDs from query string
-	var nodeIDs []string
-	if nodeIDsStr := c.QueryArray("node_id"); len(nodeIDsStr) > 0 {
-		nodeIDs = nodeIDsStr
-	} else {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Missing required parameter",
-			"details": "node_id is required",
+	// Check if database is available
+	if h.pool == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{
+			"error": "Database unavailable",
+			"details": "The server is running in degraded mode without database connectivity",
 		})
 		return
 	}
+
+	// Parse node IDs from query string (optional - if empty, return all nodes)
+	nodeIDs := c.QueryArray("node_id")
 
 	// Query real-time metrics from database
 	ctx := context.Background()
 	metricsList := make([]map[string]interface{}, 0)
 
 	// Build query for latest metrics per node
-	query := `
-		SELECT DISTINCT ON (m.node_id)
-			m.node_id,
-			m.latency_ms,
-			m.packet_loss_rate,
-			m.jitter_ms,
-			m.timestamp
-		FROM metrics m
-		WHERE m.node_id = ANY($1)
-			AND m.timestamp >= NOW() - INTERVAL '1 hour'
-		ORDER BY m.node_id, m.timestamp DESC;
-	`
+	// If nodeIDs are provided, filter by them; otherwise return all nodes
+	var query string
+	var rows pgx.Rows
+	var err error
 
-	rows, err := h.pool.Query(ctx, query, nodeIDs)
+	if len(nodeIDs) > 0 {
+		// Filter by specific node IDs
+		query = `
+			SELECT DISTINCT ON (m.node_id)
+				m.node_id,
+				m.latency_ms,
+				m.packet_loss_rate,
+				m.jitter_ms,
+				m.timestamp
+			FROM metrics m
+			WHERE m.node_id = ANY($1)
+				AND m.timestamp >= NOW() - INTERVAL '1 hour'
+			ORDER BY m.node_id, m.timestamp DESC;
+		`
+		rows, err = h.pool.Query(ctx, query, nodeIDs)
+	} else {
+		// Return all nodes
+		query = `
+			SELECT DISTINCT ON (m.node_id)
+				m.node_id,
+				m.latency_ms,
+				m.packet_loss_rate,
+				m.jitter_ms,
+				m.timestamp
+			FROM metrics m
+			WHERE m.timestamp >= NOW() - INTERVAL '1 hour'
+			ORDER BY m.node_id, m.timestamp DESC;
+		`
+		rows, err = h.pool.Query(ctx, query)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to query metrics",
