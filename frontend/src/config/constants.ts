@@ -7,6 +7,9 @@
 // Token management (JWT-based authentication)
 export const ACCESS_TOKEN_EXPIRY_MINUTES = 15
 export const REFRESH_TOKEN_EXPIRY_DAYS = 7
+export const TOKEN_PRE_REFRESH_THRESHOLD_SECONDS = 30 // Refresh token 30 seconds before expiry
+export const TOKEN_REFRESH_CHECK_INTERVAL_SECONDS = 60 // Check every minute
+export const MAX_REFRESH_RETRY_COUNT = 1 // Maximum retry attempts for failed refresh
 
 // Session management (deprecated - kept for backwards compatibility)
 export const SESSION_EXPIRY_HOURS = 24

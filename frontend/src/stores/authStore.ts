@@ -1,6 +1,10 @@
 import { create } from 'zustand'
 import { login as apiLogin, logout as apiLogout, getMe as apiGetMe, refreshToken as apiRefreshToken } from '../api/auth'
-import { ACCESS_TOKEN_EXPIRY_MINUTES } from '../config/constants'
+import {
+  ACCESS_TOKEN_EXPIRY_MINUTES,
+  TOKEN_PRE_REFRESH_THRESHOLD_SECONDS,
+  TOKEN_REFRESH_CHECK_INTERVAL_SECONDS,
+} from '../config/constants'
 import type { User } from './types'
 
 // ============== Types ==============
@@ -127,7 +131,7 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     // Clear existing interval if any
     get().stopTokenExpirationCheck()
 
-    // Check every minute
+    // Check every minute (using constant)
     preRefreshIntervalId = window.setInterval(() => {
       const state = get()
       if (!state.tokenExpiresAt) {
@@ -136,27 +140,39 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
 
       const now = Date.now()
       const timeUntilExpiry = state.tokenExpiresAt - now
-      const PRE_REFRESH_THRESHOLD = 30 * 1000 // 30 seconds
+      const PRE_REFRESH_THRESHOLD = TOKEN_PRE_REFRESH_THRESHOLD_SECONDS * 1000 // Convert to milliseconds
 
-      // If token expires in less than 30 seconds, refresh it
-      if (timeUntilExpiry < PRE_REFRESH_THRESHOLD && timeUntilExpiry > 0) {
-        console.log('[AuthStore] Token expiring soon, refreshing...')
+      // If token expires in less than threshold, refresh it
+      // Also handle already expired tokens (edge case: check happened just after expiry)
+      if (timeUntilExpiry <= PRE_REFRESH_THRESHOLD && timeUntilExpiry > -60000) {
+        // Allow refresh if within 60 seconds of expiry (handles edge cases where check runs late)
+        console.log('[AuthStore] Token expiring soon or just expired, refreshing...')
         apiRefreshToken()
           .then((response) => {
             const expiry = Date.now() + ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000
             set({
               accessToken: response.data.access_token,
               tokenExpiresAt: expiry,
+              refreshPromise: null,
+              refreshRetryCount: 0, // Reset retry count on success
             })
             console.log('[AuthStore] Token refreshed successfully')
           })
           .catch((error) => {
             console.error('[AuthStore] Failed to refresh token:', error)
-            // If refresh fails, clear auth state
-            get().clearAuth()
+            // Don't immediately logout - might be a transient network error
+            // The apiClient interceptor will handle forcing logout if refresh consistently fails
+            const retryCount = get().refreshRetryCount + 1
+            if (retryCount >= 3) {
+              // After 3 consecutive failures, give up and logout
+              console.error('[AuthStore] Too many refresh failures, logging out')
+              get().clearAuth()
+            } else {
+              set({ refreshRetryCount: retryCount })
+            }
           })
       }
-    }, 60 * 1000) // Check every minute
+    }, TOKEN_REFRESH_CHECK_INTERVAL_SECONDS * 1000) // Use constant for check interval
   },
 
   stopTokenExpirationCheck: () => {

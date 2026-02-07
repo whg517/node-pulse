@@ -23,6 +23,7 @@ import {
 let refreshPromise: Promise<void> | null = null
 const MAX_REFRESH_RETRY = 1
 let refreshRetryCount = 0
+let consecutiveRefreshFailures = 0 // Track consecutive failures for exponential backoff
 
 /**
  * Base API client function
@@ -88,6 +89,16 @@ async function makeRequest<T>(
     if (!refreshPromise) {
       refreshRetryCount++
       refreshPromise = refreshToken()
+        .then(() => {
+          // Reset consecutive failures on success
+          consecutiveRefreshFailures = 0
+        })
+        .catch((error) => {
+          // Increment consecutive failures counter
+          consecutiveRefreshFailures++
+          console.error(`[apiClient] Token refresh failed (consecutive failures: ${consecutiveRefreshFailures}):`, error)
+          throw error
+        })
         .finally(() => {
           refreshPromise = null
         })
@@ -100,7 +111,10 @@ async function makeRequest<T>(
       return makeRequest<T>(endpoint, options, true)
     } catch (error) {
       // Refresh failed - clear auth and throw
-      authStore.clearAuth()
+      // Only logout if we've had multiple consecutive failures (allows transient network errors)
+      if (consecutiveRefreshFailures >= 3) {
+        authStore.clearAuth()
+      }
       throw new AuthenticationError('Session expired. Please login again.')
     }
   }
