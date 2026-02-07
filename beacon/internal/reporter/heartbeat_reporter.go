@@ -35,11 +35,19 @@ type HeartbeatData struct {
 	Timestamp      string  `json:"timestamp"`         // ISO 8601 timestamp
 }
 
+// TokenProvider defines interface for getting JWT tokens
+type TokenProvider interface {
+	GetAccessToken(ctx context.Context) (string, error)
+	GetNodeID() string
+	InvalidateToken()
+}
+
 // PulseAPIClient handles HTTP/HTTPS communication with Pulse server
 type PulseAPIClient struct {
 	serverURL  string
 	httpClient *http.Client
 	timeout    time.Duration
+	jwtClient  TokenProvider
 }
 
 // ProbeScheduler interface for accessing probe results
@@ -53,7 +61,8 @@ type HeartbeatReporter struct {
 	nodeID    string
 	scheduler ProbeScheduler
 	ticker    *time.Ticker
-	cancel    context.CancelFunc
+	ctx        context.Context // Store context for cancellation
+	cancel     context.CancelFunc
 	wg        sync.WaitGroup
 	mu        sync.Mutex
 	reporting bool
@@ -70,8 +79,8 @@ func NewHeartbeatData(nodeID string, latencyMs, packetLossRate, jitterMs float64
 	}
 }
 
-// NewPulseAPIClient creates a new Pulse API client with TLS support
-func NewPulseAPIClient(serverURL string, timeout time.Duration) *PulseAPIClient {
+// NewPulseAPIClient creates a new Pulse API client with TLS and JWT support
+func NewPulseAPIClient(serverURL string, timeout time.Duration, jwtClient TokenProvider) *PulseAPIClient {
 	// Create HTTP client with TLS config
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
@@ -91,23 +100,30 @@ func NewPulseAPIClient(serverURL string, timeout time.Duration) *PulseAPIClient 
 		serverURL:  serverURL,
 		httpClient: httpClient,
 		timeout:    timeout,
+		jwtClient:  jwtClient,
 	}
 }
 
 // NewHeartbeatReporter creates a new HeartbeatReporter with probe scheduler integration
-func NewHeartbeatReporter(apiClient *PulseAPIClient, nodeID string, scheduler ProbeScheduler) *HeartbeatReporter {
+func NewHeartbeatReporter(apiClient *PulseAPIClient, scheduler ProbeScheduler) *HeartbeatReporter {
 	return &HeartbeatReporter{
 		apiClient: apiClient,
-		nodeID:    nodeID,
+		nodeID:    apiClient.jwtClient.GetNodeID(),
 		scheduler: scheduler,
 		reporting: false,
 	}
 }
 
-// SendHeartbeat sends heartbeat data to Pulse server with latency measurement
-func (c *PulseAPIClient) SendHeartbeat(data *HeartbeatData) error {
+// SendHeartbeat sends heartbeat data to Pulse server with JWT authentication
+func (c *PulseAPIClient) SendHeartbeat(ctx context.Context, data *HeartbeatData) error {
 	// Measure upload latency (NFR-PERF-001)
 	startTime := time.Now()
+
+	// Get valid access token
+	accessToken, err := c.jwtClient.GetAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get access token: %w", err)
+	}
 
 	// Serialize heartbeat data to JSON
 	jsonData, err := json.Marshal(data)
@@ -117,12 +133,13 @@ func (c *PulseAPIClient) SendHeartbeat(data *HeartbeatData) error {
 
 	// Create HTTP POST request
 	url := c.serverURL + "/api/v1/beacon/heartbeat"
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	// Send request with timeout
 	resp, err := c.httpClient.Do(req)
@@ -130,6 +147,12 @@ func (c *PulseAPIClient) SendHeartbeat(data *HeartbeatData) error {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer resp.Body.Close()
+
+	// Handle authentication errors
+	if resp.StatusCode == http.StatusUnauthorized {
+		c.jwtClient.InvalidateToken()
+		return fmt.Errorf("authentication failed: invalid or expired token")
+	}
 
 	// Measure elapsed time
 	elapsed := time.Since(startTime)
@@ -210,8 +233,8 @@ func (r *HeartbeatReporter) StartReporting(ctx context.Context) {
 	r.reporting = true
 	r.ticker = time.NewTicker(ReportInterval)
 
-	// Create cancellable context
-	ctx, r.cancel = context.WithCancel(ctx)
+	// Store context and create cancellable context
+	r.ctx, r.cancel = context.WithCancel(ctx)
 	r.mu.Unlock()
 
 	logger.WithFields(map[string]interface{}{"component": "reporter", "interval": ReportInterval.String()}).Info("Starting heartbeat reporter")
@@ -229,7 +252,7 @@ func (r *HeartbeatReporter) StartReporting(ctx context.Context) {
 			select {
 			case <-r.ticker.C:
 				r.reportWithRetry()
-			case <-ctx.Done():
+			case <-r.ctx.Done():
 				r.ticker.Stop()
 				logger.WithField("component", "reporter").Info("Heartbeat reporter stopped")
 				return
@@ -265,7 +288,7 @@ func (r *HeartbeatReporter) reportWithRetry() {
 	data := r.AggregateMetrics(tcpResults, udpResults)
 
 	for attempt := 0; attempt < MaxRetries; attempt++ {
-		err := r.apiClient.SendHeartbeat(data)
+		err := r.apiClient.SendHeartbeat(r.ctx, data)
 		if err == nil {
 			return // Success
 		}

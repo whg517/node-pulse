@@ -13,6 +13,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/cache"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
+	"github.com/whg517/node-pulse/pulse/pkg/middleware"
 )
 
 var (
@@ -21,6 +22,7 @@ var (
 	ErrInvalidJitter     = "ERR_INVALID_JITTER"
 	ErrInvalidTimestamp  = "ERR_INVALID_TIMESTAMP"
 	ErrRateLimitExceeded = "ERR_RATE_LIMIT_EXCEEDED"
+	ErrUnauthorizedNode  = "ERR_UNAUTHORIZED_NODE"
 )
 
 // BeaconHandler handles beacon heartbeat API requests
@@ -43,6 +45,26 @@ func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCach
 
 // HandleHeartbeat handles POST /api/v1/beacon/heartbeat
 func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
+	// Extract and verify JWT token claims
+	userID, role, ok := middleware.RequireAuth(c)
+	if !ok {
+		// middleware.RequireAuth already sent the error response
+		return
+	}
+
+	// Verify role is "beacon"
+	if role != "beacon" {
+		c.JSON(http.StatusForbidden, models.ErrorResponse{
+			Code:    ErrUnauthorizedNode,
+			Message: "权限不足：需要 beacon 角色",
+			Details: map[string]interface{}{
+				"role":      role,
+				"required":  "beacon",
+			},
+		})
+		return
+	}
+
 	// Parse request body
 	var req models.HeartbeatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -63,6 +85,20 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 			Details: map[string]interface{}{
 				"node_id": req.NodeID,
 				"error":   err.Error(),
+			},
+		})
+		return
+	}
+
+	// Verify JWT token's user_id matches the requested node_id
+	// This ensures a beacon can only report for its own node
+	if userID != req.NodeID {
+		c.JSON(http.StatusForbidden, models.ErrorResponse{
+			Code:    ErrUnauthorizedNode,
+			Message: "权限不足：Token 节点 ID 与请求不匹配",
+			Details: map[string]interface{}{
+				"token_node_id": userID,
+				"request_node_id": req.NodeID,
 			},
 		})
 		return

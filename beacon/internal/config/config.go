@@ -24,6 +24,9 @@ type Config struct {
 	Region string   `mapstructure:"region" yaml:"region"`
 	Tags   []string `mapstructure:"tags" yaml:"tags"`
 
+	// Authentication configuration (JWT auth refactor)
+	APIKey string `mapstructure:"api_key" yaml:"api_key"`
+
 	// Probe configuration (for Story 3.3)
 	Probes []ProbeConfig `mapstructure:"probes" yaml:"probes"`
 

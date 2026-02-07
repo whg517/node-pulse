@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"beacon/internal/auth"
 	"beacon/internal/config"
 	"beacon/internal/logger"
 	"beacon/internal/metrics"
@@ -158,11 +159,26 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Starting heartbeat reporter...")
 
+	// Validate API key configuration
+	if cfg.APIKey == "" {
+		return fmt.Errorf("required field 'api_key' is missing (JWT authentication required)")
+	}
+
+	// Create JWT client for authentication
+	jwtClient := auth.NewJWTClient(cfg.PulseServer, cfg.APIKey, nil)
+
+	// Fetch initial token to validate configuration
+	logger.Info("Authenticating with Pulse server...")
+	if _, err := jwtClient.GetAccessToken(ctx); err != nil {
+		return fmt.Errorf("failed to authenticate with Pulse server: %w", err)
+	}
+	logger.Info("Authentication successful")
+
 	// Create Pulse API client with 5 second timeout (NFR-PERF-001)
-	apiClient := reporter.NewPulseAPIClient(cfg.PulseServer, 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(cfg.PulseServer, 5*time.Second, jwtClient)
 
 	// Create heartbeat reporter with scheduler integration
-	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, cfg.NodeID, scheduler)
+	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, scheduler)
 
 	// Start heartbeat reporting (using existing context)
 	heartbeatReporter.StartReporting(ctx)

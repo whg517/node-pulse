@@ -69,6 +69,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createBeaconTokensTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -474,6 +478,28 @@ func createAlertRecordsTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_alert_records_created_at ON alert_records(created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_alert_records_node_created ON alert_records(node_id, created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_alert_records_status_created ON alert_records(status, created_at DESC);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createBeaconTokensTable creates beacon_tokens table for API key authentication (JWT auth refactor)
+func createBeaconTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS beacon_tokens (
+			token_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			api_key_hash TEXT NOT NULL UNIQUE,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			last_used_at TIMESTAMPTZ,
+			expires_at TIMESTAMPTZ,
+			is_active BOOLEAN DEFAULT true
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_beacon_tokens_node_id ON beacon_tokens(node_id);
+		CREATE INDEX IF NOT EXISTS idx_beacon_tokens_api_key_hash ON beacon_tokens(api_key_hash);
+		CREATE INDEX IF NOT EXISTS idx_beacon_tokens_active ON beacon_tokens(is_active, expires_at);
 	`
 
 	_, err := pool.Exec(ctx, query)

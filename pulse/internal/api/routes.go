@@ -81,12 +81,21 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Health check endpoint (public)
 		v1.GET("/health", healthChecker.Handler)
 
-		// Beacon endpoints (public - no auth required for MVP)
+		// Beacon endpoints (JWT auth for beacons)
+		beaconTokenQuerier := db.NewBeaconTokensQuerier(pool)
+		jwtService, err := auth.NewJWTService()
+		if err != nil {
+			panic("Failed to create JWT service: " + err.Error())
+		}
+		beaconTokenHandler := NewBeaconTokenHandler(jwtService, beaconTokenQuerier)
 		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter, alertEngine)
+
 		beacon := v1.Group("/beacon")
 		{
-			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (public)
-			beacon.POST("/heartbeat", beaconHandler.HandleHeartbeat)
+			// POST /api/v1/beacon/token - Get JWT token using API key (public for beacons)
+			beacon.POST("/token", beaconTokenHandler.HandleGetToken)
+			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (JWT auth required)
+			beacon.POST("/heartbeat", middleware.JWTAuthMiddleware(), beaconHandler.HandleHeartbeat)
 		}
 
 		// Auth endpoints (public)

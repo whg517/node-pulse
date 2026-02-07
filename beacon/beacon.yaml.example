@@ -18,6 +18,10 @@ tags:
   - production
   - east-coast
 
+# Required: API Key for JWT authentication
+# Generate this on the Pulse server and associate it with your node
+api_key: your-beacon-api-key-here
+
 # Optional: Probe configurations (for Story 3.3)
 # If not specified, default probes will be used
 probes:

@@ -13,6 +13,36 @@ import (
 	"beacon/internal/reporter"
 )
 
+// mockJWTClient is a mock implementation of JWT client for testing
+type mockJWTClient struct {
+	token  string
+	nodeID string
+}
+
+func newMockJWTClient(token, nodeID string) *mockJWTClient {
+	return &mockJWTClient{
+		token:  token,
+		nodeID: nodeID,
+	}
+}
+
+func (m *mockJWTClient) GetAccessToken(ctx context.Context) (string, error) {
+	return m.token, nil
+}
+
+func (m *mockJWTClient) GetNodeID() string {
+	return m.nodeID
+}
+
+func (m *mockJWTClient) InvalidateToken() {
+	// Mock implementation - no-op
+}
+
+// Helper function to create test API client
+func createTestAPIClient(serverURL string) reporter.TokenProvider {
+	return newMockJWTClient("test-token", "test-node-id")
+}
+
 // initTestLogger initializes logger for integration tests
 func initTestLogger(t *testing.T) {
 	tempDir := t.TempDir()
@@ -40,11 +70,12 @@ func TestIntegration_SendHeartbeatSuccess(t *testing.T) {
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
 
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second, createTestAPIClient(mockServer.GetURL()))
+	ctx := context.Background()
 	data := reporter.NewHeartbeatData("test-node-uuid", 100.0, 0.5, 5.0)
 
 	// Act - send heartbeat
-	err := apiClient.SendHeartbeat(data)
+	err := apiClient.SendHeartbeat(ctx, data)
 
 	// Assert
 	if err != nil {
@@ -64,11 +95,12 @@ func TestIntegration_SendHeartbeatInvalidNodeID(t *testing.T) {
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
 
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second, createTestAPIClient(mockServer.GetURL()))
+	ctx := context.Background()
 	data := reporter.NewHeartbeatData("", 100.0, 0.5, 5.0) // Empty node_id
 
 	// Act - send heartbeat
-	err := apiClient.SendHeartbeat(data)
+	err := apiClient.SendHeartbeat(ctx, data)
 
 	// Assert - should fail
 	if err == nil {
@@ -84,11 +116,12 @@ func TestIntegration_SendHeartbeatInvalidMetrics(t *testing.T) {
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
 
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second, createTestAPIClient(mockServer.GetURL()))
+	ctx := context.Background()
 	data := reporter.NewHeartbeatData("test-node-uuid", -10.0, 0.5, 5.0) // Negative latency
 
 	// Act - send heartbeat
-	err := apiClient.SendHeartbeat(data)
+	err := apiClient.SendHeartbeat(ctx, data)
 
 	// Assert - should fail
 	if err == nil {
@@ -104,13 +137,13 @@ func TestIntegration_HeartbeatReporterSuccess(t *testing.T) {
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
 
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second, createTestAPIClient(mockServer.GetURL()))
 	mockScheduler := &mockProbeScheduler{
 		tcpResults: []*models.TCPProbeResult{
 			{Success: true, RTTMs: 100.0, PacketLossRate: 0.0, JitterMs: 2.0},
 		},
 	}
-	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid", mockScheduler)
+	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, mockScheduler)
 
 	// Act - start reporting
 	ctx := context.Background()
@@ -145,13 +178,13 @@ func TestIntegration_HeartbeatReporterRetry(t *testing.T) {
 	mockServer.SetResponseStatusCode(http.StatusInternalServerError)
 	defer mockServer.Close()
 
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second, createTestAPIClient(mockServer.GetURL()))
 	mockScheduler := &mockProbeScheduler{
 		tcpResults: []*models.TCPProbeResult{
 			{Success: true, RTTMs: 100.0, PacketLossRate: 0.0, JitterMs: 2.0},
 		},
 	}
-	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid", mockScheduler)
+	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, mockScheduler)
 
 	// Act - start reporting (will retry 3 times)
 	ctx := context.Background()
@@ -178,7 +211,7 @@ func TestIntegration_UploadLatency(t *testing.T) {
 	mockServer.SetDelay(500 * time.Millisecond)
 	defer mockServer.Close()
 
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second, createTestAPIClient(mockServer.GetURL()))
 	data := reporter.NewHeartbeatData("test-node-uuid", 100.0, 0.5, 5.0)
 
 	// Act - measure upload time
@@ -206,7 +239,7 @@ func TestIntegration_AggregateMetricsFromProbes(t *testing.T) {
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
 
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second, createTestAPIClient(mockServer.GetURL()))
 
 	// Create mock TCP and UDP probe results
 	tcpResults := []*models.TCPProbeResult{
@@ -223,7 +256,7 @@ func TestIntegration_AggregateMetricsFromProbes(t *testing.T) {
 		udpResults: udpResults,
 	}
 
-	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, "test-node-uuid", mockScheduler)
+	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, mockScheduler)
 
 	// Act - aggregate metrics
 	data := heartbeatReporter.AggregateMetrics(tcpResults, udpResults)
@@ -249,11 +282,12 @@ func TestIntegration_PulseAPIErrorResponse(t *testing.T) {
 	mockServer.SetResponseStatusCode(http.StatusBadRequest)
 	defer mockServer.Close()
 
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 5*time.Second, createTestAPIClient(mockServer.GetURL()))
+	ctx := context.Background()
 	data := reporter.NewHeartbeatData("test-node-uuid", 100.0, 0.5, 5.0)
 
 	// Act - send heartbeat
-	err := apiClient.SendHeartbeat(data)
+	err := apiClient.SendHeartbeat(ctx, data)
 
 	// Assert - should fail
 	if err == nil {
@@ -271,12 +305,13 @@ func TestIntegration_NetworkTimeout(t *testing.T) {
 	defer mockServer.Close()
 
 	// Create API client with 1 second timeout
-	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 1*time.Second)
+	apiClient := reporter.NewPulseAPIClient(mockServer.GetURL(), 1*time.Second, createTestAPIClient(mockServer.GetURL()))
+	ctx := context.Background()
 	data := reporter.NewHeartbeatData("test-node-uuid", 100.0, 0.5, 5.0)
 
 	// Act - send heartbeat (should timeout)
 	startTime := time.Now()
-	err := apiClient.SendHeartbeat(data)
+	err := apiClient.SendHeartbeat(ctx, data)
 	elapsed := time.Since(startTime)
 
 	// Assert - should timeout
