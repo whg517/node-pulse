@@ -216,7 +216,7 @@ func TestIntegration_UploadLatency(t *testing.T) {
 
 	// Act - measure upload time
 	startTime := time.Now()
-	err := apiClient.SendHeartbeat(data)
+	err := apiClient.SendHeartbeat(context.Background(), data)
 	elapsed := time.Since(startTime)
 
 	// Assert

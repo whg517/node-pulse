@@ -111,15 +111,15 @@ func TestTCPCoreMetricsIntegration(t *testing.T) {
 
 // TestUDPCoreMetricsIntegration tests UDP probe core metrics collection with real server
 func TestUDPCoreMetricsIntegration(t *testing.T) {
-	// Setup: Start a real UDP echo server
-	server := startIntegrationTestUDPEchoServer(t, "localhost:19002")
+	// Setup: Start a real UDP echo server on 127.0.0.1 to avoid IPv6 issues
+	server := startIntegrationTestUDPEchoServer(t, "127.0.0.1:19003")
 	defer server.Close()
 
 	t.Run("UDP probe with 10 samples - core metrics calculation", func(t *testing.T) {
 		config := probe.UDPProbeConfig{
 			Type:           "udp_ping",
-			Target:         "localhost",
-			Port:           19002,
+			Target:         "127.0.0.1",
+			Port:           19003,
 			TimeoutSeconds: 5,
 			Interval:       60,
 			Count:          10,
@@ -351,43 +351,68 @@ func (s *integrationTestTCPServer) Close() {
 // startIntegrationTestUDPEchoServer starts a simple UDP echo server for testing
 func startIntegrationTestUDPEchoServer(t *testing.T, addr string) *integrationTestUDPEchoServer {
 	t.Helper()
-	server := &integrationTestUDPEchoServer{addr: addr}
+	server := &integrationTestUDPEchoServer{addr: addr, readyChan: make(chan struct{})}
+
+	// Start server in goroutine
 	go server.start()
-	time.Sleep(100 * time.Millisecond) // Give server time to start
+
+	// Wait for server to be ready or timeout
+	select {
+	case <-server.readyChan:
+		// Server is ready
+	case <-time.After(2 * time.Second):
+		t.Fatalf("UDP echo server failed to start within 2 seconds")
+	}
+
 	return server
 }
 
 type integrationTestUDPEchoServer struct {
-	addr     string
-	conn     *net.UDPConn
-	stopChan chan struct{}
+	addr      string
+	conn      *net.UDPConn
+	stopChan  chan struct{}
+	readyChan chan struct{}
 }
 
 func (s *integrationTestUDPEchoServer) start() {
 	udpAddr, err := net.ResolveUDPAddr("udp", s.addr)
 	if err != nil {
+		fmt.Printf("❌ Failed to resolve UDP address %s: %v\n", s.addr, err)
 		return
 	}
 
 	conn, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
+		fmt.Printf("❌ Failed to listen on UDP %s: %v\n", s.addr, err)
 		return
 	}
 	s.conn = conn
 	s.stopChan = make(chan struct{})
 
+	fmt.Printf("✅ UDP echo server started on %s\n", s.addr)
+	// Signal that server is ready
+	close(s.readyChan)
+
 	buf := make([]byte, 1024)
 	for {
 		select {
 		case <-s.stopChan:
+			fmt.Printf("🛑 UDP echo server on %s stopping\n", s.addr)
 			return
 		default:
+			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			n, clientAddr, err := conn.ReadFromUDP(buf)
 			if err != nil {
+				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+					continue
+				}
 				continue
 			}
 			// Echo the response back
-			conn.WriteToUDP(buf[:n], clientAddr)
+			_, writeErr := conn.WriteToUDP(buf[:n], clientAddr)
+			if writeErr != nil {
+				fmt.Printf("⚠️  Failed to write to %s: %v\n", clientAddr, writeErr)
+			}
 		}
 	}
 }

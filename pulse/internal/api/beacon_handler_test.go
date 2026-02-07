@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 	"time"
 
@@ -13,24 +15,63 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/whg517/node-pulse/pulse/internal/auth"
 	"github.com/whg517/node-pulse/pulse/internal/cache"
+	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
+	"github.com/whg517/node-pulse/pulse/pkg/middleware"
 )
 
-// setupTestRouter creates a test router with beacon heartbeat endpoint
-func setupTestRouter(nodeQuerier db.NodesQuerier) *gin.Engine {
+func TestMain(m *testing.M) {
+	// Set up test config environment variables before running tests
+	os.Setenv("PULSE_JWT_SECRET", "test-secret-key-for-jwt-token-generation-in-tests-min-64-bytes-long-for-security")
+	os.Setenv("PULSE_SERVER_PORT", "8080")
+	os.Setenv("PULSE_DB_HOST", "localhost")
+	os.Setenv("PULSE_DB_PORT", "5432")
+	os.Setenv("PULSE_DB_NAME", "test")
+	os.Setenv("PULSE_DB_USER", "test")
+	os.Setenv("PULSE_DB_PASSWORD", "test")
+
+	// Load config (will use env vars if config file doesn't exist)
+	_, err := config.Load()
+	if err != nil {
+		// If config file doesn't exist, that's okay for tests - env vars will be used
+		fmt.Printf("Warning: Config file not found, using environment variables: %v\n", err)
+	}
+
+	// Run tests
+	code := m.Run()
+	os.Exit(code)
+}
+
+// setupTestRouter creates a test router with beacon heartbeat endpoint and JWT auth
+// Returns: router, authHeader for given nodeID
+func setupTestRouter(nodeQuerier db.NodesQuerier, nodeID string) (*gin.Engine, string) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
+
+	// Create JWT service for testing (config loaded in TestMain)
+	jwtService, err := auth.NewJWTService()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create JWT service: %v", err))
+	}
+
+	// Generate a beacon JWT token for testing with the given nodeID
+	token, _, err := jwtService.GenerateAccessToken(nodeID, "beacon")
+	if err != nil {
+		panic(fmt.Sprintf("Failed to generate test token: %v", err))
+	}
+	authHeader := fmt.Sprintf("Bearer %s", token)
 
 	// Create memory cache and batch writer for testing
 	memoryCache := cache.NewMemoryCache()
 	batchWriter := cache.NewBatchWriter(nil, 1000, 100) // nil DB for testing
 
 	beaconHandler := NewBeaconHandler(nodeQuerier, memoryCache, batchWriter, nil) // nil alert engine for tests
-	router.POST("/api/v1/beacon/heartbeat", beaconHandler.HandleHeartbeat)
+	router.POST("/api/v1/beacon/heartbeat", middleware.JWTAuthMiddleware(), beaconHandler.HandleHeartbeat)
 
-	return router
+	return router, authHeader
 }
 
 func TestHandleHeartbeat_ValidNodeAndValidMetrics(t *testing.T) {
@@ -47,7 +88,7 @@ func TestHandleHeartbeat_ValidNodeAndValidMetrics(t *testing.T) {
 		},
 	}
 
-	router := setupTestRouter(mockQuerier)
+	router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 	reqBody := models.HeartbeatRequest{
 		NodeID:         testNodeID.String(),
@@ -61,6 +102,8 @@ func TestHandleHeartbeat_ValidNodeAndValidMetrics(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()
@@ -78,8 +121,9 @@ func TestHandleHeartbeat_ValidNodeAndValidMetrics(t *testing.T) {
 
 func TestHandleHeartbeat_InvalidNodeID_Returns400(t *testing.T) {
 	// Arrange
+	testNodeID := uuid.New() // For auth token
 	mockQuerier := &MockNodesQuerier{}
-	router := setupTestRouter(mockQuerier)
+	router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 	reqBody := models.HeartbeatRequest{
 		NodeID:         "invalid-uuid-format",
@@ -93,6 +137,7 @@ func TestHandleHeartbeat_InvalidNodeID_Returns400(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()
@@ -117,7 +162,7 @@ func TestHandleHeartbeat_NodeNotFound_Returns400(t *testing.T) {
 		},
 	}
 
-	router := setupTestRouter(mockQuerier)
+	router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 	reqBody := models.HeartbeatRequest{
 		NodeID:         testNodeID.String(),
@@ -131,6 +176,7 @@ func TestHandleHeartbeat_NodeNotFound_Returns400(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()
@@ -170,7 +216,7 @@ func TestHandleHeartbeat_LatencyOutOfRange_Returns400(t *testing.T) {
 				},
 			}
 
-			router := setupTestRouter(mockQuerier)
+			router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 			reqBody := models.HeartbeatRequest{
 				NodeID:         testNodeID.String(),
@@ -184,6 +230,7 @@ func TestHandleHeartbeat_LatencyOutOfRange_Returns400(t *testing.T) {
 			bodyBytes, _ := json.Marshal(reqBody)
 			req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
 
 			// Act
 			w := httptest.NewRecorder()
@@ -225,7 +272,7 @@ func TestHandleHeartbeat_PacketLossOutOfRange_Returns400(t *testing.T) {
 				},
 			}
 
-			router := setupTestRouter(mockQuerier)
+			router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 			reqBody := models.HeartbeatRequest{
 				NodeID:         testNodeID.String(),
@@ -239,6 +286,7 @@ func TestHandleHeartbeat_PacketLossOutOfRange_Returns400(t *testing.T) {
 			bodyBytes, _ := json.Marshal(reqBody)
 			req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
 
 			// Act
 			w := httptest.NewRecorder()
@@ -280,7 +328,7 @@ func TestHandleHeartbeat_JitterOutOfRange_Returns400(t *testing.T) {
 				},
 			}
 
-			router := setupTestRouter(mockQuerier)
+			router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 			reqBody := models.HeartbeatRequest{
 				NodeID:         testNodeID.String(),
@@ -294,6 +342,7 @@ func TestHandleHeartbeat_JitterOutOfRange_Returns400(t *testing.T) {
 			bodyBytes, _ := json.Marshal(reqBody)
 			req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
 
 			// Act
 			w := httptest.NewRecorder()
@@ -313,8 +362,9 @@ func TestHandleHeartbeat_JitterOutOfRange_Returns400(t *testing.T) {
 
 func TestHandleHeartbeat_MissingRequiredFields_Returns400(t *testing.T) {
 	// Arrange
+	testNodeID := uuid.New() // For auth token
 	mockQuerier := &MockNodesQuerier{}
-	router := setupTestRouter(mockQuerier)
+	router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 	// Missing required fields
 	reqBody := map[string]interface{}{
@@ -325,6 +375,7 @@ func TestHandleHeartbeat_MissingRequiredFields_Returns400(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()
@@ -354,7 +405,7 @@ func TestHandleHeartbeat_InvalidTimestampFormat_Returns400(t *testing.T) {
 		},
 	}
 
-	router := setupTestRouter(mockQuerier)
+	router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 	reqBody := models.HeartbeatRequest{
 		NodeID:         testNodeID.String(),
@@ -368,6 +419,7 @@ func TestHandleHeartbeat_InvalidTimestampFormat_Returns400(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()
@@ -399,7 +451,7 @@ func TestHandleHeartbeat_InvalidProbeID_Returns400(t *testing.T) {
 			},
 		}
 
-		router := setupTestRouter(mockQuerier)
+		router, authHeader := setupTestRouter(mockQuerier, testNodeID.String())
 
 		// Create a probe_id that exceeds 255 characters
 		longProbeID := string(make([]byte, 256))
@@ -416,6 +468,7 @@ func TestHandleHeartbeat_InvalidProbeID_Returns400(t *testing.T) {
 		bodyBytes, _ := json.Marshal(reqBody)
 		req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", authHeader)
 
 		// Act
 		w := httptest.NewRecorder()

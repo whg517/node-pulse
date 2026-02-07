@@ -138,9 +138,7 @@ func createRefreshTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
 
 		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
 		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
-		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at_active
-			ON refresh_tokens(expires_at)
-			WHERE expires_at > NOW();
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at DESC);
 	`
 
 	_, err := pool.Exec(ctx, query)
