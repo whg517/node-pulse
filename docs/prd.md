@@ -2,7 +2,7 @@
 
 **作者:** Kevin
 **日期:** 2026-02-05 (全栈实现版本)
-**版本:** 3.5 (BMAD 标准)
+**版本:** 3.6 (BMAD 标准)
 
 ## 1. 项目背景与成功准则
 
@@ -1231,196 +1231,6 @@ Beacon 应监控自身的服务健康状况,特别是独立模式下的可观测
 *   **操作系统:** Linux(Ubuntu 20.04+、RHEL 8+)、macOS 11+
 *   **压缩库:** zlib(GZIP)、zstd(ZSTD 压缩)
 
-### 6.4 数据模型 (Data Model)
-
-系统核心数据实体定义。
-
-#### 6.5.1 Beacon (节点实体)
-
-```typescript
-interface Beacon {
-  beacon_id: UUID;              // 节点唯一标识
-  name: string;                 // 节点名称
-  location: {
-    country: string;            // 国家代码 (ISO 3166-1 alpha-2)
-    city: string;               // 城市名称
-    timezone: string;           // 时区 (IANA timezone database)
-  };
-  isp: string;                   // ISP 运营商名称
-  tags: string[];               // 节点标签
-  mode: 'standalone' | 'registered';  // 工作模式
-  node_token?: string;          // Node-Token (registered 模式)
-  config_version: number;       // 配置版本号
-  last_heartbeat: timestamp;    // 最后心跳时间
-  status: 'online' | 'offline' | 'degraded';  // 节点状态
-  created_at: timestamp;        // 创建时间
-  updated_at: timestamp;        // 更新时间
-}
-```
-
-#### 6.5.2 ProbeResult (探测结果)
-
-```typescript
-interface ProbeResult {
-  result_id: UUID;              // 结果唯一标识
-  beacon_id: UUID;              // Beacon ID
-  target_ip: string;            // 目标 IP
-  protocol: 'tcp' | 'udp' | 'icmp';  // 协议类型
-  timestamp: timestamp;         // 探测时间戳
-
-  // 性能指标
-  latency_ms: number;           // 延迟(毫秒)
-  loss_ratio: number;           // 丢包率 (0-1)
-  jitter_ms: number;           // 抖动(毫秒)
-
-  // MTR 数据
-  mtr_hops?: MTTHop[];          // MTR 跳数数组(如果协议是 ICMP)
-
-  created_at: timestamp;        // 创建时间
-}
-
-interface MTTHop {
-  hop_number: number;           // 跳数序号
-  ip: string;                  // IP 地址
-  hostname?: string;           // 主机名(如果可用)
-  asn: number;                 // AS 号
-  latitude?: number;           // 纬度(如果可用)
-  longitude?: number;          // 经度(如果可用)
-
-  latency_ms: number;          // 跳延迟
-  loss_ratio: number;          // 跳丢包率
-
-  // 趋势数据(最近 10 分钟)
-  trend_latency: number[];     // 延迟趋势
-  trend_loss: number[];        // 丢包率趋势
-}
-```
-
-#### 6.5.3 Alert (告警实体)
-
-```typescript
-interface Alert {
-  alert_id: UUID;               // 告警唯一标识
-  beacon_id: UUID;             // Beacon ID
-  severity: 'P0' | 'P1' | 'P2';  // 告警级别
-
-  // 告警类型
-  type: 'latency' | 'loss' | 'route_change' | 'bandwidth';  // 告警类型
-
-  // 告警数据
-  threshold: {                 // 触发阈值
-    metric: string;
-    operator: '>' | '<';
-    value: number;
-  };
-  actual_value: number;        // 实际值
-
-  // 诊断信息
-  diagnosis?: {
-    root_cause: 'local' | 'cross_border' | 'isp';
-    confidence: number;        // 0-1  置信度
-    details: string;
-  };
-
-  // 状态管理
-  status: 'active' | 'acknowledged' | 'resolved';  // 告警状态
-  acknowledged_at?: timestamp; // 确认时间
-  acknowledged_by?: string;    // 确认人
-  resolved_at?: timestamp;    // 恢复时间
-
-  // 通知
-  notifications_sent: number; // 已发送通知数量
-
-  created_at: timestamp;       // 创建时间
-  updated_at: timestamp;       // 更新时间
-}
-```
-
-#### 6.5.4 ProbeTask (探测任务)
-
-```typescript
-interface ProbeTask {
-  task_id: UUID;               // 任务唯一标识
-  beacon_id: UUID;             // Beacon ID
-
-  targets: string[];           // 目标列表
-  protocols: ('tcp' | 'udp' | 'icmp' | 'mtr')[];  // 协议列表
-  interval_seconds: number;   // 探测间隔
-  timeout_seconds: number;    // 超时时间
-  priority: 'normal' | 'low';  // 优先级
-
-  // 调度
-  enabled: boolean;            // 是否启用
-  next_run?: timestamp;       // 下次运行时间
-
-  config_version: number;      // 配置版本号
-
-  created_at: timestamp;       // 创建时间
-  updated_at: timestamp;       // 更新时间
-}
-```
-
-#### 6.5.5 ConfigVersion (配置版本)
-
-```typescript
-interface ConfigVersion {
-  version_id: number;          // 配置版本号
-  beacon_id: UUID;             // Beacon ID
-
-  config: ProbeTask;          // 探测任务配置
-
-  // 变更信息
-  updated_at: timestamp;       // 更新时间
-  updated_by: string;          // 更新人
-
-  // 基线对比
-  previous_config?: ProbeTask; // 上一版本配置
-  diff?: string[];             // 配置差异
-}
-```
-
-#### 6.5.6 WebhookDelivery (Webhook 投递记录)
-
-```typescript
-interface WebhookDelivery {
-  delivery_id: UUID;           // 投递唯一标识
-  alert_id: UUID;              // 告警 ID
-
-  webhook_url: string;         // Webhook URL
-  http_status: number;         // HTTP 状态码
-  response_time_ms: number;   // 响应时间
-
-  // 重试信息
-  retry_count: number;         // 重试次数
-  max_retries: number;         // 最大重试次数
-
-  // 状态
-  status: 'success' | 'failed' | 'pending';
-
-  sent_at: timestamp;          // 发送时间
-  completed_at?: timestamp;    // 完成时间
-}
-```
-
-#### 6.5.7 实体关系
-
-**实体关系图:**
-```
-Beacon (1) ----<--> (N) ProbeResult
-  |
-  +----> ProbeTask
-  |
-  +----> ConfigVersion (1:N 历史)
-  |
-  +----> Alert (N) ----> (N) WebhookDelivery
-```
-
-**关键关系:**
-- 一个 Beacon 生成多个 ProbeResult
-- 一个 Beacon 有一个当前 ProbeTask 和多个 ConfigVersion 历史
-- 一个 Alert 可触发多个 WebhookDelivery
-- Alert 通过 beacon_id 关联到 Beacon
-
 ## 7. 成功标准映射 (Success Criteria Mapping)
 
 | 成功标准 | 映射的功能需求 |
@@ -1466,6 +1276,7 @@ Beacon (1) ----<--> (N) ProbeResult
 
 | 版本 | 日期 | 作者 | 更改 |
 |---------|------|--------|---------|
+| 3.6 | 2026-02-06 | Kevin | **PRD 范围调整:** 移除 Section 6.4 数据模型(属于技术架构文档,不属于 PRD 范围) |
 | 3.5 | 2026-02-06 | Kevin | **PRD 范围调整:** 移除 Section 6.4 API 规范(属于技术架构文档,不属于 PRD 范围),将原 Section 6.5 数据模型重新编号为 6.4 |
 | 3.4 | 2026-02-06 | Kevin | **PRD Validation Fixes - Phase 2:** (1) 添加 7 个 FR 的可追溯性说明(FR-4.1.1, FR-4.1.3, FR-4.1.6, FR-4.1.7, FR-4.2.3, FR-4.3.3, FR-4.3.10); (2) 修复 3 处实现泄漏(SIGHUP → 操作系统信号,GZIP/ZSTD → 压缩率≥70%,文件/数据库 → 本地持久化缓存); (3) 完善 FR-4.1.5 压缩描述,添加压缩率指标 |
 | 3.3 | 2026-02-06 | Kevin | **PRD Validation Fixes:** (1) 解决 i18n 范围冲突(双语支持移入 MVP 范围); (2) 解决多协议范围冲突(TCP/ICMP/MTR 在 MVP,UDP/Iperf3 推迟至 v2.0); (3) 新增浏览器兼容性(NFR-5.4.4)、无障碍访问(NFR-5.4.5)、SEO 策略(NFR-5.4.6); (4) 完善 FR-4.2.1、FR-4.2.3、FR-4.3.6 可测量性; (5) 新增 API 规范(Section 6.4)、数据模型(Section 6.5); (6) 添加 8 个 FR 的验收标准 |
