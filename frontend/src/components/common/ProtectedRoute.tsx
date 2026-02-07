@@ -13,15 +13,15 @@ interface ProtectedRouteProps {
  *
  * Authentication checks:
  * 1. User has valid authentication state in Zustand store
- * 2. Session has not expired
+ * 2. Access token exists and is not expired
  * 3. Session restoration is complete (isLoading is false)
  *
- * Note: Actual session validation happens server-side via API calls.
+ * Note: Actual token validation happens server-side via API calls.
  * Client-side checks are for UX optimization only.
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation()
-  const { isAuthenticated, checkSession, isLoading } = useAuthStore()
+  const { isAuthenticated, tokenExpiresAt, isLoading } = useAuthStore()
 
   // Show loading indicator while session is being restored
   if (isLoading) {
@@ -39,7 +39,8 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  const isValid = checkSession()
+  // Check if token exists and is not expired
+  const isValid = tokenExpiresAt !== null && tokenExpiresAt > Date.now()
 
   if (!isAuthenticated || !isValid) {
     // Store the original location for post-login redirect

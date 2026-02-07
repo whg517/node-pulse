@@ -49,7 +49,7 @@ func TestCreateProbe_Integration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Login to get session cookie
+	// Login to get access token
 	loginReq := models.LoginRequest{
 		Username: username,
 		Password: password,
@@ -61,16 +61,15 @@ func TestCreateProbe_Integration(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
-	// Extract session_id cookie
-	cookies := w.Result().Cookies()
-	var sessionID string
-	for _, cookie := range cookies {
-		if cookie.Name == "session_id" {
-			sessionID = cookie.Value
-			break
-		}
-	}
-	require.NotEmpty(t, sessionID, "Failed to get session_id cookie")
+	// Extract access token from response
+	require.Equal(t, http.StatusOK, w.Code, "Login should succeed")
+
+	var loginResp models.LoginResponse
+	err = json.Unmarshal(w.Body.Bytes(), &loginResp)
+	require.NoError(t, err, "Failed to parse login response")
+	require.NotEmpty(t, loginResp.Data.AccessToken, "Failed to get access token")
+
+	accessToken := loginResp.Data.AccessToken
 
 	// Test 1: Create TCP probe
 	t.Run("create_tcp_probe", func(t *testing.T) {
@@ -88,7 +87,7 @@ func TestCreateProbe_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -126,7 +125,7 @@ func TestCreateProbe_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -156,7 +155,7 @@ func TestCreateProbe_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -185,7 +184,7 @@ func TestCreateProbe_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -258,21 +257,21 @@ func TestGetProbes_Integration(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
-	cookies := w.Result().Cookies()
-	var sessionID string
-	for _, cookie := range cookies {
-		if cookie.Name == "session_id" {
-			sessionID = cookie.Value
-			break
-		}
-	}
-	require.NotEmpty(t, sessionID)
+	// Extract access token from response
+	require.Equal(t, http.StatusOK, w.Code, "Login should succeed")
+
+	var loginResp models.LoginResponse
+	err = json.Unmarshal(w.Body.Bytes(), &loginResp)
+	require.NoError(t, err, "Failed to parse login response")
+	require.NotEmpty(t, loginResp.Data.AccessToken, "Failed to get access token")
+
+	accessToken := loginResp.Data.AccessToken
 
 	// Test: Get all probes
 	t.Run("get_all_probes", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/probes", nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -291,7 +290,7 @@ func TestGetProbes_Integration(t *testing.T) {
 	t.Run("get_probes_by_node", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/probes?node_id="+nodeID.String(), nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -357,15 +356,15 @@ func TestUpdateDeleteProbe_Integration(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
-	cookies := w.Result().Cookies()
-	var sessionID string
-	for _, cookie := range cookies {
-		if cookie.Name == "session_id" {
-			sessionID = cookie.Value
-			break
-		}
-	}
-	require.NotEmpty(t, sessionID)
+	// Extract access token from response
+	require.Equal(t, http.StatusOK, w.Code, "Login should succeed")
+
+	var loginResp models.LoginResponse
+	err = json.Unmarshal(w.Body.Bytes(), &loginResp)
+	require.NoError(t, err, "Failed to parse login response")
+	require.NotEmpty(t, loginResp.Data.AccessToken, "Failed to get access token")
+
+	accessToken := loginResp.Data.AccessToken
 
 	// Test 1: Update probe
 	t.Run("update_probe", func(t *testing.T) {
@@ -380,7 +379,7 @@ func TestUpdateDeleteProbe_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("PUT", "/api/v1/probes/"+probeID.String(), bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -399,7 +398,7 @@ func TestUpdateDeleteProbe_Integration(t *testing.T) {
 	t.Run("delete_probe", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/api/v1/probes/"+probeID.String()+"?confirm=true", nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -415,7 +414,7 @@ func TestUpdateDeleteProbe_Integration(t *testing.T) {
 		// Verify probe is deleted
 		w = httptest.NewRecorder()
 		req, _ = http.NewRequest("GET", "/api/v1/probes/"+probeID.String(), nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -434,7 +433,7 @@ func TestUpdateDeleteProbe_Integration(t *testing.T) {
 
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("DELETE", "/api/v1/probes/"+newProbeID.String(), nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -495,18 +494,15 @@ func TestProbeConstraints_Integration(t *testing.T) {
 		t.Logf("Login failed with status %d: %s", w.Code, w.Body.String())
 	}
 
-	cookies := w.Result().Cookies()
-	var sessionID string
-	for _, cookie := range cookies {
-		if cookie.Name == "session_id" {
-			sessionID = cookie.Value
-			break
-		}
-	}
-	if sessionID == "" {
-		t.Logf("No session cookie found. Response status: %d, Body: %s", w.Code, w.Body.String())
-	}
-	require.NotEmpty(t, sessionID)
+	// Extract access token from response
+	require.Equal(t, http.StatusOK, w.Code, "Login should succeed")
+
+	var loginResp models.LoginResponse
+	err = json.Unmarshal(w.Body.Bytes(), &loginResp)
+	require.NoError(t, err, "Failed to parse login response")
+	require.NotEmpty(t, loginResp.Data.AccessToken, "Failed to get access token")
+
+	accessToken := loginResp.Data.AccessToken
 
 	// Test 1: Interval out of range (too low)
 	t.Run("interval_too_low", func(t *testing.T) {
@@ -524,7 +520,7 @@ func TestProbeConstraints_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -547,7 +543,7 @@ func TestProbeConstraints_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -570,7 +566,7 @@ func TestProbeConstraints_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -593,7 +589,7 @@ func TestProbeConstraints_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -616,7 +612,7 @@ func TestProbeConstraints_Integration(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("POST", "/api/v1/probes", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 

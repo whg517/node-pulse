@@ -17,7 +17,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/whg517/node-pulse/pulse/internal/api"
-	"github.com/whg517/node-pulse/pulse/internal/auth"
 	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
@@ -58,16 +57,13 @@ func setupTestDBForAlertRecords(t *testing.T) (*pgxpool.Pool, func()) {
 	return pool, cleanup
 }
 
-func setupAlertRecordsAPITest(t *testing.T) (*gin.Engine, *pgxpool.Pool, *auth.SessionService, func()) {
+func setupAlertRecordsAPITest(t *testing.T) (*gin.Engine, *pgxpool.Pool, func()) {
 	pool, cleanup := setupTestDBForAlertRecords(t)
 
 	// Create tables
 	ctx := context.Background()
 	err := db.Migrate(ctx, pool)
 	require.NoError(t, err)
-
-	// Create test session service
-	sessionService := auth.NewSessionService(pool)
 
 	// Setup router
 	gin.SetMode(gin.TestMode)
@@ -89,11 +85,11 @@ func setupAlertRecordsAPITest(t *testing.T) (*gin.Engine, *pgxpool.Pool, *auth.S
 		handler.UpdateAlertRecordStatusHandler(c)
 	})
 
-	return router, pool, sessionService, cleanup
+	return router, pool, cleanup
 }
 
 func TestGetAlertRecordsHandler(t *testing.T) {
-	router, pool, _, cleanup := setupAlertRecordsAPITest(t)
+	router, pool, cleanup := setupAlertRecordsAPITest(t)
 	defer cleanup()
 
 	ctx := context.Background()
@@ -262,7 +258,7 @@ func TestGetAlertRecordsHandler(t *testing.T) {
 }
 
 func TestUpdateAlertRecordStatusHandler(t *testing.T) {
-	router, pool, _, cleanup := setupAlertRecordsAPITest(t)
+	router, pool, cleanup := setupAlertRecordsAPITest(t)
 	defer cleanup()
 
 	ctx := context.Background()

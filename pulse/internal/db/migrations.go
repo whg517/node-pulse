@@ -21,6 +21,10 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	if err := createRefreshTokensTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := createNodesTable(ctx, pool); err != nil {
 		return err
 	}
@@ -107,6 +111,30 @@ func createSessionsTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 		CREATE INDEX IF NOT EXISTS idx_sessions_expired_at ON sessions(expired_at);
 		CREATE INDEX IF NOT EXISTS idx_sessions_user_expired ON sessions(user_id, expired_at DESC);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createRefreshTokensTable creates the refresh_tokens table with indexes and foreign keys (JWT auth refactor)
+func createRefreshTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS refresh_tokens (
+			token_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+			token_hash TEXT NOT NULL,
+			jti TEXT NOT NULL,
+			device_info TEXT,
+			ip_address TEXT,
+			expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+			CONSTRAINT uq_token_hash UNIQUE (token_hash)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at);
 	`
 
 	_, err := pool.Exec(ctx, query)

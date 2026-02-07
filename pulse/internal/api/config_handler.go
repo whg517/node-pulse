@@ -65,8 +65,9 @@ func GetConfigHandler(c *gin.Context) {
 			"cookie_samesite":  cfg.Session.CookieSameSite,
 		},
 		"jwt": map[string]interface{}{
-			"secret":           "***REDACTED***",
-			"expiration_hours": cfg.JWT.ExpirationHours,
+			"secret":                            "***REDACTED***",
+			"access_token_expiration_minutes":   cfg.JWT.AccessTokenExpirationMinutes,
+			"refresh_token_expiration_days":     cfg.JWT.RefreshTokenExpirationDays,
 		},
 	}
 

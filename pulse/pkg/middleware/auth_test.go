@@ -1,41 +1,33 @@
 package middleware
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
+	"github.com/whg517/node-pulse/pulse/internal/auth"
+	"github.com/whg517/node-pulse/pulse/internal/config"
 )
 
-// mockSessionValidator is a mock implementation of SessionValidator for testing
-type mockSessionValidator struct {
-	userID  string
-	role    string
-	err     error
-	called  bool
-	sessionID string
+func init() {
+	// Load config for tests
+	config.MustLoad()
 }
 
-func (m *mockSessionValidator) GetSession(ctx context.Context, sessionID string) (string, string, error) {
-	m.called = true
-	m.sessionID = sessionID
-	return m.userID, m.role, m.err
-}
-
-func TestAuthMiddleware_Success(t *testing.T) {
+func TestJWTAuthMiddleware_Success(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	validator := &mockSessionValidator{
-		userID: "user-123",
-		role:   "admin",
-		err:    nil,
-	}
+	// Generate a valid JWT for testing
+	jwtService, err := auth.NewJWTService()
+	assert.NoError(t, err)
+
+	token, _, err := jwtService.GenerateAccessToken("user-123", "admin")
+	assert.NoError(t, err)
 
 	router := gin.New()
-	router.Use(AuthMiddleware(validator))
+	router.Use(JWTAuthMiddleware())
 	router.GET("/test", func(c *gin.Context) {
 		userID, ok := GetUserID(c)
 		assert.True(t, ok)
@@ -49,22 +41,18 @@ func TestAuthMiddleware_Success(t *testing.T) {
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
-	req.AddCookie(&http.Cookie{Name: "session_id", Value: "session-abc"})
+	req.Header.Set("Authorization", "Bearer "+token)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	assert.True(t, validator.called)
-	assert.Equal(t, "session-abc", validator.sessionID)
 	assert.Equal(t, http.StatusOK, w.Code)
 }
 
-func TestAuthMiddleware_NoCookie(t *testing.T) {
+func TestJWTAuthMiddleware_NoHeader(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	validator := &mockSessionValidator{}
-
 	router := gin.New()
-	router.Use(AuthMiddleware(validator))
+	router.Use(JWTAuthMiddleware())
 	router.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 	})
@@ -73,32 +61,44 @@ func TestAuthMiddleware_NoCookie(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	assert.False(t, validator.called)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Contains(t, w.Body.String(), "ERR_UNAUTHORIZED")
 }
 
-func TestAuthMiddleware_InvalidSession(t *testing.T) {
+func TestJWTAuthMiddleware_InvalidFormat(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	validator := &mockSessionValidator{
-		err: assert.AnError,
-	}
-
 	router := gin.New()
-	router.Use(AuthMiddleware(validator))
+	router.Use(JWTAuthMiddleware())
 	router.GET("/test", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "ok"})
 	})
 
 	req := httptest.NewRequest("GET", "/test", nil)
-	req.AddCookie(&http.Cookie{Name: "session_id", Value: "invalid-session"})
+	req.Header.Set("Authorization", "InvalidFormat token")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	assert.True(t, validator.called)
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "ERR_INVALID_SESSION")
+	assert.Contains(t, w.Body.String(), "ERR_INVALID_TOKEN_FORMAT")
+}
+
+func TestJWTAuthMiddleware_InvalidToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	router := gin.New()
+	router.Use(JWTAuthMiddleware())
+	router.GET("/test", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+	})
+
+	req := httptest.NewRequest("GET", "/test", nil)
+	req.Header.Set("Authorization", "Bearer invalid-token")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "ERR_INVALID_TOKEN")
 }
 
 func TestGetUserID_NoUser(t *testing.T) {

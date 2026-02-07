@@ -90,18 +90,21 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		}
 
 		// Auth endpoints (public)
-		authHandler := auth.NewAuthHandler(pool)
-		sessionService := auth.NewSessionService(pool)
+		authHandler, err := auth.NewAuthHandler(pool)
+		if err != nil {
+			panic("Failed to create auth handler: " + err.Error())
+		}
 		authGroup := v1.Group("/auth")
 		{
 			authGroup.POST("/login", authHandler.PostLogin)
+			authGroup.POST("/refresh", authHandler.PostRefresh)
 			authGroup.POST("/logout", authHandler.PostLogout)
-			authGroup.GET("/me", middleware.AuthMiddleware(sessionService), authHandler.GetMe)
+			authGroup.GET("/me", middleware.JWTAuthMiddleware(), authHandler.GetMe)
 		}
 
 		// Config management routes (require admin auth only)
 		configGroup := v1.Group("/config")
-		configGroup.Use(middleware.AuthMiddleware(sessionService))
+		configGroup.Use(middleware.JWTAuthMiddleware())
 		configGroup.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
 			// GET /api/v1/config - Get current configuration (admin only, passwords redacted)
@@ -117,7 +120,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Nodes group with auth middleware
 		nodes := v1.Group("/nodes")
-		nodes.Use(middleware.AuthMiddleware(sessionService))
+		nodes.Use(middleware.JWTAuthMiddleware())
 
 		// GET /api/v1/nodes - Get all nodes (all roles)
 		nodes.GET("", nodeHandler.GetNodesHandler)
@@ -147,7 +150,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Probes group with auth middleware
 		probes := v1.Group("/probes")
-		probes.Use(middleware.AuthMiddleware(sessionService))
+		probes.Use(middleware.JWTAuthMiddleware())
 
 		// GET /api/v1/probes - Get all probes (all roles)
 		probes.GET("", probeHandler.GetProbesHandler)
@@ -170,7 +173,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Data query routes (require auth)
 		dataHandler := NewDataHandler(pool, memoryCache)
 		data := v1.Group("/data")
-		data.Use(middleware.AuthMiddleware(sessionService))
+		data.Use(middleware.JWTAuthMiddleware())
 
 		// GET /api/v1/data/metrics - Get real-time metrics (all roles)
 		data.GET("/metrics", dataHandler.GetMetricsHandler)
@@ -192,7 +195,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Export group with auth and RBAC middleware (admin only)
 		exports := v1.Group("/data/export")
-		exports.Use(middleware.AuthMiddleware(sessionService))
+		exports.Use(middleware.JWTAuthMiddleware())
 		exports.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
 			// POST /api/v1/data/export - Create export task (admin only)
@@ -210,7 +213,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Alerts group with auth middleware
 		alerts := v1.Group("/alerts")
-		alerts.Use(middleware.AuthMiddleware(sessionService))
+		alerts.Use(middleware.JWTAuthMiddleware())
 
 		// GET /api/v1/alerts/rules - Get all alert rules (all roles)
 		alerts.GET("/rules", alertHandler.GetAlertRulesHandler)
@@ -235,7 +238,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Alert records group with auth middleware
 		alertRecords := v1.Group("/alerts/records")
-		alertRecords.Use(middleware.AuthMiddleware(sessionService))
+		alertRecords.Use(middleware.JWTAuthMiddleware())
 
 		// GET /api/v1/alerts/records - Get alert records with filtering (all roles)
 		alertRecords.GET("", alertRecordHandler.GetAlertRecordsHandler)
@@ -249,7 +252,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Webhooks group with auth and RBAC middleware (admin only)
 		webhooks := v1.Group("/webhooks")
-		webhooks.Use(middleware.AuthMiddleware(sessionService))
+		webhooks.Use(middleware.JWTAuthMiddleware())
 		webhooks.Use(middleware.RBACMiddleware([]string{"admin"}))
 
 		// GET /api/v1/webhooks - Get all webhook configurations (admin only)
@@ -270,7 +273,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Performance metrics routes (require auth) (Story 8.3, 8.4)
 		// Metrics group with auth middleware (all roles)
 		metricsGroup := v1.Group("/metrics")
-		metricsGroup.Use(middleware.AuthMiddleware(sessionService))
+		metricsGroup.Use(middleware.JWTAuthMiddleware())
 		{
 			// GET /api/v1/metrics/performance - Get performance metrics (all roles)
 			metricsGroup.GET("/performance", metricsHandler.GetPerformanceMetrics)

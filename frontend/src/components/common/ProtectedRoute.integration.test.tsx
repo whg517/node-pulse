@@ -12,8 +12,11 @@ describe('Authentication Flow Integration', () => {
       user: null,
       isAuthenticated: false,
       role: null,
-      sessionId: null,
-      sessionExpiry: null,
+      accessToken: null,
+      tokenExpiresAt: null,
+      refreshPromise: null,
+      refreshRetryCount: 0,
+      isLoading: false,
     })
   })
 
@@ -51,8 +54,10 @@ describe('Authentication Flow Integration', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
     render(
@@ -104,8 +109,8 @@ describe('Authentication Flow Integration', () => {
     expect(screen.getByText('Login Page')).toBeInTheDocument()
   })
 
-  it('should redirect to login when session expires', async () => {
-    // Set authenticated state with expired session
+  it('should redirect to login when token expires', async () => {
+    // Set authenticated state with expired token
     useAuthStore.setState({
       user: {
         id: 'user-123',
@@ -114,8 +119,10 @@ describe('Authentication Flow Integration', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() - 1000, // Expired
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() - 1000, // Expired
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
     render(
@@ -134,7 +141,7 @@ describe('Authentication Flow Integration', () => {
       </MemoryRouter>
     )
 
-    // Should be redirected to login due to expired session
+    // Should be redirected to login due to expired token
     await waitFor(() => {
       expect(screen.getByText('Login Page')).toBeInTheDocument()
     })

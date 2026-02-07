@@ -17,8 +17,10 @@ describe('useAuthStore', () => {
       user: null,
       isAuthenticated: false,
       role: null,
-      sessionId: null,
-      sessionExpiry: null,
+      accessToken: null,
+      tokenExpiresAt: null,
+      refreshPromise: null,
+      refreshRetryCount: 0,
       isLoading: false,
     })
     vi.clearAllMocks()
@@ -30,8 +32,10 @@ describe('useAuthStore', () => {
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
     expect(result.current.role).toBeNull()
-    expect(result.current.sessionId).toBeNull()
-    expect(result.current.sessionExpiry).toBeNull()
+    expect(result.current.accessToken).toBeNull()
+    expect(result.current.tokenExpiresAt).toBeNull()
+    expect(result.current.refreshPromise).toBeNull()
+    expect(result.current.refreshRetryCount).toBe(0)
     expect(result.current.isLoading).toBe(false)
   })
 
@@ -41,6 +45,7 @@ describe('useAuthStore', () => {
         user_id: 'user-123',
         username: 'testuser',
         role: 'admin' as const,
+        access_token: 'test-access-token',
       },
       message: 'Login successful',
       timestamp: '2024-01-01T00:00:00Z',
@@ -61,9 +66,9 @@ describe('useAuthStore', () => {
     })
     expect(result.current.isAuthenticated).toBe(true)
     expect(result.current.role).toBe('admin')
-    expect(result.current.sessionId).toBe('user-123')
-    expect(result.current.sessionExpiry).toBeDefined()
-    expect(result.current.sessionExpiry).toBeGreaterThan(Date.now())
+    expect(result.current.accessToken).toBe('test-access-token')
+    expect(result.current.tokenExpiresAt).toBeDefined()
+    expect(result.current.tokenExpiresAt).toBeGreaterThan(Date.now())
   })
 
   it('should handle logout successfully', async () => {
@@ -76,8 +81,10 @@ describe('useAuthStore', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
     const mockLogoutResponse = {
@@ -96,8 +103,10 @@ describe('useAuthStore', () => {
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
     expect(result.current.role).toBeNull()
-    expect(result.current.sessionId).toBeNull()
-    expect(result.current.sessionExpiry).toBeNull()
+    expect(result.current.accessToken).toBeNull()
+    expect(result.current.tokenExpiresAt).toBeNull()
+    expect(result.current.refreshPromise).toBeNull()
+    expect(result.current.refreshRetryCount).toBe(0)
   })
 
   it('should handle logout API failure gracefully', async () => {
@@ -110,8 +119,10 @@ describe('useAuthStore', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
     vi.mocked(authApi.logout).mockRejectedValue(new Error('Logout failed'))
@@ -125,6 +136,7 @@ describe('useAuthStore', () => {
     // Should still clear local state even if API call fails
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
+    expect(result.current.accessToken).toBeNull()
   })
 
   it('should set user manually', () => {
@@ -155,8 +167,10 @@ describe('useAuthStore', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
     const { result } = renderHook(() => useAuthStore())
@@ -168,14 +182,16 @@ describe('useAuthStore', () => {
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
     expect(result.current.role).toBeNull()
-    expect(result.current.sessionId).toBeNull()
-    expect(result.current.sessionExpiry).toBeNull()
+    expect(result.current.accessToken).toBeNull()
+    expect(result.current.tokenExpiresAt).toBeNull()
+    expect(result.current.refreshPromise).toBeNull()
+    expect(result.current.refreshRetryCount).toBe(0)
   })
 
-  it('should validate valid session', () => {
+  it('should have valid token when token exists and not expired', () => {
     const { result } = renderHook(() => useAuthStore())
 
-    // Set valid session
+    // Set valid token
     act(() => {
       useAuthStore.setState({
         user: {
@@ -185,20 +201,23 @@ describe('useAuthStore', () => {
         },
         isAuthenticated: true,
         role: 'admin',
-        sessionId: 'user-123',
-        sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+        accessToken: 'test-access-token',
+        tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        refreshPromise: null,
+        refreshRetryCount: 0,
       })
     })
 
-    const isValid = result.current.checkSession()
+    const state = result.current
+    const isValid = state.tokenExpiresAt !== null && state.tokenExpiresAt > Date.now()
     expect(isValid).toBe(true)
-    expect(result.current.isAuthenticated).toBe(true)
+    expect(state.isAuthenticated).toBe(true)
   })
 
-  it('should invalidate expired session', () => {
+  it('should handle expired token', () => {
     const { result } = renderHook(() => useAuthStore())
 
-    // Set expired session directly (not using act because we're setting state for testing)
+    // Set expired token directly
     useAuthStore.setState({
       user: {
         id: 'user-123',
@@ -207,23 +226,22 @@ describe('useAuthStore', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() - 1000, // Expired
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() - 1000, // Expired
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
-    // Trigger checkSession which should clear the state
-    act(() => {
-      result.current.checkSession()
-    })
-
-    expect(result.current.isAuthenticated).toBe(false)
-    expect(result.current.user).toBeNull()
+    const state = result.current
+    const isValid = state.tokenExpiresAt !== null && state.tokenExpiresAt > Date.now()
+    expect(isValid).toBe(false)
   })
 
-  it('should return false for session without expiry', () => {
+  it('should return false for token without expiry', () => {
     const { result } = renderHook(() => useAuthStore())
 
-    const isValid = result.current.checkSession()
+    const state = result.current
+    const isValid = state.tokenExpiresAt !== null && state.tokenExpiresAt > Date.now()
     expect(isValid).toBe(false)
   })
 
@@ -253,9 +271,6 @@ describe('useAuthStore', () => {
     })
     expect(result.current.isAuthenticated).toBe(true)
     expect(result.current.role).toBe('viewer')
-    expect(result.current.sessionId).toBe('user-789')
-    expect(result.current.sessionExpiry).toBeDefined()
-    expect(result.current.sessionExpiry).toBeGreaterThan(Date.now())
     expect(result.current.isLoading).toBe(false)
   })
 
@@ -273,8 +288,10 @@ describe('useAuthStore', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      refreshPromise: null,
+      refreshRetryCount: 0,
       isLoading: false,
     })
 
@@ -285,8 +302,8 @@ describe('useAuthStore', () => {
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
     expect(result.current.role).toBeNull()
-    expect(result.current.sessionId).toBeNull()
-    expect(result.current.sessionExpiry).toBeNull()
+    expect(result.current.accessToken).toBeNull()
+    expect(result.current.tokenExpiresAt).toBeNull()
     expect(result.current.isLoading).toBe(false)
   })
 

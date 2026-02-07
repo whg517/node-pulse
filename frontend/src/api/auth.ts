@@ -2,32 +2,31 @@
  * Authentication API endpoints
  *
  * Provides typed functions for user authentication operations
- * including login, logout, and session management.
+ * including login, logout, token refresh, and session management.
  */
 
 import { apiClient } from './client'
-import type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse } from '../types/auth'
+import type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse, RefreshResponse } from '../types/auth'
 import { AuthenticationError } from './errors'
 
-export type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse }
-
-const SESSION_COOKIE_NAME = 'session_id'
+export type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse, RefreshResponse }
 
 /**
  * User login
  *
  * Authenticates user with username and password.
- * On success, Session Cookie is automatically set by the server.
+ * On success, access token is returned in response body
+ * and refresh token is set in HttpOnly cookie.
  *
  * @param credentials - User credentials (username, password)
- * @returns Login response with user info and session details
+ * @returns Login response with user info and access token
  * @throws AuthenticationError if login fails
  * @throws ValidationError if credentials are invalid
  *
  * @example
  * try {
- *   const { user } = await login({ username: 'admin', password: 'pass123' })
- *   console.log('Logged in as', user.username)
+ *   const { data } = await login({ username: 'admin', password: 'pass123' })
+ *   console.log('Logged in as', data.username)
  * } catch (error) {
  *   if (isAuthenticationError(error)) {
  *     console.error('Login failed:', error.message)
@@ -53,10 +52,39 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
 }
 
 /**
+ * Refresh access token
+ *
+ * Uses the refresh token from HttpOnly cookie to get a new access token.
+ * Implements token rotation - old refresh token is deleted, new one is set.
+ *
+ * @returns Refresh response with new access token
+ * @throws AuthenticationError if refresh token is invalid or expired
+ *
+ * @example
+ * try {
+ *   const { data } = await refreshToken()
+ *   console.log('New access token:', data.access_token)
+ * } catch (error) {
+ *   console.error('Token refresh failed:', error.message)
+ * }
+ */
+export async function refreshToken(): Promise<RefreshResponse> {
+  try {
+    return await apiClient<RefreshResponse>('/api/v1/auth/refresh', {
+      method: 'POST',
+    })
+  } catch (error) {
+    throw new AuthenticationError(
+      error instanceof Error ? error.message : 'Failed to refresh token'
+    )
+  }
+}
+
+/**
  * User logout
  *
  * Clears the current user session.
- * Session Cookie is automatically cleared by the server.
+ * Refresh token is deleted from database and HttpOnly cookie is cleared.
  *
  * @returns Logout response
  * @throws AuthenticationError if logout fails
@@ -78,16 +106,10 @@ export async function logout(): Promise<LogoutResponse> {
 }
 
 /**
- * Session cookie name constant
- * Used by the server to set and read the session cookie
- */
-export { SESSION_COOKIE_NAME }
-
-/**
  * Get current user
  *
  * Retrieves the currently authenticated user's information.
- * Session Cookie is automatically sent by the browser.
+ * Access token is sent in Authorization header.
  *
  * @returns Current user response
  * @throws AuthenticationError if not authenticated

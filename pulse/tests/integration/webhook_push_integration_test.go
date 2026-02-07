@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/whg517/node-pulse/pulse/internal/alert"
+	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
 	"github.com/whg517/node-pulse/pulse/internal/testutil"
@@ -23,6 +24,10 @@ import (
 
 func setupWebhookPushTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	ctx := context.Background()
+
+	// Load config first
+	testutil.SetupTestConfig()
+	config.MustLoad()
 
 	// Connect to test database
 	testDBURL := testutil.GetTestDBURL()

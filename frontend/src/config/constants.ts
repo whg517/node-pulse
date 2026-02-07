@@ -4,7 +4,11 @@
  * Centralized location for magic numbers and configuration values
  */
 
-// Session management
+// Token management (JWT-based authentication)
+export const ACCESS_TOKEN_EXPIRY_MINUTES = 15
+export const REFRESH_TOKEN_EXPIRY_DAYS = 7
+
+// Session management (deprecated - kept for backwards compatibility)
 export const SESSION_EXPIRY_HOURS = 24
 export const SESSION_COOKIE_NAME = 'session_id'
 

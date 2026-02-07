@@ -6,10 +6,9 @@ export function useAuth() {
     isAuthenticated,
     user,
     role,
-    sessionExpiry,
+    tokenExpiresAt,
     login: storeLogin,
     logout: storeLogout,
-    checkSession,
   } = useAuthStore()
 
   const handleLogin = async (credentials: LoginRequest): Promise<LoginResponse> => {
@@ -27,7 +26,7 @@ export function useAuth() {
   }
 
   const isValidSession = (): boolean => {
-    return checkSession()
+    return tokenExpiresAt !== null && tokenExpiresAt > Date.now()
   }
 
   return {
@@ -35,7 +34,7 @@ export function useAuth() {
     userId: user?.id || null,
     username: user?.username || null,
     role,
-    sessionExpiry,
+    tokenExpiresAt,
     login: handleLogin,
     logout: handleLogout,
     isValidSession,

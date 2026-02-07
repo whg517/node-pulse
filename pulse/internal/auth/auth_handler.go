@@ -14,21 +14,28 @@ import (
 
 // AuthHandler handles authentication endpoints
 type AuthHandler struct {
-	pool           *pgxpool.Pool
-	sessionService *SessionService
+	pool              *pgxpool.Pool
+	jwtService        *JWTService
+	refreshTokenStore *RefreshTokenStore
 }
 
 // NewAuthHandler creates a new auth handler
-func NewAuthHandler(pool *pgxpool.Pool) *AuthHandler {
-	return &AuthHandler{
-		pool:           pool,
-		sessionService: NewSessionService(pool),
+func NewAuthHandler(pool *pgxpool.Pool) (*AuthHandler, error) {
+	jwtService, err := NewJWTService()
+	if err != nil {
+		return nil, err
 	}
+
+	return &AuthHandler{
+		pool:              pool,
+		jwtService:        jwtService,
+		refreshTokenStore: NewRefreshTokenStore(pool),
+	}, nil
 }
 
 // PostLogin handles POST /api/v1/auth/login
 // @Summary		User login
-// @Description	Authenticates a user and returns a session token. Supports username/password authentication.
+// @Description	Authenticates a user and returns JWT access token and refresh token cookie. Supports username/password authentication.
 // @Description
 // @Description	**Rate Limiting:** Maximum 5 failed attempts per IP per 15 minutes.
 // @Description	**Account Lockout:** 6 failed attempts will lock the account for 10 minutes.
@@ -128,49 +135,231 @@ func (h *AuthHandler) PostLogin(c *gin.Context) {
 	// Successful login - reset failed attempts
 	h.resetFailedAttempts(ctx, user.UserID)
 
-	// Create session
-	sessionID, err := h.sessionService.CreateSession(ctx, user.UserID, user.Role)
+	// Generate JWT access token
+	accessToken, _, err := h.jwtService.GenerateAccessToken(user.UserID, user.Role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "ERR_INTERNAL_SERVER",
-			Message: "Failed to create session",
+			Message: "Failed to generate access token",
 			Details: nil,
 		})
 		return
 	}
 
-	// Set session cookie
+	// Generate refresh token
+	refreshToken, refreshJti, err := h.jwtService.GenerateRefreshToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to generate refresh token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Hash refresh token for storage
+	tokenHash, err := h.jwtService.HashRefreshToken(refreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to process refresh token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Store refresh token in database
+	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days
+	err = h.refreshTokenStore.Save(ctx, user.UserID, tokenHash, refreshJti, "web", ip, expiresAt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to store refresh token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Set refresh token cookie
 	cfg := config.Get()
 	secureFlag := cfg.IsProduction()
+	c.SetSameSite(2) // http.SameSiteStrict
 	c.SetCookie(
-		"session_id",
-		sessionID,
-		86400,      // 24 hours in seconds
-		"/",        // path
-		"",         // domain (uses current host)
-		true,       // HttpOnly
+		"refresh_token",
+		refreshToken,
+		7*24*3600, // 7 days in seconds
+		"/",       // path
+		"",        // domain (uses current host)
+		true,      // HttpOnly (prevent XSS)
 		secureFlag, // Secure (true in production, false in development)
 	)
 
-	// Return success response
+	// Set security headers to prevent caching
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate")
+	c.Header("Pragma", "no-cache")
+	c.Header("X-Content-Type-Options", "nosniff")
+
+	// Return access token in response body
 	c.JSON(http.StatusOK, models.LoginResponse{
 		Data: struct {
-			UserID   string `json:"user_id"`
-			Username string `json:"username"`
-			Role     string `json:"role"`
+			UserID      string `json:"user_id"`
+			Username    string `json:"username"`
+			Role        string `json:"role"`
+			AccessToken string `json:"access_token"`
 		}{
-			UserID:   user.UserID,
-			Username: user.Username,
-			Role:     user.Role,
+			UserID:      user.UserID,
+			Username:    user.Username,
+			Role:        user.Role,
+			AccessToken: accessToken,
 		},
 		Message:   "Login successful",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
 
+// PostRefresh handles POST /api/v1/auth/refresh
+// @Summary		Refresh access token
+// @Description	Refreshes an expired access token using a valid refresh token from cookie. Implements token rotation.
+// @Tags			auth
+// @Accept			json
+// @Produce		json
+// @Success		200		{object}	models.RefreshResponse	"Token refreshed successfully"
+// @Failure		401		{object}	models.ErrorResponse	"Invalid or expired refresh token"
+// @Failure		500		{object}	models.ErrorResponse	"Internal server error"
+// @Router			/auth/refresh [post]
+func (h *AuthHandler) PostRefresh(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// Get refresh token from cookie
+	refreshToken, err := c.Cookie("refresh_token")
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "ERR_UNAUTHORIZED",
+			Message: "Refresh token not found",
+			Details: nil,
+		})
+		return
+	}
+
+	// Hash the token to look it up
+	tokenHash, err := h.jwtService.HashRefreshToken(refreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to process refresh token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Get refresh token from database
+	storedToken, err := h.refreshTokenStore.GetByHash(ctx, tokenHash)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "ERR_INVALID_REFRESH_TOKEN",
+			Message: "Invalid or expired refresh token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Delete old refresh token (token rotation)
+	if err := h.refreshTokenStore.Delete(ctx, tokenHash); err != nil {
+		// Log error but don't block refresh - security measure
+		// In production, use proper logging
+	}
+
+	// Look up user to get role
+	user, err := h.lookupUserByID(ctx, storedToken.UserID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "ERR_INVALID_REFRESH_TOKEN",
+			Message: "User not found",
+			Details: nil,
+		})
+		return
+	}
+
+	// Generate new access token
+	accessToken, _, err := h.jwtService.GenerateAccessToken(storedToken.UserID, user.Role)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to generate access token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Generate new refresh token
+	newRefreshToken, newRefreshJti, err := h.jwtService.GenerateRefreshToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to generate refresh token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Hash new refresh token
+	newTokenHash, err := h.jwtService.HashRefreshToken(newRefreshToken)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to process refresh token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Store new refresh token
+	expiresAt := time.Now().Add(7 * 24 * time.Hour) // 7 days
+	ip := c.ClientIP()
+	err = h.refreshTokenStore.Save(ctx, storedToken.UserID, newTokenHash, newRefreshJti, storedToken.DeviceInfo, ip, expiresAt)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to store refresh token",
+			Details: nil,
+		})
+		return
+	}
+
+	// Set new refresh token cookie
+	cfg := config.Get()
+	secureFlag := cfg.IsProduction()
+	c.SetSameSite(2) // http.SameSiteStrict
+	c.SetCookie(
+		"refresh_token",
+		newRefreshToken,
+		7*24*3600, // 7 days in seconds
+		"/",       // path
+		"",        // domain
+		true,      // HttpOnly
+		secureFlag, // Secure
+	)
+
+	// Set security headers
+	c.Header("Cache-Control", "no-store, no-cache, must-revalidate")
+	c.Header("Pragma", "no-cache")
+	c.Header("X-Content-Type-Options", "nosniff")
+
+	// Return new access token
+	c.JSON(http.StatusOK, models.RefreshResponse{
+		Data: struct {
+			AccessToken string `json:"access_token"`
+		}{
+			AccessToken: accessToken,
+		},
+		Message:   "Token refreshed successfully",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
 // GetMe handles GET /api/v1/auth/me
 // @Summary		Get current user
-// @Description	Returns the currently authenticated user's information based on session cookie.
+// @Description	Returns the currently authenticated user's information based on JWT access token.
 // @Tags			auth
 // @Accept			json
 // @Produce		json
@@ -223,34 +412,29 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 func (h *AuthHandler) PostLogout(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Get session ID from cookie
-	sessionID, err := c.Cookie("session_id")
-	if err != nil {
-		// No session cookie, but that's okay for logout
-		c.JSON(http.StatusOK, gin.H{
-			"message":   "Logout successful",
-			"timestamp": time.Now().Format(time.RFC3339),
-		})
-		return
+	// Get refresh token from cookie
+	refreshToken, err := c.Cookie("refresh_token")
+	if err == nil {
+		// Hash and delete from database
+		tokenHash, err := h.jwtService.HashRefreshToken(refreshToken)
+		if err == nil {
+			// Log error but don't block logout
+			h.refreshTokenStore.Delete(ctx, tokenHash)
+		}
 	}
 
-	// Delete session from database
-	if err := h.sessionService.DeleteSession(ctx, sessionID); err != nil {
-		// Log error but don't block logout
-		// In production, use proper logging
-	}
-
-	// Clear session cookie
+	// Clear refresh token cookie
 	cfg := config.Get()
 	secureFlag := cfg.IsProduction()
+	c.SetSameSite(2) // http.SameSiteStrict
 	c.SetCookie(
-		"session_id",
+		"refresh_token",
 		"",
 		-1,         // MaxAge -1 to delete
 		"/",        // path
 		"",         // domain
 		true,       // HttpOnly
-		secureFlag, // Secure (true in production, false in development)
+		secureFlag, // Secure
 	)
 
 	c.JSON(http.StatusOK, gin.H{

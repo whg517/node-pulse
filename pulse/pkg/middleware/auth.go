@@ -1,46 +1,82 @@
 package middleware
 
 import (
-	"context"
+	"fmt"
 	"net/http"
+	"strings"
+	"sync"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/whg517/node-pulse/pulse/internal/auth"
 )
 
-// SessionValidator defines the interface for session validation
-// This allows the middleware to be decoupled from the concrete auth service
-type SessionValidator interface {
-	GetSession(ctx context.Context, sessionID string) (userID string, role string, err error)
+var (
+	jwtService     *auth.JWTService
+	jwtServiceOnce sync.Once
+	jwtServiceErr  error
+)
+
+// initJWTService initializes the JWT service singleton
+func initJWTService() error {
+	var initErr error
+	jwtServiceOnce.Do(func() {
+		jwtService, initErr = auth.NewJWTService()
+	})
+	return initErr
 }
 
-// AuthMiddleware validates session cookie and sets user context
-func AuthMiddleware(validator SessionValidator) gin.HandlerFunc {
+// JWTAuthMiddleware validates JWT access token from Authorization header
+func JWTAuthMiddleware() gin.HandlerFunc {
+	// Initialize JWT service once
+	if err := initJWTService(); err != nil {
+		// If we can't initialize JWT service, return a middleware that always fails
+		return func(c *gin.Context) {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"code":    "ERR_INTERNAL_SERVER",
+				"message": "Failed to initialize JWT service",
+			})
+		}
+	}
+
 	return func(c *gin.Context) {
-		// Extract session ID from cookie
-		sessionID, err := c.Cookie("session_id")
-		if err != nil {
-			// No session cookie = unauthenticated
+		// Extract token from Authorization header
+		authHeader := c.GetHeader("Authorization")
+		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
 				"code":    "ERR_UNAUTHORIZED",
-				"message": "Authentication required",
+				"message": "Authorization header required",
 			})
 			return
 		}
 
-		// Validate session
-		userID, role, err := validator.GetSession(c.Request.Context(), sessionID)
-		if err != nil {
-			// Invalid or expired session
+		// Check if it's a Bearer token
+		if !strings.HasPrefix(authHeader, "Bearer ") {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"code":    "ERR_INVALID_SESSION",
-				"message": "Invalid or expired session",
+				"code":    "ERR_INVALID_TOKEN_FORMAT",
+				"message": "Invalid authorization header format. Expected: Bearer <token>",
+			})
+			return
+		}
+
+		// Extract the token
+		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+		// Validate JWT token
+		claims, err := jwtService.ValidateAccessToken(tokenString)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    "ERR_INVALID_TOKEN",
+				"message": fmt.Sprintf("Invalid or expired access token: %v", err),
 			})
 			return
 		}
 
 		// Set user context for protected routes
-		c.Set("user_id", userID)
-		c.Set("role", role)
+		c.Set("user_id", claims.UserID)
+		c.Set("role", claims.Role)
+		c.Set("jti", claims.Jti)
+
 		c.Next()
 	}
 }

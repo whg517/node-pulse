@@ -1,6 +1,6 @@
 import { create } from 'zustand'
-import { login as apiLogin, logout as apiLogout, getMe as apiGetMe } from '../api/auth'
-import { SESSION_EXPIRY_HOURS } from '../config/constants'
+import { login as apiLogin, logout as apiLogout, getMe as apiGetMe, refreshToken as apiRefreshToken } from '../api/auth'
+import { ACCESS_TOKEN_EXPIRY_MINUTES } from '../config/constants'
 import type { User } from './types'
 
 // ============== Types ==============
@@ -8,8 +8,10 @@ export interface AuthState {
   user: User | null
   isAuthenticated: boolean
   role: 'admin' | 'operator' | 'viewer' | null
-  sessionId: string | null
-  sessionExpiry: number | null
+  accessToken: string | null
+  tokenExpiresAt: number | null
+  refreshPromise: Promise<void> | null
+  refreshRetryCount: number
   isLoading: boolean
 }
 
@@ -18,11 +20,16 @@ export interface AuthActions {
   logout: () => Promise<void>
   setUser: (user: User) => void
   clearAuth: () => void
-  checkSession: () => boolean
+  setAccessToken: (token: string, expiresIn: number) => void
+  startTokenExpirationCheck: () => void
+  stopTokenExpirationCheck: () => void
   restoreSession: () => Promise<void>
 }
 
 type AuthStore = AuthState & AuthActions
+
+// Token pre-refresh interval ID
+let preRefreshIntervalId: number | null = null
 
 // ============== Store ==============
 export const useAuthStore = create<AuthStore>((set, get) => ({
@@ -30,14 +37,16 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   user: null,
   isAuthenticated: false,
   role: null,
-  sessionId: null,
-  sessionExpiry: null,
+  accessToken: null,
+  tokenExpiresAt: null,
+  refreshPromise: null,
+  refreshRetryCount: 0,
   isLoading: false,
 
   // Actions
   login: async (username: string, password: string) => {
     const response = await apiLogin({ username, password })
-    const expiry = Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000
+    const expiry = Date.now() + ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000
 
     const user: User = {
       id: response.data.user_id,
@@ -49,12 +58,20 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       user,
       isAuthenticated: true,
       role: response.data.role,
-      sessionId: response.data.user_id, // Using user_id as session identifier
-      sessionExpiry: expiry,
+      accessToken: response.data.access_token,
+      tokenExpiresAt: expiry,
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
+
+    // Start pre-refresh timer
+    get().startTokenExpirationCheck()
   },
 
   logout: async () => {
+    // Stop pre-refresh timer
+    get().stopTokenExpirationCheck()
+
     try {
       await apiLogout()
     } catch (error) {
@@ -65,8 +82,10 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         user: null,
         isAuthenticated: false,
         role: null,
-        sessionId: null,
-        sessionExpiry: null,
+        accessToken: null,
+        tokenExpiresAt: null,
+        refreshPromise: null,
+        refreshRetryCount: 0,
       })
     }
   },
@@ -80,40 +99,77 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   clearAuth: () => {
+    // Stop pre-refresh timer
+    get().stopTokenExpirationCheck()
+
     set({
       user: null,
       isAuthenticated: false,
       role: null,
-      sessionId: null,
-      sessionExpiry: null,
+      accessToken: null,
+      tokenExpiresAt: null,
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
   },
 
-  checkSession: () => {
-    const state = get()
-    if (!state.sessionExpiry) return false
+  setAccessToken: (token: string, expiresIn: number) => {
+    const expiry = Date.now() + expiresIn * 1000
+    set({
+      accessToken: token,
+      tokenExpiresAt: expiry,
+      refreshPromise: null,
+      refreshRetryCount: 0,
+    })
+  },
 
-    const now = Date.now()
-    const isValid = state.isAuthenticated && state.sessionExpiry > now
+  startTokenExpirationCheck: () => {
+    // Clear existing interval if any
+    get().stopTokenExpirationCheck()
 
-    if (!isValid) {
-      set({
-        user: null,
-        isAuthenticated: false,
-        role: null,
-        sessionId: null,
-        sessionExpiry: null,
-      })
+    // Check every minute
+    preRefreshIntervalId = window.setInterval(() => {
+      const state = get()
+      if (!state.tokenExpiresAt) {
+        return
+      }
+
+      const now = Date.now()
+      const timeUntilExpiry = state.tokenExpiresAt - now
+      const PRE_REFRESH_THRESHOLD = 30 * 1000 // 30 seconds
+
+      // If token expires in less than 30 seconds, refresh it
+      if (timeUntilExpiry < PRE_REFRESH_THRESHOLD && timeUntilExpiry > 0) {
+        console.log('[AuthStore] Token expiring soon, refreshing...')
+        apiRefreshToken()
+          .then((response) => {
+            const expiry = Date.now() + ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000
+            set({
+              accessToken: response.data.access_token,
+              tokenExpiresAt: expiry,
+            })
+            console.log('[AuthStore] Token refreshed successfully')
+          })
+          .catch((error) => {
+            console.error('[AuthStore] Failed to refresh token:', error)
+            // If refresh fails, clear auth state
+            get().clearAuth()
+          })
+      }
+    }, 60 * 1000) // Check every minute
+  },
+
+  stopTokenExpirationCheck: () => {
+    if (preRefreshIntervalId !== null) {
+      clearInterval(preRefreshIntervalId)
+      preRefreshIntervalId = null
     }
-
-    return isValid
   },
 
   restoreSession: async () => {
     set({ isLoading: true })
     try {
       const response = await apiGetMe()
-      const expiry = Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000
 
       const user: User = {
         id: response.data.user_id,
@@ -125,8 +181,6 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         user,
         isAuthenticated: true,
         role: response.data.role,
-        sessionId: response.data.user_id,
-        sessionExpiry: expiry,
         isLoading: false,
       })
     } catch (error) {
@@ -135,8 +189,8 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
         user: null,
         isAuthenticated: false,
         role: null,
-        sessionId: null,
-        sessionExpiry: null,
+        accessToken: null,
+        tokenExpiresAt: null,
         isLoading: false,
       })
     }

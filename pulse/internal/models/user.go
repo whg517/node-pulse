@@ -23,9 +23,19 @@ type LoginRequest struct {
 // LoginResponse represents successful login response
 type LoginResponse struct {
 	Data struct {
-		UserID   string `json:"user_id"`
-		Username string `json:"username"`
-		Role     string `json:"role"`
+		UserID      string `json:"user_id"`
+		Username    string `json:"username"`
+		Role        string `json:"role"`
+		AccessToken string `json:"access_token"`
+	} `json:"data"`
+	Message   string `json:"message"`
+	Timestamp string `json:"timestamp"`
+}
+
+// RefreshResponse represents successful token refresh response
+type RefreshResponse struct {
+	Data struct {
+		AccessToken string `json:"access_token"`
 	} `json:"data"`
 	Message   string `json:"message"`
 	Timestamp string `json:"timestamp"`

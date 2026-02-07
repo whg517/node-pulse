@@ -81,8 +81,9 @@ type SessionConfig struct {
 
 // JWTConfig holds JWT configuration
 type JWTConfig struct {
-	Secret          string
-	ExpirationHours int
+	Secret                         string
+	AccessTokenExpirationMinutes   int
+	RefreshTokenExpirationDays     int
 }
 
 var (
@@ -281,8 +282,11 @@ func mergeConfig(dst, src *Config) {
 	if src.JWT.Secret != "" {
 		dst.JWT.Secret = src.JWT.Secret
 	}
-	if src.JWT.ExpirationHours != 0 {
-		dst.JWT.ExpirationHours = src.JWT.ExpirationHours
+	if src.JWT.AccessTokenExpirationMinutes != 0 {
+		dst.JWT.AccessTokenExpirationMinutes = src.JWT.AccessTokenExpirationMinutes
+	}
+	if src.JWT.RefreshTokenExpirationDays != 0 {
+		dst.JWT.RefreshTokenExpirationDays = src.JWT.RefreshTokenExpirationDays
 	}
 }
 
@@ -299,7 +303,7 @@ func generateSecrets(cfg *Config) error {
 
 	// Generate JWT secret if not provided
 	if cfg.JWT.Secret == "" {
-		secret, err := generateRandomSecret(32)
+		secret, err := generateRandomSecret(64) // 64 bytes (512 bits) for NIST compliance
 		if err != nil {
 			return fmt.Errorf("failed to generate JWT secret: %w", err)
 		}
@@ -362,8 +366,9 @@ func defaultConfig() *Config {
 			CookieSameSite:  "Lax",
 		},
 		JWT: JWTConfig{
-			Secret:          "", // Will be auto-generated if empty
-			ExpirationHours: 24,
+			Secret:                         "", // Will be auto-generated if empty
+			AccessTokenExpirationMinutes:   15, // 15 minutes
+			RefreshTokenExpirationDays:     7,  // 7 days
 		},
 	}
 }
@@ -579,9 +584,14 @@ func mergeFromEnv(cfg *Config) *Config {
 		// Legacy fallback
 		cfg.JWT.Secret = v
 	}
-	if v := os.Getenv("PULSE_JWT_EXPIRATION_HOURS"); v != "" {
-		if i := parseInt(v, cfg.JWT.ExpirationHours); i > 0 {
-			cfg.JWT.ExpirationHours = i
+	if v := os.Getenv("PULSE_JWT_ACCESS_TOKEN_EXPIRATION_MINUTES"); v != "" {
+		if i := parseInt(v, cfg.JWT.AccessTokenExpirationMinutes); i > 0 {
+			cfg.JWT.AccessTokenExpirationMinutes = i
+		}
+	}
+	if v := os.Getenv("PULSE_JWT_REFRESH_TOKEN_EXPIRATION_DAYS"); v != "" {
+		if i := parseInt(v, cfg.JWT.RefreshTokenExpirationDays); i > 0 {
+			cfg.JWT.RefreshTokenExpirationDays = i
 		}
 	}
 
@@ -747,8 +757,14 @@ func (c *JWTConfig) Validate() error {
 	if c.Secret == "" {
 		return fmt.Errorf("jwt secret cannot be empty")
 	}
-	if c.ExpirationHours <= 0 {
-		return fmt.Errorf("jwt expiration_hours must be positive, got %d", c.ExpirationHours)
+	if len(c.Secret) < 64 {
+		return fmt.Errorf("jwt secret must be at least 64 bytes (512 bits) for security, got %d bytes", len(c.Secret))
+	}
+	if c.AccessTokenExpirationMinutes <= 0 {
+		return fmt.Errorf("jwt access_token_expiration_minutes must be positive, got %d", c.AccessTokenExpirationMinutes)
+	}
+	if c.RefreshTokenExpirationDays <= 0 {
+		return fmt.Errorf("jwt refresh_token_expiration_days must be positive, got %d", c.RefreshTokenExpirationDays)
 	}
 	return nil
 }
@@ -793,13 +809,14 @@ func (c *Config) String() string {
 			"Cleanup{Enabled:%t} Log{Level:%s} CORS{Origins:%s} "+
 			"Admin{Username:%s,Password:***REDACTED***} "+
 			"Session{Secret:***REDACTED***,ExpirationHours:%d} "+
-			"JWT{Secret:***REDACTED***,ExpirationHours:%d}}",
+			"JWT{Secret:***REDACTED***,AccessTokenExpirationMinutes:%d,RefreshTokenExpirationDays:%d}}",
 		c.Server.Port, c.Server.Mode,
 		maskURL(c.DB.URL), c.DB.MaxConnections,
 		c.Cleanup.Enabled, c.Log.Level,
 		c.CORS.AllowedOrigins, c.Admin.Username,
 		c.Session.ExpirationHours,
-		c.JWT.ExpirationHours,
+		c.JWT.AccessTokenExpirationMinutes,
+		c.JWT.RefreshTokenExpirationDays,
 	)
 }
 

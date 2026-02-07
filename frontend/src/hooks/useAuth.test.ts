@@ -17,8 +17,11 @@ describe('useAuth', () => {
       user: null,
       isAuthenticated: false,
       role: null,
-      sessionId: null,
-      sessionExpiry: null,
+      accessToken: null,
+      tokenExpiresAt: null,
+      refreshPromise: null,
+      refreshRetryCount: 0,
+      isLoading: false,
     })
     vi.clearAllMocks()
   })
@@ -68,8 +71,10 @@ describe('useAuth', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
     const mockLogoutResponse = {
@@ -97,7 +102,7 @@ describe('useAuth', () => {
     // Initially invalid
     expect(result.current.isValidSession()).toBe(false)
 
-    // Set valid session
+    // Set valid token
     act(() => {
       useAuthStore.setState({
         user: {
@@ -107,17 +112,19 @@ describe('useAuth', () => {
         },
         isAuthenticated: true,
         role: 'admin',
-        sessionId: 'user-123',
-        sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+        accessToken: 'test-access-token',
+        tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+        refreshPromise: null,
+        refreshRetryCount: 0,
       })
     })
 
     expect(result.current.isValidSession()).toBe(true)
 
-    // Set expired session
+    // Set expired token
     act(() => {
       useAuthStore.setState({
-        sessionExpiry: Date.now() - 1000,
+        tokenExpiresAt: Date.now() - 1000,
       })
     })
 

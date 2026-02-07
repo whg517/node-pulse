@@ -10,6 +10,15 @@ export interface LoginResponse {
     user_id: string
     username: string
     role: 'admin' | 'operator' | 'viewer'
+    access_token: string
+  }
+  message: string
+  timestamp: string
+}
+
+export interface RefreshResponse {
+  data: {
+    access_token: string
   }
   message: string
   timestamp: string

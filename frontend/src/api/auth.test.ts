@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { login, logout } from './auth'
+import { login, logout, refreshToken } from './auth'
 import { AuthenticationError } from './errors'
-import { SESSION_COOKIE_NAME } from './auth'
 
 describe('auth API', () => {
   beforeEach(() => {
@@ -19,6 +18,7 @@ describe('auth API', () => {
           user_id: '123',
           username: 'admin',
           role: 'admin',
+          access_token: 'test-access-token',
         },
         message: 'Login successful',
         timestamp: '2026-01-26T10:00:00Z',
@@ -241,9 +241,52 @@ describe('auth API', () => {
     })
   })
 
-  describe('SESSION_COOKIE_NAME', () => {
-    it('should export SESSION_COOKIE_NAME constant', () => {
-      expect(SESSION_COOKIE_NAME).toBe('session_id')
+  describe('refreshToken', () => {
+    it('should successfully refresh token', async () => {
+      const mockResponse = {
+        data: {
+          access_token: 'new_access_token',
+        },
+        message: 'Token refreshed successfully',
+        timestamp: '2024-02-05T00:00:00Z',
+      }
+
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      })
+
+      vi.stubGlobal('fetch', mockFetch)
+
+      const result = await refreshToken()
+
+      expect(result.data.access_token).toBe('new_access_token')
+      expect(mockFetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/auth/refresh'),
+        expect.objectContaining({
+          method: 'POST',
+          credentials: 'include',
+        })
+      )
+
+      vi.unstubAllGlobals()
+    })
+
+    it('should handle refresh token errors', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({
+          code: 'ERR_INVALID_REFRESH_TOKEN',
+          message: 'Invalid or expired refresh token',
+        }),
+      })
+
+      vi.stubGlobal('fetch', mockFetch)
+
+      await expect(refreshToken()).rejects.toThrow(AuthenticationError)
+
+      vi.unstubAllGlobals()
     })
   })
 })

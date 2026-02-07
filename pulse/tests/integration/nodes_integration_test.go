@@ -19,6 +19,9 @@ import (
 
 // TestGetNodeStatus_Integration tests the complete node status query workflow
 func TestGetNodeStatus_Integration(t *testing.T) {
+	// Clear rate limit store before test
+	auth.ClearRateLimitStore()
+
 	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
 
@@ -65,7 +68,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Login to get session cookie
+	// Login to get access token
 	loginReq := models.LoginRequest{
 		Username: username,
 		Password: password,
@@ -77,22 +80,21 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
-	// Extract session_id cookie
-	cookies := w.Result().Cookies()
-	var sessionID string
-	for _, cookie := range cookies {
-		if cookie.Name == "session_id" {
-			sessionID = cookie.Value
-			break
-		}
-	}
-	require.NotEmpty(t, sessionID, "Failed to get session_id cookie")
+	// Extract access token from response
+	require.Equal(t, http.StatusOK, w.Code, "Login should succeed")
+
+	var loginResp models.LoginResponse
+	err = json.Unmarshal(w.Body.Bytes(), &loginResp)
+	require.NoError(t, err, "Failed to parse login response")
+	require.NotEmpty(t, loginResp.Data.AccessToken, "Failed to get access token")
+
+	accessToken := loginResp.Data.AccessToken
 
 	// Test 1: Query online node status
 	t.Run("online_node_status", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/nodes/"+onlineNodeID.String()+"/status", nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -113,7 +115,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	t.Run("offline_node_status", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/nodes/"+offlineNodeID.String()+"/status", nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -133,7 +135,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	t.Run("connecting_node_status", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/nodes/"+connectingNodeID.String()+"/status", nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -154,7 +156,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 		nonExistentID := uuid.New()
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/nodes/"+nonExistentID.String()+"/status", nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -193,7 +195,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 			go func() {
 				w := httptest.NewRecorder()
 				req, _ := http.NewRequest("GET", "/api/v1/nodes/"+onlineNodeID.String()+"/status", nil)
-				req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+				req.Header.Set("Authorization", "Bearer "+accessToken)
 
 				router.ServeHTTP(w, req)
 			}()
@@ -210,7 +212,7 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	t.Run("invalid_uuid_format", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req, _ := http.NewRequest("GET", "/api/v1/nodes/invalid-uuid-123/status", nil)
-		req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+		req.Header.Set("Authorization", "Bearer "+accessToken)
 
 		router.ServeHTTP(w, req)
 
@@ -229,6 +231,9 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 
 // TestGetNodeStatus_ResponseFormat validates API response format matches specification
 func TestGetNodeStatus_ResponseFormat(t *testing.T) {
+	// Clear rate limit store before test
+	auth.ClearRateLimitStore()
+
 	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
 
@@ -266,25 +271,24 @@ func TestGetNodeStatus_ResponseFormat(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
-	cookies := w.Result().Cookies()
-	var sessionID string
-	for _, cookie := range cookies {
-		if cookie.Name == "session_id" {
-			sessionID = cookie.Value
-			break
-		}
-	}
+	// Extract access token from response
+	require.Equal(t, http.StatusOK, w.Code)
+
+	var loginResp models.LoginResponse
+	err := json.Unmarshal(w.Body.Bytes(), &loginResp)
+	require.NoError(t, err)
+	require.NotEmpty(t, loginResp.Data.AccessToken)
 
 	// Query node status
 	w = httptest.NewRecorder()
 	req, _ = http.NewRequest("GET", "/api/v1/nodes/"+nodeID.String()+"/status", nil)
-	req.AddCookie(&http.Cookie{Name: "session_id", Value: sessionID})
+	req.Header.Set("Authorization", "Bearer "+loginResp.Data.AccessToken)
 
 	router.ServeHTTP(w, req)
 
 	// Validate response format
 	var resp models.GetNodeStatusResponse
-	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 
 	// Check response structure

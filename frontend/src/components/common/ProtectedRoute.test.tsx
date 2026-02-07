@@ -15,8 +15,11 @@ describe('ProtectedRoute', () => {
       user: null,
       isAuthenticated: false,
       role: null,
-      sessionId: null,
-      sessionExpiry: null,
+      accessToken: null,
+      tokenExpiresAt: null,
+      refreshPromise: null,
+      refreshRetryCount: 0,
+      isLoading: false,
     })
   })
 
@@ -40,7 +43,7 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('Login Page')).toBeInTheDocument()
   })
 
-  it('should redirect to login when session is invalid', () => {
+  it('should redirect to login when token is invalid', () => {
     useAuthStore.setState({
       user: {
         id: 'user-123',
@@ -49,8 +52,10 @@ describe('ProtectedRoute', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() - 1000, // Expired
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() - 1000, // Expired
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
     render(
@@ -72,7 +77,7 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('Login Page')).toBeInTheDocument()
   })
 
-  it('should render protected content when user is authenticated with valid session', () => {
+  it('should render protected content when user is authenticated with valid token', () => {
     useAuthStore.setState({
       user: {
         id: 'user-123',
@@ -81,8 +86,10 @@ describe('ProtectedRoute', () => {
       },
       isAuthenticated: true,
       role: 'admin',
-      sessionId: 'user-123',
-      sessionExpiry: Date.now() + 24 * 60 * 60 * 1000,
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      refreshPromise: null,
+      refreshRetryCount: 0,
     })
 
     render(
