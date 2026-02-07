@@ -10,11 +10,10 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/pulse-api/cmd/server",
+            "program": "${workspaceFolder}/pulse/cmd/server",
             "env": {
                 "DATABASE_URL": "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable",
             }
         }
     ]
 }
-
