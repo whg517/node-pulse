@@ -20,7 +20,6 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
-	"github.com/whg517/node-pulse/pulse/pkg/middleware"
 )
 
 func TestMain(m *testing.M) {
@@ -67,7 +66,25 @@ func setupTestRouter(nodeQuerier db.NodesQuerier, nodeID string) (*gin.Engine, s
 	batchWriter := cache.NewBatchWriter(nil, 1000, 100) // nil DB for testing
 
 	beaconHandler := NewBeaconHandler(nodeQuerier, memoryCache, batchWriter, nil) // nil alert engine for tests
-	router.POST("/api/v1/beacon/heartbeat", middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleHeartbeat)
+
+	// For testing, bypass the JWT middleware's blacklist check by using a custom middleware
+	// that only validates the token signature (not the blacklist)
+	router.POST("/api/v1/beacon/heartbeat", func(c *gin.Context) {
+		// Simple token validation for tests (no blacklist check)
+		authHeader := c.GetHeader("Authorization")
+		if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+			tokenString := authHeader[7:]
+			_, err := jwtService.ValidateAccessToken(tokenString)
+			if err == nil {
+				// Token valid, set context and proceed
+				c.Set("user_id", nodeID)
+				c.Set("role", "beacon")
+				c.Next()
+				return
+			}
+		}
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{Code: "UNAUTHORIZED", Message: "Invalid token"})
+	}, beaconHandler.HandleHeartbeat)
 
 	return router, authHeader
 }

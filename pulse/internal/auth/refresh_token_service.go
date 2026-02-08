@@ -13,35 +13,111 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/models"
 )
 
+// mutexWithTimestamp wraps a mutex with last-used timestamp for cleanup
+type mutexWithTimestamp struct {
+	mu    *sync.Mutex
+	usedAt time.Time
+}
+
 // RefreshTokenService manages refresh tokens with concurrency protection
 type RefreshTokenService struct {
-	pool    *pgxpool.Pool
-	mutexes map[string]*sync.Mutex
-	mu      sync.Mutex
+	pool         *pgxpool.Pool
+	mutexes      map[string]*mutexWithTimestamp
+	mu           sync.Mutex
+	cleanupDone  chan struct{}
 }
 
 // NewRefreshTokenService creates a new refresh token service
 func NewRefreshTokenService(pool *pgxpool.Pool) *RefreshTokenService {
-	return &RefreshTokenService{
-		pool:    pool,
-		mutexes: make(map[string]*sync.Mutex),
+	service := &RefreshTokenService{
+		pool:        pool,
+		mutexes:     make(map[string]*mutexWithTimestamp),
+		cleanupDone: make(chan struct{}),
+	}
+
+	// Start background cleanup goroutine
+	go service.cleanupMutexes()
+
+	return service
+}
+
+// cleanupMutexes periodically removes unused mutexes (prevents memory leak)
+func (s *RefreshTokenService) cleanupMutexes() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			s.mu.Lock()
+			cutoff := time.Now().Add(-5 * time.Minute)
+			for userID, mt := range s.mutexes {
+				if mt.usedAt.Before(cutoff) {
+					delete(s.mutexes, userID)
+				}
+			}
+			s.mu.Unlock()
+		case <-s.cleanupDone:
+			return
+		}
 	}
 }
 
-// getMutex returns a mutex for the given user ID (with cleanup)
+// Shutdown stops the cleanup goroutine
+func (s *RefreshTokenService) Shutdown() {
+	close(s.cleanupDone)
+}
+
+// getMutex returns a mutex for the given user ID (with cleanup tracking)
 func (s *RefreshTokenService) getMutex(userID string) *sync.Mutex {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if _, exists := s.mutexes[userID]; !exists {
-		s.mutexes[userID] = &sync.Mutex{}
+		s.mutexes[userID] = &mutexWithTimestamp{
+			mu:    &sync.Mutex{},
+			usedAt: time.Now(),
+		}
+	} else {
+		// Update last-used time
+		s.mutexes[userID].usedAt = time.Now()
 	}
 
-	return s.mutexes[userID]
+	return s.mutexes[userID].mu
 }
 
 // CreateRefreshToken creates a new refresh token for a user
 func (s *RefreshTokenService) CreateRefreshToken(ctx context.Context, userID string, userAgent, ipAddress string, maxValidityDays int) (string, *models.RefreshToken, error) {
+	// Check session limit (max 10 active sessions per user)
+	var activeCount int
+	err := s.pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM refresh_tokens
+		WHERE user_id = $1 AND revoked_at IS NULL
+	`, userID).Scan(&activeCount)
+
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to check active sessions: %w", err)
+	}
+
+	const maxSessions = 10
+	if activeCount >= maxSessions {
+		// Delete oldest session to make room
+		_, err = s.pool.Exec(ctx, `
+			DELETE FROM refresh_tokens
+			WHERE user_id = $1
+			  AND revoked_at IS NULL
+			  AND token_id IN (
+			    SELECT token_id FROM refresh_tokens
+			    WHERE user_id = $1 AND revoked_at IS NULL
+			    ORDER BY created_at ASC
+			    LIMIT 1
+			  )
+		`, userID)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to cleanup old sessions: %w", err)
+		}
+	}
+
 	tokenPlain := uuid.New().String()
 
 	// Hash the token for storage
@@ -66,7 +142,7 @@ func (s *RefreshTokenService) CreateRefreshToken(ctx context.Context, userID str
 
 	// Insert into database
 	var dbToken models.RefreshToken
-	err := s.pool.QueryRow(ctx, `
+	err = s.pool.QueryRow(ctx, `
 		INSERT INTO refresh_tokens (token_id, user_id, expires_at, max_valid_until, user_agent, ip_address, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
 		RETURNING id, token_id, user_id, expires_at, max_valid_until, revoked_at, replaced_by, user_agent, ip_address, created_at, updated_at
@@ -153,16 +229,27 @@ func (s *RefreshTokenService) RotateRefreshToken(ctx context.Context, oldToken s
 	hash := sha256.Sum256([]byte(oldToken))
 	tokenHash := hex.EncodeToString(hash[:])
 
-	// First, validate and get the old token info to get userID
+	// Acquire mutex FIRST to prevent TOCTOU race (before any validation)
+	// We need userID for the mutex, so do a lightweight lookup first
+	var userID string
+	err := s.pool.QueryRow(ctx, `
+		SELECT user_id FROM refresh_tokens WHERE token_id = $1
+	`, tokenHash).Scan(&userID)
+
+	if err != nil {
+		return "", nil, fmt.Errorf("token not found: %w", err)
+	}
+
+	// Get mutex for this user and lock immediately
+	userMutex := s.getMutex(userID)
+	userMutex.Lock()
+	defer userMutex.Unlock()
+
+	// Now validate the token (we're already holding the lock)
 	oldTokenInfo, err := s.ValidateRefreshToken(ctx, oldToken)
 	if err != nil {
 		return "", nil, err
 	}
-
-	// Get mutex for this user
-	userMutex := s.getMutex(oldTokenInfo.UserID)
-	userMutex.Lock()
-	defer userMutex.Unlock()
 
 	// Start transaction
 	tx, err := s.pool.Begin(ctx)

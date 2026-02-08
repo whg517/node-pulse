@@ -2,7 +2,6 @@ package auth
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -12,6 +11,18 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/whg517/node-pulse/pulse/internal/models"
+)
+
+const (
+	// Security constants (F29: Moved from magic numbers to named constants)
+	MaxFailedLoginAttempts    = 5
+	AccountLockDuration        = 10 * time.Minute
+	MaxSessionsPerUser         = 10
+	MaxLoginAttemptsPerMinute  = 5
+	MaxRefreshAttemptsPerMinute = 10
+	MaxLogoutAttemptsPerMinute = 10
+	MaxAPIKeyAttemptsPerMinute = 11
+	ConstantAuthDelay          = 150 * time.Millisecond
 )
 
 // AuthHandler handles authentication endpoints
@@ -66,6 +77,16 @@ func NewAuthHandler(
 func (h *AuthHandler) Login(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	// Validate Content-Type header (prevent content-type confusion attacks)
+	contentType := c.GetHeader("Content-Type")
+	if contentType != "application/json" {
+		c.JSON(http.StatusUnsupportedMediaType, models.ErrorResponse{
+			Code:    "UNSUPPORTED_MEDIA_TYPE",
+			Message: "Content-Type must be application/json",
+		})
+		return
+	}
+
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
@@ -79,8 +100,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	ipAddress := c.ClientIP()
 	rateLimitKey := fmt.Sprintf("ip:%s", ipAddress)
 
-	// Check rate limit
-	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, 5)
+	// Check rate limit (uses MaxLoginAttemptsPerMinute constant)
+	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, MaxLoginAttemptsPerMinute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "RATE_LIMIT_ERROR",
@@ -99,22 +120,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Get user from database
+	// Get user from database with account lock check (database-side time check)
 	var userID, role, passwordHash string
 	var failedAttempts int
-	var lockedUntil *time.Time
 	err = h.pool.QueryRow(ctx, `
-		SELECT user_id, password_hash, role, failed_login_attempts, locked_until
+		SELECT user_id, password_hash, role, failed_login_attempts
 		FROM users
 		WHERE username = $1
-	`, req.Username).Scan(&userID, &passwordHash, &role, &failedAttempts, &lockedUntil)
+		  AND (locked_until IS NULL OR locked_until <= NOW())
+	`, req.Username).Scan(&userID, &passwordHash, &role, &failedAttempts)
 
 	if err != nil {
-		// Add artificial delay before response (timing attack prevention)
-		delayBytes := make([]byte, 1)
-		_, _ = rand.Read(delayBytes)
-		delay := time.Duration(100+int(delayBytes[0])%100) * time.Millisecond
-		time.Sleep(delay)
+		// User not found, locked, OR account is still locked (DB filters locked accounts)
+		// Add constant delay before response (timing attack prevention)
+		constantAuthDelay()
 
 		// Generic error message (user enumeration prevention)
 		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
@@ -124,29 +143,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Check if account is locked
-	if lockedUntil != nil && lockedUntil.After(time.Now()) {
-		// Add artificial delay before response
-		delayBytes := make([]byte, 1)
-		_, _ = rand.Read(delayBytes)
-		delay := time.Duration(100+int(delayBytes[0])%100) * time.Millisecond
-		time.Sleep(delay)
-
-		c.JSON(http.StatusLocked, models.ErrorResponse{
-			Code:    "ERR_ACCOUNT_LOCKED",
-			Message: "Account temporarily locked due to failed login attempts",
-		})
-		return
-	}
-
-	// Verify password (using password_utils.go)
-	// For now, use bcrypt directly (TODO: integrate with existing password_utils)
-	if !verifyPassword(req.Password, passwordHash) {
-		// Increment failed attempts
+	// Verify password using bcrypt directly (constant-time comparison)
+		err = VerifyPassword(req.Password, passwordHash)
+	if err != nil {
+		// Password incorrect - increment failed attempts and log security event
 		newAttempts := failedAttempts + 1
-		if newAttempts >= 5 {
-			// Lock account for 10 minutes
-			lockUntil := time.Now().Add(10 * time.Minute)
+		if newAttempts >= MaxFailedLoginAttempts {
+			// Lock account for AccountLockDuration
+			lockUntil := time.Now().Add(AccountLockDuration)
 			_, _ = h.pool.Exec(ctx, `
 				UPDATE users
 				SET failed_login_attempts = $1, locked_until = $2
@@ -160,11 +164,14 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			`, newAttempts, userID)
 		}
 
-		// Add artificial delay to prevent timing attacks
-		delayBytes := make([]byte, 1)
-		_, _ = rand.Read(delayBytes)
-		delay := time.Duration(100+int(delayBytes[0])%100) * time.Millisecond
-		time.Sleep(delay)
+		// Log failed login attempt (F30: Add audit logging for failed logins)
+		h.logAuditEvent(ctx, "login_failed", &userID, ipAddress, map[string]interface{}{
+			"failed_attempts": newAttempts,
+			"account_locked":  newAttempts >= 5,
+		})
+
+		// Add constant delay to prevent timing attacks
+		constantAuthDelay()
 
 		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 			Code:    "ERR_INVALID_CREDENTIALS",
@@ -195,8 +202,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		ctx, userID, userAgent, ipAddress, h.maxValidityDays,
 	)
 	if err != nil {
-		// Log the actual error for debugging
-		fmt.Printf("[ERROR] Failed to create refresh token: %v\n", err)
+		// Log sanitized error (no token hashes or user IDs exposed)
+		fmt.Printf("[ERROR] Failed to create refresh token for user\n")
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "TOKEN_GENERATION_FAILED",
 			Message: "Failed to generate refresh token",
@@ -267,8 +274,8 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	tokenHash := hex.EncodeToString(hash[:])
 	rateLimitKey := fmt.Sprintf("token:%s", tokenHash)
 
-	// Check rate limit (10 requests per minute)
-	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, 10)
+	// Check rate limit (uses MaxRefreshAttemptsPerMinute constant)
+	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, MaxRefreshAttemptsPerMinute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "RATE_LIMIT_ERROR",
@@ -340,12 +347,22 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		"user_agent": userAgent,
 	})
 
+	// Set refresh token as HTTP-only cookie (secure, not exposed in response body)
+	http.SetCookie(c.Writer, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    newRefreshToken,
+		MaxAge:   h.refreshExpirationDays * 86400, // Convert days to seconds
+		HttpOnly: true,                          // Prevent XSS
+		Secure:   true,                          // HTTPS only
+		SameSite: http.SameSiteStrictMode,       // CSRF protection
+		Path:     "/",
+	})
+
 	c.JSON(http.StatusOK, models.TokenResponse{
-		AccessToken:      accessToken,
-		RefreshToken:     newRefreshToken,
-		TokenType:        "Bearer",
-		ExpiresIn:        h.accessExpirationMinutes * 60,
-		RefreshExpiresIn: h.refreshExpirationDays * 86400,
+		AccessToken: accessToken,
+		TokenType:   "Bearer",
+		ExpiresIn:   h.accessExpirationMinutes * 60,
+		// RefreshToken intentionally omitted - set via HTTP-only cookie only
 	})
 }
 
@@ -361,12 +378,32 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 func (h *AuthHandler) Logout(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Get user from context (set by middleware)
+	// Rate limit logout requests per user to prevent DoS
 	userID := c.GetString("user_id")
 	if userID == "" {
 		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 			Code:    "UNAUTHORIZED",
 			Message: "Authorization required",
+		})
+		return
+	}
+
+	rateLimitKey := fmt.Sprintf("logout:%s", userID)
+	// Rate limit logout requests (uses MaxLogoutAttemptsPerMinute constant)
+	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, MaxLogoutAttemptsPerMinute)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "RATE_LIMIT_ERROR",
+			Message: "Failed to check rate limit",
+		})
+		return
+	}
+
+	if !allowed {
+		c.Header("X-RateLimit-Reset", resetTime.Format(time.RFC3339))
+		c.JSON(http.StatusTooManyRequests, models.ErrorResponse{
+			Code:    "ERR_RATE_LIMIT_EXCEEDED",
+			Message: "Too many logout requests",
 		})
 		return
 	}
@@ -783,13 +820,13 @@ func (h *AuthHandler) logAuditEvent(ctx context.Context, eventType string, userI
 	`, eventType, *userID, ipAddressPtr, details)
 
 	if err != nil {
-		// Log error but don't fail the request
-		fmt.Printf("WARN: failed to log audit event: %v\n", err)
+		// Log sanitized error (no sensitive details)
+		fmt.Printf("WARN: failed to log audit event: %s\n", eventType)
 	}
 }
 
-// verifyPassword verifies a password against a hash using bcrypt
-func verifyPassword(password, hash string) bool {
-	err := VerifyPassword(password, hash)
-	return err == nil
+// constantAuthDelay provides a constant 150ms delay to prevent timing attacks
+// on authentication failures. This ensures all failed auth paths take the same time.
+func constantAuthDelay() {
+	time.Sleep(150 * time.Millisecond)
 }

@@ -10,11 +10,20 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+const (
+	// TokenIssuer identifies the issuer of JWT tokens
+	TokenIssuer = "node-pulse"
+	// TokenAudience identifies the intended audience for JWT tokens
+	TokenAudience = "node-pulse-api"
+)
+
 // JWTService handles JWT token generation and validation
 type JWTService struct {
 	secret           []byte
 	accessExpiration time.Duration
 	pool             *pgxpool.Pool
+	issuer           string
+	audience         []string
 }
 
 // NewJWTService creates a new JWT service instance
@@ -23,6 +32,8 @@ func NewJWTService(secret string, accessExpirationMinutes int, pool *pgxpool.Poo
 		secret:           []byte(secret),
 		accessExpiration: time.Duration(accessExpirationMinutes) * time.Minute,
 		pool:             pool,
+		issuer:           TokenIssuer,
+		audience:         []string{TokenAudience},
 	}
 }
 
@@ -34,7 +45,7 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// GenerateAccessToken generates a new access token
+// GenerateAccessToken generates a new access token with issuer and audience claims
 func (s *JWTService) GenerateAccessToken(userID, role string) (string, string, error) {
 	jti := uuid.New().String()
 	now := time.Now()
@@ -44,6 +55,9 @@ func (s *JWTService) GenerateAccessToken(userID, role string) (string, string, e
 		Role:   role,
 		JTI:    jti,
 		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    s.issuer,
+			Subject:   userID,
+			Audience:  s.audience,
 			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessExpiration)),
 			IssuedAt:  jwt.NewNumericDate(now),
 			NotBefore: jwt.NewNumericDate(now),
@@ -60,10 +74,10 @@ func (s *JWTService) GenerateAccessToken(userID, role string) (string, string, e
 }
 
 // ValidateAccessToken validates an access token and returns the claims
-// Uses 60-second clock skew tolerance
+// Uses 10-second clock skew tolerance (reduced from 60s for better security)
 func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
-	// Create parser with 60-second leeway for clock skew
-	parser := jwt.NewParser(jwt.WithLeeway(60*time.Second))
+	// Create parser with 10-second leeway for clock skew
+	parser := jwt.NewParser(jwt.WithLeeway(10*time.Second))
 
 	token, err := parser.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Validate signing algorithm
@@ -80,6 +94,34 @@ func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
 		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	// Validate issuer claim
+	tokenIssuer, ok := claims["iss"].(string)
+	if !ok || tokenIssuer != s.issuer {
+		return nil, fmt.Errorf("invalid token issuer: expected %s, got %s", s.issuer, tokenIssuer)
+	}
+
+	// Validate audience claim
+	tokenAudience, ok := claims["aud"].(string)
+	if !ok {
+		// Check if audience is a list
+		audList, ok := claims["aud"].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("invalid token audience")
+		}
+		audienceValid := false
+		for _, aud := range audList {
+			if audStr, ok := aud.(string); ok && audStr == TokenAudience {
+				audienceValid = true
+				break
+			}
+		}
+		if !audienceValid {
+			return nil, fmt.Errorf("invalid token audience")
+		}
+	} else if tokenAudience != TokenAudience {
+		return nil, fmt.Errorf("invalid token audience: expected %s, got %s", TokenAudience, tokenAudience)
 	}
 
 	// Extract claims
@@ -128,11 +170,11 @@ func (s *JWTService) GetJTI(tokenString string) (string, error) {
 }
 
 // CheckRevoked checks if a token's JTI is in the blacklist
-// Returns false (not revoked) when pool is nil (for testing)
+// Returns error when pool is nil (fail-closed for security)
 func (s *JWTService) CheckRevoked(ctx context.Context, jti string) (bool, error) {
-	// Handle nil pool for testing scenarios
+	// Fail-closed: return error when pool is nil instead of accepting all tokens
 	if s.pool == nil {
-		return false, nil // No blacklist checking without a database
+		return false, fmt.Errorf("database pool not initialized - cannot verify token revocation status")
 	}
 
 	var revoked bool

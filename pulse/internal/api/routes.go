@@ -1,6 +1,11 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"os"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	swaggerFiles "github.com/swaggo/files"
@@ -326,22 +331,22 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 // getEnvOrDefault gets environment variable or returns default value
 func getEnvOrDefault(key, defaultValue string) string {
-	value := ""
-	// In production, use os.Getenv(key)
-	// For now, return default
+	value := os.Getenv(key)
 	if value == "" {
 		return defaultValue
 	}
 	return value
 }
 
-// generateJWTSecret generates a 512-bit (64 byte) random JWT secret
+// generateJWTSecret generates a 512-bit (64 byte) random JWT secret using crypto/rand
 func generateJWTSecret() string {
 	secret := make([]byte, 64)
-	// In production, use crypto/rand.Read()
-	// For now, return a placeholder
-	for i := range secret {
-		secret[i] = 'a' + byte(i%26)
+	// Use crypto/rand for cryptographically secure random bytes
+	_, err := rand.Read(secret)
+	if err != nil {
+		// Fallback: panic on failure as this is a critical security function
+		panic(fmt.Sprintf("failed to generate JWT secret: %v", err))
 	}
-	return string(secret)
+	// Return as hex string for easier configuration
+	return hex.EncodeToString(secret)
 }
