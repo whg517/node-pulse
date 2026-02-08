@@ -52,10 +52,8 @@ func setupTestRouter(nodeQuerier db.NodesQuerier, nodeID string) (*gin.Engine, s
 	router := gin.New()
 
 	// Create JWT service for testing (config loaded in TestMain)
-	jwtService, err := auth.NewJWTService()
-	if err != nil {
-		panic(fmt.Sprintf("Failed to create JWT service: %v", err))
-	}
+	jwtSecret := "test-secret-key-32-bytes-long"
+	jwtService := auth.NewJWTService(jwtSecret, 15, nil) // nil DB for tests
 
 	// Generate a beacon JWT token for testing with the given nodeID
 	token, _, err := jwtService.GenerateAccessToken(nodeID, "beacon")
@@ -69,7 +67,7 @@ func setupTestRouter(nodeQuerier db.NodesQuerier, nodeID string) (*gin.Engine, s
 	batchWriter := cache.NewBatchWriter(nil, 1000, 100) // nil DB for testing
 
 	beaconHandler := NewBeaconHandler(nodeQuerier, memoryCache, batchWriter, nil) // nil alert engine for tests
-	router.POST("/api/v1/beacon/heartbeat", middleware.JWTAuthMiddleware(), beaconHandler.HandleHeartbeat)
+	router.POST("/api/v1/beacon/heartbeat", middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleHeartbeat)
 
 	return router, authHeader
 }

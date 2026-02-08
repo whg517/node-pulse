@@ -84,6 +84,7 @@ type JWTConfig struct {
 	Secret                         string
 	AccessTokenExpirationMinutes   int
 	RefreshTokenExpirationDays     int
+	RefreshTokenMaxValidityDays    int // Absolute cap for refresh tokens (sliding window)
 }
 
 var (
@@ -288,6 +289,9 @@ func mergeConfig(dst, src *Config) {
 	if src.JWT.RefreshTokenExpirationDays != 0 {
 		dst.JWT.RefreshTokenExpirationDays = src.JWT.RefreshTokenExpirationDays
 	}
+	if src.JWT.RefreshTokenMaxValidityDays != 0 {
+		dst.JWT.RefreshTokenMaxValidityDays = src.JWT.RefreshTokenMaxValidityDays
+	}
 }
 
 // generateSecrets auto-generates secrets if not provided
@@ -369,6 +373,7 @@ func defaultConfig() *Config {
 			Secret:                         "", // Will be auto-generated if empty
 			AccessTokenExpirationMinutes:   15, // 15 minutes
 			RefreshTokenExpirationDays:     7,  // 7 days
+			RefreshTokenMaxValidityDays:    30, // 30 days absolute cap
 		},
 	}
 }
@@ -594,6 +599,11 @@ func mergeFromEnv(cfg *Config) *Config {
 			cfg.JWT.RefreshTokenExpirationDays = i
 		}
 	}
+	if v := os.Getenv("PULSE_JWT_REFRESH_TOKEN_MAX_VALIDITY_DAYS"); v != "" {
+		if i := parseInt(v, cfg.JWT.RefreshTokenMaxValidityDays); i > 0 {
+			cfg.JWT.RefreshTokenMaxValidityDays = i
+		}
+	}
 
 	// Derive CookieSecure from Mode if not explicitly set
 	if !cfg.Session.CookieSecure {
@@ -765,6 +775,13 @@ func (c *JWTConfig) Validate() error {
 	}
 	if c.RefreshTokenExpirationDays <= 0 {
 		return fmt.Errorf("jwt refresh_token_expiration_days must be positive, got %d", c.RefreshTokenExpirationDays)
+	}
+	if c.RefreshTokenMaxValidityDays <= 0 {
+		return fmt.Errorf("jwt refresh_token_max_validity_days must be positive, got %d", c.RefreshTokenMaxValidityDays)
+	}
+	if c.RefreshTokenMaxValidityDays < c.RefreshTokenExpirationDays {
+		return fmt.Errorf("jwt refresh_token_max_validity_days (%d) must be >= refresh_token_expiration_days (%d)",
+			c.RefreshTokenMaxValidityDays, c.RefreshTokenExpirationDays)
 	}
 	return nil
 }

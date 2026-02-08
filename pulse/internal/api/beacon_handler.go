@@ -45,10 +45,22 @@ func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCach
 
 // HandleHeartbeat handles POST /api/v1/beacon/heartbeat
 func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
-	// Extract and verify JWT token claims
-	userID, role, ok := middleware.RequireAuth(c)
-	if !ok {
-		// middleware.RequireAuth already sent the error response
+	// Get user info from context (set by JWTAuthMiddleware)
+	userID, err := middleware.GetUserID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    ErrUnauthorizedNode,
+			Message: "Unauthorized",
+		})
+		return
+	}
+
+	role, err := middleware.GetUserRole(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    ErrUnauthorizedNode,
+			Message: "Unauthorized",
+		})
 		return
 	}
 

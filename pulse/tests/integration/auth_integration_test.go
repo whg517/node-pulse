@@ -264,30 +264,32 @@ func TestIntegration_Logout_WithValidToken(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, wLogin.Code, "Login should succeed")
 
+	// Parse login response to get access token
+	var loginResp models.LoginResponse
+	err := json.Unmarshal(wLogin.Body.Bytes(), &loginResp)
+	require.NoError(t, err)
+	accessToken := loginResp.Data.AccessToken
+
 	// Get refresh token from cookie
 	cookies := wLogin.Result().Cookies()
 	require.Len(t, cookies, 1, "Should have refresh_token cookie")
 	refreshToken := cookies[0].Value
 	assert.Equal(t, "refresh_token", cookies[0].Name)
 
-	// Act - Logout with refresh token cookie
+	// Act - Logout with access token and refresh token cookie
 	req, _ := http.NewRequest("POST", "/api/v1/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken})
 	wLogout := httptest.NewRecorder()
 	router.ServeHTTP(wLogout, req)
 
 	// Assert - 200 OK
 	assert.Equal(t, http.StatusOK, wLogout.Code)
-	assert.Contains(t, wLogout.Body.String(), "Logout successful")
-
-	// Assert - Refresh token should be invalidated
-	// Attempt to use it again should fail
-	var loginResp models.LoginResponse
-	err := json.Unmarshal(wLogin.Body.Bytes(), &loginResp)
-	require.NoError(t, err)
+	assert.Contains(t, wLogout.Body.String(), "Successfully logged out")
 }
 
-// TestIntegration_Logout_WithoutSession tests logout without session cookie
+// TestIntegration_Logout_WithoutSession tests logout without authentication
+// Note: JWT-based logout requires authentication (access token)
 func TestIntegration_Logout_WithoutSession(t *testing.T) {
 	router, pool, _ := setupTestRouter(t)
 	if router == nil {
@@ -295,14 +297,17 @@ func TestIntegration_Logout_WithoutSession(t *testing.T) {
 	}
 	defer pool.Close()
 
-	// Act - Logout without session
+	// Act - Logout without authentication (no access token, no refresh token cookie)
 	req, _ := http.NewRequest("POST", "/api/v1/auth/logout", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// Assert - Still returns 200 (graceful)
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "Logout successful")
+	// Assert - Returns 401 (authentication required for logout)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	var resp models.ErrorResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, "ERR_UNAUTHORIZED", resp.Code)
 }
 
 // TestIntegration_RateLimit tests rate limiting behavior
@@ -314,7 +319,7 @@ func TestIntegration_RateLimit(t *testing.T) {
 	defer pool.Close()
 
 	// Reset rate limit store for clean test
-	auth.ClearRateLimitStore()
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user with unique username
 	testUserID := uuid.New()
@@ -333,8 +338,8 @@ func TestIntegration_RateLimit(t *testing.T) {
 	}
 	reqBody, _ := json.Marshal(loginReq)
 
-	// Act - First 4 attempts should not rate limit
-	for i := 0; i < 4; i++ {
+	// Act - First 5 attempts should not rate limit
+	for i := 0; i < 5; i++ {
 		req, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
@@ -343,7 +348,7 @@ func TestIntegration_RateLimit(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, w.Code, "Attempt %d should return 401", i+1)
 	}
 
-	// Act - 5th attempt should be rate limited (429)
+	// Act - 6th attempt should be rate limited (429)
 	req, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	wRateLimited := httptest.NewRecorder()
@@ -359,14 +364,14 @@ func TestIntegration_RateLimit(t *testing.T) {
 // TestIntegration_JWTExpiration tests JWT token expiration handling
 // Note: Replaces SessionExpiration test after JWT migration
 func TestIntegration_JWTExpiration(t *testing.T) {
-	// Reset rate limit store for clean test
-	auth.ClearRateLimitStore()
-
 	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
 	defer pool.Close()
+
+	// Reset rate limit store for clean test
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create user and login
 	testUserID := uuid.New()
@@ -416,6 +421,9 @@ func TestIntegration_GetMe_WithValidToken(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+
+	// Clear rate limit store for clean test
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user and login
 	testUserID := uuid.New()
@@ -493,6 +501,9 @@ func TestIntegration_GetMe_WithExpiredToken(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+
+	// Clear rate limit store for clean test
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create user
 	testUserID := uuid.New()

@@ -19,11 +19,11 @@ import (
 
 // TestGetNodeStatus_Integration tests the complete node status query workflow
 func TestGetNodeStatus_Integration(t *testing.T) {
-	// Clear rate limit store before test
-	auth.ClearRateLimitStore()
-
 	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
+
+	// Clear rate limit store before test
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "status_test_user"
@@ -231,11 +231,11 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 
 // TestGetNodeStatus_ResponseFormat validates API response format matches specification
 func TestGetNodeStatus_ResponseFormat(t *testing.T) {
-	// Clear rate limit store before test
-	auth.ClearRateLimitStore()
-
 	router, pool, _ := setupTestRouter(t)
 	defer pool.Close()
+
+	// Clear rate limit store before test
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and node
 	username := "response_format_user"

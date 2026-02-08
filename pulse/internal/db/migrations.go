@@ -21,7 +21,24 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
-	if err := createRefreshTokensTable(ctx, pool); err != nil {
+	// JWT Auth Rewrite: Drop and recreate with new schema
+	if err := dropAndRecreateRefreshTokensTable(ctx, pool); err != nil {
+		return err
+	}
+
+	if err := dropAndRecreateBeaconTokensAsAPIKeys(ctx, pool); err != nil {
+		return err
+	}
+
+	if err := createTokenBlacklistTable(ctx, pool); err != nil {
+		return err
+	}
+
+	if err := createAuthAuditLogsTable(ctx, pool); err != nil {
+		return err
+	}
+
+	if err := createRateLimitsTable(ctx, pool); err != nil {
 		return err
 	}
 
@@ -69,10 +86,6 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
-	if err := createBeaconTokensTable(ctx, pool); err != nil {
-		return err
-	}
-
 	if err := seedAdminUser(ctx, pool); err != nil {
 		return err
 	}
@@ -90,6 +103,8 @@ func createUsersTable(ctx context.Context, pool *pgxpool.Pool) error {
 			role VARCHAR(20) NOT NULL,
 			failed_login_attempts INTEGER DEFAULT 0,
 			locked_until TIMESTAMP NULL,
+			mfa_enabled BOOLEAN DEFAULT false,
+			mfa_secret TEXT NULL,
 			created_at TIMESTAMP DEFAULT NOW(),
 			updated_at TIMESTAMP DEFAULT NOW()
 		);
@@ -121,31 +136,7 @@ func createSessionsTable(ctx context.Context, pool *pgxpool.Pool) error {
 	return err
 }
 
-// createRefreshTokensTable creates the refresh_tokens table with indexes and foreign keys (JWT auth refactor)
-func createRefreshTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
-	query := `
-		CREATE TABLE IF NOT EXISTS refresh_tokens (
-			token_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-			token_hash TEXT NOT NULL,
-			jti TEXT NOT NULL,
-			device_info TEXT,
-			ip_address TEXT,
-			expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-			created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-			CONSTRAINT uq_token_hash UNIQUE (token_hash)
-		);
-
-		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_id ON refresh_tokens(user_id);
-		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
-		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expires_at ON refresh_tokens(expires_at DESC);
-	`
-
-	_, err := pool.Exec(ctx, query)
-	return err
-}
-
-// createNodesTable creates nodes table with indexes
+// dropAndRecreateRefreshTokensTable drops and recreates refresh_tokens with new schema for JWT rewrite
 func createNodesTable(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS nodes (
@@ -484,24 +475,121 @@ func createAlertRecordsTable(ctx context.Context, pool *pgxpool.Pool) error {
 	return err
 }
 
-// createBeaconTokensTable creates beacon_tokens table for API key authentication (JWT auth refactor)
-func createBeaconTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
+// dropAndRecreateRefreshTokensTable drops and recreates refresh_tokens with new schema for JWT rewrite
+func dropAndRecreateRefreshTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `
-		CREATE TABLE IF NOT EXISTS beacon_tokens (
-			token_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-			node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
-			api_key_hash TEXT NOT NULL UNIQUE,
-			created_at TIMESTAMPTZ DEFAULT NOW(),
-			last_used_at TIMESTAMPTZ,
-			expires_at TIMESTAMPTZ,
-			is_active BOOLEAN DEFAULT true
+		-- Drop existing table
+		DROP TABLE IF EXISTS refresh_tokens CASCADE;
+
+		-- Create new table with sliding + absolute expiration support
+		CREATE TABLE refresh_tokens (
+			id SERIAL PRIMARY KEY,
+			token_id TEXT UNIQUE NOT NULL,
+			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+			expires_at TIMESTAMP NOT NULL,
+			max_valid_until TIMESTAMP NOT NULL,
+			revoked_at TIMESTAMP,
+			replaced_by TEXT,
+			user_agent TEXT,
+			ip_address INET,
+			created_at TIMESTAMP DEFAULT NOW(),
+			updated_at TIMESTAMP DEFAULT NOW()
 		);
 
-		CREATE INDEX IF NOT EXISTS idx_beacon_tokens_node_id ON beacon_tokens(node_id);
-		CREATE INDEX IF NOT EXISTS idx_beacon_tokens_api_key_hash ON beacon_tokens(api_key_hash);
-		CREATE INDEX IF NOT EXISTS idx_beacon_tokens_active ON beacon_tokens(is_active, expires_at);
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_revoked ON refresh_tokens(user_id, revoked_at);
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_id ON refresh_tokens(token_id);
 	`
 
 	_, err := pool.Exec(ctx, query)
 	return err
+}
+
+// dropAndRecreateBeaconTokensAsAPIKeys drops beacon_tokens and creates api_keys table
+func dropAndRecreateBeaconTokensAsAPIKeys(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		-- Drop existing table
+		DROP TABLE IF EXISTS beacon_tokens CASCADE;
+		DROP TABLE IF EXISTS api_keys CASCADE;
+
+		-- Create renamed table with improved schema
+		CREATE TABLE api_keys (
+			id SERIAL PRIMARY KEY,
+			key_hash TEXT UNIQUE NOT NULL,
+			key_prefix TEXT NOT NULL,
+			user_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
+			name TEXT NOT NULL,
+			is_active BOOLEAN DEFAULT true,
+			expires_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT NOW(),
+			last_used_at TIMESTAMP
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+		CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
+		CREATE INDEX IF NOT EXISTS idx_api_keys_active_expires ON api_keys(is_active, expires_at);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createTokenBlacklistTable creates token_blacklist for immediate access token revocation
+func createTokenBlacklistTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS token_blacklist (
+			jti TEXT PRIMARY KEY,
+			revoked_at TIMESTAMP NOT NULL,
+			expires_at TIMESTAMP NOT NULL
+		);
+
+		CREATE INDEX ON token_blacklist(expires_at);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createAuthAuditLogsTable creates auth_audit_logs for security event tracking
+func createAuthAuditLogsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS auth_audit_logs (
+			id SERIAL PRIMARY KEY,
+			event_type VARCHAR(50) NOT NULL,
+			user_id UUID,
+			ip_address INET,
+			details JSONB,
+			created_at TIMESTAMP DEFAULT NOW()
+		);
+
+		CREATE INDEX ON auth_audit_logs(event_type, created_at);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createRateLimitsTable creates rate_limits for database-backed rate limiting
+func createRateLimitsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS rate_limits (
+			id SERIAL PRIMARY KEY,
+			key VARCHAR(255) NOT NULL,
+			window_type VARCHAR(10) NOT NULL,
+			window_start TIMESTAMP NOT NULL,
+			request_count INTEGER DEFAULT 1,
+			UNIQUE(key, window_type, window_start)
+		);
+
+		CREATE INDEX ON rate_limits(key, window_start);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createBeaconTokensTable creates beacon_tokens table for API key authentication (JWT auth refactor)
+func createBeaconTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
+	// DEPRECATED: Replaced by api_keys table in JWT auth rewrite
+	// Kept for backward compatibility during migration
+	return nil
 }
