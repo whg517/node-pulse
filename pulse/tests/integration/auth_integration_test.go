@@ -220,13 +220,14 @@ func TestIntegration_Login_AccountLocked(t *testing.T) {
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// Assert - 423 Locked
-	assert.Equal(t, http.StatusLocked, w.Code)
+	// Assert - 401 Unauthorized (account locked appears as invalid credentials for security)
+	// This is intentional to prevent user enumeration - locked accounts are filtered at DB level
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	var resp models.ErrorResponse
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
-	assert.Equal(t, "ERR_ACCOUNT_LOCKED", resp.Code)
-	assert.Contains(t, resp.Message, "locked")
+	assert.Equal(t, "ERR_INVALID_CREDENTIALS", resp.Code)
+	assert.Contains(t, resp.Message, "Invalid username or password")
 }
 
 // TestIntegration_Logout_WithSession tests logout with valid refresh token
@@ -264,30 +265,40 @@ func TestIntegration_Logout_WithValidToken(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, wLogin.Code, "Login should succeed")
 
+	// Parse login response to get access token
+	var loginResp models.LoginResponse
+	err := json.Unmarshal(wLogin.Body.Bytes(), &loginResp)
+	require.NoError(t, err)
+	accessToken := loginResp.Data.AccessToken
+
 	// Get refresh token from cookie
 	cookies := wLogin.Result().Cookies()
 	require.Len(t, cookies, 1, "Should have refresh_token cookie")
 	refreshToken := cookies[0].Value
 	assert.Equal(t, "refresh_token", cookies[0].Name)
+	assert.NotEmpty(t, refreshToken, "Refresh token should not be empty")
+	t.Logf("Got refresh token from cookie (length: %d, prefix: %s)", len(refreshToken), refreshToken[:20])
 
-	// Act - Logout with refresh token cookie
+	// Verify refresh token exists in database before concurrent test
+	var tokenCount int
+	err = pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM refresh_tokens").Scan(&tokenCount)
+	require.NoError(t, err, "Failed to count refresh tokens")
+	t.Logf("Refresh tokens in DB before concurrent test: %d", tokenCount)
+
+	// Act - Logout with access token and refresh token cookie
 	req, _ := http.NewRequest("POST", "/api/v1/auth/logout", nil)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.AddCookie(&http.Cookie{Name: "refresh_token", Value: refreshToken})
 	wLogout := httptest.NewRecorder()
 	router.ServeHTTP(wLogout, req)
 
 	// Assert - 200 OK
 	assert.Equal(t, http.StatusOK, wLogout.Code)
-	assert.Contains(t, wLogout.Body.String(), "Logout successful")
-
-	// Assert - Refresh token should be invalidated
-	// Attempt to use it again should fail
-	var loginResp models.LoginResponse
-	err := json.Unmarshal(wLogin.Body.Bytes(), &loginResp)
-	require.NoError(t, err)
+	assert.Contains(t, wLogout.Body.String(), "Successfully logged out")
 }
 
-// TestIntegration_Logout_WithoutSession tests logout without session cookie
+// TestIntegration_Logout_WithoutSession tests logout without authentication
+// Note: JWT-based logout requires authentication (access token)
 func TestIntegration_Logout_WithoutSession(t *testing.T) {
 	router, pool, _ := setupTestRouter(t)
 	if router == nil {
@@ -295,14 +306,17 @@ func TestIntegration_Logout_WithoutSession(t *testing.T) {
 	}
 	defer pool.Close()
 
-	// Act - Logout without session
+	// Act - Logout without authentication (no access token, no refresh token cookie)
 	req, _ := http.NewRequest("POST", "/api/v1/auth/logout", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	// Assert - Still returns 200 (graceful)
-	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Contains(t, w.Body.String(), "Logout successful")
+	// Assert - Returns 401 (authentication required for logout)
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	var resp models.ErrorResponse
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	require.NoError(t, err)
+	assert.Equal(t, "ERR_UNAUTHORIZED", resp.Code)
 }
 
 // TestIntegration_RateLimit tests rate limiting behavior
@@ -314,7 +328,7 @@ func TestIntegration_RateLimit(t *testing.T) {
 	defer pool.Close()
 
 	// Reset rate limit store for clean test
-	auth.ClearRateLimitStore()
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user with unique username
 	testUserID := uuid.New()
@@ -333,8 +347,8 @@ func TestIntegration_RateLimit(t *testing.T) {
 	}
 	reqBody, _ := json.Marshal(loginReq)
 
-	// Act - First 4 attempts should not rate limit
-	for i := 0; i < 4; i++ {
+	// Act - First 5 attempts should not rate limit
+	for i := 0; i < 5; i++ {
 		req, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(reqBody))
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
@@ -343,7 +357,7 @@ func TestIntegration_RateLimit(t *testing.T) {
 		assert.Equal(t, http.StatusUnauthorized, w.Code, "Attempt %d should return 401", i+1)
 	}
 
-	// Act - 5th attempt should be rate limited (429)
+	// Act - 6th attempt should be rate limited (429)
 	req, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(reqBody))
 	req.Header.Set("Content-Type", "application/json")
 	wRateLimited := httptest.NewRecorder()
@@ -359,14 +373,14 @@ func TestIntegration_RateLimit(t *testing.T) {
 // TestIntegration_JWTExpiration tests JWT token expiration handling
 // Note: Replaces SessionExpiration test after JWT migration
 func TestIntegration_JWTExpiration(t *testing.T) {
-	// Reset rate limit store for clean test
-	auth.ClearRateLimitStore()
-
 	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
 	defer pool.Close()
+
+	// Reset rate limit store for clean test
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create user and login
 	testUserID := uuid.New()
@@ -416,6 +430,9 @@ func TestIntegration_GetMe_WithValidToken(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+
+	// Clear rate limit store for clean test
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user and login
 	testUserID := uuid.New()
@@ -494,6 +511,9 @@ func TestIntegration_GetMe_WithExpiredToken(t *testing.T) {
 	}
 	defer pool.Close()
 
+	// Clear rate limit store for clean test
+	auth.ClearRateLimitStore(context.Background(), pool)
+
 	// Arrange - Create user
 	testUserID := uuid.New()
 	testPassword := "testPassword"
@@ -537,4 +557,123 @@ func TestIntegration_GetMe_WithExpiredToken(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, "ERR_INVALID_TOKEN", resp.Code, "Error code should be ERR_INVALID_TOKEN")
+}
+
+// TestIntegration_ConcurrentRefresh tests concurrent refresh token rotation
+// Tech-Spec Task 10.2: Verify only one request succeeds, others get 409 Conflict
+func TestIntegration_ConcurrentRefresh(t *testing.T) {
+	router, pool, _ := setupTestRouter(t)
+	if router == nil {
+		return
+	}
+	defer pool.Close()
+
+	// Clear rate limit store for clean test
+	auth.ClearRateLimitStore(context.Background(), pool)
+
+	// Arrange - Create test user and login
+	testUserID := uuid.New()
+	testPassword := "testPassword"
+	passwordHash, _ := auth.HashPassword(testPassword)
+	testUsername := fmt.Sprintf("concurrent_%s", testUserID.String()[:8])
+
+	_, err := pool.Exec(context.Background(), `
+		INSERT INTO users (user_id, username, password_hash, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
+	`, testUserID, testUsername, passwordHash, "operator")
+	require.NoError(t, err)
+	defer cleanupTestUser(pool, testUsername)
+
+	// Login to get initial tokens
+	loginReq := models.LoginRequest{
+		Username: testUsername,
+		Password: testPassword,
+	}
+	loginBody, _ := json.Marshal(loginReq)
+	loginHTTPReq, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(loginBody))
+	loginHTTPReq.Header.Set("Content-Type", "application/json")
+	wLogin := httptest.NewRecorder()
+	router.ServeHTTP(wLogin, loginHTTPReq)
+
+	require.Equal(t, http.StatusOK, wLogin.Code, "Login should succeed")
+
+	var loginResp models.LoginResponse
+	err = json.Unmarshal(wLogin.Body.Bytes(), &loginResp)
+	require.NoError(t, err)
+
+	// Get refresh token from cookie
+	cookies := wLogin.Result().Cookies()
+	require.Len(t, cookies, 1, "Should have refresh_token cookie")
+	refreshToken := cookies[0].Value
+	assert.NotEmpty(t, refreshToken, "Refresh token should not be empty")
+
+	// Verify refresh token exists in database
+	var tokenCount int
+	err = pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM refresh_tokens WHERE user_id = $1", testUserID).Scan(&tokenCount)
+	require.NoError(t, err, "Failed to count refresh tokens")
+	assert.Equal(t, 1, tokenCount, "Should have exactly 1 refresh token in database after login")
+	t.Logf("Refresh token created successfully. Token in DB: %d, Token length: %d", tokenCount, len(refreshToken))
+
+	// Act - Launch 10 concurrent refresh requests
+	const numGoroutines = 10
+	type result struct {
+		statusCode int
+		body       string
+	}
+	results := make(chan result, numGoroutines) // Channel to collect results
+
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			// Create new refresh request with JSON body
+			refreshReq := models.RefreshRequest{
+				RefreshToken: refreshToken,
+			}
+			reqBody, _ := json.Marshal(refreshReq)
+			req, _ := http.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewBuffer(reqBody))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			// Send status code and body to results channel
+			results <- result{
+				statusCode: w.Code,
+				body:       w.Body.String(),
+			}
+		}()
+	}
+
+	// Collect all results
+	successCount := 0
+	conflictCount := 0
+	otherCount := 0
+	statusCodes := make([]int, numGoroutines)
+	var firstErrorBody string
+
+	for i := 0; i < numGoroutines; i++ {
+		res := <-results
+		statusCodes[i] = res.statusCode
+		switch res.statusCode {
+		case http.StatusOK:
+			successCount++
+		case http.StatusConflict:
+			conflictCount++
+		default:
+			otherCount++
+			if firstErrorBody == "" {
+				firstErrorBody = res.body
+			}
+		}
+	}
+
+	// Log status codes and first error body for debugging
+	t.Logf("Concurrent refresh results - Status codes: %v", statusCodes)
+	t.Logf("Success: %d, Conflict: %d, Other: %d", successCount, conflictCount, otherCount)
+	if otherCount > 0 && firstErrorBody != "" {
+		t.Logf("First error response body: %s", firstErrorBody)
+	}
+
+	// Assert - Only one should succeed (200 OK), others should get 409 Conflict
+	assert.Equal(t, 1, successCount, "Expected exactly 1 successful refresh (200 OK)")
+	assert.Equal(t, 9, conflictCount, "Expected 9 conflicts (409 Conflict) from concurrent refresh")
+	assert.Equal(t, 0, otherCount, "Expected no other status codes")
 }

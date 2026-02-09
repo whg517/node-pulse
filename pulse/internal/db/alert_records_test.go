@@ -14,7 +14,7 @@ import (
 )
 
 func setupAlertRecordsTest(t *testing.T) (*pgxpool.Pool, func()) {
-	pool, cleanup := setupTestDB(t)
+	pool, cleanup := SetupTestDB(t)
 
 	// Create alert records table
 	ctx := context.Background()

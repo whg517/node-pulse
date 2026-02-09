@@ -14,14 +14,15 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	Server  ServerConfig
-	DB      DatabaseConfig
-	Cleanup CleanupConfig
-	Log     LogConfig
-	CORS    CORSConfig
-	Admin   AdminConfig
-	Session SessionConfig
-	JWT     JWTConfig
+	Server     ServerConfig
+	DB         DatabaseConfig
+	Cleanup    CleanupConfig
+	Log        LogConfig
+	CORS       CORSConfig
+	Admin      AdminConfig
+	Session    SessionConfig
+	JWT        JWTConfig
+	RateLimit  RateLimitConfig
 }
 
 // ServerConfig holds server configuration
@@ -84,6 +85,16 @@ type JWTConfig struct {
 	Secret                         string
 	AccessTokenExpirationMinutes   int
 	RefreshTokenExpirationDays     int
+	RefreshTokenMaxValidityDays    int // Absolute cap for refresh tokens (sliding window)
+}
+
+// RateLimitConfig holds rate limiting configuration for auth endpoints
+type RateLimitConfig struct {
+	LoginMaxPerMinute   int // Maximum login attempts per minute per IP
+	LoginMaxPerDay      int // Maximum login attempts per day per IP
+	RefreshMaxPerMinute int // Maximum refresh attempts per minute per token
+	RefreshMaxPerDay    int // Maximum refresh attempts per day per token
+	APIKeyMaxPerMinute  int // Maximum API key exchanges per minute per key
 }
 
 var (
@@ -288,6 +299,25 @@ func mergeConfig(dst, src *Config) {
 	if src.JWT.RefreshTokenExpirationDays != 0 {
 		dst.JWT.RefreshTokenExpirationDays = src.JWT.RefreshTokenExpirationDays
 	}
+	if src.JWT.RefreshTokenMaxValidityDays != 0 {
+		dst.JWT.RefreshTokenMaxValidityDays = src.JWT.RefreshTokenMaxValidityDays
+	}
+
+	if src.RateLimit.LoginMaxPerMinute != 0 {
+		dst.RateLimit.LoginMaxPerMinute = src.RateLimit.LoginMaxPerMinute
+	}
+	if src.RateLimit.LoginMaxPerDay != 0 {
+		dst.RateLimit.LoginMaxPerDay = src.RateLimit.LoginMaxPerDay
+	}
+	if src.RateLimit.RefreshMaxPerMinute != 0 {
+		dst.RateLimit.RefreshMaxPerMinute = src.RateLimit.RefreshMaxPerMinute
+	}
+	if src.RateLimit.RefreshMaxPerDay != 0 {
+		dst.RateLimit.RefreshMaxPerDay = src.RateLimit.RefreshMaxPerDay
+	}
+	if src.RateLimit.APIKeyMaxPerMinute != 0 {
+		dst.RateLimit.APIKeyMaxPerMinute = src.RateLimit.APIKeyMaxPerMinute
+	}
 }
 
 // generateSecrets auto-generates secrets if not provided
@@ -369,6 +399,14 @@ func defaultConfig() *Config {
 			Secret:                         "", // Will be auto-generated if empty
 			AccessTokenExpirationMinutes:   15, // 15 minutes
 			RefreshTokenExpirationDays:     7,  // 7 days
+			RefreshTokenMaxValidityDays:    30, // 30 days absolute cap
+		},
+		RateLimit: RateLimitConfig{
+			LoginMaxPerMinute:   5,  // 5 login attempts per minute per IP
+			LoginMaxPerDay:      100, // 100 login attempts per day per IP
+			RefreshMaxPerMinute: 10, // 10 refresh attempts per minute per token
+			RefreshMaxPerDay:    200, // 200 refresh attempts per day per token
+			APIKeyMaxPerMinute:  11, // 11 API key exchanges per minute per key
 		},
 	}
 }
@@ -594,6 +632,38 @@ func mergeFromEnv(cfg *Config) *Config {
 			cfg.JWT.RefreshTokenExpirationDays = i
 		}
 	}
+	if v := os.Getenv("PULSE_JWT_REFRESH_TOKEN_MAX_VALIDITY_DAYS"); v != "" {
+		if i := parseInt(v, cfg.JWT.RefreshTokenMaxValidityDays); i > 0 {
+			cfg.JWT.RefreshTokenMaxValidityDays = i
+		}
+	}
+
+	// Rate Limit configuration
+	if v := os.Getenv("PULSE_RATELIMIT_LOGIN_MAX_PER_MINUTE"); v != "" {
+		if i := parseInt(v, cfg.RateLimit.LoginMaxPerMinute); i > 0 {
+			cfg.RateLimit.LoginMaxPerMinute = i
+		}
+	}
+	if v := os.Getenv("PULSE_RATELIMIT_LOGIN_MAX_PER_DAY"); v != "" {
+		if i := parseInt(v, cfg.RateLimit.LoginMaxPerDay); i > 0 {
+			cfg.RateLimit.LoginMaxPerDay = i
+		}
+	}
+	if v := os.Getenv("PULSE_RATELIMIT_REFRESH_MAX_PER_MINUTE"); v != "" {
+		if i := parseInt(v, cfg.RateLimit.RefreshMaxPerMinute); i > 0 {
+			cfg.RateLimit.RefreshMaxPerMinute = i
+		}
+	}
+	if v := os.Getenv("PULSE_RATELIMIT_REFRESH_MAX_PER_DAY"); v != "" {
+		if i := parseInt(v, cfg.RateLimit.RefreshMaxPerDay); i > 0 {
+			cfg.RateLimit.RefreshMaxPerDay = i
+		}
+	}
+	if v := os.Getenv("PULSE_RATELIMIT_APIKEY_MAX_PER_MINUTE"); v != "" {
+		if i := parseInt(v, cfg.RateLimit.APIKeyMaxPerMinute); i > 0 {
+			cfg.RateLimit.APIKeyMaxPerMinute = i
+		}
+	}
 
 	// Derive CookieSecure from Mode if not explicitly set
 	if !cfg.Session.CookieSecure {
@@ -628,6 +698,9 @@ func (c *Config) Validate() error {
 	}
 	if err := c.JWT.Validate(); err != nil {
 		return fmt.Errorf("jwt config invalid: %w", err)
+	}
+	if err := c.RateLimit.Validate(); err != nil {
+		return fmt.Errorf("ratelimit config invalid: %w", err)
 	}
 	return nil
 }
@@ -765,6 +838,42 @@ func (c *JWTConfig) Validate() error {
 	}
 	if c.RefreshTokenExpirationDays <= 0 {
 		return fmt.Errorf("jwt refresh_token_expiration_days must be positive, got %d", c.RefreshTokenExpirationDays)
+	}
+	if c.RefreshTokenMaxValidityDays <= 0 {
+		return fmt.Errorf("jwt refresh_token_max_validity_days must be positive, got %d", c.RefreshTokenMaxValidityDays)
+	}
+	if c.RefreshTokenMaxValidityDays < c.RefreshTokenExpirationDays {
+		return fmt.Errorf("jwt refresh_token_max_validity_days (%d) must be >= refresh_token_expiration_days (%d)",
+			c.RefreshTokenMaxValidityDays, c.RefreshTokenExpirationDays)
+	}
+	return nil
+}
+
+// Validate validates rate limit configuration
+func (c *RateLimitConfig) Validate() error {
+	if c.LoginMaxPerMinute <= 0 {
+		return fmt.Errorf("ratelimit login_max_per_minute must be positive, got %d", c.LoginMaxPerMinute)
+	}
+	if c.LoginMaxPerDay <= 0 {
+		return fmt.Errorf("ratelimit login_max_per_day must be positive, got %d", c.LoginMaxPerDay)
+	}
+	if c.RefreshMaxPerMinute <= 0 {
+		return fmt.Errorf("ratelimit refresh_max_per_minute must be positive, got %d", c.RefreshMaxPerMinute)
+	}
+	if c.RefreshMaxPerDay <= 0 {
+		return fmt.Errorf("ratelimit refresh_max_per_day must be positive, got %d", c.RefreshMaxPerDay)
+	}
+	if c.APIKeyMaxPerMinute <= 0 {
+		return fmt.Errorf("ratelimit apikey_max_per_minute must be positive, got %d", c.APIKeyMaxPerMinute)
+	}
+	// Validate that per-day limits are greater than per-minute limits
+	if c.LoginMaxPerDay < c.LoginMaxPerMinute {
+		return fmt.Errorf("ratelimit login_max_per_day (%d) must be >= login_max_per_minute (%d)",
+			c.LoginMaxPerDay, c.LoginMaxPerMinute)
+	}
+	if c.RefreshMaxPerDay < c.RefreshMaxPerMinute {
+		return fmt.Errorf("ratelimit refresh_max_per_day (%d) must be >= refresh_max_per_minute (%d)",
+			c.RefreshMaxPerDay, c.RefreshMaxPerMinute)
 	}
 	return nil
 }

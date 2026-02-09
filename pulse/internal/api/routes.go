@@ -1,8 +1,14 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"os"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 
@@ -36,6 +42,25 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	// Apply error handling and rate limiting middleware
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.RateLimitMiddleware())
+
+	// Get JWT configuration from environment or use defaults
+	jwtSecret := getEnvOrDefault("PULSE_JWT_SECRET", "")
+	if jwtSecret == "" {
+		// Auto-generate 512-bit secret if not provided
+		jwtSecret = generateJWTSecret()
+	}
+
+	// Initialize JWT service
+	jwtService := auth.NewJWTService(jwtSecret, 15, pool)
+
+	// Initialize auth handler
+	authHandler := auth.NewAuthHandler(
+		pool,
+		jwtSecret,
+		15,  // 15 minutes access token
+		7,   // 7 days refresh token
+		30,  // 30 days max validity
+	)
 
 	// Initialize memory cache and batch writer (Story 3.2)
 	memoryCache := cache.NewMemoryCache()
@@ -75,6 +100,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	// Swagger documentation route (public)
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
+	// Prometheus metrics endpoint (public)
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
 	// API v1 routes
 	v1 := router.Group("/api/v1")
 	{
@@ -82,38 +110,47 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		v1.GET("/health", healthChecker.Handler)
 
 		// Beacon endpoints (JWT auth for beacons)
-		beaconTokenQuerier := db.NewBeaconTokensQuerier(pool)
-		jwtService, err := auth.NewJWTService()
-		if err != nil {
-			panic("Failed to create JWT service: " + err.Error())
-		}
-		beaconTokenHandler := NewBeaconTokenHandler(jwtService, beaconTokenQuerier)
 		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter, alertEngine)
 
 		beacon := v1.Group("/beacon")
 		{
-			// POST /api/v1/beacon/token - Get JWT token using API key (public for beacons)
-			beacon.POST("/token", beaconTokenHandler.HandleGetToken)
 			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (JWT auth required)
-			beacon.POST("/heartbeat", middleware.JWTAuthMiddleware(), beaconHandler.HandleHeartbeat)
+			beacon.POST("/heartbeat", middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleHeartbeat)
 		}
 
 		// Auth endpoints (public)
-		authHandler, err := auth.NewAuthHandler(pool)
-		if err != nil {
-			panic("Failed to create auth handler: " + err.Error())
-		}
 		authGroup := v1.Group("/auth")
 		{
-			authGroup.POST("/login", authHandler.PostLogin)
-			authGroup.POST("/refresh", authHandler.PostRefresh)
-			authGroup.POST("/logout", authHandler.PostLogout)
-			authGroup.GET("/me", middleware.JWTAuthMiddleware(), authHandler.GetMe)
+			// POST /api/v1/auth/login - User login
+			authGroup.POST("/login", authHandler.Login)
+			// POST /api/v1/auth/refresh - Refresh access token
+			authGroup.POST("/refresh", authHandler.Refresh)
+			// POST /api/v1/auth/logout - Logout (requires valid token to blacklist it)
+			authGroup.POST("/logout", middleware.JWTAuthMiddleware(jwtService), authHandler.Logout)
+			// POST /api/v1/auth/token/api-key - Exchange API key for JWT token (public for beacons/devices)
+			authGroup.POST("/token/api-key", authHandler.ExchangeAPIKey)
+			// GET /api/v1/auth/me - Get current user info (requires auth)
+			authGroup.GET("/me", middleware.JWTAuthMiddleware(jwtService), authHandler.GetMe)
+			// GET /api/v1/auth/sessions - Get user sessions (requires auth)
+			authGroup.GET("/sessions", middleware.JWTAuthMiddleware(jwtService), authHandler.GetSessions)
+			// DELETE /api/v1/auth/sessions/:id - Revoke specific session (requires auth)
+			authGroup.DELETE("/sessions/:id", middleware.JWTAuthMiddleware(jwtService), authHandler.DeleteSession)
+			// GET /api/v1/auth/session-info - Get session expiration info (requires auth)
+			authGroup.GET("/session-info", middleware.JWTAuthMiddleware(jwtService), authHandler.GetSessionInfo)
+		}
+
+		// Admin auth routes (admin only)
+		adminAuth := v1.Group("/admin/auth")
+		adminAuth.Use(middleware.JWTAuthMiddleware(jwtService))
+		adminAuth.Use(middleware.RBACMiddleware([]string{"admin"}))
+		{
+			// POST /api/v1/admin/auth/revoke-all/:userId - Revoke all user sessions
+			adminAuth.POST("/revoke-all/:userId", authHandler.RevokeAllSessions)
 		}
 
 		// Config management routes (require admin auth only)
 		configGroup := v1.Group("/config")
-		configGroup.Use(middleware.JWTAuthMiddleware())
+		configGroup.Use(middleware.JWTAuthMiddleware(jwtService))
 		configGroup.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
 			// GET /api/v1/config - Get current configuration (admin only, passwords redacted)
@@ -129,7 +166,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Nodes group with auth middleware
 		nodes := v1.Group("/nodes")
-		nodes.Use(middleware.JWTAuthMiddleware())
+		nodes.Use(middleware.JWTAuthMiddleware(jwtService))
 
 		// GET /api/v1/nodes - Get all nodes (all roles)
 		nodes.GET("", nodeHandler.GetNodesHandler)
@@ -159,7 +196,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Probes group with auth middleware
 		probes := v1.Group("/probes")
-		probes.Use(middleware.JWTAuthMiddleware())
+		probes.Use(middleware.JWTAuthMiddleware(jwtService))
 
 		// GET /api/v1/probes - Get all probes (all roles)
 		probes.GET("", probeHandler.GetProbesHandler)
@@ -182,7 +219,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Data query routes (require auth)
 		dataHandler := NewDataHandler(pool, memoryCache)
 		data := v1.Group("/data")
-		data.Use(middleware.JWTAuthMiddleware())
+		data.Use(middleware.JWTAuthMiddleware(jwtService))
 
 		// GET /api/v1/data/metrics - Get real-time metrics (all roles)
 		data.GET("/metrics", dataHandler.GetMetricsHandler)
@@ -204,7 +241,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Export group with auth and RBAC middleware (admin only)
 		exports := v1.Group("/data/export")
-		exports.Use(middleware.JWTAuthMiddleware())
+		exports.Use(middleware.JWTAuthMiddleware(jwtService))
 		exports.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
 			// POST /api/v1/data/export - Create export task (admin only)
@@ -222,7 +259,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Alerts group with auth middleware
 		alerts := v1.Group("/alerts")
-		alerts.Use(middleware.JWTAuthMiddleware())
+		alerts.Use(middleware.JWTAuthMiddleware(jwtService))
 
 		// GET /api/v1/alerts/rules - Get all alert rules (all roles)
 		alerts.GET("/rules", alertHandler.GetAlertRulesHandler)
@@ -247,7 +284,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Alert records group with auth middleware
 		alertRecords := v1.Group("/alerts/records")
-		alertRecords.Use(middleware.JWTAuthMiddleware())
+		alertRecords.Use(middleware.JWTAuthMiddleware(jwtService))
 
 		// GET /api/v1/alerts/records - Get alert records with filtering (all roles)
 		alertRecords.GET("", alertRecordHandler.GetAlertRecordsHandler)
@@ -261,7 +298,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// Webhooks group with auth and RBAC middleware (admin only)
 		webhooks := v1.Group("/webhooks")
-		webhooks.Use(middleware.JWTAuthMiddleware())
+		webhooks.Use(middleware.JWTAuthMiddleware(jwtService))
 		webhooks.Use(middleware.RBACMiddleware([]string{"admin"}))
 
 		// GET /api/v1/webhooks - Get all webhook configurations (admin only)
@@ -282,7 +319,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Performance metrics routes (require auth) (Story 8.3, 8.4)
 		// Metrics group with auth middleware (all roles)
 		metricsGroup := v1.Group("/metrics")
-		metricsGroup.Use(middleware.JWTAuthMiddleware())
+		metricsGroup.Use(middleware.JWTAuthMiddleware(jwtService))
 		{
 			// GET /api/v1/metrics/performance - Get performance metrics (all roles)
 			metricsGroup.GET("/performance", metricsHandler.GetPerformanceMetrics)
@@ -294,4 +331,26 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 	// Return cache manager for graceful shutdown
 	return cacheManager
+}
+
+// getEnvOrDefault gets environment variable or returns default value
+func getEnvOrDefault(key, defaultValue string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
+// generateJWTSecret generates a 512-bit (64 byte) random JWT secret using crypto/rand
+func generateJWTSecret() string {
+	secret := make([]byte, 64)
+	// Use crypto/rand for cryptographically secure random bytes
+	_, err := rand.Read(secret)
+	if err != nil {
+		// Fallback: panic on failure as this is a critical security function
+		panic(fmt.Sprintf("failed to generate JWT secret: %v", err))
+	}
+	// Return as hex string for easier configuration
+	return hex.EncodeToString(secret)
 }

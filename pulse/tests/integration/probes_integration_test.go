@@ -23,7 +23,7 @@ func TestCreateProbe_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store to avoid 429 errors from previous tests
-	auth.ClearRateLimitStore()
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "probe_test_user"
@@ -204,7 +204,7 @@ func TestGetProbes_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store to avoid 429 errors from previous tests
-	auth.ClearRateLimitStore()
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "get_probes_user"
@@ -313,7 +313,7 @@ func TestUpdateDeleteProbe_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store to avoid 429 errors from previous tests
-	auth.ClearRateLimitStore()
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "update_probe_user"
@@ -453,7 +453,7 @@ func TestProbeConstraints_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store to avoid 429 errors from previous tests
-	auth.ClearRateLimitStore()
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "probe_constraints_user"

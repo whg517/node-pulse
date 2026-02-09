@@ -1,95 +1,86 @@
 package auth
 
 import (
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
+	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/whg517/node-pulse/pulse/internal/config"
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Claims represents JWT custom claims
-// Security: Does NOT include PII (username, email) - JWT can be decoded
-type Claims struct {
-	UserID string `json:"user_id"`
-	Role   string `json:"role"`
-	Jti    string `json:"jti"` // JWT ID for audit trail
-	jwt.RegisteredClaims
-}
+const (
+	// TokenIssuer identifies the issuer of JWT tokens
+	TokenIssuer = "node-pulse"
+	// TokenAudience identifies the intended audience for JWT tokens
+	TokenAudience = "node-pulse-api"
+)
 
 // JWTService handles JWT token generation and validation
 type JWTService struct {
-	secret                         []byte
-	accessTokenExpirationMinutes   int
-	refreshTokenExpirationDays     int
+	secret           []byte
+	accessExpiration time.Duration
+	pool             *pgxpool.Pool
+	issuer           string
+	audience         []string
 }
 
-var (
-	jwtService     *JWTService
-	jwtServiceOnce sync.Once
-	jwtServiceErr  error
-)
-
-// NewJWTService creates a new JWT service (singleton pattern)
-func NewJWTService() (*JWTService, error) {
-	jwtServiceOnce.Do(func() {
-		cfg := config.Get()
-
-		// Validate JWT secret is at least 64 bytes (512 bits) per NIST standards
-		if len(cfg.JWT.Secret) < 64 {
-			jwtServiceErr = fmt.Errorf("JWT secret must be at least 64 bytes (512 bits) for security, got %d bytes", len(cfg.JWT.Secret))
-			return
-		}
-
-		jwtService = &JWTService{
-			secret:                         []byte(cfg.JWT.Secret),
-			accessTokenExpirationMinutes:   15, // 15 minutes default
-			refreshTokenExpirationDays:     7,  // 7 days default
-		}
-	})
-
-	return jwtService, jwtServiceErr
+// NewJWTService creates a new JWT service instance
+func NewJWTService(secret string, accessExpirationMinutes int, pool *pgxpool.Pool) *JWTService {
+	return &JWTService{
+		secret:           []byte(secret),
+		accessExpiration: time.Duration(accessExpirationMinutes) * time.Minute,
+		pool:             pool,
+		issuer:           TokenIssuer,
+		audience:         []string{TokenAudience},
+	}
 }
 
-// GenerateAccessToken generates a JWT access token
-// Returns: token string, JWT ID (jti), error
+// Claims represents JWT custom claims
+type Claims struct {
+	UserID string `json:"user_id"`
+	Role   string `json:"role"`
+	JTI    string `json:"jti"` // JWT ID for blacklist tracking
+	jwt.RegisteredClaims
+}
+
+// GenerateAccessToken generates a new access token with issuer and audience claims
 func (s *JWTService) GenerateAccessToken(userID, role string) (string, string, error) {
-	// Generate unique JWT ID for audit trail
-	jti := generateJTI()
-
+	jti := uuid.New().String()
 	now := time.Now()
-	expiresAt := now.Add(time.Duration(s.accessTokenExpirationMinutes) * time.Minute)
 
 	claims := Claims{
 		UserID: userID,
 		Role:   role,
-		Jti:    jti,
+		JTI:    jti,
 		RegisteredClaims: jwt.RegisteredClaims{
-			ID:        jti,
+			Issuer:    s.issuer,
+			Subject:   userID,
+			Audience:  s.audience,
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.accessExpiration)),
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(expiresAt),
-			Issuer:    "node-pulse",
+			NotBefore: jwt.NewNumericDate(now),
 		},
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, err := token.SignedString(s.secret)
 	if err != nil {
-		return "", "", fmt.Errorf("failed to sign access token: %w", err)
+		return "", "", fmt.Errorf("failed to sign token: %w", err)
 	}
 
 	return tokenString, jti, nil
 }
 
-// ValidateAccessToken validates a JWT access token and returns the claims
+// ValidateAccessToken validates an access token and returns the claims
+// Uses 60-second clock skew tolerance as specified in tech-spec
 func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
-		// Validate signing method
+	// Create parser with 60-second leeway for clock skew
+	parser := jwt.NewParser(jwt.WithLeeway(60*time.Second))
+
+	token, err := parser.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// Validate signing algorithm
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -97,49 +88,106 @@ func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse access token: %w", err)
+		return nil, fmt.Errorf("failed to parse token: %w", err)
 	}
 
-	claims, ok := token.Claims.(*Claims)
+	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok || !token.Valid {
-		return nil, fmt.Errorf("invalid access token")
+		return nil, fmt.Errorf("invalid token claims")
 	}
 
-	// Check expiration
-	if time.Now().After(claims.ExpiresAt.Time) {
-		return nil, fmt.Errorf("access token expired")
+	// Validate issuer claim
+	tokenIssuer, ok := claims["iss"].(string)
+	if !ok || tokenIssuer != s.issuer {
+		return nil, fmt.Errorf("invalid token issuer: expected %s, got %s", s.issuer, tokenIssuer)
 	}
 
-	return claims, nil
-}
-
-// GenerateRefreshToken generates a random refresh token
-// Returns: token string, JWT ID (jti), error
-func (s *JWTService) GenerateRefreshToken() (string, string, error) {
-	// Generate 32-byte random token (256 bits)
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		return "", "", fmt.Errorf("failed to generate refresh token: %w", err)
+	// Validate audience claim
+	tokenAudience, ok := claims["aud"].(string)
+	if !ok {
+		// Check if audience is a list
+		audList, ok := claims["aud"].([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("invalid token audience")
+		}
+		audienceValid := false
+		for _, aud := range audList {
+			if audStr, ok := aud.(string); ok && audStr == TokenAudience {
+				audienceValid = true
+				break
+			}
+		}
+		if !audienceValid {
+			return nil, fmt.Errorf("invalid token audience")
+		}
+	} else if tokenAudience != TokenAudience {
+		return nil, fmt.Errorf("invalid token audience: expected %s, got %s", TokenAudience, tokenAudience)
 	}
 
-	// Generate JTI for tracking
-	jti := generateJTI()
+	// Extract claims
+	userID, ok := claims["user_id"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid user_id in token")
+	}
 
-	// Encode as base64 URL-safe
-	token := base64.URLEncoding.EncodeToString(tokenBytes)
+	role, ok := claims["role"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid role in token")
+	}
 
-	return token, jti, nil
+	jti, ok := claims["jti"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid jti in token")
+	}
+
+	return &Claims{
+		UserID: userID,
+		Role:   role,
+		JTI:    jti,
+	}, nil
 }
 
-// HashRefreshToken creates a SHA-256 hash of the refresh token for storage
-func (s *JWTService) HashRefreshToken(token string) (string, error) {
-	hash := sha256.Sum256([]byte(token))
-	return hex.EncodeToString(hash[:]), nil
+// GetJTI extracts the JTI from a token string without full validation
+// Used for blacklist operations
+func (s *JWTService) GetJTI(tokenString string) (string, error) {
+	parser := jwt.NewParser()
+	token, _, err := parser.ParseUnverified(tokenString, &jwt.MapClaims{})
+	if err != nil {
+		return "", fmt.Errorf("failed to parse token: %w", err)
+	}
+
+	claims, ok := token.Claims.(*jwt.MapClaims)
+	if !ok {
+		return "", fmt.Errorf("invalid token claims")
+	}
+
+	jti, ok := (*claims)["jti"].(string)
+	if !ok {
+		return "", fmt.Errorf("invalid jti in token")
+	}
+
+	return jti, nil
 }
 
-// generateJTI generates a unique JWT ID for audit trail
-func generateJTI() string {
-	b := make([]byte, 16)
-	rand.Read(b)
-	return hex.EncodeToString(b)
+// CheckRevoked checks if a token's JTI is in the blacklist
+// Returns error when pool is nil (fail-closed for security)
+func (s *JWTService) CheckRevoked(ctx context.Context, jti string) (bool, error) {
+	// Fail-closed: return error when pool is nil instead of accepting all tokens
+	if s.pool == nil {
+		return false, fmt.Errorf("database pool not initialized - cannot verify token revocation status")
+	}
+
+	var revoked bool
+	err := s.pool.QueryRow(ctx, `
+		SELECT EXISTS(
+			SELECT 1 FROM token_blacklist
+			WHERE jti = $1
+		)
+	`, jti).Scan(&revoked)
+
+	if err != nil {
+		return false, fmt.Errorf("failed to check token blacklist: %w", err)
+	}
+
+	return revoked, nil
 }

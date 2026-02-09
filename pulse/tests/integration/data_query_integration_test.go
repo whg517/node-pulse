@@ -21,14 +21,14 @@ import (
 // TestDataQueryEndpoints_Integration tests the data query API endpoints
 // This includes GET /api/v1/data/metrics, /history, /comparison, and /diagnosis
 func TestDataQueryEndpoints_Integration(t *testing.T) {
-	// Clear rate limit store before test
-	auth.ClearRateLimitStore()
-
 	router, pool, _ := setupTestRouter(t)
 	if router == nil {
 		return
 	}
 	defer pool.Close()
+
+	// Clear rate limit store before test
+	auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := fmt.Sprintf("dataquery_%s", uuid.New().String()[:8])

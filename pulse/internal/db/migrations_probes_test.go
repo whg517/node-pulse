@@ -8,7 +8,7 @@ import (
 // TestCreateProbesTable tests probes table creation
 func TestCreateProbesTable(t *testing.T) {
 	ctx := context.Background()
-	pool, _ := setupTestDB(t)
+	pool, _ := SetupTestDB(t)
 	defer pool.Close()
 
 	// Run migration
@@ -90,7 +90,7 @@ func TestCreateProbesTable(t *testing.T) {
 // TestCreateMetricsTable tests metrics table creation
 func TestCreateMetricsTable(t *testing.T) {
 	ctx := context.Background()
-	pool, _ := setupTestDB(t)
+	pool, _ := SetupTestDB(t)
 	defer pool.Close()
 
 	// Create probes table first (required for foreign key)

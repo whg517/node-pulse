@@ -1,133 +1,216 @@
 package middleware
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
-	"github.com/whg517/node-pulse/pulse/internal/auth"
-	"github.com/whg517/node-pulse/pulse/internal/config"
 )
 
-func init() {
-	// Load config for tests
-	config.MustLoad()
-}
-
-func TestJWTAuthMiddleware_Success(t *testing.T) {
+// TestMiddleware_TokenValidation_MissingToken tests missing Authorization header
+func TestMiddleware_TokenValidation_MissingToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// Generate a valid JWT for testing
-	jwtService, err := auth.NewJWTService()
-	assert.NoError(t, err)
-
-	token, _, err := jwtService.GenerateAccessToken("user-123", "admin")
-	assert.NoError(t, err)
+	// Create mock JWT service
+	mockJWT := &MockJWTService{}
 
 	router := gin.New()
-	router.Use(JWTAuthMiddleware())
-	router.GET("/test", func(c *gin.Context) {
-		userID, ok := GetUserID(c)
-		assert.True(t, ok)
-		assert.Equal(t, "user-123", userID)
-
-		role, ok := GetUserRole(c)
-		assert.True(t, ok)
-		assert.Equal(t, "admin", role)
-
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+	router.Use(JWTAuthMiddlewareWithInterface(mockJWT))
+	router.GET("/protected", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("Authorization", "Bearer "+token)
+	req, _ := http.NewRequest("GET", "/protected", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "Should return 401 without token")
 }
 
-func TestJWTAuthMiddleware_NoHeader(t *testing.T) {
+// TestMiddleware_TokenValidation_InvalidFormat tests malformed token is rejected
+func TestMiddleware_TokenValidation_InvalidFormat(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Create mock JWT service
+	mockJWT := &MockJWTService{}
+
 	router := gin.New()
-	router.Use(JWTAuthMiddleware())
-	router.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+	router.Use(JWTAuthMiddlewareWithInterface(mockJWT))
+	router.GET("/protected", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req, _ := http.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "InvalidFormat token123")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "ERR_UNAUTHORIZED")
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "Should return 401 for invalid format")
 }
 
-func TestJWTAuthMiddleware_InvalidFormat(t *testing.T) {
+// TestMiddleware_TokenValidation_ValidToken tests valid token is accepted
+func TestMiddleware_TokenValidation_ValidToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Create mock JWT service that returns valid claims
+	mockJWT := &MockJWTService{
+		ValidateFunc: func(tokenString string) (*JWTClaims, error) {
+			return &JWTClaims{
+				UserID: "user-123",
+				Role:   "admin",
+				JTI:    "jti-abc",
+			}, nil
+		},
+		CheckRevokedFunc: func(ctx context.Context, jti string) (bool, error) {
+			return false, nil
+		},
+	}
+
 	router := gin.New()
-	router.Use(JWTAuthMiddleware())
-	router.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+	router.Use(JWTAuthMiddlewareWithInterface(mockJWT))
+	router.GET("/protected", func(c *gin.Context) {
+		userID, _ := GetUserID(c)
+		c.JSON(http.StatusOK, gin.H{
+			"user_id": userID,
+			"message": "success",
+		})
 	})
 
-	req := httptest.NewRequest("GET", "/test", nil)
-	req.Header.Set("Authorization", "InvalidFormat token")
+	req, _ := http.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "Bearer valid-token-123")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "ERR_INVALID_TOKEN_FORMAT")
+	assert.Equal(t, http.StatusOK, w.Code, "Should return 200 for valid token")
+	assert.Contains(t, w.Body.String(), "user-123", "Should set user_id in context")
 }
 
-func TestJWTAuthMiddleware_InvalidToken(t *testing.T) {
+// TestMiddleware_TokenValidation_InvalidToken tests invalid token is rejected
+func TestMiddleware_TokenValidation_InvalidToken(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
+	// Create mock JWT service that returns error
+	mockJWT := &MockJWTService{
+		ValidateFunc: func(tokenString string) (*JWTClaims, error) {
+			return nil, errors.New("invalid token")
+		},
+	}
+
 	router := gin.New()
-	router.Use(JWTAuthMiddleware())
-	router.GET("/test", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"message": "ok"})
+	router.Use(JWTAuthMiddlewareWithInterface(mockJWT))
+	router.GET("/protected", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	req := httptest.NewRequest("GET", "/test", nil)
+	req, _ := http.NewRequest("GET", "/protected", nil)
 	req.Header.Set("Authorization", "Bearer invalid-token")
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
-	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "ERR_INVALID_TOKEN")
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "Should return 401 for invalid token")
 }
 
-func TestGetUserID_NoUser(t *testing.T) {
+// TestMiddleware_TokenValidation_RevokedToken tests revoked token is rejected
+func TestMiddleware_TokenValidation_RevokedToken(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	// Create mock JWT service that returns token as revoked
+	mockJWT := &MockJWTService{
+		ValidateFunc: func(tokenString string) (*JWTClaims, error) {
+			return &JWTClaims{
+				UserID: "user-123",
+				Role:   "admin",
+				JTI:    "jti-revoked",
+			}, nil
+		},
+		CheckRevokedFunc: func(ctx context.Context, jti string) (bool, error) {
+			return true, nil // Token is revoked
+		},
+	}
+
+	router := gin.New()
+	router.Use(JWTAuthMiddlewareWithInterface(mockJWT))
+	router.GET("/protected", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+
+	req, _ := http.NewRequest("GET", "/protected", nil)
+	req.Header.Set("Authorization", "Bearer revoked-token")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code, "Should return 401 for revoked token")
+	assert.Contains(t, w.Body.String(), "TOKEN_REVOKED", "Should return token revoked error")
+}
+
+// TestMiddleware_HelperFunctions tests context helper functions
+func TestMiddleware_HelperFunctions(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	c, _ := gin.CreateTestContext(httptest.NewRecorder())
 
-	userID, ok := GetUserID(c)
-	assert.False(t, ok)
-	assert.Empty(t, userID)
+	// Test GetUserID when not set
+	_, err := GetUserID(c)
+	assert.Error(t, err, "Should return error when user_id not set")
+
+	// Test GetUserRole when not set
+	_, err = GetUserRole(c)
+	assert.Error(t, err, "Should return error when role not set")
+
+	// Test GetJTI when not set
+	_, err = GetJTI(c)
+	assert.Error(t, err, "Should return error when jti not set")
+
+	// Set values and test retrieval
+	c.Set("user_id", "user-123")
+	c.Set("role", "admin")
+	c.Set("jti", "jti-abc")
+
+	userID, err := GetUserID(c)
+	assert.NoError(t, err, "Should not return error when user_id is set")
+	assert.Equal(t, "user-123", userID, "Should return correct user_id")
+
+	role, err := GetUserRole(c)
+	assert.NoError(t, err, "Should not return error when role is set")
+	assert.Equal(t, "admin", role, "Should return correct role")
+
+	jti, err := GetJTI(c)
+	assert.NoError(t, err, "Should not return error when jti is set")
+	assert.Equal(t, "jti-abc", jti, "Should return correct jti")
 }
 
-func TestGetUserRole_NoUser(t *testing.T) {
+// BenchmarkMiddleware_TokenValidation benchmarks token validation performance
+func BenchmarkMiddleware_TokenValidation(b *testing.B) {
 	gin.SetMode(gin.TestMode)
 
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
+	mockJWT := &MockJWTService{
+		ValidateFunc: func(tokenString string) (*JWTClaims, error) {
+			return &JWTClaims{
+				UserID: "user-123",
+				Role:   "admin",
+				JTI:    "jti-abc",
+			}, nil
+		},
+		CheckRevokedFunc: func(ctx context.Context, jti string) (bool, error) {
+			return false, nil
+		},
+	}
 
-	role, ok := GetUserRole(c)
-	assert.False(t, ok)
-	assert.Empty(t, role)
-}
+	router := gin.New()
+	router.Use(JWTAuthMiddlewareWithInterface(mockJWT))
+	router.GET("/protected", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
 
-func TestRequireAuth_NotAuthenticated(t *testing.T) {
-	gin.SetMode(gin.TestMode)
-
-	c, _ := gin.CreateTestContext(httptest.NewRecorder())
-
-	userID, role, ok := RequireAuth(c)
-	assert.False(t, ok)
-	assert.Empty(t, userID)
-	assert.Empty(t, role)
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req, _ := http.NewRequest("GET", "/protected", nil)
+		req.Header.Set("Authorization", "Bearer valid-token-123")
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+	}
 }

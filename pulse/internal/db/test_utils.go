@@ -4,14 +4,17 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/crypto/bcrypt"
 
 	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/testutil"
 )
 
-// setupTestDB creates a test database connection pool
-func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
+// SetupTestDB creates a test database connection pool
+// This function is exported for use in other test packages
+func SetupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	// Setup test config
 	testutil.SetupTestConfig()
 
@@ -29,12 +32,25 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	}
 
 	// Clean up any existing tables from previous tests
+	// Drop auth-related tables first (due to foreign keys)
+	pool.Exec(ctx, "DROP TABLE IF EXISTS rate_limits CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS auth_audit_logs CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS token_blacklist CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS refresh_tokens CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS api_keys CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
+
+	// Drop other tables
 	pool.Exec(ctx, "DROP TABLE IF EXISTS alerts CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_suppressions CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_events CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS webhooks CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS webhook_logs CASCADE")
 	pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
 	pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
 	pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
 	pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
 
 	// Create all tables
 	if err := Migrate(ctx, pool); err != nil {
@@ -48,4 +64,80 @@ func setupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	}
 
 	return pool, cleanup
+}
+
+// CreateTestUser creates a test user in the database and returns the user ID
+func CreateTestUser(ctx context.Context, pool *pgxpool.Pool, username, password, role string) uuid.UUID {
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+
+	userID := uuid.New()
+	_, err = pool.Exec(ctx, `
+		INSERT INTO users (user_id, username, password_hash, email, role, is_active, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, true, NOW(), NOW())
+	`, userID, username, hashedPassword, username+"@test.com", role)
+	if err != nil {
+		panic(err)
+	}
+
+	return userID
+}
+
+// CreateTestAPIKey creates a test API key and returns the plain text key and key ID
+func CreateTestAPIKey(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, name string) (string, int) {
+	// Generate a random API key
+	keyPlain := uuid.New().String()
+
+	// Hash the key
+	hash := bcryptHash(keyPlain)
+
+	// Extract key prefix (first 8 chars)
+	keyPrefix := keyPlain[:8]
+
+	// Insert into database
+	var keyID int
+	err := pool.QueryRow(ctx, `
+		INSERT INTO api_keys (key_hash, key_prefix, user_id, name, is_active, created_at, last_used_at)
+		VALUES ($1, $2, $3, $4, true, NOW(), NOW())
+		RETURNING id
+	`, hash, keyPrefix, userID, name).Scan(&keyID)
+	if err != nil {
+		panic(err)
+	}
+
+	return keyPlain, keyID
+}
+
+// bcryptHash is a helper to hash passwords/API keys
+func bcryptHash(plain string) string {
+	hash, err := bcrypt.GenerateFromPassword([]byte(plain), bcrypt.DefaultCost)
+	if err != nil {
+		panic(err)
+	}
+	return string(hash)
+}
+
+// CleanupTestTables drops all test tables (useful for cleanup between tests)
+func CleanupTestTables(ctx context.Context, pool *pgxpool.Pool) {
+	// Drop auth-related tables first (due to foreign keys)
+	pool.Exec(ctx, "DROP TABLE IF EXISTS rate_limits CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS auth_audit_logs CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS token_blacklist CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS refresh_tokens CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS api_keys CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
+
+	// Drop other tables
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_events CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_suppressions CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS alerts CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS webhook_logs CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS webhooks CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
+	pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
 }
