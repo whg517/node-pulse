@@ -118,6 +118,10 @@ func (s *RefreshTokenService) CreateRefreshToken(ctx context.Context, userID str
 		}
 	}
 
+	// Generate token_id (UUID) as database identifier
+	tokenID := uuid.New()
+
+	// Generate refresh token (random string for client)
 	tokenPlain := uuid.New().String()
 
 	// Hash the token for storage
@@ -143,10 +147,10 @@ func (s *RefreshTokenService) CreateRefreshToken(ctx context.Context, userID str
 	// Insert into database
 	var dbToken models.RefreshToken
 	err = s.pool.QueryRow(ctx, `
-		INSERT INTO refresh_tokens (token_id, user_id, expires_at, max_valid_until, user_agent, ip_address, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+		INSERT INTO refresh_tokens (token_id, token_hash, user_id, expires_at, max_valid_until, user_agent, ip_address, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
 		RETURNING id, token_id, user_id, expires_at, max_valid_until, revoked_at, replaced_by, user_agent, ip_address, created_at, updated_at
-	`, tokenHash, userID, expiresAt, maxValidUntil, userAgentPtr, ipAddressPtr).Scan(
+	`, tokenID, tokenHash, userID, expiresAt, maxValidUntil, userAgentPtr, ipAddressPtr).Scan(
 		&dbToken.ID,
 		&dbToken.TokenID,
 		&dbToken.UserID,
@@ -182,13 +186,14 @@ func (s *RefreshTokenService) ValidateRefreshToken(ctx context.Context, token st
 
 	var dbToken models.RefreshToken
 	err = tx.QueryRow(ctx, `
-		SELECT id, token_id, user_id, expires_at, max_valid_until, revoked_at, replaced_by, user_agent, ip_address, created_at, updated_at
+		SELECT id, token_id, token_hash, user_id, expires_at, max_valid_until, revoked_at, replaced_by, user_agent, ip_address, created_at, updated_at
 		FROM refresh_tokens
-		WHERE token_id = $1
+		WHERE token_hash = $1
 		FOR UPDATE
 	`, tokenHash).Scan(
 		&dbToken.ID,
 		&dbToken.TokenID,
+		&dbToken.TokenHash,
 		&dbToken.UserID,
 		&dbToken.ExpiresAt,
 		&dbToken.MaxValidUntil,
@@ -231,23 +236,30 @@ func (s *RefreshTokenService) RotateRefreshToken(ctx context.Context, oldToken s
 
 	// Acquire mutex FIRST to prevent TOCTOU race (before any validation)
 	// We need userID for the mutex, so do a lightweight lookup first
-	var userID string
+	var userID uuid.UUID
 	err := s.pool.QueryRow(ctx, `
-		SELECT user_id FROM refresh_tokens WHERE token_id = $1
+		SELECT user_id FROM refresh_tokens WHERE token_hash = $1
 	`, tokenHash).Scan(&userID)
 
 	if err != nil {
 		return "", nil, fmt.Errorf("token not found: %w", err)
 	}
 
+	// Convert UUID to string for mutex lookup
+	userIDStr := userID.String()
+
 	// Get mutex for this user and lock immediately
-	userMutex := s.getMutex(userID)
+	userMutex := s.getMutex(userIDStr)
 	userMutex.Lock()
 	defer userMutex.Unlock()
 
 	// Now validate the token (we're already holding the lock)
 	oldTokenInfo, err := s.ValidateRefreshToken(ctx, oldToken)
 	if err != nil {
+		// If token is revoked, it's likely due to concurrent use - return specific error
+		if err.Error() == "token has been revoked" {
+			return "", nil, fmt.Errorf("token already used")
+		}
 		return "", nil, err
 	}
 
@@ -261,7 +273,7 @@ func (s *RefreshTokenService) RotateRefreshToken(ctx context.Context, oldToken s
 	// Double-check token hasn't been used (concurrent request)
 	var revokedAt *time.Time
 	err = tx.QueryRow(ctx, `
-		SELECT revoked_at FROM refresh_tokens WHERE token_id = $1 FOR UPDATE
+		SELECT revoked_at FROM refresh_tokens WHERE token_hash = $1 FOR UPDATE
 	`, tokenHash).Scan(&revokedAt)
 
 	if err != nil {
@@ -277,7 +289,7 @@ func (s *RefreshTokenService) RotateRefreshToken(ctx context.Context, oldToken s
 	_, err = tx.Exec(ctx, `
 		UPDATE refresh_tokens
 		SET revoked_at = $1, updated_at = $1
-		WHERE token_id = $2
+		WHERE token_hash = $2
 	`, now, tokenHash)
 
 	if err != nil {
@@ -290,17 +302,30 @@ func (s *RefreshTokenService) RotateRefreshToken(ctx context.Context, oldToken s
 		newExpiresAt = oldTokenInfo.MaxValidUntil.Time
 	}
 
+	// Handle empty IP address (set to NULL)
+	var ipAddressPtr *string
+	if ipAddress != "" {
+		ipAddressPtr = &ipAddress
+	}
+
+	// Handle empty user agent (set to NULL)
+	var userAgentPtr *string
+	if userAgent != "" {
+		userAgentPtr = &userAgent
+	}
+
 	// Create new token
-	newTokenPlain := uuid.New().String()
+	newTokenID := uuid.New()
+	newTokenPlain := newTokenID.String()
 	newHash := sha256.Sum256([]byte(newTokenPlain))
 	newTokenHash := hex.EncodeToString(newHash[:])
 
 	var newToken models.RefreshToken
 	err = tx.QueryRow(ctx, `
-		INSERT INTO refresh_tokens (token_id, user_id, expires_at, max_valid_until, user_agent, ip_address, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+		INSERT INTO refresh_tokens (token_id, token_hash, user_id, expires_at, max_valid_until, user_agent, ip_address, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
 		RETURNING id, token_id, user_id, expires_at, max_valid_until, revoked_at, replaced_by, user_agent, ip_address, created_at, updated_at
-	`, newTokenHash, oldTokenInfo.UserID, newExpiresAt, oldTokenInfo.MaxValidUntil, userAgent, ipAddress).Scan(
+	`, newTokenID, newTokenHash, oldTokenInfo.UserID, newExpiresAt, oldTokenInfo.MaxValidUntil, userAgentPtr, ipAddressPtr).Scan(
 		&newToken.ID,
 		&newToken.TokenID,
 		&newToken.UserID,

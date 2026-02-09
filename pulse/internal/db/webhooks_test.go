@@ -12,9 +12,9 @@ import (
 )
 
 func setupWebhookTestDB(t *testing.T) *pgxpool.Pool {
-	pool, _ := setupTestDB(t)
+	pool, _ := SetupTestDB(t)
 
-	// webhooks table is already created by Migrate in setupTestDB
+	// webhooks table is already created by Migrate in SetupTestDB
 	return pool
 }
 

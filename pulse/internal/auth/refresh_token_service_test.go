@@ -156,15 +156,15 @@ func TestRefreshTokenService_RevokeRefreshToken(t *testing.T) {
 	ctx := context.Background()
 
 	// Create token
-	_, dbToken, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	tokenPlain, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
 	// Revoke token
-	err = service.RevokeRefreshToken(ctx, "user-123", dbToken.TokenID)
+	err = service.RevokeRefreshToken(ctx, "user-123", tokenPlain)
 	require.NoError(t, err)
 
 	// Try to validate - should fail
-	_, err = service.ValidateRefreshToken(ctx, dbToken.TokenID)
+	_, err = service.ValidateRefreshToken(ctx, tokenPlain)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "revoked")
 }
@@ -177,18 +177,18 @@ func TestRefreshTokenService_RevokeAllUserTokens(t *testing.T) {
 	ctx := context.Background()
 
 	// Create multiple tokens for same user
-	_, token1, _ := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
-	_, token2, _ := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	tokenPlain1, _, _ := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	tokenPlain2, _, _ := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
 
 	// Revoke all tokens
 	err := service.RevokeAllUserTokens(ctx, "user-123")
 	require.NoError(t, err)
 
 	// Verify all tokens are revoked
-	_, err = service.ValidateRefreshToken(ctx, token1.TokenID)
+	_, err = service.ValidateRefreshToken(ctx, tokenPlain1)
 	assert.Error(t, err)
 
-	_, err = service.ValidateRefreshToken(ctx, token2.TokenID)
+	_, err = service.ValidateRefreshToken(ctx, tokenPlain2)
 	assert.Error(t, err)
 }
 
@@ -219,10 +219,10 @@ func TestRefreshTokenService_CleanupExpiredTokens(t *testing.T) {
 	ctx := context.Background()
 
 	// Create and immediately revoke a token
-	_, dbToken, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	tokenPlain, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
-	err = service.RevokeRefreshToken(ctx, "user-123", dbToken.TokenID)
+	err = service.RevokeRefreshToken(ctx, "user-123", tokenPlain)
 	require.NoError(t, err)
 
 	// Run cleanup with 0 retention (delete all revoked)

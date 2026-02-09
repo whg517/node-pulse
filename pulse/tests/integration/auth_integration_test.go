@@ -276,6 +276,14 @@ func TestIntegration_Logout_WithValidToken(t *testing.T) {
 	require.Len(t, cookies, 1, "Should have refresh_token cookie")
 	refreshToken := cookies[0].Value
 	assert.Equal(t, "refresh_token", cookies[0].Name)
+	assert.NotEmpty(t, refreshToken, "Refresh token should not be empty")
+	t.Logf("Got refresh token from cookie (length: %d, prefix: %s)", len(refreshToken), refreshToken[:20])
+
+	// Verify refresh token exists in database before concurrent test
+	var tokenCount int
+	err = pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM refresh_tokens").Scan(&tokenCount)
+	require.NoError(t, err, "Failed to count refresh tokens")
+	t.Logf("Refresh tokens in DB before concurrent test: %d", tokenCount)
 
 	// Act - Logout with access token and refresh token cookie
 	req, _ := http.NewRequest("POST", "/api/v1/auth/logout", nil)
@@ -549,4 +557,123 @@ func TestIntegration_GetMe_WithExpiredToken(t *testing.T) {
 	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, "ERR_INVALID_TOKEN", resp.Code, "Error code should be ERR_INVALID_TOKEN")
+}
+
+// TestIntegration_ConcurrentRefresh tests concurrent refresh token rotation
+// Tech-Spec Task 10.2: Verify only one request succeeds, others get 409 Conflict
+func TestIntegration_ConcurrentRefresh(t *testing.T) {
+	router, pool, _ := setupTestRouter(t)
+	if router == nil {
+		return
+	}
+	defer pool.Close()
+
+	// Clear rate limit store for clean test
+	auth.ClearRateLimitStore(context.Background(), pool)
+
+	// Arrange - Create test user and login
+	testUserID := uuid.New()
+	testPassword := "testPassword"
+	passwordHash, _ := auth.HashPassword(testPassword)
+	testUsername := fmt.Sprintf("concurrent_%s", testUserID.String()[:8])
+
+	_, err := pool.Exec(context.Background(), `
+		INSERT INTO users (user_id, username, password_hash, role, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
+	`, testUserID, testUsername, passwordHash, "operator")
+	require.NoError(t, err)
+	defer cleanupTestUser(pool, testUsername)
+
+	// Login to get initial tokens
+	loginReq := models.LoginRequest{
+		Username: testUsername,
+		Password: testPassword,
+	}
+	loginBody, _ := json.Marshal(loginReq)
+	loginHTTPReq, _ := http.NewRequest("POST", "/api/v1/auth/login", bytes.NewBuffer(loginBody))
+	loginHTTPReq.Header.Set("Content-Type", "application/json")
+	wLogin := httptest.NewRecorder()
+	router.ServeHTTP(wLogin, loginHTTPReq)
+
+	require.Equal(t, http.StatusOK, wLogin.Code, "Login should succeed")
+
+	var loginResp models.LoginResponse
+	err = json.Unmarshal(wLogin.Body.Bytes(), &loginResp)
+	require.NoError(t, err)
+
+	// Get refresh token from cookie
+	cookies := wLogin.Result().Cookies()
+	require.Len(t, cookies, 1, "Should have refresh_token cookie")
+	refreshToken := cookies[0].Value
+	assert.NotEmpty(t, refreshToken, "Refresh token should not be empty")
+
+	// Verify refresh token exists in database
+	var tokenCount int
+	err = pool.QueryRow(context.Background(), "SELECT COUNT(*) FROM refresh_tokens WHERE user_id = $1", testUserID).Scan(&tokenCount)
+	require.NoError(t, err, "Failed to count refresh tokens")
+	assert.Equal(t, 1, tokenCount, "Should have exactly 1 refresh token in database after login")
+	t.Logf("Refresh token created successfully. Token in DB: %d, Token length: %d", tokenCount, len(refreshToken))
+
+	// Act - Launch 10 concurrent refresh requests
+	const numGoroutines = 10
+	type result struct {
+		statusCode int
+		body       string
+	}
+	results := make(chan result, numGoroutines) // Channel to collect results
+
+	for i := 0; i < numGoroutines; i++ {
+		go func() {
+			// Create new refresh request with JSON body
+			refreshReq := models.RefreshRequest{
+				RefreshToken: refreshToken,
+			}
+			reqBody, _ := json.Marshal(refreshReq)
+			req, _ := http.NewRequest("POST", "/api/v1/auth/refresh", bytes.NewBuffer(reqBody))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			// Send status code and body to results channel
+			results <- result{
+				statusCode: w.Code,
+				body:       w.Body.String(),
+			}
+		}()
+	}
+
+	// Collect all results
+	successCount := 0
+	conflictCount := 0
+	otherCount := 0
+	statusCodes := make([]int, numGoroutines)
+	var firstErrorBody string
+
+	for i := 0; i < numGoroutines; i++ {
+		res := <-results
+		statusCodes[i] = res.statusCode
+		switch res.statusCode {
+		case http.StatusOK:
+			successCount++
+		case http.StatusConflict:
+			conflictCount++
+		default:
+			otherCount++
+			if firstErrorBody == "" {
+				firstErrorBody = res.body
+			}
+		}
+	}
+
+	// Log status codes and first error body for debugging
+	t.Logf("Concurrent refresh results - Status codes: %v", statusCodes)
+	t.Logf("Success: %d, Conflict: %d, Other: %d", successCount, conflictCount, otherCount)
+	if otherCount > 0 && firstErrorBody != "" {
+		t.Logf("First error response body: %s", firstErrorBody)
+	}
+
+	// Assert - Only one should succeed (200 OK), others should get 409 Conflict
+	assert.Equal(t, 1, successCount, "Expected exactly 1 successful refresh (200 OK)")
+	assert.Equal(t, 9, conflictCount, "Expected 9 conflicts (409 Conflict) from concurrent refresh")
+	assert.Equal(t, 0, otherCount, "Expected no other status codes")
 }

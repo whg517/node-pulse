@@ -13,7 +13,7 @@ import (
 )
 
 func setupAlertTestDB(t *testing.T) *pgxpool.Pool {
-	pool, _ := setupTestDB(t)
+	pool, _ := SetupTestDB(t)
 
 	// Clean up before each test
 	_, err := pool.Exec(context.Background(), "DELETE FROM alerts WHERE 1=1")

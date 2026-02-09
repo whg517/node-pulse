@@ -332,7 +332,7 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		return
 	}
 
-	accessToken, jti, err := h.jwtService.GenerateAccessToken(dbToken.UserID, role)
+	accessToken, jti, err := h.jwtService.GenerateAccessToken(dbToken.UserID.String(), role)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "TOKEN_GENERATION_FAILED",
@@ -342,7 +342,8 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	}
 
 	// Log token refresh
-	h.logAuditEvent(ctx, "token_refresh", &dbToken.UserID, ipAddress, map[string]interface{}{
+	userIDStr := dbToken.UserID.String()
+	h.logAuditEvent(ctx, "token_refresh", &userIDStr, ipAddress, map[string]interface{}{
 		"jti":        jti,
 		"user_agent": userAgent,
 	})
@@ -554,7 +555,7 @@ func (h *AuthHandler) GetSessions(c *gin.Context) {
 	sessions := make([]models.SessionResponse, len(tokens))
 	for i, token := range tokens {
 		sessions[i] = models.SessionResponse{
-			SessionID:     token.TokenID,
+			SessionID:     token.TokenID.String(),
 			CreatedAt:     token.CreatedAt.Time.Format(time.RFC3339),
 			ExpiresAt:     token.ExpiresAt.Time.Format(time.RFC3339),
 			MaxValidUntil: token.MaxValidUntil.Time.Format(time.RFC3339),

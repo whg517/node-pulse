@@ -110,8 +110,6 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		beacon := v1.Group("/beacon")
 		{
-			// POST /api/v1/beacon/token - Exchange API key for JWT token (public for beacons)
-			beacon.POST("/token", authHandler.ExchangeAPIKey)
 			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (JWT auth required)
 			beacon.POST("/heartbeat", middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleHeartbeat)
 		}
@@ -125,6 +123,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			authGroup.POST("/refresh", authHandler.Refresh)
 			// POST /api/v1/auth/logout - Logout (requires valid token to blacklist it)
 			authGroup.POST("/logout", middleware.JWTAuthMiddleware(jwtService), authHandler.Logout)
+			// POST /api/v1/auth/token/api-key - Exchange API key for JWT token (public for beacons/devices)
+			authGroup.POST("/token/api-key", authHandler.ExchangeAPIKey)
 			// GET /api/v1/auth/me - Get current user info (requires auth)
 			authGroup.GET("/me", middleware.JWTAuthMiddleware(jwtService), authHandler.GetMe)
 			// GET /api/v1/auth/sessions - Get user sessions (requires auth)

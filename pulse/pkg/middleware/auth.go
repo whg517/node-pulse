@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strings"
@@ -10,7 +11,15 @@ import (
 )
 
 // JWTAuthMiddleware validates JWT tokens and checks blacklist
+// Accepts concrete *auth.JWTService for production use
 func JWTAuthMiddleware(jwtService *auth.JWTService) gin.HandlerFunc {
+	// Create adapter from concrete type to interface
+	adapter := &JWTServiceAdapter{service: jwtService}
+	return JWTAuthMiddlewareWithInterface(adapter)
+}
+
+// JWTAuthMiddlewareWithInterface accepts JWTService interface (useful for testing/mocking)
+func JWTAuthMiddlewareWithInterface(jwtService JWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get Authorization header
 		authHeader := c.GetHeader("Authorization")
@@ -36,7 +45,7 @@ func JWTAuthMiddleware(jwtService *auth.JWTService) gin.HandlerFunc {
 		// Extract token
 		tokenString := authHeader[7:]
 
-		// Validate token
+		// Validate token using interface
 		claims, err := jwtService.ValidateAccessToken(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -47,7 +56,7 @@ func JWTAuthMiddleware(jwtService *auth.JWTService) gin.HandlerFunc {
 			return
 		}
 
-		// Check blacklist
+		// Check blacklist using interface
 		ctx := c.Request.Context()
 		revoked, err := jwtService.CheckRevoked(ctx, claims.JTI)
 		if err != nil {
@@ -75,6 +84,29 @@ func JWTAuthMiddleware(jwtService *auth.JWTService) gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+// JWTServiceAdapter adapts auth.JWTService to middleware.JWTService interface
+type JWTServiceAdapter struct {
+	service *auth.JWTService
+}
+
+// ValidateAccessToken adapts auth.Claims to middleware.JWTClaims
+func (a *JWTServiceAdapter) ValidateAccessToken(tokenString string) (*JWTClaims, error) {
+	claims, err := a.service.ValidateAccessToken(tokenString)
+	if err != nil {
+		return nil, err
+	}
+	return &JWTClaims{
+		UserID: claims.UserID,
+		Role:   claims.Role,
+		JTI:    claims.JTI,
+	}, nil
+}
+
+// CheckRevoked forwards to auth.JWTService.CheckRevoked
+func (a *JWTServiceAdapter) CheckRevoked(ctx context.Context, jti string) (bool, error) {
+	return a.service.CheckRevoked(ctx, jti)
 }
 
 // GetUserID retrieves user_id from context

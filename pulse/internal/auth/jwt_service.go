@@ -74,10 +74,10 @@ func (s *JWTService) GenerateAccessToken(userID, role string) (string, string, e
 }
 
 // ValidateAccessToken validates an access token and returns the claims
-// Uses 10-second clock skew tolerance (reduced from 60s for better security)
+// Uses 60-second clock skew tolerance as specified in tech-spec
 func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
-	// Create parser with 10-second leeway for clock skew
-	parser := jwt.NewParser(jwt.WithLeeway(10*time.Second))
+	// Create parser with 60-second leeway for clock skew
+	parser := jwt.NewParser(jwt.WithLeeway(60*time.Second))
 
 	token, err := parser.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		// Validate signing algorithm

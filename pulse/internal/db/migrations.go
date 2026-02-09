@@ -484,12 +484,13 @@ func dropAndRecreateRefreshTokensTable(ctx context.Context, pool *pgxpool.Pool) 
 		-- Create new table with sliding + absolute expiration support
 		CREATE TABLE refresh_tokens (
 			id SERIAL PRIMARY KEY,
-			token_id TEXT UNIQUE NOT NULL,
+			token_id UUID UNIQUE NOT NULL,
+			token_hash TEXT NOT NULL,
 			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
 			expires_at TIMESTAMP NOT NULL,
 			max_valid_until TIMESTAMP NOT NULL,
 			revoked_at TIMESTAMP,
-			replaced_by TEXT,
+			replaced_by UUID REFERENCES refresh_tokens(token_id),
 			user_agent TEXT,
 			ip_address INET,
 			created_at TIMESTAMP DEFAULT NOW(),
@@ -498,6 +499,7 @@ func dropAndRecreateRefreshTokensTable(ctx context.Context, pool *pgxpool.Pool) 
 
 		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_revoked ON refresh_tokens(user_id, revoked_at);
 		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_id ON refresh_tokens(token_id);
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
 	`
 
 	_, err := pool.Exec(ctx, query)
