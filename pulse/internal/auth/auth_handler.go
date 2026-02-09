@@ -32,6 +32,7 @@ type AuthHandler struct {
 	refreshTokenService *RefreshTokenService
 	apiKeyService     *APIKeyService
 	rateLimiter       *RateLimiter
+	auditLogger       *AuditLogger
 	accessExpirationMinutes int
 	refreshExpirationDays  int
 	maxValidityDays        int
@@ -49,6 +50,7 @@ func NewAuthHandler(
 	refreshTokenService := NewRefreshTokenService(pool)
 	apiKeyService := NewAPIKeyService(pool)
 	rateLimiter := NewRateLimiter(pool)
+	auditLogger := NewAuditLogger(pool)
 
 	return &AuthHandler{
 		pool:                  pool,
@@ -56,6 +58,7 @@ func NewAuthHandler(
 		refreshTokenService:  refreshTokenService,
 		apiKeyService:        apiKeyService,
 		rateLimiter:          rateLimiter,
+		auditLogger:          auditLogger,
 		accessExpirationMinutes: accessExpirationMinutes,
 		refreshExpirationDays:   refreshExpirationDays,
 		maxValidityDays:         maxValidityDays,
@@ -259,6 +262,16 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Router /api/v1/auth/refresh [post]
 func (h *AuthHandler) Refresh(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	// Validate Content-Type header (prevent content-type confusion attacks)
+	contentType := c.GetHeader("Content-Type")
+	if contentType != "application/json" {
+		c.JSON(http.StatusUnsupportedMediaType, models.ErrorResponse{
+			Code:    "UNSUPPORTED_MEDIA_TYPE",
+			Message: "Content-Type must be application/json",
+		})
+		return
+	}
 
 	var req models.RefreshRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -711,6 +724,16 @@ func (h *AuthHandler) RevokeAllSessions(c *gin.Context) {
 // @Router /api/v1/beacon/token [post]
 func (h *AuthHandler) ExchangeAPIKey(c *gin.Context) {
 	ctx := c.Request.Context()
+
+	// Validate Content-Type header (prevent content-type confusion attacks)
+	contentType := c.GetHeader("Content-Type")
+	if contentType != "application/json" {
+		c.JSON(http.StatusUnsupportedMediaType, models.ErrorResponse{
+			Code:    "UNSUPPORTED_MEDIA_TYPE",
+			Message: "Content-Type must be application/json",
+		})
+		return
+	}
 
 	var req struct {
 		APIKey string `json:"api_key" binding:"required"`

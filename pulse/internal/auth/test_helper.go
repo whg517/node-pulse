@@ -90,3 +90,40 @@ func createTestTables(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 		}
 	}
 }
+
+// setupTestDBWithCleanup creates a test database connection with cleanup
+// This function is exported for use across all auth test files
+func setupTestDBWithCleanup(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+
+	// Use test database from environment or skip
+	testDSN := "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
+	ctx := context.Background()
+
+	pool, err := pgxpool.New(ctx, testDSN)
+	if err != nil {
+		t.Skipf("Skipping test: cannot connect to test database: %v", err)
+		return nil
+	}
+
+	// Test connection
+	if err := pool.Ping(ctx); err != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", err)
+		pool.Close()
+		return nil
+	}
+
+	// Clean up any existing tables
+	cleanupTables(ctx, pool)
+
+	// Create all tables
+	createTestTables(ctx, t, pool)
+
+	// Register cleanup function
+	t.Cleanup(func() {
+		cleanupTables(ctx, pool)
+		pool.Close()
+	})
+
+	return pool
+}
