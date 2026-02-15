@@ -26,6 +26,7 @@ export default function AlertHistoryPage() {
   const [nodes, setNodes] = useState<Array<{ id: string; name: string; ip: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
+  const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null)
 
   // Filters
   const [filters, setFilters] = useState<AlertRecordFilters>({})
@@ -35,8 +36,6 @@ export default function AlertHistoryPage() {
   const [page, setPage] = useState(1)
   const pageSize = 20
 
-  // Status update tracking
-  const [updatingStatus, setUpdatingStatus] = useState<Record<string, boolean>>({})
 
   // Check if user can edit (admin only)
   const canEdit = user?.role === 'admin'
@@ -102,22 +101,23 @@ export default function AlertHistoryPage() {
   }
 
   const handleStatusUpdate = async (id: string, currentStatus: AlertRecordStatus, newStatus: AlertRecordStatus) => {
+    // Clear previous error
+    setStatusUpdateError(null)
+
     // Validate status transition
     if (!isValidStatusTransition(currentStatus, newStatus)) {
-      console.error(`Invalid status transition: ${currentStatus} -> ${newStatus}`)
+      setStatusUpdateError(`Invalid status transition: ${currentStatus} -> ${newStatus}`)
       return
     }
-
-    setUpdatingStatus((prev) => ({ ...prev, [id]: true }))
 
     try {
       await updateAlertRecordStatus(id, newStatus)
       // Reload records
       await loadRecords()
     } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update status'
+      setStatusUpdateError(message)
       console.error('Failed to update status:', error)
-    } finally {
-      setUpdatingStatus((prev) => ({ ...prev, [id]: false }))
     }
   }
 
@@ -208,6 +208,34 @@ export default function AlertHistoryPage() {
                 className="ml-auto px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
               >
                 Retry
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Status Update Error */}
+        {statusUpdateError && (
+          <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <svg
+                className="w-5 h-5 text-yellow-600 mr-2"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                />
+              </svg>
+              <p className="text-yellow-800">{statusUpdateError}</p>
+              <button
+                onClick={() => setStatusUpdateError(null)}
+                className="ml-auto px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm"
+              >
+                Dismiss
               </button>
             </div>
           </div>

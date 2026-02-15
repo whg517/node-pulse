@@ -220,7 +220,6 @@ export default function NodeManagementPage() {
             node={selectedNode}
             onSubmit={handleSubmit}
             onCancel={() => setDialogOpen(false)}
-            loading={isSubmitting}
           />
         )}
 
