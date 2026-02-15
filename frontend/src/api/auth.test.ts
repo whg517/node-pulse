@@ -1,10 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { login, logout, refreshToken } from './auth'
 import { AuthenticationError } from './errors'
+import { resetModuleState } from './client'
+
+// Mock localStorage for cross-tab logout sync
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+}
+vi.stubGlobal('localStorage', localStorageMock)
 
 describe('auth API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset module-level state between tests
+    resetModuleState()
   })
 
   afterEach(() => {

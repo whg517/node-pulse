@@ -1,22 +1,32 @@
+/**
+ * Authentication Store
+ *
+ * Zustand store for authentication state management.
+ *
+ * Key Features:
+ * - No pre-refresh timer (relies on 401 interceptor)
+ * - Cross-tab logout sync via localStorage events
+ * - Simplified, single-responsibility API
+ * - NO token persistence (tokens in memory only)
+ */
+
 import { create } from 'zustand'
-import { login as apiLogin, logout as apiLogout, getMe as apiGetMe, refreshToken as apiRefreshToken } from '../api/auth'
-import {
-  ACCESS_TOKEN_EXPIRY_MINUTES,
-  TOKEN_PRE_REFRESH_THRESHOLD_SECONDS,
-  TOKEN_REFRESH_CHECK_INTERVAL_SECONDS,
-} from '../config/constants'
+import { login as apiLogin, logout as apiLogout, getMe as apiGetMe } from '../api/auth'
+import { cancelPendingRequests } from '../api/client'
+import { ACCESS_TOKEN_EXPIRY_MINUTES } from '../config/constants'
 import type { User } from './types'
+import type { UserRole } from '../types/auth'
 
 // ============== Types ==============
+
 export interface AuthState {
   user: User | null
   isAuthenticated: boolean
-  role: 'admin' | 'operator' | 'viewer' | null
+  role: UserRole | null
   accessToken: string | null
   tokenExpiresAt: number | null
-  refreshPromise: Promise<void> | null
-  refreshRetryCount: number
   isLoading: boolean
+  refreshFailureCount: number
 }
 
 export interface AuthActions {
@@ -25,27 +35,27 @@ export interface AuthActions {
   setUser: (user: User) => void
   clearAuth: () => void
   setAccessToken: (token: string, expiresIn: number) => void
-  startTokenExpirationCheck: () => void
-  stopTokenExpirationCheck: () => void
   restoreSession: () => Promise<void>
 }
 
 type AuthStore = AuthState & AuthActions
 
-// Token pre-refresh interval ID
-let preRefreshIntervalId: number | null = null
+// ============== Cross-Tab Sync Constants ==============
+
+const LOGOUT_EVENT_KEY = 'auth:logout'
+const LOGOUT_EVENT_VALUE = 'logout'
 
 // ============== Store ==============
-export const useAuthStore = create<AuthStore>((set, get) => ({
+
+export const useAuthStore = create<AuthStore>((set) => ({
   // State
   user: null,
   isAuthenticated: false,
   role: null,
   accessToken: null,
   tokenExpiresAt: null,
-  refreshPromise: null,
-  refreshRetryCount: 0,
   isLoading: false,
+  refreshFailureCount: 0,
 
   // Actions
   login: async (username: string, password: string) => {
@@ -64,32 +74,30 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       role: response.data.role,
       accessToken: response.data.access_token,
       tokenExpiresAt: expiry,
-      refreshPromise: null,
-      refreshRetryCount: 0,
+      refreshFailureCount: 0,
     })
-
-    // Start pre-refresh timer
-    get().startTokenExpirationCheck()
   },
 
   logout: async () => {
-    // Stop pre-refresh timer
-    get().stopTokenExpirationCheck()
-
     try {
       await apiLogout()
     } catch (error) {
       console.error('Logout API call failed:', error)
       // Continue with local logout even if API call fails
     } finally {
+      // Broadcast logout to other tabs
+      broadcastLogout()
+
+      // Cancel any pending requests
+      cancelPendingRequests()
+
       set({
         user: null,
         isAuthenticated: false,
         role: null,
         accessToken: null,
         tokenExpiresAt: null,
-        refreshPromise: null,
-        refreshRetryCount: 0,
+        refreshFailureCount: 0,
       })
     }
   },
@@ -103,8 +111,11 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
   },
 
   clearAuth: () => {
-    // Stop pre-refresh timer
-    get().stopTokenExpirationCheck()
+    // Broadcast logout to other tabs
+    broadcastLogout()
+
+    // Cancel any pending requests
+    cancelPendingRequests()
 
     set({
       user: null,
@@ -112,74 +123,17 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
       role: null,
       accessToken: null,
       tokenExpiresAt: null,
-      refreshPromise: null,
-      refreshRetryCount: 0,
+      refreshFailureCount: 0,
     })
   },
 
   setAccessToken: (token: string, expiresIn: number) => {
-    const expiry = Date.now() + expiresIn * 1000
+    const expiry = Date.now() + expiresIn
     set({
       accessToken: token,
       tokenExpiresAt: expiry,
-      refreshPromise: null,
-      refreshRetryCount: 0,
+      refreshFailureCount: 0,
     })
-  },
-
-  startTokenExpirationCheck: () => {
-    // Clear existing interval if any
-    get().stopTokenExpirationCheck()
-
-    // Check every minute (using constant)
-    preRefreshIntervalId = window.setInterval(() => {
-      const state = get()
-      if (!state.tokenExpiresAt) {
-        return
-      }
-
-      const now = Date.now()
-      const timeUntilExpiry = state.tokenExpiresAt - now
-      const PRE_REFRESH_THRESHOLD = TOKEN_PRE_REFRESH_THRESHOLD_SECONDS * 1000 // Convert to milliseconds
-
-      // If token expires in less than threshold, refresh it
-      // Also handle already expired tokens (edge case: check happened just after expiry)
-      if (timeUntilExpiry <= PRE_REFRESH_THRESHOLD && timeUntilExpiry > -60000) {
-        // Allow refresh if within 60 seconds of expiry (handles edge cases where check runs late)
-        console.log('[AuthStore] Token expiring soon or just expired, refreshing...')
-        apiRefreshToken()
-          .then((response) => {
-            const expiry = Date.now() + ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000
-            set({
-              accessToken: response.data.access_token,
-              tokenExpiresAt: expiry,
-              refreshPromise: null,
-              refreshRetryCount: 0, // Reset retry count on success
-            })
-            console.log('[AuthStore] Token refreshed successfully')
-          })
-          .catch((error) => {
-            console.error('[AuthStore] Failed to refresh token:', error)
-            // Don't immediately logout - might be a transient network error
-            // The apiClient interceptor will handle forcing logout if refresh consistently fails
-            const retryCount = get().refreshRetryCount + 1
-            if (retryCount >= 3) {
-              // After 3 consecutive failures, give up and logout
-              console.error('[AuthStore] Too many refresh failures, logging out')
-              get().clearAuth()
-            } else {
-              set({ refreshRetryCount: retryCount })
-            }
-          })
-      }
-    }, TOKEN_REFRESH_CHECK_INTERVAL_SECONDS * 1000) // Use constant for check interval
-  },
-
-  stopTokenExpirationCheck: () => {
-    if (preRefreshIntervalId !== null) {
-      clearInterval(preRefreshIntervalId)
-      preRefreshIntervalId = null
-    }
   },
 
   restoreSession: async () => {
@@ -212,3 +166,88 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 }))
+
+// ============== Cross-Tab Logout Sync ==============
+
+/**
+ * Broadcast logout event to other tabs via localStorage
+ */
+function broadcastLogout(): void {
+  try {
+    localStorage.setItem(LOGOUT_EVENT_KEY, LOGOUT_EVENT_VALUE)
+    // Remove immediately after setting to allow re-triggering
+    setTimeout(() => {
+      localStorage.removeItem(LOGOUT_EVENT_KEY)
+    }, 100)
+  } catch (error) {
+    console.error('Failed to broadcast logout:', error)
+  }
+}
+
+/**
+ * Setup cross-tab logout listener
+ * Call this once in App.tsx during initialization
+ * Returns cleanup function
+ */
+export function setupCrossTabLogoutSync(): () => void {
+  const handleStorageEvent = (event: StorageEvent) => {
+    if (event.key === LOGOUT_EVENT_KEY && event.newValue === LOGOUT_EVENT_VALUE) {
+      console.log('[AuthStore] Received logout event from another tab')
+
+      // Cancel any pending requests
+      cancelPendingRequests()
+
+      // Clear auth state without calling API
+      useAuthStore.setState({
+        user: null,
+        isAuthenticated: false,
+        role: null,
+        accessToken: null,
+        tokenExpiresAt: null,
+        refreshFailureCount: 0,
+      })
+    }
+  }
+
+  window.addEventListener('storage', handleStorageEvent)
+
+  // Return cleanup function
+  return () => {
+    window.removeEventListener('storage', handleStorageEvent)
+  }
+}
+
+/**
+ * Setup visibility change handler for session validation
+ * Call this once in App.tsx during initialization
+ * Returns cleanup function
+ */
+export function setupVisibilityHandler(): () => void {
+  const handleVisibilityChange = async () => {
+    if (document.visibilityState === 'visible') {
+      const { isAuthenticated, accessToken, tokenExpiresAt } = useAuthStore.getState()
+
+      // Only validate if we think we're authenticated
+      if (isAuthenticated && accessToken && tokenExpiresAt) {
+        const now = Date.now()
+
+        // If token is expired, try to restore session
+        if (now >= tokenExpiresAt) {
+          console.log('[AuthStore] Token expired on tab focus, restoring session...')
+          try {
+            await useAuthStore.getState().restoreSession()
+          } catch (error) {
+            console.warn('[AuthStore] Session restoration failed on tab focus:', error)
+          }
+        }
+      }
+    }
+  }
+
+  document.addEventListener('visibilitychange', handleVisibilityChange)
+
+  // Return cleanup function
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }
+}

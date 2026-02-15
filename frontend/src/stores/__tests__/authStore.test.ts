@@ -1,13 +1,19 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
-import { useAuthStore } from '../authStore'
+import { useAuthStore, setupCrossTabLogoutSync, setupVisibilityHandler } from '../authStore'
 import * as authApi from '../../api/auth'
+import * as client from '../../api/client'
 
 // Mock the auth API
 vi.mock('../../api/auth', () => ({
   login: vi.fn(),
   logout: vi.fn(),
   getMe: vi.fn(),
+}))
+
+// Mock the client module
+vi.mock('../../api/client', () => ({
+  cancelPendingRequests: vi.fn(),
 }))
 
 describe('useAuthStore', () => {
@@ -19,11 +25,14 @@ describe('useAuthStore', () => {
       role: null,
       accessToken: null,
       tokenExpiresAt: null,
-      refreshPromise: null,
-      refreshRetryCount: 0,
       isLoading: false,
+      refreshFailureCount: 0,
     })
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
   })
 
   it('should have initial state', () => {
@@ -34,9 +43,8 @@ describe('useAuthStore', () => {
     expect(result.current.role).toBeNull()
     expect(result.current.accessToken).toBeNull()
     expect(result.current.tokenExpiresAt).toBeNull()
-    expect(result.current.refreshPromise).toBeNull()
-    expect(result.current.refreshRetryCount).toBe(0)
     expect(result.current.isLoading).toBe(false)
+    expect(result.current.refreshFailureCount).toBe(0)
   })
 
   it('should handle login successfully', async () => {
@@ -69,6 +77,7 @@ describe('useAuthStore', () => {
     expect(result.current.accessToken).toBe('test-access-token')
     expect(result.current.tokenExpiresAt).toBeDefined()
     expect(result.current.tokenExpiresAt).toBeGreaterThan(Date.now())
+    expect(result.current.refreshFailureCount).toBe(0)
   })
 
   it('should handle logout successfully', async () => {
@@ -83,8 +92,7 @@ describe('useAuthStore', () => {
       role: 'admin',
       accessToken: 'test-access-token',
       tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      refreshPromise: null,
-      refreshRetryCount: 0,
+      refreshFailureCount: 0,
     })
 
     const mockLogoutResponse = {
@@ -105,8 +113,8 @@ describe('useAuthStore', () => {
     expect(result.current.role).toBeNull()
     expect(result.current.accessToken).toBeNull()
     expect(result.current.tokenExpiresAt).toBeNull()
-    expect(result.current.refreshPromise).toBeNull()
-    expect(result.current.refreshRetryCount).toBe(0)
+    expect(result.current.refreshFailureCount).toBe(0)
+    expect(client.cancelPendingRequests).toHaveBeenCalled()
   })
 
   it('should handle logout API failure gracefully', async () => {
@@ -121,8 +129,7 @@ describe('useAuthStore', () => {
       role: 'admin',
       accessToken: 'test-access-token',
       tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      refreshPromise: null,
-      refreshRetryCount: 0,
+      refreshFailureCount: 0,
     })
 
     vi.mocked(authApi.logout).mockRejectedValue(new Error('Logout failed'))
@@ -137,6 +144,7 @@ describe('useAuthStore', () => {
     expect(result.current.user).toBeNull()
     expect(result.current.isAuthenticated).toBe(false)
     expect(result.current.accessToken).toBeNull()
+    expect(client.cancelPendingRequests).toHaveBeenCalled()
   })
 
   it('should set user manually', () => {
@@ -169,8 +177,7 @@ describe('useAuthStore', () => {
       role: 'admin',
       accessToken: 'test-access-token',
       tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      refreshPromise: null,
-      refreshRetryCount: 0,
+      refreshFailureCount: 2,
     })
 
     const { result } = renderHook(() => useAuthStore())
@@ -184,8 +191,20 @@ describe('useAuthStore', () => {
     expect(result.current.role).toBeNull()
     expect(result.current.accessToken).toBeNull()
     expect(result.current.tokenExpiresAt).toBeNull()
-    expect(result.current.refreshPromise).toBeNull()
-    expect(result.current.refreshRetryCount).toBe(0)
+    expect(result.current.refreshFailureCount).toBe(0)
+    expect(client.cancelPendingRequests).toHaveBeenCalled()
+  })
+
+  it('should set access token', () => {
+    const { result } = renderHook(() => useAuthStore())
+
+    act(() => {
+      result.current.setAccessToken('new-token', 900000) // 15 minutes in ms
+    })
+
+    expect(result.current.accessToken).toBe('new-token')
+    expect(result.current.tokenExpiresAt).toBeGreaterThan(Date.now())
+    expect(result.current.refreshFailureCount).toBe(0)
   })
 
   it('should have valid token when token exists and not expired', () => {
@@ -203,8 +222,7 @@ describe('useAuthStore', () => {
         role: 'admin',
         accessToken: 'test-access-token',
         tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-        refreshPromise: null,
-        refreshRetryCount: 0,
+        refreshFailureCount: 0,
       })
     })
 
@@ -228,17 +246,8 @@ describe('useAuthStore', () => {
       role: 'admin',
       accessToken: 'test-access-token',
       tokenExpiresAt: Date.now() - 1000, // Expired
-      refreshPromise: null,
-      refreshRetryCount: 0,
+      refreshFailureCount: 0,
     })
-
-    const state = result.current
-    const isValid = state.tokenExpiresAt !== null && state.tokenExpiresAt > Date.now()
-    expect(isValid).toBe(false)
-  })
-
-  it('should return false for token without expiry', () => {
-    const { result } = renderHook(() => useAuthStore())
 
     const state = result.current
     const isValid = state.tokenExpiresAt !== null && state.tokenExpiresAt > Date.now()
@@ -290,8 +299,7 @@ describe('useAuthStore', () => {
       role: 'admin',
       accessToken: 'test-access-token',
       tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      refreshPromise: null,
-      refreshRetryCount: 0,
+      refreshFailureCount: 0,
       isLoading: false,
     })
 
@@ -350,5 +358,72 @@ describe('useAuthStore', () => {
     // Check that isLoading is false after restoration
     expect(result.current.isLoading).toBe(false)
     expect(result.current.isAuthenticated).toBe(true)
+  })
+})
+
+describe('cross-tab logout sync', () => {
+  it('should setup and return cleanup function', () => {
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener')
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener')
+
+    const cleanup = setupCrossTabLogoutSync()
+
+    expect(addEventListenerSpy).toHaveBeenCalledWith('storage', expect.any(Function))
+
+    cleanup()
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('storage', expect.any(Function))
+
+    addEventListenerSpy.mockRestore()
+    removeEventListenerSpy.mockRestore()
+  })
+
+  it('should clear auth state on logout event from another tab', () => {
+    // Set up authenticated state
+    useAuthStore.setState({
+      user: {
+        id: 'user-123',
+        username: 'testuser',
+        role: 'admin',
+      },
+      isAuthenticated: true,
+      role: 'admin',
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      refreshFailureCount: 0,
+    })
+
+    setupCrossTabLogoutSync()
+
+    // Simulate storage event from another tab
+    const storageEvent = new StorageEvent('storage', {
+      key: 'auth:logout',
+      newValue: 'logout',
+    })
+
+    window.dispatchEvent(storageEvent)
+
+    const state = useAuthStore.getState()
+    expect(state.isAuthenticated).toBe(false)
+    expect(state.user).toBeNull()
+    expect(state.accessToken).toBeNull()
+  })
+})
+
+describe('visibility handler', () => {
+  it('should setup and return cleanup function', () => {
+    const addEventListenerSpy = vi.spyOn(document, 'addEventListener')
+    const removeEventListenerSpy = vi.spyOn(document, 'removeEventListener')
+
+    const cleanup = setupVisibilityHandler()
+
+    expect(addEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
+
+    cleanup()
+
+    expect(removeEventListenerSpy).toHaveBeenCalledWith('visibilitychange', expect.any(Function))
+
+    addEventListenerSpy.mockRestore()
+    removeEventListenerSpy.mockRestore()
   })
 })
