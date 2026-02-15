@@ -165,7 +165,10 @@ func runStart(cmd *cobra.Command, args []string) error {
 	}
 
 	// Create JWT client for authentication
-	jwtClient := auth.NewJWTClient(cfg.PulseServer, cfg.APIKey, nil)
+	jwtClient, err := auth.NewJWTClient(cfg.PulseServer, cfg.APIKey, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create JWT client: %w", err)
+	}
 
 	// Fetch initial token to validate configuration
 	logger.Info("Authenticating with Pulse server...")
