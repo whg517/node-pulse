@@ -3,12 +3,23 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { apiClient } from '../client'
+import { apiClient, resetModuleState } from '../client'
 import { AuthenticationError, ValidationError, NotFoundError } from '../errors'
+
+// Mock localStorage for cross-tab logout sync
+const localStorageMock = {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+}
+vi.stubGlobal('localStorage', localStorageMock)
 
 describe('apiClient', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset module-level state between tests
+    resetModuleState()
   })
 
   describe('successful requests', () => {
@@ -171,7 +182,7 @@ describe('apiClient', () => {
       vi.unstubAllGlobals()
     })
 
-    it('should throw ApiError for unknown status codes', async () => {
+    it('should throw ApiError for 5xx status codes with user-friendly message', async () => {
       const errorResponse = {
         code: 'ERR_INTERNAL',
         message: 'Internal server error',
@@ -192,12 +203,14 @@ describe('apiClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(Error)
         expect(error).toHaveProperty('status', 500)
+        // 5xx errors now return a user-friendly message
+        expect((error as Error).message).toBe('Server temporarily unavailable. Please try again later.')
       }
 
       vi.unstubAllGlobals()
     })
 
-    it('should handle non-JSON error responses', async () => {
+    it('should handle non-JSON error responses for 5xx', async () => {
       const mockFetch = vi.fn(() =>
         Promise.resolve({
           ok: false,
@@ -229,7 +242,8 @@ describe('apiClient', () => {
       } catch (error) {
         expect(error).toBeInstanceOf(Error)
         const apiError = error as Error
-        expect(apiError.message).toBe('Internal Server Error')
+        // 5xx errors now return a user-friendly message
+        expect(apiError.message).toBe('Server temporarily unavailable. Please try again later.')
       }
 
       vi.unstubAllGlobals()

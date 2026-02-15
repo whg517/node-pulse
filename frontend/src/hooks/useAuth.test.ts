@@ -1,29 +1,52 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAuth } from './useAuth'
-import { useAuthStore } from '../stores/authStore'
-import * as authApi from '../api/auth'
 
-// Mock the auth API
-vi.mock('../api/auth', () => ({
-  login: vi.fn(),
-  logout: vi.fn(),
+// Mock the auth store with a proper Zustand-like implementation
+const mockLogin = vi.fn().mockResolvedValue(undefined)
+const mockLogout = vi.fn().mockResolvedValue(undefined)
+const mockSetUser = vi.fn()
+const mockClearAuth = vi.fn()
+const mockSetAccessToken = vi.fn()
+const mockRestoreSession = vi.fn().mockResolvedValue(undefined)
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const createMockState = (overrides: Record<string, any> = {}) => ({
+  user: null,
+  isAuthenticated: false,
+  role: null,
+  accessToken: null,
+  tokenExpiresAt: null,
+  isLoading: false,
+  refreshFailureCount: 0,
+  login: mockLogin,
+  logout: mockLogout,
+  setUser: mockSetUser,
+  clearAuth: mockClearAuth,
+  setAccessToken: mockSetAccessToken,
+  restoreSession: mockRestoreSession,
+  ...overrides,
+})
+
+// Store the current mock state
+let currentMockState = createMockState()
+
+vi.mock('../stores/authStore', () => ({
+  useAuthStore: vi.fn((selector) => {
+    // If selector is provided, call it with state (Zustand behavior)
+    // If no selector, return the whole state (for direct access)
+    if (selector) {
+      return selector(currentMockState)
+    }
+    return currentMockState
+  }),
 }))
 
 describe('useAuth', () => {
   beforeEach(() => {
-    // Reset store state before each test
-    useAuthStore.setState({
-      user: null,
-      isAuthenticated: false,
-      role: null,
-      accessToken: null,
-      tokenExpiresAt: null,
-      refreshPromise: null,
-      refreshRetryCount: 0,
-      isLoading: false,
-    })
     vi.clearAllMocks()
+    // Reset mock state before each test
+    currentMockState = createMockState()
   })
 
   it('should return initial authentication state', () => {
@@ -33,27 +56,23 @@ describe('useAuth', () => {
     expect(result.current.userId).toBeNull()
     expect(result.current.username).toBeNull()
     expect(result.current.role).toBeNull()
+    expect(result.current.isLoading).toBe(false)
   })
 
-  it('should handle successful login', async () => {
-    const mockLoginResponse = {
-      data: {
-        user_id: 'user-123',
+  it('should return authenticated state when logged in', () => {
+    currentMockState = createMockState({
+      isAuthenticated: true,
+      user: {
+        id: 'user-123',
         username: 'testuser',
         role: 'admin' as const,
       },
-      message: 'Login successful',
-      timestamp: '2024-01-01T00:00:00Z',
-    }
-
-    vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
+      role: 'admin' as const,
+      accessToken: 'test-token',
+      tokenExpiresAt: Date.now() + 3600000,
+    })
 
     const { result } = renderHook(() => useAuth())
-
-    await act(async () => {
-      const response = await result.current.login({ username: 'testuser', password: 'password123' })
-      expect(response).toEqual(mockLoginResponse)
-    })
 
     expect(result.current.isAuthenticated).toBe(true)
     expect(result.current.userId).toBe('user-123')
@@ -61,73 +80,66 @@ describe('useAuth', () => {
     expect(result.current.role).toBe('admin')
   })
 
-  it('should handle successful logout', async () => {
-    // First set up an authenticated session
-    useAuthStore.setState({
-      user: {
-        id: 'user-123',
-        username: 'testuser',
-        role: 'admin',
-      },
-      isAuthenticated: true,
-      role: 'admin',
-      accessToken: 'test-access-token',
-      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-      refreshPromise: null,
-      refreshRetryCount: 0,
-    })
-
-    const mockLogoutResponse = {
-      message: 'Logout successful',
-      timestamp: '2024-01-01T00:00:00Z',
-    }
-
-    vi.mocked(authApi.logout).mockResolvedValue(mockLogoutResponse)
-
+  it('should call store login on login', async () => {
     const { result } = renderHook(() => useAuth())
 
     await act(async () => {
-      const response = await result.current.logout()
-      expect(response).toEqual(mockLogoutResponse)
+      await result.current.login({ username: 'testuser', password: 'password123' })
     })
 
-    expect(result.current.isAuthenticated).toBe(false)
-    expect(result.current.userId).toBeNull()
-    expect(result.current.username).toBeNull()
+    expect(mockLogin).toHaveBeenCalledWith('testuser', 'password123')
+    expect(mockLogin).toHaveBeenCalledTimes(1)
+  })
+
+  it('should call store logout on logout', async () => {
+    const { result } = renderHook(() => useAuth())
+
+    await act(async () => {
+      await result.current.logout()
+    })
+
+    expect(mockLogout).toHaveBeenCalledTimes(1)
   })
 
   it('should validate session correctly', () => {
+    // Test invalid session (no token)
+    currentMockState = createMockState()
+
+    const { result: result1 } = renderHook(() => useAuth())
+    expect(result1.current.isValidSession()).toBe(false)
+
+    // Test valid session
+    currentMockState = createMockState({
+      isAuthenticated: true,
+      user: { id: '1', username: 'test', role: 'admin' as const },
+      role: 'admin' as const,
+      accessToken: 'token',
+      tokenExpiresAt: Date.now() + 3600000,
+    })
+
+    const { result: result2 } = renderHook(() => useAuth())
+    expect(result2.current.isValidSession()).toBe(true)
+
+    // Test expired session
+    currentMockState = createMockState({
+      isAuthenticated: true,
+      user: { id: '1', username: 'test', role: 'admin' as const },
+      role: 'admin' as const,
+      accessToken: 'token',
+      tokenExpiresAt: Date.now() - 1000,
+    })
+
+    const { result: result3 } = renderHook(() => useAuth())
+    expect(result3.current.isValidSession()).toBe(false)
+  })
+
+  it('should return loading state', () => {
+    currentMockState = createMockState({
+      isLoading: true,
+    })
+
     const { result } = renderHook(() => useAuth())
 
-    // Initially invalid
-    expect(result.current.isValidSession()).toBe(false)
-
-    // Set valid token
-    act(() => {
-      useAuthStore.setState({
-        user: {
-          id: 'user-123',
-          username: 'testuser',
-          role: 'admin',
-        },
-        isAuthenticated: true,
-        role: 'admin',
-        accessToken: 'test-access-token',
-        tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
-        refreshPromise: null,
-        refreshRetryCount: 0,
-      })
-    })
-
-    expect(result.current.isValidSession()).toBe(true)
-
-    // Set expired token
-    act(() => {
-      useAuthStore.setState({
-        tokenExpiresAt: Date.now() - 1000,
-      })
-    })
-
-    expect(result.current.isValidSession()).toBe(false)
+    expect(result.current.isLoading).toBe(true)
   })
 })

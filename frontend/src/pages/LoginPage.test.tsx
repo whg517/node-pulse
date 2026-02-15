@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom'
 import LoginPage from './LoginPage'
 
 const mockNavigate = vi.fn()
+const mockLogin = vi.fn()
 
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom')
@@ -17,28 +18,26 @@ vi.mock('react-router-dom', async () => {
   }
 })
 
-vi.mock('../api/auth', () => ({
-  login: vi.fn(),
-  logout: vi.fn(),
-}))
-
 vi.mock('../stores/authStore', () => ({
   useAuthStore: vi.fn((selector) => {
     const state = {
+      user: null,
       isAuthenticated: false,
-      userId: null,
-      username: null,
       role: null,
-      sessionExpiry: null,
-      setSession: vi.fn(),
-      clearSession: vi.fn(),
-      checkSession: vi.fn(() => false),
+      accessToken: null,
+      tokenExpiresAt: null,
+      isLoading: false,
+      refreshFailureCount: 0,
+      login: mockLogin,
+      logout: vi.fn(),
+      setUser: vi.fn(),
+      clearAuth: vi.fn(),
+      setAccessToken: vi.fn(),
+      restoreSession: vi.fn().mockResolvedValue(undefined),
     }
     return selector ? selector(state) : state
   }),
 }))
-
-import { login } from '../api/auth'
 
 describe('LoginPage', () => {
   beforeEach(() => {
@@ -126,7 +125,7 @@ describe('LoginPage', () => {
   })
 
   it('calls login API and navigates to dashboard on success', async () => {
-    ;(login as any).mockResolvedValue({
+    mockLogin.mockResolvedValue({
       data: {
         user_id: '123',
         username: 'admin',
@@ -150,11 +149,11 @@ describe('LoginPage', () => {
     await userEvent.type(passwordInput, 'Password123')
     await userEvent.click(submitButton)
 
-    expect(login).toHaveBeenCalledWith({ username: 'admin', password: 'Password123' })
+    expect(mockLogin).toHaveBeenCalledWith('admin', 'Password123')
   })
 
   it('displays error message on invalid credentials', async () => {
-    ;(login as any).mockRejectedValue({
+    mockLogin.mockRejectedValue({
       code: 'ERR_INVALID_CREDENTIALS',
       message: 'Invalid username or password',
     })
@@ -178,7 +177,7 @@ describe('LoginPage', () => {
   })
 
   it('displays account locked message when account is locked', async () => {
-    ;(login as any).mockRejectedValue({
+    mockLogin.mockRejectedValue({
       code: 'ERR_ACCOUNT_LOCKED',
       message: 'Account locked due to too many failed login attempts',
       details: {
@@ -213,7 +212,7 @@ describe('LoginPage', () => {
     const mockLoginPromise = new Promise((resolve) => {
       resolveLogin = resolve
     })
-    ;(login as any).mockReturnValue(mockLoginPromise)
+    mockLogin.mockReturnValue(mockLoginPromise)
 
     render(
       <MemoryRouter>

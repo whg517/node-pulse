@@ -1,16 +1,13 @@
-import { useState, type FormEvent } from 'react'
+import { useState, type FormEvent, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { login, logout } from '../api/auth'
-import { useAuthStore } from '../stores/authStore'
+import { useAuth } from '../hooks/useAuth'
 import type { ValidationError } from '../types/auth'
 import { ToastNotification, type ToastProps } from '../components/ToastNotification'
 
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const storeLogin = useAuthStore((state) => state.login)
-  const storeLogout = useAuthStore((state) => state.logout)
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, isLoading: authLoading, login } = useAuth()
 
   // Get the location from router state (where user was trying to go)
   const from = (location.state as any)?.from?.pathname || '/dashboard'
@@ -23,6 +20,13 @@ export default function LoginPage() {
   const [accountLockedMessage, setAccountLockedMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [toasts, setToasts] = useState<ToastProps[]>([])
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated && !authLoading) {
+      navigate(from, { replace: true })
+    }
+  }, [isAuthenticated, authLoading, navigate, from])
 
   const showToast = (type: ToastProps['type'], title: string, message?: string) => {
     const id = Date.now().toString()
@@ -79,11 +83,12 @@ export default function LoginPage() {
     setIsLoading(true)
 
     try {
+      // Single API call - login action handles everything
       await login({ username: username.trim(), password })
-      await storeLogin(username.trim(), password)
 
       showToast('success', 'Login successful', 'Redirecting to dashboard...')
 
+      // Small delay for toast visibility, then navigate
       setTimeout(() => {
         navigate(from, { replace: true })
       }, 500)
@@ -99,7 +104,7 @@ export default function LoginPage() {
       } else if (err.code === 'ERR_INVALID_CREDENTIALS') {
         setApiError('Invalid username or password')
         setPassword('')
-      } else if (err.code === 'ERR_RATE_LIMIT_EXCEEDED') {
+      } else if (err.code === 'ERR_RATE_LIMITED' || err.code === 'ERR_RATE_LIMIT_EXCEEDED') {
         setApiError('Too many login attempts. Please try again later.')
         showToast('error', 'Too many attempts', 'Please try again later')
       } else {
@@ -113,6 +118,22 @@ export default function LoginPage() {
 
   const getFieldError = (field: 'username' | 'password') => {
     return errors.find((e) => e.field === field)?.message
+  }
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-blue-600">
+            <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
+              Loading...
+            </span>
+          </div>
+          <p className="mt-4 text-gray-600">Checking session...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -243,27 +264,6 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
-
-        {isAuthenticated && (
-          <div className="mt-6">
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  await logout()
-                  await storeLogout()
-                  showToast('success', 'Logout successful', 'You have been logged out')
-                  navigate('/login')
-                } catch {
-                  showToast('error', 'Logout failed', 'Please try again later')
-                }
-              }}
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-            >
-              Sign Out
-            </button>
-          </div>
-        )}
 
         {toasts.map((toast) => (
           <ToastNotification

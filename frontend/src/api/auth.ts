@@ -3,13 +3,28 @@
  *
  * Provides typed functions for user authentication operations
  * including login, logout, token refresh, and session management.
+ *
+ * Each function makes exactly ONE API call - no duplicate calls.
  */
 
 import { apiClient } from './client'
-import type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse, RefreshResponse } from '../types/auth'
+import type {
+  LoginRequest,
+  LoginResponse,
+  LogoutResponse,
+  GetMeResponse,
+  RefreshResponse,
+} from '../types/auth'
 import { AuthenticationError } from './errors'
 
-export type { LoginRequest, LoginResponse, LogoutResponse, GetMeResponse, RefreshResponse }
+// Re-export types for convenience
+export type {
+  LoginRequest,
+  LoginResponse,
+  LogoutResponse,
+  GetMeResponse,
+  RefreshResponse,
+}
 
 /**
  * User login
@@ -41,7 +56,7 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
     })
   } catch (error) {
     // Ensure authentication errors are properly typed
-    if (error instanceof Error && error.name === 'AuthenticationError') {
+    if (error instanceof AuthenticationError) {
       throw error
     }
     // Wrap other errors as AuthenticationError
@@ -87,7 +102,7 @@ export async function refreshToken(): Promise<RefreshResponse> {
  * Refresh token is deleted from database and HttpOnly cookie is cleared.
  *
  * @returns Logout response
- * @throws AuthenticationError if logout fails
+ * @throws AuthenticationError if logout fails (but local state should still be cleared)
  *
  * @example
  * await logout()
@@ -99,6 +114,7 @@ export async function logout(): Promise<LogoutResponse> {
       method: 'POST',
     })
   } catch (error) {
+    // Re-throw for caller to handle, but they should still clear local state
     throw new AuthenticationError(
       error instanceof Error ? error.message : 'Logout failed'
     )
@@ -132,7 +148,7 @@ export async function getMe(): Promise<GetMeResponse> {
     })
   } catch (error) {
     // Ensure authentication errors are properly typed
-    if (error instanceof Error && error.name === 'AuthenticationError') {
+    if (error instanceof AuthenticationError) {
       throw error
     }
     // Wrap other errors as AuthenticationError

@@ -11,8 +11,9 @@ import AlertHistoryPage from './pages/AlertHistoryPage'
 import WebhooksPage from './pages/WebhooksPage'
 import DataExportPage from './pages/DataExportPage'
 import PerformanceDashboard from './pages/PerformanceDashboard'
+import SessionsPage from './pages/SessionsPage'
 import ProtectedRoute from './components/common/ProtectedRoute'
-import { useAuthStore } from './stores/authStore'
+import { useAuthStore, setupCrossTabLogoutSync, setupVisibilityHandler } from './stores/authStore'
 
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession)
@@ -21,6 +22,17 @@ function App() {
   useEffect(() => {
     restoreSession()
   }, [restoreSession])
+
+  // Setup cross-tab logout sync and visibility handler
+  useEffect(() => {
+    const cleanupCrossTab = setupCrossTabLogoutSync()
+    const cleanupVisibility = setupVisibilityHandler()
+
+    return () => {
+      cleanupCrossTab()
+      cleanupVisibility()
+    }
+  }, [])
 
   return (
     <BrowserRouter>
@@ -38,7 +50,17 @@ function App() {
           }
         />
 
-        {/* Future protected routes (will be implemented in later stories) */}
+        {/* Sessions management */}
+        <Route
+          path="/sessions"
+          element={
+            <ProtectedRoute>
+              <SessionsPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Node management routes */}
         <Route
           path="/nodes"
           element={
@@ -63,6 +85,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Alert routes */}
         <Route
           path="/alerts/rules"
           element={
@@ -87,6 +111,8 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Admin routes */}
         <Route
           path="/webhooks"
           element={
