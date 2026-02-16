@@ -1,3 +1,146 @@
-.vscode
+# IDE and editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
 
-.omc
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# OMC (Oh My Claude Code)
+.omc/
+
+# BMAD output
+_bmad-output/
+
+# ============================================
+# Go (Pulse backend)
+# ============================================
+
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+pulse/pulse
+pulse/bin/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Dependency directories
+vendor/
+
+# Test results
+pulse/test-results/
+
+# ============================================
+# Node.js / TypeScript (Frontend)
+# ============================================
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+frontend/dist/
+frontend/build/
+frontend/.next/
+frontend/.nuxt/
+
+# Cache
+.npm
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+
+# ============================================
+# Playwright E2E Testing
+# ============================================
+
+# Playwright test results
+e2e/test-results/
+**/test-results/
+playwright-report/
+e2e/playwright-report/
+playwright/.cache/
+
+# Playwright auth state
+.auth/
+e2e/.auth/
+
+# Playwright trace files
+*.zip
+trace.zip
+
+# ============================================
+# Docker
+# ============================================
+
+# Docker volumes (if mounted locally)
+.docker/
+
+# ============================================
+# Miscellaneous
+# ============================================
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# Backup files
+*.bak
+*.backup
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+
+# Database files (local development)
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets (never commit)
+*.pem
+*.key
+*.crt
+secrets/
+.secrets/
