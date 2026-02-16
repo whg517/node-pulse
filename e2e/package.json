@@ -1,0 +1,24 @@
+{
+  "name": "node-pulse-e2e",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "End-to-end tests for Node-Pulse monitoring system",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "test:headed": "playwright test --headed",
+    "report": "playwright show-report",
+    "test:auth": "playwright test tests/auth",
+    "test:rbac": "playwright test tests/rbac",
+    "test:nodes": "playwright test tests/nodes",
+    "test:alerts": "playwright test tests/alerts",
+    "test:webhooks": "playwright test tests/webhooks",
+    "test:export": "playwright test tests/export"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^20.0.0",
+    "pg": "^8.11.0"
+  }
+}

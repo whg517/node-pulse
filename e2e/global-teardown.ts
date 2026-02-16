@@ -1,0 +1,107 @@
+/**
+ * Global Teardown for E2E Tests
+ *
+ * This runs once after all tests:
+ * 1. Cleans up test data (nodes, alerts, etc.)
+ * 2. Closes database connections
+ */
+
+import { Pool } from 'pg'
+import * as fs from 'fs'
+
+// Test database connection
+const TEST_DB_URL = process.env.TEST_DB_URL || 'postgresql://testuser:testpass123@localhost:5432/nodepulse_test'
+
+/**
+ * Clean up test data from database
+ */
+async function cleanupTestData(pool: Pool): Promise<void> {
+  console.log('[Global Teardown] Cleaning up test data...')
+
+  try {
+    // Delete test alert records first (foreign key constraint)
+    await pool.query(`
+      DELETE FROM alert_records WHERE node_id IN (
+        SELECT id FROM nodes WHERE name LIKE 'e2e_test_%'
+      )
+    `)
+
+    // Delete test alert rules
+    await pool.query(`
+      DELETE FROM alerts WHERE node_id IN (
+        SELECT id FROM nodes WHERE name LIKE 'e2e_test_%'
+      )
+    `)
+
+    // Delete test probes
+    await pool.query(`
+      DELETE FROM probes WHERE node_id IN (
+        SELECT id FROM nodes WHERE name LIKE 'e2e_test_%'
+      )
+    `)
+
+    // Delete test metrics
+    await pool.query(`
+      DELETE FROM metrics WHERE node_id IN (
+        SELECT id FROM nodes WHERE name LIKE 'e2e_test_%'
+      )
+    `)
+
+    // Delete test nodes
+    await pool.query(`
+      DELETE FROM nodes WHERE name LIKE 'e2e_test_%'
+    `)
+
+    console.log('[Global Teardown] Test data cleanup complete!')
+  } catch (error) {
+    console.error('[Global Teardown] Error cleaning up test data:', error)
+    // Don't throw - we want to continue with teardown
+  }
+}
+
+/**
+ * Clean up auth state files
+ */
+function cleanupAuthStates(): void {
+  console.log('[Global Teardown] Cleaning up auth state files...')
+
+  const authDir = '.auth'
+  if (fs.existsSync(authDir)) {
+    const files = fs.readdirSync(authDir)
+    for (const file of files) {
+      if (file.endsWith('.json')) {
+        fs.unlinkSync(`${authDir}/${file}`)
+      }
+    }
+    // Remove directory if empty
+    try {
+      fs.rmdirSync(authDir)
+    } catch {
+      // Directory not empty, leave it
+    }
+  }
+
+  console.log('[Global Teardown] Auth state files cleaned up!')
+}
+
+/**
+ * Main global teardown function
+ */
+export default async function globalTeardown() {
+  console.log('[Global Teardown] Starting e2e test teardown...')
+
+  // Connect to test database
+  const pool = new Pool({ connectionString: TEST_DB_URL })
+
+  try {
+    // Clean up test data
+    await cleanupTestData(pool)
+  } finally {
+    await pool.end()
+  }
+
+  // Clean up auth state files
+  cleanupAuthStates()
+
+  console.log('[Global Teardown] Teardown complete!')
+}

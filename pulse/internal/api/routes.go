@@ -50,6 +50,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		jwtSecret = generateJWTSecret()
 	}
 
+	// Get cookie secure setting from environment (default false for development)
+	cookieSecure := getEnvOrDefault("PULSE_SESSION_COOKIE_SECURE", "false") == "true"
+
 	// Initialize JWT service
 	jwtService := auth.NewJWTService(jwtSecret, 15, pool)
 
@@ -60,6 +63,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		15,  // 15 minutes access token
 		7,   // 7 days refresh token
 		30,  // 30 days max validity
+		cookieSecure,
 	)
 
 	// Initialize memory cache and batch writer (Story 3.2)

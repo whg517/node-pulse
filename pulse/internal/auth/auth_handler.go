@@ -36,6 +36,7 @@ type AuthHandler struct {
 	accessExpirationMinutes int
 	refreshExpirationDays  int
 	maxValidityDays        int
+	cookieSecure           bool
 }
 
 // NewAuthHandler creates a new auth handler
@@ -45,6 +46,7 @@ func NewAuthHandler(
 	accessExpirationMinutes int,
 	refreshExpirationDays int,
 	maxValidityDays int,
+	cookieSecure bool,
 ) *AuthHandler {
 	jwtService := NewJWTService(jwtSecret, accessExpirationMinutes, pool)
 	refreshTokenService := NewRefreshTokenService(pool)
@@ -62,6 +64,7 @@ func NewAuthHandler(
 		accessExpirationMinutes: accessExpirationMinutes,
 		refreshExpirationDays:   refreshExpirationDays,
 		maxValidityDays:         maxValidityDays,
+		cookieSecure:            cookieSecure,
 	}
 }
 
@@ -205,8 +208,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		ctx, userID, userAgent, ipAddress, h.maxValidityDays,
 	)
 	if err != nil {
-		// Log sanitized error (no token hashes or user IDs exposed)
-		fmt.Printf("[ERROR] Failed to create refresh token for user\n")
+		// Log error for debugging (temporary)
+		fmt.Printf("[ERROR] Failed to create refresh token for user: %v\n", err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "TOKEN_GENERATION_FAILED",
 			Message: "Failed to generate refresh token",
@@ -221,13 +224,18 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	})
 
 	// Set refresh token as HTTP-only cookie (must be set before JSON response)
+	// Use Lax mode to allow cookies with proxied requests in development
+	sameSiteMode := http.SameSiteLaxMode
+	if h.cookieSecure {
+		sameSiteMode = http.SameSiteStrictMode
+	}
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
 		MaxAge:   h.refreshExpirationDays * 86400, // Convert days to seconds
 		HttpOnly: true,
-		Secure:   true, // HTTPS only
-		SameSite: http.SameSiteStrictMode,
+		Secure:   h.cookieSecure,
+		SameSite: sameSiteMode,
 		Path:     "/",
 	})
 
@@ -274,12 +282,17 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	}
 
 	var req models.RefreshRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Code:    "INVALID_REQUEST",
-			Message: "Invalid request format",
-		})
-		return
+	if err := c.ShouldBindJSON(&req); err != nil || req.RefreshToken == "" {
+		// If no token in body, try to get from cookie
+		cookie, err := c.Cookie("refresh_token")
+		if err != nil || cookie == "" {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Code:    "INVALID_REQUEST",
+				Message: "Refresh token required in body or cookie",
+			})
+			return
+		}
+		req.RefreshToken = cookie
 	}
 
 	// Hash the refresh token for rate limit key
@@ -362,21 +375,30 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	})
 
 	// Set refresh token as HTTP-only cookie (secure, not exposed in response body)
+	// Use Lax mode to allow cookies with proxied requests in development
+	sameSiteMode := http.SameSiteLaxMode
+	if h.cookieSecure {
+		sameSiteMode = http.SameSiteStrictMode
+	}
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    newRefreshToken,
 		MaxAge:   h.refreshExpirationDays * 86400, // Convert days to seconds
 		HttpOnly: true,                          // Prevent XSS
-		Secure:   true,                          // HTTPS only
-		SameSite: http.SameSiteStrictMode,       // CSRF protection
+		Secure:   h.cookieSecure,                // HTTPS only (configurable)
+		SameSite: sameSiteMode,                  // Lax for dev, Strict for prod
 		Path:     "/",
 	})
 
-	c.JSON(http.StatusOK, models.TokenResponse{
-		AccessToken: accessToken,
-		TokenType:   "Bearer",
-		ExpiresIn:   h.accessExpirationMinutes * 60,
-		// RefreshToken intentionally omitted - set via HTTP-only cookie only
+	// Return response in same format as Login for frontend consistency
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Token refreshed successfully",
+		"data": gin.H{
+			"access_token": accessToken,
+			"token_type":   "Bearer",
+			"expires_in":   h.accessExpirationMinutes * 60,
+		},
+		"timestamp": time.Now().Format(time.RFC3339),
 	})
 }
 
@@ -567,13 +589,18 @@ func (h *AuthHandler) GetSessions(c *gin.Context) {
 	// Convert to response format
 	sessions := make([]models.SessionResponse, len(tokens))
 	for i, token := range tokens {
+		var ipAddress *string
+		if token.IPAddress.IsValid() {
+			ipStr := token.IPAddress.String()
+			ipAddress = &ipStr
+		}
 		sessions[i] = models.SessionResponse{
 			SessionID:     token.TokenID.String(),
 			CreatedAt:     token.CreatedAt.Time.Format(time.RFC3339),
 			ExpiresAt:     token.ExpiresAt.Time.Format(time.RFC3339),
 			MaxValidUntil: token.MaxValidUntil.Time.Format(time.RFC3339),
 			UserAgent:     token.UserAgent,
-			IPAddress:     token.IPAddress,
+			IPAddress:     ipAddress,
 		}
 	}
 

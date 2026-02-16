@@ -343,17 +343,20 @@ async function handleError(response: Response): Promise<never> {
   }
 
   // Map HTTP status codes to error classes
+  // Preserve original error code from backend when available
   switch (response.status) {
     case 400:
       throw new ValidationError(message, details)
     case 401:
-      throw new AuthenticationError(message, details)
+      // Preserve original error code (ERR_INVALID_CREDENTIALS, ERR_ACCOUNT_LOCKED, etc.)
+      throw new ApiError(message, code, details, 401)
     case 403:
       throw new AuthorizationError(message, details)
     case 404:
       throw new NotFoundError(message, details)
     case 429:
-      throw new RateLimitError(message, details)
+      // Preserve original error code (ERR_RATE_LIMITED, ERR_RATE_LIMIT_EXCEEDED, etc.)
+      throw new ApiError(message, code, details, 429)
     default:
       throw new ApiError(message, code, details, response.status)
   }

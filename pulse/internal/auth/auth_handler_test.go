@@ -67,6 +67,7 @@ func setupAuthHandlerTest(t *testing.T) (*pgxpool.Pool, *AuthHandler, *config.Co
 		cfg.JWT.AccessTokenExpirationMinutes,
 		cfg.JWT.RefreshTokenExpirationDays,
 		cfg.JWT.RefreshTokenMaxValidityDays,
+		false, // cookieSecure false for tests
 	)
 
 	cleanup := func() {
@@ -216,7 +217,7 @@ func TestAuthHandler_ExchangeAPIKey_InvalidKey(t *testing.T) {
 	router := gin.New()
 
 	pool := setupTestDB(t)
-	handler := auth.NewAuthHandler(pool, jwtSecret, 15, 7, 30)
+	handler := auth.NewAuthHandler(pool, jwtSecret, 15, 7, 30, false)
 	router.POST("/api/v1/beacon/token", handler.ExchangeAPIKey)
 
 	reqBody := map[string]string{"api_key": "invalid-key-123"}

@@ -163,7 +163,7 @@ func TestSecurity_AccountEnumerationPrevention(t *testing.T) {
 
 	jwtService := NewJWTService(cfg.Secret, cfg.AccessTokenExpirationMinutes, pool)
 	handler := NewAuthHandler(pool, cfg.Secret, cfg.AccessTokenExpirationMinutes,
-		cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays)
+		cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false)
 	handler.jwtService = jwtService
 
 	router := gin.New()
@@ -423,7 +423,7 @@ func TestSecurity_BruteForceProtection(t *testing.T) {
 
 	jwtService := NewJWTService(cfg.Secret, cfg.AccessTokenExpirationMinutes, pool)
 	handler := NewAuthHandler(pool, cfg.Secret, cfg.AccessTokenExpirationMinutes,
-		cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays)
+		cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false)
 	handler.jwtService = jwtService
 
 	router := gin.New()

@@ -1,6 +1,8 @@
 package models
 
 import (
+	"net/netip"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 )
@@ -16,7 +18,7 @@ type RefreshToken struct {
 	RevokedAt    *pgtype.Timestamp  `json:"revoked_at,omitempty" db:"revoked_at"`
 	ReplacedBy   *uuid.UUID         `json:"replaced_by,omitempty" db:"replaced_by"`
 	UserAgent    *string            `json:"user_agent,omitempty" db:"user_agent"`
-	IPAddress    *string            `json:"ip_address,omitempty" db:"ip_address"`
+	IPAddress    netip.Addr         `json:"ip_address,omitempty" db:"ip_address"`
 	CreatedAt    pgtype.Timestamp   `json:"created_at" db:"created_at"`
 	UpdatedAt    pgtype.Timestamp   `json:"updated_at" db:"updated_at"`
 }
