@@ -417,7 +417,7 @@ func TestWebhookPush_RetryLogic(t *testing.T) {
 
 	// Initialize push service
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
-	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:8080")
+	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:6532")
 
 	// Create alert event in database (required for foreign key constraint)
 	alertEventsQuerier := db.NewAlertEventsQuerier(pool)
@@ -529,7 +529,7 @@ func TestWebhookPush_ConcurrentDelivery(t *testing.T) {
 
 	// Initialize push service
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
-	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:8080")
+	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:6532")
 
 	// Create alert event in database (required for foreign key constraint)
 	alertEventsQuerier := db.NewAlertEventsQuerier(pool)

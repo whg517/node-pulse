@@ -15,7 +15,7 @@ func TestStatusCommand_JSONOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -46,7 +46,7 @@ func TestStatusCommand_StatusField(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -76,7 +76,7 @@ func TestStatusCommand_LastHeartbeat(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -106,7 +106,7 @@ func TestStatusCommand_ConfigVersion(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -159,7 +159,7 @@ func TestStatusCommand_AllRequiredFields(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -197,7 +197,7 @@ func TestStatusCommand_JSONFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `

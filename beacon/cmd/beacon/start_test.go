@@ -45,7 +45,7 @@ func executeWithTimeout(timeout time.Duration) (string, error) {
 		// Timeout, but we still need to wait for goroutine
 		err = fmt.Errorf("execution timed out after %v", timeout)
 	}
-	cancel() // Cancel the context
+	cancel()  // Cancel the context
 	wg.Wait() // Wait for goroutine to finish
 	return output, err
 }
@@ -60,7 +60,7 @@ func TestStartCommand_ProgressOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -102,7 +102,7 @@ func TestStartCommand_DeploymentTiming(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -139,7 +139,7 @@ func TestStartCommand_ConfigErrorWithLocation(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
     wrong_indentation: "this is wrong"
@@ -171,7 +171,7 @@ func TestStartCommand_RegistrationSuccess(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -186,7 +186,7 @@ node_name: "Test Node"
 
 	// Check for node ID in output (AC #4)
 	if !strings.Contains(output, "Node ID") && !strings.Contains(output, "node_id") &&
-	   !strings.Contains(output, "Node") && !strings.Contains(output, "节点") {
+		!strings.Contains(output, "Node") && !strings.Contains(output, "节点") {
 		t.Error("Expected registration success output with node ID or Node info")
 	}
 }
@@ -238,7 +238,7 @@ func TestIsValidUUID_Invalid(t *testing.T) {
 		"not-a-uuid",
 		"550e8400-e29b-41d4-a716", // too short
 		"550e8400-e29b-41d4-a716-446655440000-extra", // too long
-		"550e8400-e29b-41d4-a716-44665544000x", // invalid char
+		"550e8400-e29b-41d4-a716-44665544000x",       // invalid char
 		"",
 	}
 
@@ -259,7 +259,7 @@ func TestStartCommand_ProgressSteps(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -274,7 +274,7 @@ node_name: "Test Node"
 
 	// Check for loading/configuration messages (AC #1)
 	if !strings.Contains(output, "Loading") && !strings.Contains(output, "configuration") &&
-	   !strings.Contains(output, "加载") && !strings.Contains(output, "配置") {
+		!strings.Contains(output, "加载") && !strings.Contains(output, "配置") {
 		t.Error("Expected progress step indicators or loading messages")
 	}
 }
@@ -300,7 +300,7 @@ node_name: "Test Node"
 
 	// Check for suggestion in error message (AC #6)
 	if !strings.Contains(output, "suggestion") && !strings.Contains(output, "建议") &&
-	   !strings.Contains(output, "URL") && !strings.Contains(output, "url") {
+		!strings.Contains(output, "URL") && !strings.Contains(output, "url") {
 		// Error should contain helpful information
 		if !strings.Contains(output, "invalid") && !strings.Contains(output, "Invalid") {
 			t.Error("Expected error message with suggestion or specific issue")
@@ -318,7 +318,7 @@ func TestStartCommand_PIDFileCreation(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -348,7 +348,7 @@ func TestStartCommand_PIDFileErrorHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `

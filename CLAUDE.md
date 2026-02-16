@@ -45,7 +45,7 @@ cd pulse
 # Download dependencies
 make deps
 
-# Run the server (default port 8080)
+# Run the server (default port 6532)
 make run
 
 # Build binary
@@ -247,7 +247,7 @@ Required:
 - `PULSE_DATABASE_URL` - PostgreSQL connection string
 
 Optional (with defaults):
-- `PULSE_SERVER_PORT=8080`
+- `PULSE_SERVER_PORT=6532`
 - `PULSE_LOG_LEVEL=info`
 - `PULSE_CORS_ALLOWED_ORIGINS=http://localhost:5173`
 - `PULSE_ADMIN_USERNAME=admin`, `PULSE_ADMIN_PASSWORD=Admin123`

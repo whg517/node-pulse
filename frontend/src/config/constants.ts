@@ -13,7 +13,7 @@ export const REFRESH_TOKEN_EXPIRY_DAYS = 7
 // Development uses Vite proxy (empty string = relative path)
 export const API_BASE_URL = import.meta.env.MODE === 'development'
   ? ''
-  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080')
+  : (import.meta.env.VITE_API_BASE_URL || 'http://localhost:6532')
 
 // Dashboard defaults
 export const DEFAULT_REFRESH_INTERVAL = 5 // seconds

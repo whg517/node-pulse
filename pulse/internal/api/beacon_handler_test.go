@@ -25,7 +25,7 @@ import (
 func TestMain(m *testing.M) {
 	// Set up test config environment variables before running tests
 	os.Setenv("PULSE_JWT_SECRET", "test-secret-key-for-jwt-token-generation-in-tests-min-64-bytes-long-for-security")
-	os.Setenv("PULSE_SERVER_PORT", "8080")
+	os.Setenv("PULSE_SERVER_PORT", "6532")
 	os.Setenv("PULSE_DB_HOST", "localhost")
 	os.Setenv("PULSE_DB_PORT", "5432")
 	os.Setenv("PULSE_DB_NAME", "test")
@@ -117,7 +117,7 @@ func TestHandleHeartbeat_ValidNodeAndValidMetrics(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Authorization", authHeader)
 	req.Header.Set("Authorization", authHeader)
 
 	// Act
@@ -152,7 +152,7 @@ func TestHandleHeartbeat_InvalidNodeID_Returns400(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()
@@ -191,7 +191,7 @@ func TestHandleHeartbeat_NodeNotFound_Returns400(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()
@@ -245,7 +245,7 @@ func TestHandleHeartbeat_LatencyOutOfRange_Returns400(t *testing.T) {
 			bodyBytes, _ := json.Marshal(reqBody)
 			req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", authHeader)
+			req.Header.Set("Authorization", authHeader)
 
 			// Act
 			w := httptest.NewRecorder()
@@ -301,7 +301,7 @@ func TestHandleHeartbeat_PacketLossOutOfRange_Returns400(t *testing.T) {
 			bodyBytes, _ := json.Marshal(reqBody)
 			req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", authHeader)
+			req.Header.Set("Authorization", authHeader)
 
 			// Act
 			w := httptest.NewRecorder()
@@ -357,7 +357,7 @@ func TestHandleHeartbeat_JitterOutOfRange_Returns400(t *testing.T) {
 			bodyBytes, _ := json.Marshal(reqBody)
 			req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", authHeader)
+			req.Header.Set("Authorization", authHeader)
 
 			// Act
 			w := httptest.NewRecorder()
@@ -390,7 +390,7 @@ func TestHandleHeartbeat_MissingRequiredFields_Returns400(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()
@@ -434,7 +434,7 @@ func TestHandleHeartbeat_InvalidTimestampFormat_Returns400(t *testing.T) {
 	bodyBytes, _ := json.Marshal(reqBody)
 	req, _ := http.NewRequest("POST", "/api/v1/beacon/heartbeat", bytes.NewBuffer(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Authorization", authHeader)
+	req.Header.Set("Authorization", authHeader)
 
 	// Act
 	w := httptest.NewRecorder()

@@ -14,7 +14,7 @@ func TestStopCommand_GracefulShutdown(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -37,8 +37,8 @@ node_name: "Test Node"
 		t.Error("Expected stop output for graceful shutdown")
 	}
 	if !strings.Contains(output, "stopped") && !strings.Contains(output, "成功") &&
-	   !strings.Contains(output, "success") && !strings.Contains(output, "未运行") &&
-	   !strings.Contains(output, "not running") {
+		!strings.Contains(output, "success") && !strings.Contains(output, "未运行") &&
+		!strings.Contains(output, "not running") {
 		t.Error("Expected stop success message or not running message")
 	}
 }
@@ -49,7 +49,7 @@ func TestStopCommand_WaitForProbe(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -79,7 +79,7 @@ func TestStopCommand_ConfirmationOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -99,8 +99,8 @@ node_name: "Test Node"
 
 	// Check for confirmation of stop (AC #8)
 	if !strings.Contains(output, "成功") && !strings.Contains(output, "success") &&
-	   !strings.Contains(output, "完成") && !strings.Contains(output, "complete") &&
-	   !strings.Contains(output, "未运行") && !strings.Contains(output, "not running") {
+		!strings.Contains(output, "完成") && !strings.Contains(output, "complete") &&
+		!strings.Contains(output, "未运行") && !strings.Contains(output, "not running") {
 		t.Error("Expected stop confirmation message or not running message")
 	}
 }
@@ -128,7 +128,7 @@ func TestStopCommand_PIDFileHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -148,7 +148,7 @@ node_name: "Test Node"
 
 	// Should mention PID or process status
 	if !strings.Contains(output, "PID") && !strings.Contains(output, "进程") &&
-	   !strings.Contains(output, "process") && !strings.Contains(output, "未运行") {
+		!strings.Contains(output, "process") && !strings.Contains(output, "未运行") {
 		t.Log("Note: Stop output may not explicitly mention PID when no process is running")
 	}
 }
@@ -158,7 +158,7 @@ func TestStopCommand_GracefulShutdownMessage(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -187,7 +187,7 @@ func TestStopCommand_CleanupOnNonRunning(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -212,7 +212,7 @@ node_name: "Test Node"
 
 	// Should mention that beacon is not running
 	if !strings.Contains(output, "未运行") && !strings.Contains(output, "not running") &&
-	   !strings.Contains(output, "可能未运行") {
+		!strings.Contains(output, "可能未运行") {
 		t.Log("Note: Stop command may not explicitly mention 'not running' status")
 	}
 }

@@ -267,7 +267,7 @@ describe('apiClient', () => {
       const fetchCall = (fetch as any).mock.calls[0]
       const url = fetchCall[0]
 
-      expect(url).toContain('http://localhost:8080')
+      expect(url).toContain('http://localhost:6532')
       expect(url).toContain('/api/v1/test')
 
       vi.unstubAllGlobals()

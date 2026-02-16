@@ -20,7 +20,7 @@ func TestIntegration_BeaconStartCommandOutput(t *testing.T) {
 	tmpFile := tmpDir + "/beacon.yaml"
 	logFile := tmpDir + "/beacon.log"
 	configContent := fmt.Sprintf(`
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-integration-01"
 node_name: "Integration Test Node"
 log_file: "%s"
@@ -65,7 +65,7 @@ func TestIntegration_BeaconStopCommandOutput(t *testing.T) {
 	tmpFile := tmpDir + "/beacon.yaml"
 	logFile := tmpDir + "/beacon.log"
 	configContent := fmt.Sprintf(`
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-integration-stop"
 node_name: "Integration Test Node"
 log_file: "%s"
@@ -102,7 +102,7 @@ func TestIntegration_BeaconStatusCommandOutput(t *testing.T) {
 	tmpFile := tmpDir + "/beacon.yaml"
 	logFile := tmpDir + "/beacon.log"
 	configContent := fmt.Sprintf(`
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-integration-01"
 node_name: "Integration Test Node"
 log_file: "%s"
@@ -148,7 +148,7 @@ func TestIntegration_BeaconDebugCommandOutput(t *testing.T) {
 	tmpFile := tmpDir + "/beacon.yaml"
 	logFile := tmpDir + "/beacon.log"
 	configContent := fmt.Sprintf(`
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-integration-debug-01"
 node_name: "Integration Debug Test Node"
 log_file: "%s"
@@ -293,7 +293,7 @@ func TestIntegration_BeaconDebugCommandPrettyOutput(t *testing.T) {
 	tmpFile := tmpDir + "/beacon.yaml"
 	logFile := tmpDir + "/beacon.log"
 	configContent := fmt.Sprintf(`
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-integration-debug-pretty"
 node_name: "Integration Debug Pretty Test"
 log_file: "%s"
@@ -351,7 +351,7 @@ func TestIntegration_BeaconDebugCommandDebugMode(t *testing.T) {
 	tmpFile := tmpDir + "/beacon.yaml"
 	logFile := tmpDir + "/beacon.log"
 	configContent := fmt.Sprintf(`
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-integration-debug-mode"
 node_name: "Integration Debug Mode Test"
 log_file: "%s"

@@ -19,7 +19,7 @@ func createTestConfig(t *testing.T) string {
 	tmpFile := filepath.Join(t.TempDir(), "test-config.yaml")
 	logFile := filepath.Join(t.TempDir(), "beacon.log")
 	configContent := fmt.Sprintf(`
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 log_file: "%s"
@@ -64,7 +64,7 @@ func executeWithTimeout(timeout time.Duration) (string, error) {
 		// Timeout
 		err = fmt.Errorf("execution timed out after %v", timeout)
 	}
-	cancel() // Cancel the context
+	cancel()  // Cancel the context
 	wg.Wait() // Wait for goroutine to finish
 	return output, err
 }

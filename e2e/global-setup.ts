@@ -14,7 +14,7 @@ import * as fs from 'fs'
 
 // Test database connection
 const TEST_DB_URL = process.env.TEST_DB_URL || 'postgresql://testuser:testpass123@localhost:5432/nodepulse_test'
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:6532'
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173'
 
 // Test user credentials (using default admin for now)

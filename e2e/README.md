@@ -25,7 +25,7 @@ cd pulse
 make run
 ```
 
-The backend should be running on `http://localhost:8080`.
+The backend should be running on `http://localhost:6532`.
 
 ### 3. Start Frontend Server
 
@@ -212,5 +212,5 @@ If tests are flaky, try:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | TEST_DB_URL | postgresql://testuser:testpass123@localhost:5432/nodepulse_test | Test database URL |
-| API_BASE_URL | http://localhost:8080 | Backend API URL |
+| API_BASE_URL | http://localhost:6532 | Backend API URL |
 | FRONTEND_BASE_URL | http://localhost:5173 | Frontend URL |

@@ -21,7 +21,7 @@
 # Server Configuration
 # ==================================
 server:
-  port: "8080"              # Server port
+  port: "6532"              # Server port
   read_timeout: 15          # Read timeout in seconds
   write_timeout: 15         # Write timeout in seconds
   idle_timeout: 60          # Idle timeout in seconds

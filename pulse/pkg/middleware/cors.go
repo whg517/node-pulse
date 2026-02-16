@@ -16,7 +16,7 @@ func CORSMiddleware() gin.HandlerFunc {
 		allowedOrigins := cfg.CORS.AllowedOrigins
 		if allowedOrigins == "" {
 			// Default to localhost for development
-			allowedOrigins = "http://localhost:8080"
+			allowedOrigins = "http://localhost:6532"
 		}
 
 		origin := c.Request.Header.Get("Origin")

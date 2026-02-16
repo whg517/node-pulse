@@ -86,7 +86,7 @@ func TestPushService_SendWebhook_Success(t *testing.T) {
 		webhookQuerier:     &mockWebhookQuerier{},
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
-		baseURL:            "http://localhost:8080",
+		baseURL:            "http://localhost:6532",
 	}
 
 	ctx := context.Background()
@@ -135,7 +135,7 @@ func TestPushService_SendWebhook_RetrySuccess(t *testing.T) {
 		webhookQuerier:     &mockWebhookQuerier{},
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
-		baseURL:            "http://localhost:8080",
+		baseURL:            "http://localhost:6532",
 	}
 
 	ctx := context.Background()
@@ -180,7 +180,7 @@ func TestPushService_SendWebhook_MaxRetriesExceeded(t *testing.T) {
 		webhookQuerier:     &mockWebhookQuerier{},
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
-		baseURL:            "http://localhost:8080",
+		baseURL:            "http://localhost:6532",
 	}
 
 	ctx := context.Background()
@@ -229,7 +229,7 @@ func TestPushService_SendWebhook_ContextCancellation(t *testing.T) {
 		webhookQuerier:     &mockWebhookQuerier{},
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
-		baseURL:            "http://localhost:8080",
+		baseURL:            "http://localhost:6532",
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -262,7 +262,7 @@ func TestPushService_SendAlert_NoWebhooks(t *testing.T) {
 		webhookQuerier:     &mockWebhookQuerier{webhooks: []*models.Webhook{}},
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
-		baseURL:            "http://localhost:8080",
+		baseURL:            "http://localhost:6532",
 	}
 
 	ctx := context.Background()
@@ -301,7 +301,7 @@ func TestPushService_SendAlert_MultipleWebhooks(t *testing.T) {
 		},
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
-		baseURL:            "http://localhost:8080",
+		baseURL:            "http://localhost:6532",
 	}
 
 	ctx := context.Background()
@@ -343,7 +343,7 @@ func TestPushService_SendAlert_OnlyEnabledWebhooks(t *testing.T) {
 		},
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
-		baseURL:            "http://localhost:8080",
+		baseURL:            "http://localhost:6532",
 	}
 
 	ctx := context.Background()
@@ -387,7 +387,7 @@ func TestPushService_SendAlert_PartialFailure(t *testing.T) {
 		},
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
-		baseURL:            "http://localhost:8080",
+		baseURL:            "http://localhost:6532",
 	}
 
 	ctx := context.Background()
@@ -439,7 +439,7 @@ func TestPushService_SendAlert_PartialFailure(t *testing.T) {
 
 func TestPushService_formatAlertEvent(t *testing.T) {
 	service := &PushService{
-		baseURL: "http://localhost:8080",
+		baseURL: "http://localhost:6532",
 	}
 
 	alertEvent := &models.AlertEvent{
@@ -476,6 +476,6 @@ func TestPushService_formatAlertEvent(t *testing.T) {
 
 	links, ok := formatted["links"].(map[string]any)
 	require.True(t, ok)
-	assert.Equal(t, "http://localhost:8080/nodes/node-1", links["alert_details"])
-	assert.Equal(t, "http://localhost:8080", links["dashboard"])
+	assert.Equal(t, "http://localhost:6532/nodes/node-1", links["alert_details"])
+	assert.Equal(t, "http://localhost:6532", links["dashboard"])
 }

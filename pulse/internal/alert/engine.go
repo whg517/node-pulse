@@ -71,7 +71,7 @@ func NewAlertEngine(
 	// Get webhooks querier for webhook push
 	webhookQuerier := db.NewWebhookQuerier(pool)
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
-	webhookPushService := webhook.NewPushService(webhookQuerier, webhookLogsQuerier, "http://localhost:8080")
+	webhookPushService := webhook.NewPushService(webhookQuerier, webhookLogsQuerier, "http://localhost:6532")
 
 	return &AlertEngine{
 		pool:                     pool,

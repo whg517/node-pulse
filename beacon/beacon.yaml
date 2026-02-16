@@ -1,7 +1,7 @@
 # Beacon Configuration File
 # Copy this file to beacon.yaml or /etc/beacon/beacon.yaml
 
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "us-east-01"
 node_name: "Beacon East-01"
 

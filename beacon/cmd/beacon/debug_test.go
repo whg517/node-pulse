@@ -57,7 +57,7 @@ func TestDebugCommand_JSONOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 log_level: "INFO"
@@ -121,7 +121,7 @@ func TestDebugCommand_PrettyOutput(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 log_level: "INFO"
@@ -165,7 +165,7 @@ func TestDebugCommand_NetworkStatus(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -201,7 +201,7 @@ node_name: "Test Node"
 	}
 
 	// Verify pulse_server_address matches config
-	if networkStatus["pulse_server_address"] != "http://localhost:8080" {
+	if networkStatus["pulse_server_address"] != "http://localhost:6532" {
 		t.Errorf("pulse_server_address mismatch: got %v", networkStatus["pulse_server_address"])
 	}
 }
@@ -211,7 +211,7 @@ func TestDebugCommand_ConfigurationInfo(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-node-01"
 node_name: "Test Config Node"
 log_level: "DEBUG"
@@ -253,7 +253,7 @@ func TestDebugCommand_ConnectionStatus(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -295,7 +295,7 @@ func TestDebugCommand_ResourceUsage(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `
@@ -343,7 +343,7 @@ func TestDebugCommand_ProbeTasks(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 probes:
@@ -408,7 +408,7 @@ func TestDebugCommand_DebugMode(t *testing.T) {
 
 	// Test with debug_mode: true
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 debug_mode: true
@@ -465,7 +465,7 @@ func TestDebugCommand_StructuredLogFormat(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "test-01"
 node_name: "Test Node"
 `

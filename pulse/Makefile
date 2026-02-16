@@ -13,7 +13,7 @@ deps: ## Download dependencies
 	go mod tidy
 	@echo "✅ Dependencies ready"
 
-run: ## Run the server (default port 8080)
+run: ## Run the server (default port 6532)
 	@echo "🚀 Starting server..."
 	@go run cmd/server/main.go
 
@@ -57,7 +57,7 @@ swag: ## Generate/update Swagger documentation
 	fi
 	@swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal
 	@echo "✅ Swagger documentation generated"
-	@echo "📖 Access at: http://localhost:8080/swagger/index.html"
+	@echo "📖 Access at: http://localhost:6532/swagger/index.html"
 
 swag-clean: ## Clean generated Swagger documentation
 	@echo "🧹 Cleaning Swagger docs..."

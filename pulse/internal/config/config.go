@@ -14,23 +14,23 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	Server     ServerConfig
-	DB         DatabaseConfig
-	Cleanup    CleanupConfig
-	Log        LogConfig
-	CORS       CORSConfig
-	Admin      AdminConfig
-	Session    SessionConfig
-	JWT        JWTConfig
-	RateLimit  RateLimitConfig
+	Server    ServerConfig
+	DB        DatabaseConfig
+	Cleanup   CleanupConfig
+	Log       LogConfig
+	CORS      CORSConfig
+	Admin     AdminConfig
+	Session   SessionConfig
+	JWT       JWTConfig
+	RateLimit RateLimitConfig
 }
 
 // ServerConfig holds server configuration
 type ServerConfig struct {
 	Port         string
-	ReadTimeout  int // seconds
-	WriteTimeout int // seconds
-	IdleTimeout  int // seconds
+	ReadTimeout  int    // seconds
+	WriteTimeout int    // seconds
+	IdleTimeout  int    // seconds
 	Mode         string // debug, release, test
 }
 
@@ -82,10 +82,10 @@ type SessionConfig struct {
 
 // JWTConfig holds JWT configuration
 type JWTConfig struct {
-	Secret                         string
-	AccessTokenExpirationMinutes   int
-	RefreshTokenExpirationDays     int
-	RefreshTokenMaxValidityDays    int // Absolute cap for refresh tokens (sliding window)
+	Secret                       string
+	AccessTokenExpirationMinutes int
+	RefreshTokenExpirationDays   int
+	RefreshTokenMaxValidityDays  int // Absolute cap for refresh tokens (sliding window)
 }
 
 // RateLimitConfig holds rate limiting configuration for auth endpoints
@@ -356,7 +356,7 @@ func generateRandomSecret(length int) (string, error) {
 func defaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port:         "8080",
+			Port:         "6532",
 			ReadTimeout:  15,
 			WriteTimeout: 15,
 			IdleTimeout:  60,
@@ -380,7 +380,7 @@ func defaultConfig() *Config {
 			Output: "stdout",
 		},
 		CORS: CORSConfig{
-			AllowedOrigins: "http://localhost:3000,http://localhost:5173,http://localhost:8080",
+			AllowedOrigins: "http://localhost:3000,http://localhost:5173,http://localhost:6532",
 			AllowedMethods: "GET,POST,PUT,DELETE,OPTIONS",
 			AllowedHeaders: "Content-Type,Authorization",
 			MaxAge:         86400, // 24 hours
@@ -396,17 +396,17 @@ func defaultConfig() *Config {
 			CookieSameSite:  "Lax",
 		},
 		JWT: JWTConfig{
-			Secret:                         "", // Will be auto-generated if empty
-			AccessTokenExpirationMinutes:   15, // 15 minutes
-			RefreshTokenExpirationDays:     7,  // 7 days
-			RefreshTokenMaxValidityDays:    30, // 30 days absolute cap
+			Secret:                       "", // Will be auto-generated if empty
+			AccessTokenExpirationMinutes: 15, // 15 minutes
+			RefreshTokenExpirationDays:   7,  // 7 days
+			RefreshTokenMaxValidityDays:  30, // 30 days absolute cap
 		},
 		RateLimit: RateLimitConfig{
-			LoginMaxPerMinute:   5,  // 5 login attempts per minute per IP
+			LoginMaxPerMinute:   5,   // 5 login attempts per minute per IP
 			LoginMaxPerDay:      100, // 100 login attempts per day per IP
-			RefreshMaxPerMinute: 10, // 10 refresh attempts per minute per token
+			RefreshMaxPerMinute: 10,  // 10 refresh attempts per minute per token
 			RefreshMaxPerDay:    200, // 200 refresh attempts per day per token
-			APIKeyMaxPerMinute:  11, // 11 API key exchanges per minute per key
+			APIKeyMaxPerMinute:  11,  // 11 API key exchanges per minute per key
 		},
 	}
 }

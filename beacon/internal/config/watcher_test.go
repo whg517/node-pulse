@@ -18,7 +18,7 @@ func TestFileWatcher_StartStop(t *testing.T) {
 	cfgPath := filepath.Join(tmpDir, "beacon.yaml")
 
 	// Write initial config
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: test-node-1
 node_name: Test Node 1
 probes:
@@ -81,7 +81,7 @@ func TestFileWatcher_ConfigReload(t *testing.T) {
 	cfgPath := filepath.Join(tmpDir, "beacon.yaml")
 
 	// Write initial config
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: test-node-1
 node_name: Test Node 1
 probes:
@@ -172,7 +172,7 @@ func TestFileWatcher_ValidationFailure(t *testing.T) {
 	cfgPath := filepath.Join(tmpDir, "beacon.yaml")
 
 	// Write initial valid config
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: test-node-1
 node_name: Test Node 1
 probes:
@@ -218,7 +218,7 @@ probes:
 	time.Sleep(500 * time.Millisecond)
 
 	// Write invalid config (interval_seconds exceeds limit)
-	invalidConfig := `pulse_server: http://localhost:8080
+	invalidConfig := `pulse_server: http://localhost:6532
 node_id: test-node-1
 node_name: Test Node 1
 probes:
@@ -245,7 +245,7 @@ probes:
 
 	// Verify original config is still in place
 	currentConfig := watcher.GetConfig()
-	if currentConfig.PulseServer != "http://localhost:8080" {
+	if currentConfig.PulseServer != "http://localhost:6532" {
 		t.Errorf("Original config should remain unchanged after validation failure, got pulse_server: %s", currentConfig.PulseServer)
 	}
 }
@@ -255,7 +255,7 @@ func TestFileWatcher_Debounce(t *testing.T) {
 	tmpDir := t.TempDir()
 	cfgPath := filepath.Join(tmpDir, "beacon.yaml")
 
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: test-node-1
 node_name: Test Node 1
 probes:
@@ -302,7 +302,7 @@ probes:
 
 	// Rapidly modify config file 3 times (each with a different pulse_server)
 	for i := 0; i < 3; i++ {
-		port := 8080 + i
+		port := 6532 + i
 		newConfig := fmt.Sprintf(`pulse_server: http://localhost:%d
 node_id: test-node-1
 node_name: Test Node 1
@@ -336,7 +336,7 @@ func TestFileWatcher_ConcurrentReads(t *testing.T) {
 	tmpDir := t.TempDir()
 	cfgPath := filepath.Join(tmpDir, "beacon.yaml")
 
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: test-node-1
 node_name: Test Node 1
 probes:
@@ -399,7 +399,7 @@ func TestFileWatcher_Rollback(t *testing.T) {
 	tmpDir := t.TempDir()
 	cfgPath := filepath.Join(tmpDir, "beacon.yaml")
 
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: test-node-1
 node_name: Test Node 1
 probes:
@@ -486,7 +486,7 @@ func TestFileWatcher_CustomConfigPath(t *testing.T) {
 	tmpDir := t.TempDir()
 	customCfgPath := filepath.Join(tmpDir, "custom-beacon.yaml")
 
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: test-node-1
 node_name: Test Node 1
 probes:

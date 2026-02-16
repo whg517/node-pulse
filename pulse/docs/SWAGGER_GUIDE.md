@@ -9,7 +9,7 @@ The Node Pulse API now includes interactive API documentation powered by Swagger
 Once the server is running, access the Swagger UI at:
 
 ```
-http://localhost:8080/swagger/index.html
+http://localhost:6532/swagger/index.html
 ```
 
 ## Adding Swagger Annotations to New Endpoints
@@ -207,7 +207,7 @@ The main API information (title, version, description, host) is defined in `cmd/
 // @title			Node Pulse API
 // @version		1.0
 // @description	Node Pulse is a distributed monitoring system...
-// @host			localhost:8080
+// @host			localhost:6532
 // @BasePath		/api/v1
 ```
 
@@ -262,5 +262,5 @@ go install github.com/swaggo/swag/cmd/swag@latest
 
 ### Swagger UI not accessible
 - Verify the route is registered in `routes.go`
-- Check the server is running on the correct port (default 8080)
+- Check the server is running on the correct port (default 6532)
 - Ensure no middleware is blocking the `/swagger/*` path

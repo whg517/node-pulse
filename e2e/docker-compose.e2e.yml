@@ -6,10 +6,10 @@ services:
   # Use the existing test database from pulse/
   # No additional services needed - e2e tests connect to:
   # - PostgreSQL: localhost:5432 (from pulse/docker-compose.test.yml)
-  # - Pulse Backend: localhost:8080 (run `make run` in pulse/)
+  # - Pulse Backend: localhost:6532 (run `make run` in pulse/)
   # - Frontend: localhost:5173 (run `npm run dev` in frontend/)
 
   # This file is kept for documentation and future CI/CD use
   placeholder:
     image: alpine:latest
-    command: echo "E2E tests require: 1) pulse/docker-compose.test.yml running, 2) pulse backend on :8080, 3) frontend on :5173"
+    command: echo "E2E tests require: 1) pulse/docker-compose.test.yml running, 2) pulse backend on :6532, 3) frontend on :5173"

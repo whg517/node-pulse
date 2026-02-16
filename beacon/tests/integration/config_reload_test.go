@@ -25,7 +25,7 @@ func TestConfigReload_BeaconStartup(t *testing.T) {
 	pidPath := filepath.Join(tmpDir, "beacon.pid")
 
 	// Write initial config
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: integration-test-node
 node_name: Integration Test Node
 probes:
@@ -98,7 +98,7 @@ func TestConfigReload_FileModification(t *testing.T) {
 	logPath := filepath.Join(tmpDir, "beacon.log")
 
 	// Write initial config
-	initialConfig := fmt.Sprintf(`pulse_server: http://localhost:8080
+	initialConfig := fmt.Sprintf(`pulse_server: http://localhost:6532
 node_id: integration-test-reload
 node_name: Integration Test Reload
 probes:
@@ -135,7 +135,7 @@ log_file: %s
 	time.Sleep(2 * time.Second)
 
 	// Modify config file (change interval from 60 to 120 seconds)
-	modifiedConfig := fmt.Sprintf(`pulse_server: http://localhost:8080
+	modifiedConfig := fmt.Sprintf(`pulse_server: http://localhost:6532
 node_id: integration-test-reload
 node_name: Integration Test Reload
 probes:
@@ -199,7 +199,7 @@ func TestConfigReload_InvalidConfig(t *testing.T) {
 	logPath := filepath.Join(tmpDir, "beacon.log")
 
 	// Write initial valid config
-	initialConfig := fmt.Sprintf(`pulse_server: http://localhost:8080
+	initialConfig := fmt.Sprintf(`pulse_server: http://localhost:6532
 node_id: integration-test-validation
 node_name: Integration Test Validation
 probes:
@@ -242,7 +242,7 @@ log_file: %s
 	}
 
 	// Write invalid config (interval exceeds max)
-	invalidConfig := fmt.Sprintf(`pulse_server: http://localhost:8080
+	invalidConfig := fmt.Sprintf(`pulse_server: http://localhost:6532
 node_id: integration-test-validation
 node_name: Integration Test Validation
 probes:
@@ -303,7 +303,7 @@ func TestConfigReload_ConcurrentReads(t *testing.T) {
 	cfgPath := filepath.Join(tmpDir, "beacon.yaml")
 
 	// Write config
-	initialConfig := `pulse_server: http://localhost:8080
+	initialConfig := `pulse_server: http://localhost:6532
 node_id: integration-test-concurrent
 node_name: Integration Test Concurrent
 probes:
@@ -363,7 +363,7 @@ log_file: /tmp/beacon-concurrent-test.log
 	// Config modifiers (write config changes)
 	go func() {
 		for i := 0; i < 5; i++ {
-			port := 8080 + i
+			port := 6532 + i
 			modifiedConfig := fmt.Sprintf(`pulse_server: http://localhost:%d
 node_id: integration-test-concurrent
 node_name: Integration Test Concurrent

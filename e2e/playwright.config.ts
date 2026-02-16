@@ -8,7 +8,7 @@ const __dirname = dirname(__filename)
 
 // Use the existing test database from pulse/docker-compose.test.yml
 const TEST_DB_URL = process.env.TEST_DB_URL || 'postgresql://testuser:testpass123@localhost:5432/nodepulse_test'
-const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:8080'
+const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:6532'
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173'
 
 // Set environment variables for tests

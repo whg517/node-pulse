@@ -14,7 +14,7 @@ func TestLoadConfig_Success(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "us-east-01"
 node_name: "Beacon East-01"
 debug: false
@@ -31,8 +31,8 @@ debug: false
 	}
 
 	// Verify config values
-	if cfg.PulseServer != "http://localhost:8080" {
-		t.Errorf("Expected pulse_server to be 'http://localhost:8080', got: %s", cfg.PulseServer)
+	if cfg.PulseServer != "http://localhost:6532" {
+		t.Errorf("Expected pulse_server to be 'http://localhost:6532', got: %s", cfg.PulseServer)
 	}
 	if cfg.NodeID != "us-east-01" {
 		t.Errorf("Expected node_id to be 'us-east-01', got: %s", cfg.NodeID)
@@ -48,7 +48,7 @@ func TestLoadConfig_MissingRequiredFields(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 `
 	err := os.WriteFile(configPath, []byte(configContent), 0644)
 	if err != nil {
@@ -87,7 +87,7 @@ func TestLoadConfig_InvalidYAML(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "us-east-01"
 invalid yaml: [unclosed
 `
@@ -157,12 +157,12 @@ func TestConfigStruct_Complete(t *testing.T) {
 func TestProbeConfigStruct_Valid(t *testing.T) {
 	// Test ProbeConfig struct with valid values
 	probe := ProbeConfig{
-		Type:     "tcp_ping",
-		Target:   "8.8.8.8",
-		Port:     80,
-		Interval: 300,
-		Count:    10,
-		TimeoutSeconds:  5,
+		Type:           "tcp_ping",
+		Target:         "8.8.8.8",
+		Port:           80,
+		Interval:       300,
+		Count:          10,
+		TimeoutSeconds: 5,
 	}
 
 	if probe.Type != "tcp_ping" {
@@ -188,12 +188,12 @@ func TestProbeConfigStruct_Valid(t *testing.T) {
 func TestProbeConfigStruct_UDP(t *testing.T) {
 	// Test ProbeConfig with UDP probe
 	probe := ProbeConfig{
-		Type:     "udp_ping",
-		Target:   "8.8.8.8",
-		Port:     53,
-		Interval: 300,
-		Count:    10,
-		TimeoutSeconds:  5,
+		Type:           "udp_ping",
+		Target:         "8.8.8.8",
+		Port:           53,
+		Interval:       300,
+		Count:          10,
+		TimeoutSeconds: 5,
 	}
 
 	if probe.Type != "udp_ping" {
@@ -204,9 +204,9 @@ func TestProbeConfigStruct_UDP(t *testing.T) {
 func TestReconnectConfigStruct_Valid(t *testing.T) {
 	// Test ReconnectConfig struct with valid values
 	reconnect := ReconnectConfig{
-		MaxRetries:     10,
-		RetryInterval:  60,
-		Backoff:        "exponential",
+		MaxRetries:    10,
+		RetryInterval: 60,
+		Backoff:       "exponential",
 	}
 
 	if reconnect.MaxRetries != 10 {
@@ -223,9 +223,9 @@ func TestReconnectConfigStruct_Valid(t *testing.T) {
 func TestReconnectConfigStruct_Linear(t *testing.T) {
 	// Test ReconnectConfig with linear backoff
 	reconnect := ReconnectConfig{
-		MaxRetries:     5,
-		RetryInterval:  30,
-		Backoff:        "linear",
+		MaxRetries:    5,
+		RetryInterval: 30,
+		Backoff:       "linear",
 	}
 
 	if reconnect.Backoff != "linear" {
@@ -241,20 +241,20 @@ func TestConfigStruct_WithProbes(t *testing.T) {
 		NodeName:    "美国东部-节点01",
 		Probes: []ProbeConfig{
 			{
-				Type:     "tcp_ping",
-				Target:   "8.8.8.8",
-				Port:     80,
-				Interval: 300,
-				Count:    10,
-				TimeoutSeconds:  5,
+				Type:           "tcp_ping",
+				Target:         "8.8.8.8",
+				Port:           80,
+				Interval:       300,
+				Count:          10,
+				TimeoutSeconds: 5,
 			},
 			{
-				Type:     "udp_ping",
-				Target:   "8.8.8.8",
-				Port:     53,
-				Interval: 300,
-				Count:    10,
-				TimeoutSeconds:  5,
+				Type:           "udp_ping",
+				Target:         "8.8.8.8",
+				Port:           53,
+				Interval:       300,
+				Count:          10,
+				TimeoutSeconds: 5,
 			},
 		},
 	}
@@ -277,9 +277,9 @@ func TestConfigStruct_WithReconnect(t *testing.T) {
 		NodeID:      "us-east-01",
 		NodeName:    "美国东部-节点01",
 		Reconnect: ReconnectConfig{
-			MaxRetries:     10,
-			RetryInterval:  60,
-			Backoff:        "exponential",
+			MaxRetries:    10,
+			RetryInterval: 60,
+			Backoff:       "exponential",
 		},
 	}
 
@@ -438,7 +438,7 @@ func TestLoadConfig_ValidURL_HTTP(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "beacon.yaml")
 
 	configContent := `
-pulse_server: "http://localhost:8080"
+pulse_server: "http://localhost:6532"
 node_id: "dev-01"
 node_name: "Development Node"
 `
@@ -453,8 +453,8 @@ node_name: "Development Node"
 		t.Errorf("Expected no error for valid HTTP URL, got: %v", err)
 	}
 
-	if cfg.PulseServer != "http://localhost:8080" {
-		t.Errorf("Expected PulseServer to be 'http://localhost:8080', got: %s", cfg.PulseServer)
+	if cfg.PulseServer != "http://localhost:6532" {
+		t.Errorf("Expected PulseServer to be 'http://localhost:6532', got: %s", cfg.PulseServer)
 	}
 }
 
@@ -898,7 +898,7 @@ func TestValidateHostname_Valid(t *testing.T) {
 
 func TestValidateHostname_Invalid(t *testing.T) {
 	testCases := []struct {
-		hostname string
+		hostname    string
 		errContains string
 	}{
 		{"-invalid", "cannot start"},
@@ -943,7 +943,7 @@ func TestValidateReconnectConfig_AllZero(t *testing.T) {
 	cfg := ReconnectConfig{
 		MaxRetries:    0,
 		RetryInterval: 0,
-		Backoff:        "",
+		Backoff:       "",
 	}
 
 	err := validateReconnectConfig(cfg)
@@ -956,7 +956,7 @@ func TestValidateReconnectConfig_InvalidBackoff(t *testing.T) {
 	cfg := ReconnectConfig{
 		MaxRetries:    10,
 		RetryInterval: 60,
-		Backoff:        "invalid",
+		Backoff:       "invalid",
 	}
 
 	err := validateReconnectConfig(cfg)
@@ -974,7 +974,7 @@ func TestValidateReconnectConfig_MaxRetriesOutOfRange(t *testing.T) {
 	cfg := ReconnectConfig{
 		MaxRetries:    101,
 		RetryInterval: 60,
-		Backoff:        "exponential",
+		Backoff:       "exponential",
 	}
 
 	err := validateReconnectConfig(cfg)
