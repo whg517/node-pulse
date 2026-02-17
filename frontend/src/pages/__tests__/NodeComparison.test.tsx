@@ -179,9 +179,8 @@ describe('NodeComparisonPage', () => {
       </MemoryRouter>
     )
 
-    await waitFor(() => {
-      expect(screen.getByText('Node Comparison')).toBeInTheDocument()
-    })
+    // Use findByRole to target the h1 specifically
+    expect(await screen.findByRole('heading', { name: 'Node Comparison', level: 1 })).toBeInTheDocument()
     expect(
       screen.getByText(
         'Compare network metrics across multiple nodes to identify performance differences and anomalies.'

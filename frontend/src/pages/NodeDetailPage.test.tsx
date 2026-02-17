@@ -8,10 +8,14 @@ import { useNodeDetail } from '../hooks/useNodeDetail'
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, options?: any) => {
       const translations: Record<string, string> = {
         'common.loading': 'Loading node details...',
         'common.error': 'Error',
+        'common.back': 'Back to Dashboard',
+        'errors.failedToLoad': 'Error Loading Node',
+        'errors.nodeNotFound': 'Node Not Found',
+        'errors.notFound': 'The requested node does not exist.',
         'nodes.errorLoadingNode': 'Error Loading Node',
         'nodes.nodeNotFound': 'Node Not Found',
         'nodes.nodeNotFoundDescription': 'The requested node does not exist.',
@@ -34,11 +38,14 @@ vi.mock('react-i18next', () => ({
         'status.offline': 'Offline',
         'status.connecting': 'Connecting',
         'status.live': 'Live',
+        'nodes.live': 'Live',
         'metrics.latency': 'Latency',
         'metrics.packetLoss': 'Packet Loss Rate',
         'metrics.jitter': 'Jitter',
         'aria.backToDashboard': 'Back to dashboard',
-        'errors.failedToLoad': 'Error Loading Node',
+        'time.justNow': 'Just now',
+        'time.minutesAgo': `${options?.count || 1} minute${(options?.count || 1) > 1 ? 's' : ''} ago`,
+        'time.hoursAgo': `${options?.count || 1} hour${(options?.count || 1) > 1 ? 's' : ''} ago`,
       }
       return translations[key] || key
     },
@@ -398,11 +405,12 @@ describe('NodeDetailPage', () => {
     }
 
     const now = new Date()
-    const oneMinuteAgo = new Date(now.getTime() - 60000).toISOString()
+    // Use 90 seconds ago to ensure diffMins >= 1 (avoids timing issues with 60000ms)
+    const ninetySecondsAgo = new Date(now.getTime() - 90000).toISOString()
 
     const mockNodeStatus = {
       status: 'online',
-      last_heartbeat: oneMinuteAgo,
+      last_heartbeat: ninetySecondsAgo,
     }
 
     mockUseNodeDetail.mockReturnValue({
@@ -460,7 +468,7 @@ describe('NodeDetailPage', () => {
       </MemoryRouter>
     )
 
-    const backLink = screen.getByLabelText('Back to dashboard')
+    const backLink = screen.getByLabelText('Back to Dashboard')
     expect(backLink).toBeInTheDocument()
     expect(backLink.closest('a')).toHaveAttribute('href', '/dashboard')
   })
