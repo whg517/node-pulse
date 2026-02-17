@@ -155,7 +155,8 @@ func TestCalculatePercentiles(t *testing.T) {
 
 func TestAggregateMetrics(t *testing.T) {
 	t.Run("Basic aggregation", func(t *testing.T) {
-		now := time.Now()
+		// Use a fixed time at the start of a minute to ensure all records fall in the same window
+		now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 		records := []MetricRecord{
 			{
 				Timestamp:  now,
@@ -217,7 +218,8 @@ func TestAggregateMetrics(t *testing.T) {
 	})
 
 	t.Run("Success rate calculation", func(t *testing.T) {
-		now := time.Now()
+		// Use a fixed time to ensure consistent test results
+		now := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
 		records := []MetricRecord{
 			{
 				Timestamp:  now,
