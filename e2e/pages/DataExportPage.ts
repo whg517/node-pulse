@@ -23,7 +23,7 @@ export class DataExportPage {
     this.submitButton = page.locator('button[type="submit"], button:has-text("Export")')
     this.progressBar = page.locator('[data-testid="progress-bar"], .progress-bar')
     this.downloadButton = page.locator('button:has-text("Download"), a:has-text("Download")')
-    this.accessWarning = page.locator('text=/admin.*only/i, text=/access.*denied/i, .access-warning')
+    this.accessWarning = page.locator('.access-warning, :text-is("Access Denied"), :text-is("Admin Only")')
   }
 
   async goto() {
