@@ -39,17 +39,10 @@ export default defineConfig({
     navigationTimeout: 30000,
   },
   projects: [
-    // Setup project for database seeding and auth state
-    {
-      name: 'setup',
-      testMatch: /global-setup\.ts/,
-    },
-    // Chromium tests
+    // Chromium tests - globalSetup handles seeding and auth state
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
-      dependencies: ['setup'],
-      testIgnore: /global-setup\.ts/,
     },
   ],
   // Global setup for database seeding
