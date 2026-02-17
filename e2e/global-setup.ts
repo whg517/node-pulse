@@ -11,6 +11,7 @@
 import { Pool } from 'pg'
 import { chromium, FullConfig } from '@playwright/test'
 import * as fs from 'fs'
+import bcrypt from 'bcryptjs'
 
 // Test database connection
 const TEST_DB_URL = process.env.TEST_DB_URL || 'postgresql://testuser:testpass123@localhost:5432/nodepulse_test'
@@ -82,6 +83,42 @@ async function clearRateLimits(pool: Pool): Promise<void> {
 }
 
 /**
+ * Seed test users for different roles
+ */
+async function seedTestUsers(pool: Pool): Promise<void> {
+  console.log('[Global Setup] Seeding test users...')
+
+  const testUsers = [
+    { username: 'e2e_operator', password: 'E2eOperator123!', role: 'operator' },
+    { username: 'e2e_viewer', password: 'E2eViewer123!', role: 'viewer' },
+  ]
+
+  for (const user of testUsers) {
+    // Check if user exists
+    const existingUser = await pool.query(
+      'SELECT user_id FROM users WHERE username = $1',
+      [user.username]
+    )
+
+    if (existingUser.rows.length === 0) {
+      // Hash password with bcrypt (cost factor 12 to match backend)
+      const passwordHash = await bcrypt.hash(user.password, 12)
+
+      // Insert user
+      await pool.query(`
+        INSERT INTO users (user_id, username, password_hash, role, created_at, updated_at)
+        VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
+        ON CONFLICT (username) DO NOTHING
+      `, [user.username, passwordHash, user.role])
+
+      console.log(`[Global Setup] Created test user: ${user.username} (${user.role})`)
+    } else {
+      console.log(`[Global Setup] Test user already exists: ${user.username}`)
+    }
+  }
+}
+
+/**
  * Seed test alert rules
  */
 async function seedTestAlertRules(pool: Pool): Promise<void> {
@@ -143,8 +180,15 @@ async function authenticateAndSaveState(
     // Submit form
     await page.click('button[type="submit"]')
 
-    // Wait for redirect to dashboard (indicates successful login)
-    await page.waitForURL('**/dashboard**', { timeout: 15000 })
+    // Wait for successful login - either dashboard URL or a dashboard element
+    // React Router SPA navigation might not trigger URL change detection reliably
+    try {
+      // First try waiting for URL change
+      await page.waitForURL('**/dashboard**', { timeout: 10000 })
+    } catch {
+      // Fallback: wait for dashboard content to appear (SPA navigation)
+      await page.waitForSelector('text=/Welcome|Dashboard|Nodes/i', { timeout: 5000 })
+    }
 
     // Save storage state (includes cookies and localStorage)
     await context.storageState({ path: statePath })
@@ -161,7 +205,7 @@ async function authenticateAndSaveState(
 /**
  * Main global setup function
  */
-export default async function globalSetup(config: FullConfig) {
+export default async function globalSetup(_config: FullConfig) {
   console.log('[Global Setup] Starting e2e test setup...')
 
   // Create .auth directory for storage states
@@ -180,11 +224,14 @@ export default async function globalSetup(config: FullConfig) {
     // Clear rate limits first to allow logins
     await clearRateLimits(pool)
 
+    // Seed test users (operator, viewer) for RBAC tests
+    await seedTestUsers(pool)
+
     // Seed test data
     await seedTestNodes(pool)
     await seedTestAlertRules(pool)
 
-    // Authenticate and save state for admin
+    // Authenticate and save state for all roles
     try {
       await authenticateAndSaveState(
         TEST_USERS.admin.username,
@@ -192,10 +239,17 @@ export default async function globalSetup(config: FullConfig) {
         '.auth/admin.json'
       )
 
-      // Copy admin state for operator and viewer (they'll use same auth for now)
-      // In a real setup, you'd create separate users
-      fs.copyFileSync('.auth/admin.json', '.auth/operator.json')
-      fs.copyFileSync('.auth/admin.json', '.auth/viewer.json')
+      await authenticateAndSaveState(
+        'e2e_operator',
+        'E2eOperator123!',
+        '.auth/operator.json'
+      )
+
+      await authenticateAndSaveState(
+        'e2e_viewer',
+        'E2eViewer123!',
+        '.auth/viewer.json'
+      )
 
       console.log('[Global Setup] Setup complete!')
     } catch (error) {

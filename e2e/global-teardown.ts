@@ -19,6 +19,11 @@ async function cleanupTestData(pool: Pool): Promise<void> {
   console.log('[Global Teardown] Cleaning up test data...')
 
   try {
+    // Delete test users (operator, viewer) - created for RBAC tests
+    await pool.query(`
+      DELETE FROM users WHERE username IN ('e2e_operator', 'e2e_viewer')
+    `)
+
     // Delete test alert records first (foreign key constraint)
     await pool.query(`
       DELETE FROM alert_records WHERE node_id IN (
