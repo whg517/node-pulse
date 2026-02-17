@@ -138,11 +138,25 @@ func (suite *HealthCheckIntegrationTestSuite) TestAlertSystemChecker_CheckWebhoo
 	err := db.NewWebhookQuerier(suite.pool).CreateWebhook(suite.ctx, webhook)
 	require.NoError(suite.T(), err)
 
-	// Create 70 successful webhook logs
+	// Create a test node for the alert events (required for foreign key constraint)
+	nodeID := uuid.New()
+	nodeQuerier := db.NewPoolQuerier(suite.pool)
+	err = nodeQuerier.CreateNode(suite.ctx, nodeID, "test-node-webhook", "192.168.1.100", "us-west", nil)
+	require.NoError(suite.T(), err)
+
+	// Create 70 successful webhook logs with valid alert events
 	for i := 0; i < 70; i++ {
+		// Create alert event first (required by foreign key)
+		alertEventID := uuid.New()
+		_, err = suite.pool.Exec(suite.ctx, `
+			INSERT INTO alert_events (id, node_id, metric, threshold, current_value, level, created_at)
+			VALUES ($1, $2, 'latency', 100, 150, 'P0', NOW())
+		`, alertEventID, nodeID)
+		require.NoError(suite.T(), err)
+
 		log := &models.WebhookLog{
 			WebhookID:    webhook.ID,
-			AlertEventID: uuid.New().String(),
+			AlertEventID: alertEventID.String(),
 			Status:       "success",
 			RetryCount:   0,
 			ErrorMessage: "",
@@ -151,11 +165,19 @@ func (suite *HealthCheckIntegrationTestSuite) TestAlertSystemChecker_CheckWebhoo
 		require.NoError(suite.T(), err)
 	}
 
-	// Create 30 failed webhook logs
+	// Create 30 failed webhook logs with valid alert events
 	for i := 0; i < 30; i++ {
+		// Create alert event first (required by foreign key)
+		alertEventID := uuid.New()
+		_, err = suite.pool.Exec(suite.ctx, `
+			INSERT INTO alert_events (id, node_id, metric, threshold, current_value, level, created_at)
+			VALUES ($1, $2, 'latency', 100, 200, 'P0', NOW())
+		`, alertEventID, nodeID)
+		require.NoError(suite.T(), err)
+
 		log := &models.WebhookLog{
 			WebhookID:    webhook.ID,
-			AlertEventID: uuid.New().String(),
+			AlertEventID: alertEventID.String(),
 			Status:       "failure",
 			RetryCount:   3,
 			ErrorMessage: "timeout",

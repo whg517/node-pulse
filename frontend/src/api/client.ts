@@ -24,6 +24,15 @@ import {
   AuthorizationError,
 } from './errors'
 
+// Re-export error classes for consumers
+export {
+  ApiError,
+  AuthenticationError,
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+}
+
 // ============== Module-level State ==============
 
 /**
@@ -347,8 +356,8 @@ async function handleError(response: Response): Promise<never> {
     case 400:
       throw new ValidationError(message, details)
     case 401:
-      // Preserve original error code (ERR_INVALID_CREDENTIALS, ERR_ACCOUNT_LOCKED, etc.)
-      throw new ApiError(message, code, details, 401)
+      // Throw AuthenticationError for 401 responses, preserving details
+      throw new AuthenticationError(message, details)
     case 403:
       throw new AuthorizationError(message, details)
     case 404:

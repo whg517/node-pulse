@@ -88,10 +88,18 @@ func TestDiagnosis_SequentialRefresh(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code, "First refresh should succeed (200 OK)")
 
 		if w.Code == http.StatusOK {
-			var resp models.TokenResponse
+			// The refresh endpoint returns a wrapped response: {"data": {"access_token": ...}}
+			var resp struct {
+				Message string `json:"message"`
+				Data    struct {
+					AccessToken string `json:"access_token"`
+					TokenType   string `json:"token_type"`
+					ExpiresIn   int    `json:"expires_in"`
+				} `json:"data"`
+			}
 			err = json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
-			assert.NotEmpty(t, resp.AccessToken, "Should have new access token")
+			assert.NotEmpty(t, resp.Data.AccessToken, "Should have new access token")
 			t.Logf("✓ First refresh succeeded, got new access token")
 		}
 	})
