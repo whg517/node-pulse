@@ -144,7 +144,52 @@ Located in `beacon/internal/*/test.go` files. Run with `make test`.
 - Requires Docker test database: `make setup-test-db`
 
 ### Frontend Tests
-Located in `frontend/src/**/*.test.tsx`. Run with `npm run test`.
+Located in `frontend/src/**/*.test.tsx`. Run with `npm run test` (uses Vitest).
+
+### E2E Tests (Playwright)
+Located in `e2e/tests/` organized by feature:
+- `tests/auth/` - Login, logout, sessions, token refresh
+- `tests/rbac/` - Role-based access control (admin, operator, viewer)
+- `tests/nodes/` - Node list, detail, CRUD, comparison
+- `tests/alerts/` - Alert rules, history, records
+- `tests/webhooks/` - Webhook configuration
+- `tests/export/` - Data export functionality
+- `tests/dashboard/`, `tests/performance/` - Dashboard and metrics
+
+```bash
+cd e2e
+
+# Install dependencies
+npm install
+
+# Run all tests (requires running Pulse + Frontend + DB)
+npm test
+
+# Run specific test suites
+npm run test:auth
+npm run test:rbac
+npm run test:nodes
+npm run test:alerts
+npm run test:webhooks
+npm run test:export
+
+# Docker-based E2E environment (recommended)
+npm run docker:up      # Start Pulse, Frontend, PostgreSQL in Docker
+npm run docker:down    # Stop containers
+npm run docker:logs    # View logs
+npm run docker:reset   # Reset and restart
+
+# Debugging
+npm run test:ui        # Playwright UI mode
+npm run test:debug     # Debug mode
+npm run test:headed    # Run with browser visible
+npm run report         # Show test report
+```
+
+The E2E environment uses `docker-compose.e2e.yml` which sets up:
+- PostgreSQL test database (port 5432)
+- Pulse backend API (port 6532)
+- Frontend dev server (port 5173)
 
 ## Configuration
 
