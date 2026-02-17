@@ -120,6 +120,31 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		{
 			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (JWT auth required)
 			beacon.POST("/heartbeat", middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleHeartbeat)
+			// POST /api/v1/beacon/heartbeat/compressed - Receive compressed heartbeat data (FR-4.1.5)
+			beacon.POST("/heartbeat/compressed", middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleCompressedHeartbeat)
+		}
+
+		// Beacon config management routes (require auth) (FR-4.2.4)
+		beacons := v1.Group("/beacons")
+		beacons.Use(middleware.JWTAuthMiddleware(jwtService))
+		{
+			// GET /api/v1/beacons/:id/config - Get beacon config
+			beacons.GET("/:id/config", beaconHandler.GetBeaconConfig)
+			// POST /api/v1/beacons/:id/config - Update beacon config
+			beacons.POST("/:id/config", middleware.RBACMiddleware([]string{"admin", "operator"}), beaconHandler.UpdateBeaconConfig)
+			// GET /api/v1/beacons/:id/config/history - Get beacon config history
+			beacons.GET("/:id/config/history", beaconHandler.GetBeaconConfigHistory)
+			// POST /api/v1/beacons/:id/config/preview - Preview config changes
+			beacons.POST("/:id/config/preview", beaconHandler.GetConfigPreview)
+		}
+
+		// Beacon group config management routes (admin/operator only)
+		beaconGroups := v1.Group("/beacon-groups")
+		beaconGroups.Use(middleware.JWTAuthMiddleware(jwtService))
+		beaconGroups.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
+		{
+			// POST /api/v1/beacon-groups/:gid/config - Batch update beacon configs
+			beaconGroups.POST("/:gid/config", beaconHandler.BatchUpdateBeaconGroupConfig)
 		}
 
 		// Auth endpoints (public)

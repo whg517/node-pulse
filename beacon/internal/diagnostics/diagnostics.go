@@ -27,6 +27,18 @@ type DiagnosticDetails struct {
 	ResourceMonitor     *ResourceMonitorInfo `json:"resource_monitor,omitempty"`
 	ProbeTasks          ProbeTasks          `json:"probe_tasks"`
 	PrometheusMetrics   PrometheusMetrics   `json:"prometheus_metrics"`
+
+	// FR-4.1.2 Enhanced mode status
+	ModeStatus          *ModeStatusInfo     `json:"mode_status,omitempty"`
+}
+
+// ModeStatusInfo contains mode and config source status
+type ModeStatusInfo struct {
+	CurrentMode         string    `json:"current_mode"`
+	ConfigSource        string    `json:"config_source"`
+	ConsecutiveFailures int       `json:"consecutive_failures"`
+	LastSuccessTime     time.Time `json:"last_success_time,omitempty"`
+	LastFailureTime     time.Time `json:"last_failure_time,omitempty"`
 }
 
 // Collector is the diagnostic information collector interface
@@ -34,12 +46,24 @@ type Collector interface {
 	Collect() (*DiagnosticInfo, error)
 	CollectJSON() ([]byte, error)
 	CollectPretty() (string, error)
+
+	// Provider setters for enhanced metrics
+	SetModeProvider(provider ModeProvider)
+	SetCacheStatsProvider(provider CacheStatsProvider)
+	SetCompressionStatsProvider(provider CompressionStatsProvider)
+	SetProbeCountProvider(provider ProbeCountProvider)
 }
 
 // collector implements the Collector interface
 type collector struct {
-	cfg      *config.Config
+	cfg       *config.Config
 	startTime time.Time
+
+	// Providers for enhanced diagnostics
+	modeProvider        ModeProvider
+	cacheStatsProvider  CacheStatsProvider
+	compressionProvider CompressionStatsProvider
+	probeCountProvider  ProbeCountProvider
 }
 
 // NewCollector creates a new diagnostic information collector
@@ -48,6 +72,26 @@ func NewCollector(cfg *config.Config) Collector {
 		cfg:       cfg,
 		startTime: time.Now(),
 	}
+}
+
+// SetModeProvider sets the mode provider for enhanced diagnostics
+func (c *collector) SetModeProvider(provider ModeProvider) {
+	c.modeProvider = provider
+}
+
+// SetCacheStatsProvider sets the cache stats provider
+func (c *collector) SetCacheStatsProvider(provider CacheStatsProvider) {
+	c.cacheStatsProvider = provider
+}
+
+// SetCompressionStatsProvider sets the compression stats provider
+func (c *collector) SetCompressionStatsProvider(provider CompressionStatsProvider) {
+	c.compressionProvider = provider
+}
+
+// SetProbeCountProvider sets the probe count provider
+func (c *collector) SetProbeCountProvider(provider ProbeCountProvider) {
+	c.probeCountProvider = provider
 }
 
 // Collect collects all diagnostic information
@@ -108,7 +152,40 @@ func (c *collector) Collect() (*DiagnosticInfo, error) {
 	}
 	info.Diagnostics.PrometheusMetrics = *promMetrics
 
+	// Collect mode status (FR-4.1.2)
+	modeStatus := c.collectModeStatus()
+	if modeStatus != nil {
+		info.Diagnostics.ModeStatus = modeStatus
+	}
+
 	return info, nil
+}
+
+// collectModeStatus collects the current mode status
+func (c *collector) collectModeStatus() *ModeStatusInfo {
+	if c.modeProvider == nil {
+		return nil
+	}
+
+	status := &ModeStatusInfo{
+		CurrentMode:    string(c.modeProvider.GetMode()),
+		ConfigSource:   string(c.modeProvider.GetConfigSource()),
+	}
+
+	// If modeProvider also implements ModeManager interface, get additional info
+	type modeStatusProvider interface {
+		GetConsecutiveFailures() int
+		GetLastSuccessTime() time.Time
+		GetLastFailureTime() time.Time
+	}
+
+	if msp, ok := c.modeProvider.(modeStatusProvider); ok {
+		status.ConsecutiveFailures = msp.GetConsecutiveFailures()
+		status.LastSuccessTime = msp.GetLastSuccessTime()
+		status.LastFailureTime = msp.GetLastFailureTime()
+	}
+
+	return status
 }
 
 // CollectJSON collects diagnostic information and returns as JSON
@@ -158,12 +235,22 @@ func (c *collector) CollectPretty() (string, error) {
 		probeInfo += fmt.Sprintf("Failed: %d\n", info.Diagnostics.ProbeTasks.FailureExecs)
 	}
 
-	// Format Prometheus metrics
+	// Format Prometheus metrics with enhanced metrics
 	promInfo := fmt.Sprintf("Beacon Up: %.0f\n", info.Diagnostics.PrometheusMetrics.BeaconUp)
 	promInfo += fmt.Sprintf("RTT: %.6f seconds\n", info.Diagnostics.PrometheusMetrics.RTTSeconds)
 	promInfo += fmt.Sprintf("Packet Loss: %.4f\n", info.Diagnostics.PrometheusMetrics.PacketLossRate)
 	if info.Diagnostics.PrometheusMetrics.JitterMs > 0 {
 		promInfo += fmt.Sprintf("Jitter: %.2f ms\n", info.Diagnostics.PrometheusMetrics.JitterMs)
+	}
+	// Enhanced metrics
+	promInfo += fmt.Sprintf("Mode: %s\n", info.Diagnostics.PrometheusMetrics.Mode)
+	promInfo += fmt.Sprintf("Config Source: %s\n", info.Diagnostics.PrometheusMetrics.ConfigSource)
+	promInfo += fmt.Sprintf("Active Probes: %d\n", info.Diagnostics.PrometheusMetrics.ActiveProbes)
+	if info.Diagnostics.PrometheusMetrics.CompressionRatio > 0 {
+		promInfo += fmt.Sprintf("Compression Ratio: %.2f%%\n", info.Diagnostics.PrometheusMetrics.CompressionRatio)
+	}
+	if info.Diagnostics.PrometheusMetrics.CacheSizeBytes > 0 {
+		promInfo += fmt.Sprintf("Cache Size: %d bytes\n", info.Diagnostics.PrometheusMetrics.CacheSizeBytes)
 	}
 
 	// Format resource monitor (Story 3.11)
@@ -190,6 +277,24 @@ func (c *collector) CollectPretty() (string, error) {
 		}
 	}
 
+	// Format mode status (FR-4.1.2)
+	modeStatusInfo := ""
+	if info.Diagnostics.ModeStatus != nil {
+		modeStatusInfo = fmt.Sprintf("Current Mode: %s\n", info.Diagnostics.ModeStatus.CurrentMode)
+		modeStatusInfo += fmt.Sprintf("Config Source: %s\n", info.Diagnostics.ModeStatus.ConfigSource)
+		if info.Diagnostics.ModeStatus.ConsecutiveFailures > 0 {
+			modeStatusInfo += fmt.Sprintf("Consecutive Failures: %d\n", info.Diagnostics.ModeStatus.ConsecutiveFailures)
+		}
+		if !info.Diagnostics.ModeStatus.LastSuccessTime.IsZero() {
+			modeStatusInfo += fmt.Sprintf("Last Success: %s\n", info.Diagnostics.ModeStatus.LastSuccessTime.Format(time.RFC3339))
+		}
+		if !info.Diagnostics.ModeStatus.LastFailureTime.IsZero() {
+			modeStatusInfo += fmt.Sprintf("Last Failure: %s\n", info.Diagnostics.ModeStatus.LastFailureTime.Format(time.RFC3339))
+		}
+	} else {
+		modeStatusInfo = "Mode: registered (default)\n"
+	}
+
 	pretty := fmt.Sprintf(`
 ╔════════════════════════════════════════════════════════════╗
 ║           Beacon Diagnostic Information                    ║
@@ -199,6 +304,10 @@ Timestamp: %s
 Node ID: %s
 Node Name: %s
 
+─────────────────────────────────────────────────────────────
+Operating Mode (FR-4.1.2)
+─────────────────────────────────────────────────────────────
+%s
 ─────────────────────────────────────────────────────────────
 Network Status
 ─────────────────────────────────────────────────────────────
@@ -219,7 +328,6 @@ Debug Mode: %v
 Connection Status
 ─────────────────────────────────────────────────────────────
 %s
-
 ─────────────────────────────────────────────────────────────
 Resource Usage
 ─────────────────────────────────────────────────────────────
@@ -230,12 +338,10 @@ Memory: %.2f MB (%.1f%%)
 Resource Monitor
 ─────────────────────────────────────────────────────────────
 %s
-
 ─────────────────────────────────────────────────────────────
 Probe Tasks
 ─────────────────────────────────────────────────────────────
 %s
-
 ─────────────────────────────────────────────────────────────
 Prometheus Metrics
 ─────────────────────────────────────────────────────────────
@@ -244,6 +350,7 @@ Prometheus Metrics
 		info.Timestamp,
 		info.NodeID,
 		info.NodeName,
+		modeStatusInfo,
 		info.Diagnostics.NetworkStatus.PulseServerAddress,
 		info.Diagnostics.NetworkStatus.PulseServerReachable,
 		info.Diagnostics.NetworkStatus.RTTMs.Avg,

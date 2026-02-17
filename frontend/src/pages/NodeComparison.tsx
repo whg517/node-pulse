@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { fetchNodes } from '../api/nodes'
 import { getComparisonData } from '../api/data'
 import type { NodeDTO } from '../api/types'
@@ -8,6 +10,7 @@ import type {
   MetricType,
 } from '../components/dashboard/ComparisonChart'
 import { useDashboardStore } from '../stores/dashboardStore'
+import { useTheme } from '../hooks/useTheme'
 import type { ExtendedTimeRange, GroupByType } from '../stores/types'
 
 // ISP tags for grouping
@@ -38,6 +41,9 @@ const ISP_TAGS = [
  * @returns NodeComparison page component
  */
 export default function NodeComparisonPage() {
+  const { t } = useTranslation()
+  const { isDark } = useTheme()
+
   // Store state and actions
   const {
     comparison: storeComparison,
@@ -67,7 +73,7 @@ export default function NodeComparisonPage() {
         const { data } = await fetchNodes()
         setAvailableNodes(data)
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to load nodes'
+        const message = err instanceof Error ? err.message : t('errors.failedToLoad')
         setError(message)
         console.error('Error loading nodes:', err)
       } finally {
@@ -76,7 +82,7 @@ export default function NodeComparisonPage() {
     }
 
     loadNodes()
-  }, [])
+  }, [t])
 
   // Transform available nodes to selector format
   const nodeOptions = availableNodes.map((node) => ({
@@ -91,11 +97,11 @@ export default function NodeComparisonPage() {
   const handleNodeSelectionChange = (nodeIds: string[]) => {
     // Validate min/max selection
     if (nodeIds.length > 5) {
-      setError('Maximum 5 nodes can be selected')
+      setError(t('nodes.maxNodesSelected', { max: 5 }))
       return
     }
     if (nodeIds.length < 2 && nodeIds.length > 0) {
-      setError('At least 2 nodes must be selected for comparison')
+      setError(t('nodes.selectAtLeast', { count: 2 }))
     }
     setComparisonNodeIds(nodeIds)
     setError(null)
@@ -156,15 +162,15 @@ export default function NodeComparisonPage() {
   // Handle comparison button click
   const handleCompare = async () => {
     if (selectedNodeIds.length < 2) {
-      setError('Please select at least 2 nodes for comparison')
+      setError(t('nodes.selectAtLeast', { count: 2 }))
       return
     }
     if (selectedNodeIds.length > 5) {
-      setError('Maximum 5 nodes can be compared')
+      setError(t('nodes.maxNodesSelected', { max: 5 }))
       return
     }
     if (selectedMetrics.length === 0) {
-      setError('Please select at least one metric')
+      setError(t('reports.selectMetrics'))
       return
     }
 
@@ -195,7 +201,7 @@ export default function NodeComparisonPage() {
 
       setComparisonData(transformedData)
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to fetch comparison data'
+      const message = err instanceof Error ? err.message : t('errors.failedToLoad')
       setError(message)
       console.error('Error fetching comparison data:', err)
     } finally {
@@ -205,29 +211,46 @@ export default function NodeComparisonPage() {
 
   // Metric options
   const metricOptions = [
-    { key: 'latency_ms' as MetricType, label: 'Latency', unit: 'ms' },
-    { key: 'packet_loss_rate' as MetricType, label: 'Packet Loss Rate', unit: '%' },
-    { key: 'jitter_ms' as MetricType, label: 'Jitter', unit: 'ms' },
+    { key: 'latency_ms' as MetricType, label: t('metrics.latency'), unit: 'ms' },
+    { key: 'packet_loss_rate' as MetricType, label: t('metrics.packetLoss'), unit: '%' },
+    { key: 'jitter_ms' as MetricType, label: t('metrics.jitter'), unit: 'ms' },
   ]
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+    <div className={`min-h-screen py-8 px-4 sm:px-6 lg:px-8 ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Node Comparison</h1>
-          <p className="mt-2 text-gray-600">
-            Compare network metrics across multiple nodes to identify performance differences and
-            anomalies.
+          <nav className="mb-4 text-sm">
+            <ol className="flex items-center space-x-2">
+              <li>
+                <Link
+                  to="/dashboard"
+                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                  {t('navigation.dashboard')}
+                </Link>
+              </li>
+              <li className={`${isDark ? 'text-gray-500' : 'text-gray-400'}`}>/</li>
+              <li className={`${isDark ? 'text-gray-300 font-medium' : 'text-gray-700 font-medium'}`}>
+                {t('nodes.comparison')}
+              </li>
+            </ol>
+          </nav>
+          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {t('nodes.comparison')}
+          </h1>
+          <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            {t('nodes.comparisonDescription')}
           </p>
         </div>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className={`mb-6 ${isDark ? 'bg-red-900/20 border-red-800' : 'bg-red-50 border-red-200'} border rounded-lg p-4`}>
             <div className="flex">
               <svg
-                className="h-5 w-5 text-red-400"
+                className={`h-5 w-5 ${isDark ? 'text-red-400' : 'text-red-600'}`}
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 aria-hidden="true"
@@ -239,28 +262,34 @@ export default function NodeComparisonPage() {
                 />
               </svg>
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">Error</h3>
-                <p className="mt-1 text-sm text-red-700">{error}</p>
+                <h3 className={`text-sm font-medium ${isDark ? 'text-red-300' : 'text-red-800'}`}>
+                  {t('common.error')}
+                </h3>
+                <p className={`mt-1 text-sm ${isDark ? 'text-red-400' : 'text-red-700'}`}>{error}</p>
               </div>
             </div>
           </div>
         )}
 
         {/* Node Selector */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Select Nodes (2-5)</h2>
+        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6 mb-6`}>
+          <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+            {t('nodes.selectNodes')} (2-5)
+          </h2>
 
           {isLoadingNodes ? (
             <div className="flex items-center justify-center py-8">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-              <span className="ml-3 text-gray-600">Loading nodes...</span>
+              <span className={`ml-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {t('common.loading')}
+              </span>
             </div>
           ) : (
             <>
               {/* Group By Selector */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Group By
+                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-2`}>
+                  {t('nodes.groupBy')}
                 </label>
                 <div className="flex space-x-2">
                   {(['none', 'region', 'isp'] as GroupByType[]).map((option) => (
@@ -270,21 +299,23 @@ export default function NodeComparisonPage() {
                       className={`px-4 py-2 rounded font-medium transition-colors ${
                         groupBy === option
                           ? 'bg-blue-600 text-white'
+                          : isDark
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
-                      {option === 'none' ? 'None' : option.charAt(0).toUpperCase() + option.slice(1)}
+                      {option === 'none' ? t('nodes.none') : option.charAt(0).toUpperCase() + option.slice(1)}
                     </button>
                   ))}
                 </div>
               </div>
 
               {/* Node List */}
-              <div className="space-y-2 max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-4">
+              <div className={`space-y-2 max-h-64 overflow-y-auto border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
                 {nodeOptions.map((node) => (
                   <label
                     key={node.node_id}
-                    className="flex items-center p-3 hover:bg-gray-50 rounded cursor-pointer"
+                    className={`flex items-center p-3 ${isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'} rounded cursor-pointer`}
                   >
                     <input
                       type="checkbox"
@@ -302,12 +333,20 @@ export default function NodeComparisonPage() {
                     />
                     <div className="ml-3 flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-gray-900">{node.name}</span>
+                        <span className={`text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                          {node.name}
+                        </span>
                         <div className="flex items-center space-x-2">
                           {node.region && (
-                            <span className="text-xs text-gray-500">Region: {node.region}</span>
+                            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                              {t('nodes.region')}: {node.region}
+                            </span>
                           )}
-                          {node.isp && <span className="text-xs text-gray-500">ISP: {node.isp}</span>}
+                          {node.isp && (
+                            <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+                              ISP: {node.isp}
+                            </span>
+                          )}
                           <span
                             className={`text-xs font-medium ${
                               node.status === 'online'
@@ -317,7 +356,7 @@ export default function NodeComparisonPage() {
                                 : 'text-yellow-600'
                             }`}
                           >
-                            {node.status}
+                            {t(`status.${node.status}`)}
                           </span>
                         </div>
                       </div>
@@ -327,10 +366,10 @@ export default function NodeComparisonPage() {
               </div>
 
               {/* Selection Summary */}
-              <div className="mt-4 text-sm text-gray-600">
-                Selected: {selectedNodeIds.length} / 5 nodes
+              <div className={`mt-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                {t('nodes.selectedCount', { count: selectedNodeIds.length, max: 5 })}
                 {selectedNodeIds.length > 0 && selectedNodeIds.length < 2 && (
-                  <span className="text-red-600 ml-2">(Select at least 2 nodes)</span>
+                  <span className="text-red-600 ml-2">({t('nodes.selectAtLeast', { count: 2 })})</span>
                 )}
               </div>
             </>
@@ -338,8 +377,10 @@ export default function NodeComparisonPage() {
         </div>
 
         {/* Time Range Selector */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Time Range</h2>
+        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6 mb-6`}>
+          <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+            {t('nodes.timeRange')}
+          </h2>
           <div className="flex space-x-2">
             {(['24h', '7d', '30d'] as const).map((range) => (
               <button
@@ -348,10 +389,12 @@ export default function NodeComparisonPage() {
                 className={`px-4 py-2 rounded font-medium transition-colors ${
                   timeRange === range
                     ? 'bg-blue-600 text-white'
+                    : isDark
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {range === '24h' ? '24 Hours' : range === '7d' ? '7 Days' : '30 Days'}
+                {range === '24h' ? t('nodes.hours24') : range === '7d' ? t('nodes.days7') : t('nodes.days30')}
               </button>
             ))}
             <button
@@ -359,10 +402,12 @@ export default function NodeComparisonPage() {
               className={`px-4 py-2 rounded font-medium transition-colors ${
                 timeRange === 'custom'
                   ? 'bg-blue-600 text-white'
+                  : isDark
+                  ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              Custom
+              {t('nodes.custom')}
             </button>
           </div>
 
@@ -370,25 +415,29 @@ export default function NodeComparisonPage() {
           {timeRange === 'custom' && (
             <div className="mt-4 grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                  {t('nodes.startTime')}
+                </label>
                 <input
                   type="datetime-local"
                   value={customTimeRange?.start || ''}
                   onChange={(e) =>
                     handleCustomTimeRangeChange(e.target.value, customTimeRange?.end || '')
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border ${isDark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                <label className={`block text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'} mb-1`}>
+                  {t('nodes.endTime')}
+                </label>
                 <input
                   type="datetime-local"
                   value={customTimeRange?.end || ''}
                   onChange={(e) =>
                     handleCustomTimeRangeChange(customTimeRange?.start || '', e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className={`w-full px-3 py-2 border ${isDark ? 'border-gray-600 bg-gray-700 text-white' : 'border-gray-300 bg-white text-gray-900'} rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent`}
                 />
               </div>
             </div>
@@ -396,8 +445,10 @@ export default function NodeComparisonPage() {
         </div>
 
         {/* Metric Selector */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Metrics</h2>
+        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6 mb-6`}>
+          <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+            {t('nodes.metricsSelector')}
+          </h2>
           <div className="flex space-x-2">
             {metricOptions.map((metric) => (
               <button
@@ -411,6 +462,8 @@ export default function NodeComparisonPage() {
                 className={`px-4 py-2 rounded font-medium transition-colors ${
                   selectedMetrics.includes(metric.key)
                     ? 'bg-blue-600 text-white'
+                    : isDark
+                    ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
@@ -436,10 +489,10 @@ export default function NodeComparisonPage() {
               selectedMetrics.length > 0 &&
               !isLoadingComparison
                 ? 'bg-blue-600 hover:bg-blue-700'
-                : 'bg-gray-300 cursor-not-allowed'
+                : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
             }`}
           >
-            {isLoadingComparison ? 'Loading...' : 'Compare Nodes'}
+            {isLoadingComparison ? t('common.loading') : t('nodes.compareNodes')}
           </button>
         </div>
 
@@ -458,10 +511,10 @@ export default function NodeComparisonPage() {
 
         {/* Empty State */}
         {!comparisonData && !isLoadingComparison && (
-          <div className="bg-white rounded-lg shadow-sm p-12">
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-12`}>
             <div className="text-center">
               <svg
-                className="mx-auto h-12 w-12 text-gray-400"
+                className={`mx-auto h-12 w-12 ${isDark ? 'text-gray-600' : 'text-gray-400'}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -474,10 +527,11 @@ export default function NodeComparisonPage() {
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No Comparison Data</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Select nodes, time range, and metrics, then click "Compare Nodes" to view the
-                comparison chart.
+              <h3 className={`mt-2 text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('nodes.noComparisonData')}
+              </h3>
+              <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                {t('nodes.noComparisonDataDescription')}
               </p>
             </div>
           </div>

@@ -21,7 +21,6 @@ import {
   AuthenticationError,
   ValidationError,
   NotFoundError,
-  RateLimitError,
   AuthorizationError,
 } from './errors'
 

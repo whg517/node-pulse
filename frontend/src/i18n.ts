@@ -1,0 +1,55 @@
+/**
+ * i18n Configuration
+ *
+ * Internationalization setup using react-i18next.
+ * Supports English (en) and Simplified Chinese (zh-CN).
+ */
+
+import i18n from 'i18next'
+import { initReactI18next } from 'react-i18next'
+
+import en from './locales/en.json'
+import zhCN from './locales/zh-CN.json'
+
+// Language resources
+const resources = {
+  en: { translation: en },
+  'zh-CN': { translation: zhCN },
+}
+
+// Get saved language from localStorage or use browser preference
+const getSavedLanguage = (): string => {
+  const saved = localStorage.getItem('settings:language')
+  if (saved && (saved === 'en' || saved === 'zh-CN')) {
+    return saved
+  }
+
+  // Fall back to browser language
+  const browserLang = navigator.language
+  if (browserLang.startsWith('zh')) {
+    return 'zh-CN'
+  }
+  return 'en'
+}
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: getSavedLanguage(),
+  fallbackLng: 'en',
+  interpolation: {
+    escapeValue: false, // React already escapes values
+  },
+  react: {
+    useSuspense: false, // Avoid suspense for faster initial load
+  },
+})
+
+export default i18n
+
+// Supported languages
+export const supportedLanguages = [
+  { code: 'en', name: 'English', nativeName: 'English' },
+  { code: 'zh-CN', name: 'Chinese (Simplified)', nativeName: '简体中文' },
+] as const
+
+export type LanguageCode = (typeof supportedLanguages)[number]['code']

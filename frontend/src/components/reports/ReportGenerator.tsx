@@ -1,0 +1,380 @@
+/**
+ * ReportGenerator Component
+ *
+ * Form component for generating reports with node selection, time range,
+ * metrics selection, and export format options.
+ */
+
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import type { NodeDTO } from '../../api/types'
+
+export type ReportType = 'health' | 'performance' | 'comparison'
+export type ExportFormat = 'csv' | 'pdf' | 'excel'
+export type DateRange = '7d' | '30d' | 'custom'
+
+export interface ReportConfig {
+  type: ReportType
+  nodeIds: string[]
+  dateRange: DateRange
+  customStartDate?: string
+  customEndDate?: string
+  metrics: ('latency' | 'packet_loss_rate' | 'jitter')[]
+  format: ExportFormat
+  includeCharts: boolean
+  includeSummary: boolean
+}
+
+interface ReportGeneratorProps {
+  nodes: NodeDTO[]
+  onSubmit: (config: ReportConfig) => Promise<void>
+  loading?: boolean
+}
+
+export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGeneratorProps) {
+  const { t } = useTranslation()
+
+  // Form state
+  const [reportType, setReportType] = useState<ReportType>('health')
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
+  const [dateRange, setDateRange] = useState<DateRange>('7d')
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
+  const [selectedMetrics, setSelectedMetrics] = useState<('latency' | 'packet_loss_rate' | 'jitter')[]>(['latency'])
+  const [format, setFormat] = useState<ExportFormat>('csv')
+  const [includeCharts, setIncludeCharts] = useState(true)
+  const [includeSummary, setIncludeSummary] = useState(true)
+  const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const metricOptions = [
+    { key: 'latency' as const, label: t('metrics.latency') },
+    { key: 'packet_loss_rate' as const, label: t('metrics.packetLoss') },
+    { key: 'jitter' as const, label: t('metrics.jitter') },
+  ]
+
+  const reportTypeOptions = [
+    { key: 'health' as const, label: t('reports.healthReport') },
+    { key: 'performance' as const, label: t('reports.performanceReport') },
+    { key: 'comparison' as const, label: t('reports.comparisonReport') },
+  ]
+
+  const toggleNode = (nodeId: string) => {
+    setSelectedNodeIds((prev) =>
+      prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]
+    )
+    if (errors.nodeIds) {
+      setErrors((prev) => ({ ...prev, nodeIds: '' }))
+    }
+  }
+
+  const selectAllNodes = () => {
+    setSelectedNodeIds(nodes.map((n) => n.id))
+    if (errors.nodeIds) {
+      setErrors((prev) => ({ ...prev, nodeIds: '' }))
+    }
+  }
+
+  const clearNodeSelection = () => {
+    setSelectedNodeIds([])
+  }
+
+  const toggleMetric = (metric: 'latency' | 'packet_loss_rate' | 'jitter') => {
+    setSelectedMetrics((prev) =>
+      prev.includes(metric) ? prev.filter((m) => m !== metric) : [...prev, metric]
+    )
+    if (errors.metrics) {
+      setErrors((prev) => ({ ...prev, metrics: '' }))
+    }
+  }
+
+  const validate = (): boolean => {
+    const newErrors: Record<string, string> = {}
+
+    if (selectedNodeIds.length === 0) {
+      newErrors.nodeIds = t('reports.selectNodes')
+    }
+
+    if (dateRange === 'custom') {
+      if (!customStartDate || !customEndDate) {
+        newErrors.dateRange = t('reports.startDate') + ' / ' + t('reports.endDate')
+      } else {
+        const start = new Date(customStartDate)
+        const end = new Date(customEndDate)
+        if (start >= end) {
+          newErrors.dateRange = t('errors.validationError')
+        }
+      }
+    }
+
+    if (selectedMetrics.length === 0) {
+      newErrors.metrics = t('reports.selectMetrics')
+    }
+
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!validate()) {
+      return
+    }
+
+    await onSubmit({
+      type: reportType,
+      nodeIds: selectedNodeIds,
+      dateRange,
+      customStartDate: dateRange === 'custom' ? customStartDate : undefined,
+      customEndDate: dateRange === 'custom' ? customEndDate : undefined,
+      metrics: selectedMetrics,
+      format,
+      includeCharts,
+      includeSummary,
+    })
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Report Type */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {t('reports.reportType')} <span className="text-red-500">*</span>
+        </label>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {reportTypeOptions.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setReportType(option.key)}
+              disabled={loading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                reportType === option.key
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Node Selection */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            {t('reports.selectNodes')} <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={selectAllNodes}
+              disabled={loading}
+              className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400"
+            >
+              {t('reports.selectAll')}
+            </button>
+            <button
+              type="button"
+              onClick={clearNodeSelection}
+              disabled={loading}
+              className="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400"
+            >
+              {t('reports.clearSelection')}
+            </button>
+          </div>
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          {t('reports.selectedNodes')}: {selectedNodeIds.length} / {nodes.length}
+        </div>
+        <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 space-y-2 bg-white dark:bg-gray-800">
+          {nodes.map((node) => (
+            <label
+              key={node.id}
+              className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 p-1 rounded"
+            >
+              <input
+                type="checkbox"
+                checked={selectedNodeIds.includes(node.id)}
+                onChange={() => toggleNode(node.id)}
+                disabled={loading}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="text-sm text-gray-900 dark:text-gray-100">
+                {node.name}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                ({node.region})
+              </span>
+            </label>
+          ))}
+        </div>
+        {errors.nodeIds && (
+          <p className="mt-1 text-sm text-red-600">{errors.nodeIds}</p>
+        )}
+      </div>
+
+      {/* Date Range */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {t('reports.dateRange')} <span className="text-red-500">*</span>
+        </label>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {[
+            { value: '7d' as const, label: t('reports.last7Days') },
+            { value: '30d' as const, label: t('reports.last30Days') },
+            { value: 'custom' as const, label: t('reports.customRange') },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setDateRange(option.value)}
+              disabled={loading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                dateRange === option.value
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {dateRange === 'custom' && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('reports.startDate')}
+              </label>
+              <input
+                type="date"
+                value={customStartDate}
+                onChange={(e) => setCustomStartDate(e.target.value)}
+                max={customEndDate || new Date().toISOString().split('T')[0]}
+                disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                {t('reports.endDate')}
+              </label>
+              <input
+                type="date"
+                value={customEndDate}
+                onChange={(e) => setCustomEndDate(e.target.value)}
+                min={customStartDate}
+                max={new Date().toISOString().split('T')[0]}
+                disabled={loading}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+          </div>
+        )}
+        {errors.dateRange && (
+          <p className="mt-1 text-sm text-red-600">{errors.dateRange}</p>
+        )}
+      </div>
+
+      {/* Metrics Selection */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {t('reports.selectMetrics')} <span className="text-red-500">*</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {metricOptions.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => toggleMetric(option.key)}
+              disabled={loading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                selectedMetrics.includes(option.key)
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {errors.metrics && (
+          <p className="mt-1 text-sm text-red-600">{errors.metrics}</p>
+        )}
+      </div>
+
+      {/* Export Format */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {t('reports.selectFormat')} <span className="text-red-500">*</span>
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { value: 'csv' as const, label: t('reports.csv') },
+            { value: 'pdf' as const, label: t('reports.pdf') },
+            { value: 'excel' as const, label: t('reports.excel') },
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setFormat(option.value)}
+              disabled={loading}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                format === option.value
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Report Options */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          {t('reports.reportOptions')}
+        </label>
+        <div className="space-y-2">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeCharts}
+              onChange={(e) => setIncludeCharts(e.target.checked)}
+              disabled={loading}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {t('reports.includeCharts')}
+            </span>
+          </label>
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeSummary}
+              onChange={(e) => setIncludeSummary(e.target.checked)}
+              disabled={loading}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {t('reports.includeSummary')}
+            </span>
+          </label>
+        </div>
+      </div>
+
+      {/* Submit Button */}
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-150"
+        >
+          {loading ? t('reports.generating') : t('reports.generateReport')}
+        </button>
+      </div>
+    </form>
+  )
+}

@@ -1,6 +1,9 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNodeDetail } from '../hooks/useNodeDetail'
+import { useTheme } from '../hooks/useTheme'
+import { useTimezone } from '../hooks/useTimezone'
 import MetricCard from '../components/dashboard/MetricCard'
 import ProblemDiagnosis, {
   type ProblemType,
@@ -25,6 +28,9 @@ import { fetchHistory } from '../api/data'
  * @returns NodeDetailPage component
  */
 export default function NodeDetailPage() {
+  const { t } = useTranslation()
+  const { isDark } = useTheme()
+  const { formatTime } = useTimezone()
   const { id } = useParams<{ id: string }>()
   const { node, nodeStatus, metrics, isLoading, error, isPolling } = useNodeDetail(
     id || '',
@@ -166,14 +172,14 @@ export default function NodeDetailPage() {
         }
       } catch (err) {
         console.error('Failed to fetch historical data:', err)
-        setHistoryError('Failed to load historical data. Please try again.')
+        setHistoryError(t('errors.loadHistoricalError'))
       } finally {
         setIsLoadingHistory(false)
       }
     }
 
     fetchHistoricalData()
-  }, [id, timeRange])
+  }, [id, timeRange, t])
 
   // Handle time range change
   const handleTimeRangeChange = (newRange: TimeRange) => {
@@ -181,12 +187,6 @@ export default function NodeDetailPage() {
   }
 
   // Determine problem type based on metrics
-  // Note: This is a simplified client-side diagnosis. A full diagnosis engine
-  // (Story 7.4) would require backend support for:
-  // - Comparison with other nodes in the same region
-  // - Historical pattern analysis
-  // - Cross-border link detection
-  // - Carrier routing analysis
   const getProblemType = (): ProblemType => {
     if (!metrics || !nodeStatus) return 'none'
 
@@ -204,8 +204,6 @@ export default function NodeDetailPage() {
 
     // Severe: Very high latency
     if (latency_ms > 1000) {
-      // Could be cross-border or routing issue
-      // Without comparison data, we assume node local
       return 'node_local'
     }
 
@@ -227,12 +225,11 @@ export default function NodeDetailPage() {
 
     const { packet_loss_rate, latency_ms, jitter_ms } = metrics
     const severityScore = Math.max(
-      packet_loss_rate / 10, // Normalize to 0-10 scale
+      packet_loss_rate / 10,
       latency_ms / 200,
       jitter_ms / 50
     )
 
-    // High confidence for clear cases
     if (
       nodeStatus.status === 'offline' ||
       packet_loss_rate > 10 ||
@@ -241,12 +238,10 @@ export default function NodeDetailPage() {
       return 'high'
     }
 
-    // Medium confidence for warning levels
     if (severityScore > 2) {
       return 'medium'
     }
 
-    // Low confidence for mild issues
     if (severityScore > 1) {
       return 'low'
     }
@@ -254,7 +249,7 @@ export default function NodeDetailPage() {
     return 'low'
   }
 
-  // Format timestamp
+  // Format timestamp using i18n
   const formatTimestamp = (timestamp: string | undefined): string => {
     if (!timestamp) return 'N/A'
 
@@ -264,28 +259,30 @@ export default function NodeDetailPage() {
       const diffMs = now.getTime() - date.getTime()
       const diffMins = Math.floor(diffMs / 60000)
 
-      if (diffMins < 1) return 'Just now'
-      if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
+      if (diffMins < 1) return t('time.justNow')
+      if (diffMins < 60) return t('time.minutesAgo', { count: diffMins })
 
       const diffHours = Math.floor(diffMins / 60)
-      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
+      if (diffHours < 24) return t('time.hoursAgo', { count: diffHours })
 
-      return date.toLocaleString()
+      return formatTime(date)
     } catch {
-      return 'Invalid timestamp'
+      return 'N/A'
     }
   }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
         <div className="text-center">
           <div
             className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
             role="status"
-            aria-label="Loading"
+            aria-label={t('common.loading')}
           />
-          <p className="mt-4 text-gray-600">Loading node details...</p>
+          <p className={`mt-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            {t('common.loading')}
+          </p>
         </div>
       </div>
     )
@@ -293,18 +290,20 @@ export default function NodeDetailPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-md">
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6 max-w-md`}>
           <div className="text-red-600 text-5xl mb-4" aria-hidden="true">
             ⚠️
           </div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error Loading Node</h2>
-          <p className="text-gray-600 mb-4">{error.message}</p>
+          <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
+            {t('errors.failedToLoad')}
+          </h2>
+          <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mb-4`}>{error.message}</p>
           <Link
             to="/dashboard"
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Back to Dashboard
+            {t('common.back')}
           </Link>
         </div>
       </div>
@@ -313,15 +312,17 @@ export default function NodeDetailPage() {
 
   if (!node) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-md">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Node Not Found</h2>
-          <p className="text-gray-600 mb-4">The requested node does not exist.</p>
+      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6 max-w-md`}>
+          <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
+            {t('errors.nodeNotFound')}
+          </h2>
+          <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mb-4`}>{t('errors.notFound')}</p>
           <Link
             to="/dashboard"
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            Back to Dashboard
+            {t('common.back')}
           </Link>
         </div>
       </div>
@@ -329,16 +330,16 @@ export default function NodeDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
       {/* Header */}
-      <header className="bg-white shadow-sm">
+      <header className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white shadow-sm'} border-b`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <Link
                 to="/dashboard"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-                aria-label="Back to dashboard"
+                className={`${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
+                aria-label={t('common.back')}
               >
                 <svg
                   className="w-6 h-6"
@@ -356,8 +357,10 @@ export default function NodeDetailPage() {
                 </svg>
               </Link>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{node.name}</h1>
-                <p className="text-sm text-gray-600">{node.ip}</p>
+                <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {node.name}
+                </h1>
+                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{node.ip}</p>
               </div>
             </div>
 
@@ -365,10 +368,10 @@ export default function NodeDetailPage() {
               <div
                 className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
                   nodeStatus?.status === 'online'
-                    ? 'bg-green-100 text-green-800'
+                    ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
                     : nodeStatus?.status === 'connecting'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-red-100 text-red-800'
+                    ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
+                    : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
                 }`}
               >
                 <span
@@ -381,20 +384,30 @@ export default function NodeDetailPage() {
                   }`}
                   aria-hidden="true"
                 />
-                <span className="capitalize">{nodeStatus?.status || 'Unknown'}</span>
+                <span className="capitalize">{t(`status.${nodeStatus?.status || 'unknown'}`)}</span>
               </div>
 
               {isPolling && (
                 <div
-                  className="flex items-center space-x-1 text-sm text-gray-600"
-                  aria-label="Data is polling in real-time"
+                  className={`flex items-center space-x-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                  aria-label={t('nodes.live')}
                 >
                   <span className="relative flex h-3 w-3">
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500" />
                   </span>
-                  <span>Live</span>
+                  <span>{t('nodes.live')}</span>
                 </div>
               )}
+
+              <button
+                className="ml-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+                onClick={() => {
+                  // Export PDF functionality would be implemented here
+                  console.log('Export PDF clicked')
+                }}
+              >
+                {t('nodes.exportPdf')}
+              </button>
             </div>
           </div>
         </div>
@@ -404,39 +417,53 @@ export default function NodeDetailPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-6">
           {/* Node Information */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Node Information</h2>
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6`}>
+            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+              {t('nodes.nodeInfo')}
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <dt className="text-sm font-medium text-gray-600">Region</dt>
-                <dd className="mt-1 text-lg font-semibold text-gray-900">{node.region}</dd>
+                <dt className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {t('nodes.region')}
+                </dt>
+                <dd className={`mt-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  {node.region}
+                </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-600">IP Address</dt>
-                <dd className="mt-1 text-lg font-semibold text-gray-900 font-mono">
+                <dt className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {t('nodes.ipAddress')}
+                </dt>
+                <dd className={`mt-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} font-mono`}>
                   {node.ip}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-600">Last Heartbeat</dt>
-                <dd className="mt-1 text-lg font-semibold text-gray-900">
+                <dt className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {t('nodes.lastHeartbeat')}
+                </dt>
+                <dd className={`mt-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   {formatTimestamp(nodeStatus?.last_heartbeat)}
                 </dd>
               </div>
               <div>
-                <dt className="text-sm font-medium text-gray-600">Tags</dt>
+                <dt className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                  {t('nodes.tags')}
+                </dt>
                 <dd className="mt-1 flex flex-wrap gap-2">
                   {node.tags && node.tags.length > 0 ? (
                     node.tags.map((tag, index) => (
                       <span
                         key={index}
-                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
                       >
                         {tag}
                       </span>
                     ))
                   ) : (
-                    <span className="text-gray-400">No tags</span>
+                    <span className={`${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                      {t('nodes.noTags')}
+                    </span>
                   )}
                 </dd>
               </div>
@@ -446,7 +473,7 @@ export default function NodeDetailPage() {
           {/* Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <MetricCard
-              title="Latency"
+              title={t('metrics.latency')}
               value={metrics?.latency_ms ?? 'N/A'}
               unit="ms"
               status={metrics && metrics.latency_ms < 100 ? 'good' : metrics && metrics.latency_ms < 200 ? 'warning' : 'critical'}
@@ -469,7 +496,7 @@ export default function NodeDetailPage() {
             />
 
             <MetricCard
-              title="Packet Loss Rate"
+              title={t('metrics.packetLoss')}
               value={metrics?.packet_loss_rate ?? 'N/A'}
               unit="%"
               status={metrics && metrics.packet_loss_rate === 0 ? 'good' : metrics && metrics.packet_loss_rate < 2 ? 'warning' : 'critical'}
@@ -492,7 +519,7 @@ export default function NodeDetailPage() {
             />
 
             <MetricCard
-              title="Jitter"
+              title={t('metrics.jitter')}
               value={metrics?.jitter_ms ?? 'N/A'}
               unit="ms"
               status={metrics && metrics.jitter_ms < 20 ? 'good' : metrics && metrics.jitter_ms < 50 ? 'warning' : 'critical'}
@@ -519,10 +546,10 @@ export default function NodeDetailPage() {
           <div className="space-y-6">
             {/* Error Message */}
             {historyError && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
                 <div className="flex items-center">
                   <svg
-                    className="w-5 h-5 text-red-600 mr-2"
+                    className="w-5 h-5 text-red-600 dark:text-red-400 mr-2"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -535,7 +562,7 @@ export default function NodeDetailPage() {
                       d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <p className="text-red-800">{historyError}</p>
+                  <p className="text-red-800 dark:text-red-300">{historyError}</p>
                   <button
                     onClick={() => {
                       setHistoryError(null)
@@ -543,7 +570,7 @@ export default function NodeDetailPage() {
                     }}
                     className="ml-auto px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
                   >
-                    Retry
+                    {t('common.retry')}
                   </button>
                 </div>
               </div>
@@ -587,22 +614,22 @@ export default function NodeDetailPage() {
           </div>
 
           {/* Problem Diagnosis */}
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Problem Diagnosis</h2>
+          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6`}>
+            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+              {t('nodes.problemDiagnosis')}
+            </h2>
             <ProblemDiagnosis
               problemType={getProblemType()}
               confidence={getConfidence()}
               details={
                 metrics
-                  ? `Current metrics: Latency ${metrics.latency_ms}ms, Packet Loss ${metrics.packet_loss_rate}%, Jitter ${metrics.jitter_ms}ms`
-                  : 'No metrics available'
+                  ? `${t('metrics.latency')}: ${metrics.latency_ms}ms, ${t('metrics.packetLoss')}: ${metrics.packet_loss_rate}%, ${t('metrics.jitter')}: ${metrics.jitter_ms}ms`
+                  : t('errors.notFound')
               }
               isExpanded={false}
             />
-            <p className="mt-4 text-sm text-gray-600 italic">
-              Note: Current diagnosis uses client-side analysis of node metrics. A more advanced diagnosis engine
-              (Story 7.4) will provide cross-node comparison, historical pattern analysis, and routing path detection
-              for more accurate problem localization.
+            <p className={`mt-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} italic`}>
+              {t('nodes.diagnosisNote')}
             </p>
           </div>
         </div>

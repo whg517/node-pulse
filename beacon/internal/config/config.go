@@ -53,6 +53,15 @@ type Config struct {
 	// Resource monitor configuration (for Story 3.11)
 	ResourceMonitor ResourceMonitorConfig `mapstructure:"resource_monitor" yaml:"resource_monitor"`
 
+	// Dual mode support configuration (FR-4.1.2)
+	Mode ModeConfig `mapstructure:"mode" yaml:"mode"`
+
+	// Data compression configuration (FR-4.1.5)
+	Compression CompressionConfig `mapstructure:"compression" yaml:"compression"`
+
+	// Resume upload configuration (FR-4.1.5, FR-4.1.7)
+	Resume ResumeConfig `mapstructure:"resume" yaml:"resume"`
+
 	// Internal fields (not from config file)
 	ConfigPath string `mapstructure:"-"`
 	Debug      bool   `mapstructure:"debug"`
@@ -218,6 +227,45 @@ func LoadConfig(configPath string) (*Config, error) {
 	}
 	if config.ResourceMonitor.Alerting.SuppressionWindowSeconds == 0 {
 		config.ResourceMonitor.Alerting.SuppressionWindowSeconds = 300 // Default 5 minutes
+	}
+
+	// Set default values for dual mode support configuration (FR-4.1.2)
+	if config.Mode.Mode == "" {
+		config.Mode.Mode = ModeRegistered // Default to registered mode
+	}
+	if config.Mode.ConfigCheckIntervalSeconds == 0 {
+		config.Mode.ConfigCheckIntervalSeconds = 60 // Default 60 seconds
+	}
+	if config.Mode.DegradedModeThreshold == 0 {
+		config.Mode.DegradedModeThreshold = 3 // Default 3 consecutive failures
+	}
+
+	// Set default values for compression configuration (FR-4.1.5)
+	if config.Compression.Level == 0 {
+		config.Compression.Level = 6 // Default compression level
+	}
+	if config.Compression.MinSizeBytes == 0 {
+		config.Compression.MinSizeBytes = 1024 // Default 1KB minimum
+	}
+	// Compression.Enabled defaults to false (bool default), but we want true
+	if !config.Compression.Enabled && config.Compression.Level == 6 {
+		config.Compression.Enabled = true // Default enabled
+	}
+
+	// Set default values for resume configuration (FR-4.1.5, FR-4.1.7)
+	if config.Resume.MaxCacheSizeBytes == 0 {
+		config.Resume.MaxCacheSizeBytes = 10 * 1024 * 1024 // Default 10MB
+	}
+	if config.Resume.CacheFilePath == "" {
+		config.Resume.CacheFilePath = "/var/lib/beacon/resume_cache.dat"
+	}
+	if config.Resume.AlertReservePercent == 0 {
+		config.Resume.AlertReservePercent = 30 // Default 30% reserved for alerts
+	}
+	// Resume.Enabled and AlertPriorityMode default to false, but we want true
+	if !config.Resume.Enabled && config.Resume.MaxCacheSizeBytes == 10*1024*1024 {
+		config.Resume.Enabled = true
+		config.Resume.AlertPriorityMode = true
 	}
 
 	// Validate metrics configuration
