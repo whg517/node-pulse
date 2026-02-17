@@ -164,15 +164,11 @@ export function LatencyTrendChart({
     }
   }, [data, isDark, showBaseline, baselineValue, t])
 
-  // Initialize and update chart
+  // Initialize chart only once on mount
   useEffect(() => {
-    if (!chartRef.current || isLoading || data.length === 0) return
+    if (!chartRef.current) return
 
-    if (!chartInstance.current) {
-      chartInstance.current = echarts.init(chartRef.current)
-    }
-
-    chartInstance.current.setOption(getChartOptions(), true)
+    chartInstance.current = echarts.init(chartRef.current)
 
     return () => {
       if (chartInstance.current) {
@@ -180,9 +176,16 @@ export function LatencyTrendChart({
         chartInstance.current = null
       }
     }
+  }, []) // Empty deps - only run on mount/unmount
+
+  // Update chart options when data or theme changes
+  useEffect(() => {
+    if (!chartInstance.current || isLoading || data.length === 0) return
+
+    chartInstance.current.setOption(getChartOptions(), true)
   }, [data, isLoading, getChartOptions])
 
-  // Handle resize and theme change
+  // Handle resize
   useEffect(() => {
     const handleResize = () => {
       if (chartInstance.current) {
@@ -192,15 +195,10 @@ export function LatencyTrendChart({
 
     window.addEventListener('resize', handleResize)
 
-    // Update chart options on theme change
-    if (chartInstance.current && data.length > 0) {
-      chartInstance.current.setOption(getChartOptions(), true)
-    }
-
     return () => {
       window.removeEventListener('resize', handleResize)
     }
-  }, [isDark, getChartOptions, data.length])
+  }, [])
 
   return (
     <div

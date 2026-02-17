@@ -89,7 +89,8 @@ export default function NodeComparisonPage() {
     node_id: node.id,
     name: node.name,
     region: node.region,
-    isp: node.tags.find((tag) => ISP_TAGS.includes(tag as any)) || undefined,
+    isp: node.tags.find((tag): tag is typeof ISP_TAGS[number] =>
+      ISP_TAGS.includes(tag as typeof ISP_TAGS[number])) || undefined,
     status: node.status as 'online' | 'offline' | 'connecting',
   }))
 

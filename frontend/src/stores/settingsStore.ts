@@ -7,6 +7,7 @@
 
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import i18n from '../i18n'
 
 // ============== Types ==============
 
@@ -82,10 +83,8 @@ export const useSettingsStore = create<SettingsStore>()(
 
       setLanguage: (language: string) => {
         set({ language })
-        // Update i18n language
-        import('../i18n').then(({ default: i18n }) => {
-          i18n.changeLanguage(language)
-        })
+        // Update i18n language directly (imported at top level)
+        i18n.changeLanguage(language)
         // Also update localStorage for i18n init
         localStorage.setItem('settings:language', language)
       },
@@ -171,7 +170,5 @@ export function initializeTheme(): void {
 export function initializeLanguage(): void {
   const { language } = useSettingsStore.getState()
   localStorage.setItem('settings:language', language)
-  import('../i18n').then(({ default: i18n }) => {
-    i18n.changeLanguage(language)
-  })
+  i18n.changeLanguage(language)
 }

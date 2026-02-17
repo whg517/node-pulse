@@ -80,7 +80,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	if role != "beacon" {
 		c.JSON(http.StatusForbidden, models.ErrorResponse{
 			Code:    ErrUnauthorizedNode,
-			Message: "权限不足：需要 beacon 角色",
+			Message: "Insufficient permissions: beacon role required",
 			Details: map[string]interface{}{
 				"role":      role,
 				"required":  "beacon",
@@ -94,7 +94,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_REQUEST",
-			Message: "请求参数无效",
+			Message: "Invalid request parameters",
 			Details: err.Error(),
 		})
 		return
@@ -105,7 +105,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_NODE_ID",
-			Message: "节点 ID 格式无效",
+			Message: "Invalid node ID format",
 			Details: map[string]interface{}{
 				"node_id": req.NodeID,
 				"error":   err.Error(),
@@ -119,7 +119,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	if userID != req.NodeID {
 		c.JSON(http.StatusForbidden, models.ErrorResponse{
 			Code:    ErrUnauthorizedNode,
-			Message: "权限不足：Token 节点 ID 与请求不匹配",
+			Message: "Insufficient permissions: token node ID does not match request",
 			Details: map[string]interface{}{
 				"token_node_id": userID,
 				"request_node_id": req.NodeID,
@@ -148,7 +148,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 		if err == db.ErrNodeNotFound {
 			c.JSON(http.StatusBadRequest, models.ErrorResponse{
 				Code:    ErrNodeNotFound,
-				Message: "节点不存在",
+				Message: "Node not found",
 				Details: map[string]interface{}{
 					"node_id": req.NodeID,
 				},
@@ -158,7 +158,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "ERR_DATABASE_ERROR",
-			Message: "节点查询失败",
+			Message: "Failed to query node",
 			Details: err.Error(),
 		})
 		return
@@ -168,7 +168,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	if req.LatencyMs < 0 || req.LatencyMs > 60000 {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrInvalidLatency,
-			Message: "时延超出范围",
+			Message: "Latency out of range",
 			Details: map[string]interface{}{
 				"field": "latency_ms",
 				"value": req.LatencyMs,
@@ -184,7 +184,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	if req.PacketLossRate < 0 || req.PacketLossRate > 100 {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrInvalidPacketLoss,
-			Message: "丢包率超出范围",
+			Message: "Packet loss rate out of range",
 			Details: map[string]interface{}{
 				"field": "packet_loss_rate",
 				"value": req.PacketLossRate,
@@ -200,7 +200,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	if req.JitterMs < 0 || req.JitterMs > 50000 {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrInvalidJitter,
-			Message: "抖动超出范围",
+			Message: "Jitter out of range",
 			Details: map[string]interface{}{
 				"field": "jitter_ms",
 				"value": req.JitterMs,
@@ -217,7 +217,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrInvalidTimestamp,
-			Message: "时间戳格式无效",
+			Message: "Invalid timestamp format",
 			Details: map[string]interface{}{
 				"field":    "timestamp",
 				"value":    req.Timestamp,
@@ -289,7 +289,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 			NodeID:    req.NodeID,
 			Timestamp: time.Now(),
 		},
-		Message:   "心跳数据接收成功",
+		Message:   "Heartbeat received successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
@@ -326,7 +326,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 	if role != "beacon" {
 		c.JSON(http.StatusForbidden, models.ErrorResponse{
 			Code:    ErrUnauthorizedNode,
-			Message: "权限不足：需要 beacon 角色",
+			Message: "Insufficient permissions: beacon role required",
 		})
 		return
 	}
@@ -336,8 +336,18 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 	if err := c.ShouldBindJSON(&compReq); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_REQUEST",
-			Message: "请求参数无效",
+			Message: "Invalid request parameters",
 			Details: err.Error(),
+		})
+		return
+	}
+
+	// Validate compressed data size (max 1MB to prevent memory exhaustion)
+	const maxCompressedSize = 1024 * 1024
+	if len(compReq.Data) > maxCompressedSize {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_PAYLOAD_TOO_LARGE",
+			Message: "Compressed data exceeds maximum size (1MB)",
 		})
 		return
 	}
@@ -351,7 +361,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 			"computed", computedChecksum)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrCompressionCorrupted,
-			Message: "压缩数据校验失败",
+			Message: "Compressed data checksum failed",
 			Details: map[string]interface{}{
 				"expected_checksum": compReq.Checksum,
 				"computed_checksum": computedChecksum,
@@ -367,7 +377,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 		slog.Error("Failed to decompress gzip data", "error", err)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrCompressionCorrupted,
-			Message: "解压缩失败",
+			Message: "Decompression failed",
 			Details: err.Error(),
 		})
 		return
@@ -380,7 +390,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 		slog.Error("Failed to read decompressed data", "error", err)
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrCompressionCorrupted,
-			Message: "读取解压数据失败",
+			Message: "Failed to read decompressed data",
 			Details: err.Error(),
 		})
 		return
@@ -391,7 +401,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 	if err := json.Unmarshal(decompressed, &req); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_REQUEST",
-			Message: "请求参数无效",
+			Message: "Invalid request parameters",
 			Details: err.Error(),
 		})
 		return
@@ -401,7 +411,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 	if userID != req.NodeID {
 		c.JSON(http.StatusForbidden, models.ErrorResponse{
 			Code:    ErrUnauthorizedNode,
-			Message: "权限不足：Token 节点 ID 与请求不匹配",
+			Message: "Insufficient permissions: token node ID does not match request",
 		})
 		return
 	}
@@ -411,7 +421,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_NODE_ID",
-			Message: "节点 ID 格式无效",
+			Message: "Invalid node ID format",
 		})
 		return
 	}
@@ -423,7 +433,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 		if err == db.ErrNodeNotFound {
 			c.JSON(http.StatusBadRequest, models.ErrorResponse{
 				Code:    ErrNodeNotFound,
-				Message: "节点不存在",
+				Message: "Node not found",
 			})
 			return
 		}
@@ -451,7 +461,11 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 		PacketLossRate: req.PacketLossRate,
 		JitterMs:       req.JitterMs,
 	}
-	h.memoryCache.Store(req.NodeID, metricPoint)
+	if err := h.memoryCache.Store(req.NodeID, metricPoint); err != nil {
+		slog.Error("Failed to write to memory cache",
+			"node_id", req.NodeID,
+			"error", err)
+	}
 
 	// Send to batch writer
 	metricRecord := &cache.MetricRecord{
@@ -483,7 +497,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 			NodeID:    req.NodeID,
 			Timestamp: time.Now(),
 		},
-		Message:   "压缩心跳数据接收成功",
+		Message:   "Compressed heartbeat received successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
@@ -537,7 +551,10 @@ type ConfigHistoryResponse struct {
 	Timestamp string               `json:"timestamp"`
 }
 
-// In-memory beacon config store (for MVP - in production use database)
+// In-memory beacon config store
+// TODO: Replace with database-backed store for production
+// Current implementation is in-memory only for MVP
+// Production migration: Add beacon_configs table with version history
 var (
 	beaconConfigStore     = make(map[string]*BeaconConfig)
 	beaconConfigHistory   = make(map[string][]ConfigHistoryEntry)
@@ -553,7 +570,7 @@ func (h *BeaconHandler) GetBeaconConfig(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_BEACON_ID",
-			Message: "Beacon ID 格式无效",
+			Message: "Invalid beacon ID format",
 		})
 		return
 	}
@@ -575,7 +592,7 @@ func (h *BeaconHandler) GetBeaconConfig(c *gin.Context) {
 
 	c.JSON(http.StatusOK, BeaconConfigResponse{
 		Data:      *config,
-		Message:   "Beacon 配置获取成功",
+		Message:   "Beacon config retrieved successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
@@ -589,7 +606,7 @@ func (h *BeaconHandler) UpdateBeaconConfig(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_BEACON_ID",
-			Message: "Beacon ID 格式无效",
+			Message: "Invalid beacon ID format",
 		})
 		return
 	}
@@ -599,7 +616,7 @@ func (h *BeaconHandler) UpdateBeaconConfig(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_REQUEST",
-			Message: "请求参数无效",
+			Message: "Invalid request parameters",
 			Details: err.Error(),
 		})
 		return
@@ -609,7 +626,7 @@ func (h *BeaconHandler) UpdateBeaconConfig(c *gin.Context) {
 	if err := validateBeaconConfig(&req); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrInvalidConfig,
-			Message: "配置验证失败",
+			Message: "Config validation failed",
 			Details: err.Error(),
 		})
 		return
@@ -655,7 +672,7 @@ func (h *BeaconHandler) UpdateBeaconConfig(c *gin.Context) {
 
 	c.JSON(http.StatusOK, BeaconConfigResponse{
 		Data:      *existing,
-		Message:   "Beacon 配置更新成功",
+		Message:   "Beacon config updated successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
@@ -669,7 +686,7 @@ func (h *BeaconHandler) GetBeaconConfigHistory(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_BEACON_ID",
-			Message: "Beacon ID 格式无效",
+			Message: "Invalid beacon ID format",
 		})
 		return
 	}
@@ -685,7 +702,7 @@ func (h *BeaconHandler) GetBeaconConfigHistory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ConfigHistoryResponse{
 		Data:      history,
-		Message:   "配置历史获取成功",
+		Message:   "Config history retrieved successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
@@ -720,7 +737,7 @@ func (h *BeaconHandler) BatchUpdateBeaconGroupConfig(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_REQUEST",
-			Message: "请求参数无效",
+			Message: "Invalid request parameters",
 			Details: err.Error(),
 		})
 		return
@@ -730,7 +747,7 @@ func (h *BeaconHandler) BatchUpdateBeaconGroupConfig(c *gin.Context) {
 	if err := validateBeaconConfig(&req.Config); err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    ErrInvalidConfig,
-			Message: "配置验证失败",
+			Message: "Config validation failed",
 			Details: err.Error(),
 		})
 		return
@@ -743,6 +760,10 @@ func (h *BeaconHandler) BatchUpdateBeaconGroupConfig(c *gin.Context) {
 		Errors:       []string{},
 	}
 
+	// Hold lock for entire batch operation to prevent race conditions
+	beaconConfigMutex.Lock()
+	defer beaconConfigMutex.Unlock()
+
 	// Apply config to each beacon
 	for _, beaconID := range req.BeaconIDs {
 		// Validate beacon ID format
@@ -752,8 +773,6 @@ func (h *BeaconHandler) BatchUpdateBeaconGroupConfig(c *gin.Context) {
 			result.Errors = append(result.Errors, "invalid beacon ID: "+beaconID)
 			continue
 		}
-
-		beaconConfigMutex.Lock()
 
 		existing, exists := beaconConfigStore[beaconID]
 		if !exists {
@@ -788,14 +807,13 @@ func (h *BeaconHandler) BatchUpdateBeaconGroupConfig(c *gin.Context) {
 		existing.UpdatedAt = time.Now()
 
 		beaconConfigStore[beaconID] = existing
-		beaconConfigMutex.Unlock()
 
 		result.SuccessCount++
 	}
 
 	c.JSON(http.StatusOK, BatchConfigUpdateResponse{
 		Data:      result,
-		Message:   "批量配置更新完成",
+		Message:   "Batch config update completed",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }

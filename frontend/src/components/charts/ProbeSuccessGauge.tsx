@@ -126,15 +126,11 @@ export function ProbeSuccessGauge({
     }
   }, [value, isDark, t])
 
-  // Initialize and update chart
+  // Initialize chart only once on mount
   useEffect(() => {
-    if (!chartRef.current || isLoading) return
+    if (!chartRef.current) return
 
-    if (!chartInstance.current) {
-      chartInstance.current = echarts.init(chartRef.current)
-    }
-
-    chartInstance.current.setOption(getChartOptions(), true)
+    chartInstance.current = echarts.init(chartRef.current)
 
     return () => {
       if (chartInstance.current) {
@@ -142,9 +138,16 @@ export function ProbeSuccessGauge({
         chartInstance.current = null
       }
     }
+  }, []) // Empty deps - only run on mount/unmount
+
+  // Update chart options when value or theme changes
+  useEffect(() => {
+    if (!chartInstance.current || isLoading) return
+
+    chartInstance.current.setOption(getChartOptions(), true)
   }, [value, isLoading, getChartOptions])
 
-  // Handle resize and theme change
+  // Handle resize
   useEffect(() => {
     const handleResize = () => {
       if (chartInstance.current) {
@@ -154,14 +157,10 @@ export function ProbeSuccessGauge({
 
     window.addEventListener('resize', handleResize)
 
-    if (chartInstance.current) {
-      chartInstance.current.setOption(getChartOptions(), true)
-    }
-
     return () => {
       window.removeEventListener('resize', handleResize)
     }
-  }, [isDark, getChartOptions])
+  }, [])
 
   return (
     <div

@@ -403,7 +403,7 @@ export default function NodeDetailPage() {
                 className="ml-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
                 onClick={() => {
                   // Export PDF functionality would be implemented here
-                  console.log('Export PDF clicked')
+                  // TODO: Implement PDF export
                 }}
               >
                 {t('nodes.exportPdf')}
