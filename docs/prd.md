@@ -196,6 +196,12 @@ Beacon 应支持两种工作模式,通过启动参数 `--mode` 指定:
 - Beacon 应在收到新配置时应用变更并确认
 - Beacon 应在 Server 不可用时使用缓存配置继续运行(降级模式)
 
+**降级模式定义:**
+- **进入条件**: 连续 3 次心跳失败或 Server 连接超时
+- **行为**: 使用本地缓存的最后有效配置继续运行,保持探测任务执行
+- **退出条件**: 成功完成一次心跳并收到 Server 确认
+- **状态指示**: `beacon_mode` 指标显示 "degraded",日志记录降级原因
+
 **配置优先级:**
 - 注册模式下:Server 下发配置优先级 > 本地默认配置
 - 独立模式下:仅使用本地配置文件,忽略 Server 配置
@@ -332,10 +338,12 @@ Beacon 应在跨境传输中确保数据完整性,防止压缩或传输过程中
 
 Beacon 应实现基于数据类型的优先级缓存策略,确保关键告警数据在缓存满时优先保留。
 
-**优先级定义:**
-- **P0 (最高)**: 告警数据 (alert, anomaly detected)
-- **P1**: 心跳包 (heartbeat, keep-alive)
-- **P2**: 常规探测数据 (latency, loss, jitter)
+> **注意**: 本节中的优先级标签 (Cache-P0/P1/P2) 用于数据缓存策略,与 FR-4.3.8 中的告警严重级别 (Alert-P0/P1/P2) 是独立的分类体系。
+
+**缓存优先级定义 (Cache Priority):**
+- **Cache-P0 (最高)**: 告警数据 (alert, anomaly detected)
+- **Cache-P1**: 心跳包 (heartbeat, keep-alive)
+- **Cache-P2**: 常规探测数据 (latency, loss, jitter)
 
 **缓存策略:**
 - 告警数据应永不因缓存满而被丢弃,即使需要淘汰旧的常规数据
@@ -653,13 +661,9 @@ Dashboard 应图形化展示 MTR 路径,标注每一跳的详细信息和风险�
 
 #### B. 节点详情与深度诊断 (Node Analysis)
 
-**FR-4.3.4 [必须] 多指标时序图表**
-*   支持 Latency/Loss/Jitter 同步联动的多轴图表
-*   支持历史 7 天平均值叠加(基线对比)
-
-**FR-4.3.5 [必须] 可视化路由拓扑**
-*   图形化展示 MTR 路径，每一跳包含 IP、AS、时延变动趋势
-*   高风险跳数红框标注
+> 本节功能在上文 A. 全局态势大屏 中已详细定义,此处为节点详情页的引用说明。
+> - 多指标时序图表参见 **FR-4.3.4**
+> - 可视化路由拓扑参见 **FR-4.3.5**
 
 **FR-4.3.6 [应该] 诊断报告导出**
 
@@ -790,12 +794,33 @@ Dashboard 应支持第三方系统集成,通过 Webhook 推送告警到外部系
 - 测试响应时间 ≤ 3 秒
 - 显示测试结果(HTTP 状态码、响应时间)
 
+**重试与错误处理:**
+- Webhook 推送失败时应自动重试,最多 3 次,间隔为 1s、2s、4s(指数退避)
+- 连续 3 次失败的 Webhook 端点应标记为 "不健康" 状态
+- 不健康的 Webhook 端点应在 5 分钟后自动恢复探测
+- 单次推送超时时间为 10 秒
+- 重试期间新告警应排队等待,队列深度不超过 100 条
+
 **验收标准:**
 - 假设用户配置 Webhook URL 并触发告警
 - 当告警触发
 - 则系统在 5 秒内推送 Webhook
 - 并且推送成功率 ≥ 99.5%
 - 并且推送历史记录可见
+
+*重试场景:*
+- 假设 Webhook 端点返回 5xx 错误
+- 当首次推送失败
+- 则系统按指数退避策略重试(1s、2s、4s)
+- 并且如果 3 次重试均失败,则标记端点为 "不健康"
+- 并且 `pulse_webhook_unhealthy_total` 指标递增
+- 并且 5 分钟后自动恢复探测
+
+*超时场景:*
+- 假设 Webhook 端点响应缓慢
+- 当单次推送超过 10 秒未响应
+- 则系统取消当前请求并触发重试
+- 并且 `pulse_webhook_timeout_total` 指标递增
 
 **FR-4.3.10 [应该] 系统 Pulse 监控**
 - Dashboard 应展示系统 Pulse 监控:内存使用、API 吞吐量、Webhook 队列深度
@@ -1090,10 +1115,17 @@ Dashboard 应遵循 WCAG 2.1 Level AA 无障碍标准,确保所有运维人员(�
 **验收标准:**
 - 假设 Prometheus 抓取器配置
 - 当抓取 /metrics 端点
-- 则响应包含所有必需指标(基础 5 个 + 工作 6 个 + 任务 4 个 + 性能 2 个 + 跨境 7 个 = 共 24 个)
+- 则响应包含所有必需指标:
+  - 基础指标 5 个: `beacon_up`, `beacon_rtt_ms`, `beacon_packet_loss_ratio`, `beacon_throughput_mbps`, `beacon_hop_count`
+  - 工作模式指标 6 个: `beacon_mode`, `beacon_config_source`, `beacon_config_version`, `beacon_last_config_update_time`, `beacon_server_connection_success`, `beacon_server_connection_failure`
+  - 探测任务指标 4 个: `beacon_active_probes`, `beacon_probe_total`, `beacon_probe_duration_seconds`, `beacon_probe_failure_total`
+  - 性能指标 2 个: `beacon_memory_usage_bytes`, `beacon_cpu_usage_percent`
+  - 跨境传输指标 7 个: `beacon_compression_ratio`, `beacon_compression_duration_seconds`, `beacon_decompression_duration_seconds`, `beacon_cache_size_bytes`, `beacon_cache_items_count`, `beacon_cache_evictions_total`, `beacon_resume_upload_bytes_total`
+  - **合计: 24 个核心指标**
 - 并且指标遵循 Prometheus 命名约定
 - 并且所有指标包含必需的标签
 - 并且独立模式和注册模式下都暴露完整的 metrics
+- 注: `beacon_self_health_status` (FR-4.1.8) 为额外健康检查指标,不计入核心指标数量
 
 **FR-4.1.8 [必须] Beacon 自健康监控**
 
@@ -1276,6 +1308,7 @@ Beacon 应监控自身的服务健康状况,特别是独立模式下的可观测
 
 | 版本 | 日期 | 作者 | 更改 |
 |---------|------|--------|---------|
+| 3.7 | 2026-02-17 | Kevin | **PRD Review 修复:** (1) 修复重复 FR 编号(FR-4.3.4/4.3.5 重复 → 改为引用说明); (2) 完善 FR-4.1.2 降级模式定义(进入/退出条件); (3) 添加 FR-4.1.7 优先级术语说明(Cache-P0/P1/P2 vs Alert-P0/P1/P2); (4) 添加 FR-4.3.9 Webhook 重试与超时验收标准; (5) 完善 NFR-5.5.1 指标计数说明(24 个核心指标 + self_health_status) |
 | 3.6 | 2026-02-06 | Kevin | **PRD 范围调整:** 移除 Section 6.4 数据模型(属于技术架构文档,不属于 PRD 范围) |
 | 3.5 | 2026-02-06 | Kevin | **PRD 范围调整:** 移除 Section 6.4 API 规范(属于技术架构文档,不属于 PRD 范围),将原 Section 6.5 数据模型重新编号为 6.4 |
 | 3.4 | 2026-02-06 | Kevin | **PRD Validation Fixes - Phase 2:** (1) 添加 7 个 FR 的可追溯性说明(FR-4.1.1, FR-4.1.3, FR-4.1.6, FR-4.1.7, FR-4.2.3, FR-4.3.3, FR-4.3.10); (2) 修复 3 处实现泄漏(SIGHUP → 操作系统信号,GZIP/ZSTD → 压缩率≥70%,文件/数据库 → 本地持久化缓存); (3) 完善 FR-4.1.5 压缩描述,添加压缩率指标 |
