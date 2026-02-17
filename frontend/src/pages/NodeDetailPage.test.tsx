@@ -5,6 +5,52 @@ import { vi } from 'vitest'
 import NodeDetailPage from './NodeDetailPage'
 import { useNodeDetail } from '../hooks/useNodeDetail'
 
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string) => {
+      const translations: Record<string, string> = {
+        'common.loading': 'Loading node details...',
+        'common.error': 'Error',
+        'nodes.errorLoadingNode': 'Error Loading Node',
+        'nodes.nodeNotFound': 'Node Not Found',
+        'nodes.nodeNotFoundDescription': 'The requested node does not exist.',
+        'nodes.backToDashboard': 'Back to Dashboard',
+        'nodes.details': 'Node Details',
+        'nodes.status': 'Status',
+        'nodes.region': 'Region',
+        'nodes.tags': 'Tags',
+        'nodes.noTags': 'No tags',
+        'nodes.metrics': 'Metrics',
+        'nodes.latency': 'Latency',
+        'nodes.packetLoss': 'Packet Loss Rate',
+        'nodes.jitter': 'Jitter',
+        'nodes.lastHeartbeat': 'Last Heartbeat',
+        'nodes.problemDiagnosis': 'Problem Diagnosis',
+        'nodes.noDiagnosisData': 'No diagnosis data available',
+        'nodes.diagnosisNote': 'Note: Current diagnosis uses client-side analysis based on available metrics.',
+        'navigation.dashboard': 'Dashboard',
+        'status.online': 'online',
+        'status.offline': 'Offline',
+        'status.connecting': 'Connecting',
+        'status.live': 'Live',
+        'metrics.latency': 'Latency',
+        'metrics.packetLoss': 'Packet Loss Rate',
+        'metrics.jitter': 'Jitter',
+        'aria.backToDashboard': 'Back to dashboard',
+        'errors.failedToLoad': 'Error Loading Node',
+      }
+      return translations[key] || key
+    },
+    i18n: { changeLanguage: vi.fn() },
+  }),
+}))
+
+// Mock useTheme hook
+vi.mock('../hooks/useTheme', () => ({
+  useTheme: () => ({ isDark: false }),
+}))
+
 // Mock the hook
 vi.mock('../hooks/useNodeDetail')
 

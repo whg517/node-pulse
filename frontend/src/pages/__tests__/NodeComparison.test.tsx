@@ -1,7 +1,54 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import NodeComparisonPage from '../NodeComparison'
 import * as nodesApi from '../../api/nodes'
+
+// Mock react-i18next
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: any) => {
+      const translations: Record<string, string> = {
+        'nodes.comparison': 'Node Comparison',
+        'nodes.comparisonDescription': 'Compare network metrics across multiple nodes to identify performance differences and anomalies.',
+        'navigation.dashboard': 'Dashboard',
+        'nodes.selectNodes': 'Select Nodes',
+        'nodes.groupBy': 'Group By',
+        'nodes.none': 'None',
+        'nodes.timeRange': 'Time Range',
+        'nodes.hours24': '24 Hours',
+        'nodes.days7': '7 Days',
+        'nodes.days30': '30 Days',
+        'nodes.custom': 'Custom',
+        'nodes.metricsSelector': 'Metrics',
+        'metrics.latency': 'Latency',
+        'metrics.packetLoss': 'Packet Loss Rate',
+        'metrics.jitter': 'Jitter',
+        'nodes.compareNodes': 'Compare Nodes',
+        'nodes.noComparisonData': 'No Comparison Data',
+        'nodes.noComparisonDataDescription': 'Select nodes, time range, and metrics, then click "Compare Nodes" to view the comparison chart.',
+        'nodes.selectedCount': `Selected: ${options?.count || 0} / ${options?.max || 5} nodes`,
+        'nodes.selectAtLeast': `Select at least ${options?.count || 2} nodes`,
+        'nodes.maxNodesSelected': `Maximum ${options?.max || 5} nodes can be selected`,
+        'nodes.region': 'Region',
+        'status.online': 'online',
+        'status.offline': 'offline',
+        'status.connecting': 'connecting',
+        'common.loading': 'Loading nodes...',
+        'common.error': 'Error',
+        'errors.failedToLoad': 'Failed to load nodes',
+        'reports.selectMetrics': 'Select at least one metric',
+      }
+      return translations[key] || key
+    },
+    i18n: { changeLanguage: vi.fn() },
+  }),
+}))
+
+// Mock useTheme hook
+vi.mock('../../hooks/useTheme', () => ({
+  useTheme: () => ({ isDark: false }),
+}))
 
 // Mock the nodes API
 vi.mock('../../api/nodes', () => ({
@@ -126,7 +173,11 @@ describe('NodeComparisonPage', () => {
   it('renders page with title and description', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Node Comparison')).toBeInTheDocument()
@@ -141,7 +192,11 @@ describe('NodeComparisonPage', () => {
   it('loads and displays available nodes', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Node 1')).toBeInTheDocument()
@@ -153,7 +208,11 @@ describe('NodeComparisonPage', () => {
   it('validates node selection (2-5 nodes)', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Select Nodes (2-5)')).toBeInTheDocument()
@@ -174,7 +233,11 @@ describe('NodeComparisonPage', () => {
   it('shows loading state while loading nodes', async () => {
     mockFetchNodes.mockImplementation(() => new Promise(() => {})) // Never resolves
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     expect(screen.getByText(/Loading nodes\.\.\./)).toBeInTheDocument()
   })
@@ -182,7 +245,11 @@ describe('NodeComparisonPage', () => {
   it('displays time range selector', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Time Range')).toBeInTheDocument()
@@ -196,7 +263,11 @@ describe('NodeComparisonPage', () => {
   it('displays metric selector', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Metrics')).toBeInTheDocument()
@@ -209,7 +280,11 @@ describe('NodeComparisonPage', () => {
   it('displays group by selector', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Group By')).toBeInTheDocument()
@@ -225,7 +300,11 @@ describe('NodeComparisonPage', () => {
   it('shows compare button with correct disabled state', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       const compareButton = screen.getByText('Compare Nodes')
@@ -255,7 +334,11 @@ describe('NodeComparisonPage', () => {
   it('displays empty state when no comparison data', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('No Comparison Data')).toBeInTheDocument()
@@ -270,7 +353,11 @@ describe('NodeComparisonPage', () => {
   it('displays error message on node load failure', async () => {
     mockFetchNodes.mockRejectedValue(new Error('Failed to load nodes'))
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       expect(screen.getByText('Error')).toBeInTheDocument()
@@ -281,7 +368,11 @@ describe('NodeComparisonPage', () => {
   it('shows node status badges', async () => {
     mockFetchNodes.mockResolvedValue({ data: mockNodes })
 
-    render(<NodeComparisonPage />)
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
 
     await waitFor(() => {
       const onlineNodes = screen.getAllByText('online')
