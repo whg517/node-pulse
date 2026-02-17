@@ -65,17 +65,23 @@ async function cleanupTestData(pool: Pool): Promise<void> {
 }
 
 /**
- * Clean up auth state files
+ * Clean up auth state files (including worker-specific directories)
  */
 function cleanupAuthStates(): void {
   console.log('[Global Teardown] Cleaning up auth state files...')
 
   const authDir = '.auth'
   if (fs.existsSync(authDir)) {
-    const files = fs.readdirSync(authDir)
-    for (const file of files) {
-      if (file.endsWith('.json')) {
-        fs.unlinkSync(`${authDir}/${file}`)
+    const entries = fs.readdirSync(authDir, { withFileTypes: true })
+    for (const entry of entries) {
+      const fullPath = `${authDir}/${entry.name}`
+      if (entry.isDirectory()) {
+        // Remove worker-specific directories recursively
+        if (entry.name.startsWith('worker-')) {
+          fs.rmSync(fullPath, { recursive: true, force: true })
+        }
+      } else if (entry.name.endsWith('.json')) {
+        fs.unlinkSync(fullPath)
       }
     }
     // Remove directory if empty

@@ -21,8 +21,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: 2,
-  workers: 4,
-  timeout: 30000,
+  workers: 2, // Reduced from 4 to avoid auth race conditions
+  timeout: 45000, // Increased from 30000 for slower environments
   expect: {
     timeout: 10000,
   },

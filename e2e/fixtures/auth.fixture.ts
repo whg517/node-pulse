@@ -8,15 +8,20 @@
 
 import { test as base, Page, BrowserContext } from '@playwright/test'
 import * as fs from 'fs'
+import * as path from 'path'
 
 // Test database connection (consistent with global-setup.ts)
 const TEST_DB_URL = process.env.TEST_DB_URL || 'postgresql://testuser:testpass123@localhost:5432/nodepulse_test'
 
-// Auth state file paths
+// Worker-specific auth state directory
+const WORKER_INDEX = process.env.TEST_WORKER_INDEX || '0'
+const AUTH_DIR = `.auth/worker-${WORKER_INDEX}`
+
+// Auth state file paths (worker-isolated)
 export const AUTH_STATES = {
-  admin: '.auth/admin.json',
-  operator: '.auth/operator.json',
-  viewer: '.auth/viewer.json',
+  admin: `${AUTH_DIR}/admin.json`,
+  operator: `${AUTH_DIR}/operator.json`,
+  viewer: `${AUTH_DIR}/viewer.json`,
 }
 
 // Test user credentials
@@ -38,18 +43,30 @@ export const TEST_CREDENTIALS = {
 // Role type
 export type Role = keyof typeof AUTH_STATES
 
+// Cache for verified auth contexts (prevents repeated verification)
+const verifiedContexts = new Set<string>()
+
 /**
- * Clear rate limits via direct DB connection
+ * Clear rate limits via direct DB connection with retry
  */
 async function clearRateLimits(): Promise<void> {
-  try {
-    const { Pool } = await import('pg')
-    const pool = new Pool({ connectionString: TEST_DB_URL })
-    await pool.query('DELETE FROM rate_limits')
-    await pool.end()
-    console.log('[auth.fixture] Rate limits cleared')
-  } catch (error) {
-    console.error('[auth.fixture] Failed to clear rate limits:', error)
+  const maxRetries = 3
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const { Pool } = await import('pg')
+      const pool = new Pool({ connectionString: TEST_DB_URL })
+      await pool.query('DELETE FROM rate_limits')
+      await pool.end()
+      console.log('[auth.fixture] Rate limits cleared')
+      // Small delay to ensure DB propagation
+      await new Promise(resolve => setTimeout(resolve, 100))
+      return
+    } catch (error) {
+      console.error(`[auth.fixture] Failed to clear rate limits (attempt ${attempt}):`, error)
+      if (attempt < maxRetries) {
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+    }
   }
 }
 
@@ -73,25 +90,110 @@ function hasValidStorageState(role: Role): boolean {
 }
 
 /**
- * Perform login via UI (fallback when storage state is not available)
+ * Copy global auth state to worker-specific location
  */
-async function performLogin(page: Page, username: string, password: string): Promise<void> {
-  console.log(`[auth.fixture] Starting login for ${username}`)
-  await page.goto('/login')
-  await page.waitForSelector('#username')
-  await page.fill('#username', username)
-  await page.fill('#password', password)
-  await page.click('button[type="submit"]')
-  console.log('[auth.fixture] Login form submitted, waiting for redirect...')
+function copyGlobalAuthState(role: Role): boolean {
+  const globalStatePath = `.auth/${role}.json`
+  const workerStatePath = AUTH_STATES[role]
 
-  // Wait for successful login - handle both full page load and SPA navigation
-  try {
-    await page.waitForURL('**/dashboard**', { timeout: 10000 })
-  } catch {
-    // Fallback for SPA navigation - wait for dashboard content
-    await page.waitForSelector('text=/Welcome|Dashboard|Nodes/i', { timeout: 5000 })
+  // Create worker auth directory if needed
+  const authDir = path.dirname(workerStatePath)
+  if (!fs.existsSync(authDir)) {
+    fs.mkdirSync(authDir, { recursive: true })
   }
-  console.log('[auth.fixture] Login successful, redirected to dashboard')
+
+  // Copy from global state if it exists and worker state doesn't
+  if (fs.existsSync(globalStatePath) && !fs.existsSync(workerStatePath)) {
+    try {
+      fs.copyFileSync(globalStatePath, workerStatePath)
+      console.log(`[auth.fixture] Copied global auth state for ${role} to worker ${WORKER_INDEX}`)
+      return true
+    } catch (error) {
+      console.error(`[auth.fixture] Failed to copy auth state:`, error)
+    }
+  }
+  return false
+}
+
+/**
+ * Perform login via UI with retry logic
+ */
+async function performLogin(page: Page, username: string, password: string, maxRetries = 3): Promise<void> {
+  let lastError: Error | null = null
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`[auth.fixture] Starting login for ${username} (attempt ${attempt})`)
+
+      // Clear rate limits before login attempt
+      if (attempt > 1) {
+        await clearRateLimits()
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
+
+      await page.goto('/login', { waitUntil: 'networkidle' })
+      await page.waitForSelector('#username', { timeout: 15000 })
+      await page.fill('#username', username)
+      await page.fill('#password', password)
+      await page.click('button[type="submit"]')
+      console.log('[auth.fixture] Login form submitted, waiting for redirect...')
+
+      // Wait for successful login - check URL first, then content
+      await page.waitForURL('**/dashboard**', { timeout: 25000 })
+
+      // Wait for page to be interactive (SPA hydration)
+      await page.waitForLoadState('domcontentloaded')
+      await page.waitForTimeout(1000)
+
+      console.log('[auth.fixture] Login successful, redirected to dashboard')
+      return
+    } catch (error) {
+      lastError = error as Error
+      console.error(`[auth.fixture] Login attempt ${attempt} failed:`, error)
+
+      if (attempt < maxRetries) {
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        // Try to navigate away and back
+        try {
+          await page.goto('/', { timeout: 5000 })
+        } catch {
+          // Ignore navigation errors
+        }
+      }
+    }
+  }
+
+  throw lastError || new Error(`Login failed after ${maxRetries} attempts`)
+}
+
+/**
+ * Verify auth state is still valid
+ */
+async function verifyAuthState(page: Page, role: Role): Promise<boolean> {
+  // Check cache first
+  const cacheKey = `${WORKER_INDEX}-${role}`
+  if (verifiedContexts.has(cacheKey)) {
+    return true
+  }
+
+  try {
+    await page.goto('/dashboard', { waitUntil: 'networkidle', timeout: 25000 })
+
+    // Wait for SPA to settle
+    await page.waitForTimeout(1000)
+
+    // If still on dashboard (not redirected to login), state is valid
+    const currentUrl = page.url()
+    if (!currentUrl.includes('login')) {
+      verifiedContexts.add(cacheKey)
+      return true
+    }
+  } catch {
+    // Verification failed
+  }
+
+  return false
 }
 
 /**
@@ -104,6 +206,9 @@ async function createAuthenticatedContext(
   const credentials = TEST_CREDENTIALS[role]
   const statePath = AUTH_STATES[role]
 
+  // Try to copy from global auth state first
+  copyGlobalAuthState(role)
+
   let context: BrowserContext
   let page: Page
 
@@ -113,37 +218,32 @@ async function createAuthenticatedContext(
     context = await browser.newContext({ storageState: statePath })
     page = await context.newPage()
 
-    // Verify the session is still valid by checking a protected route
-    try {
-      await page.goto('/dashboard')
-      // Wait a bit for potential redirect
-      await page.waitForLoadState('networkidle')
+    // Verify the session is still valid
+    const isValid = await verifyAuthState(page, role)
 
-      // If redirected to login, session is expired
-      if (page.url().includes('login')) {
-        console.log(`[auth.fixture] Saved state expired for ${role}, performing fresh login`)
-        await context.close()
-        await clearRateLimits()
-        context = await browser.newContext()
-        page = await context.newPage()
-        await performLogin(page, credentials.username, credentials.password)
-      }
-    } catch {
-      // If verification fails, fall back to fresh login
-      console.log(`[auth.fixture] State verification failed for ${role}, performing fresh login`)
+    if (!isValid) {
+      console.log(`[auth.fixture] Saved state expired for ${role}, performing fresh login`)
       await context.close()
       await clearRateLimits()
+
       context = await browser.newContext()
       page = await context.newPage()
       await performLogin(page, credentials.username, credentials.password)
+
+      // Save the new state
+      await context.storageState({ path: statePath })
     }
   } else {
     // No saved state, perform fresh login
     console.log(`[auth.fixture] No saved state for ${role}, performing fresh login`)
     await clearRateLimits()
+
     context = await browser.newContext()
     page = await context.newPage()
     await performLogin(page, credentials.username, credentials.password)
+
+    // Save the state for future tests
+    await context.storageState({ path: statePath })
   }
 
   return { context, page }
