@@ -15,7 +15,7 @@ func TestAPIKeyService_GenerateAPIKey(t *testing.T) {
 	service := NewAPIKeyService(pool)
 	ctx := context.Background()
 
-	userID := "user-123"
+	userID := CreateTestUser(t, ctx, pool)
 	token, dbKey, err := service.GenerateAPIKey(ctx, &userID, "Test Key")
 
 	require.NoError(t, err)
@@ -35,7 +35,7 @@ func TestAPIKeyService_ValidateAPIKey(t *testing.T) {
 	service := NewAPIKeyService(pool)
 	ctx := context.Background()
 
-	userID := "user-123"
+	userID := CreateTestUser(t, ctx, pool)
 	token, _, err := service.GenerateAPIKey(ctx, &userID, "Test Key")
 	require.NoError(t, err)
 
@@ -65,7 +65,7 @@ func TestAPIKeyService_RevokeAPIKey(t *testing.T) {
 	service := NewAPIKeyService(pool)
 	ctx := context.Background()
 
-	userID := "user-123"
+	userID := CreateTestUser(t, ctx, pool)
 	_, dbKey, err := service.GenerateAPIKey(ctx, &userID, "Test Key")
 	require.NoError(t, err)
 
@@ -85,7 +85,7 @@ func TestAPIKeyService_GetUserAPIKeys(t *testing.T) {
 	service := NewAPIKeyService(pool)
 	ctx := context.Background()
 
-	userID := "user-123"
+	userID := CreateTestUser(t, ctx, pool)
 
 	// Create multiple keys
 	_, _, err := service.GenerateAPIKey(ctx, &userID, "Key 1")
@@ -107,7 +107,7 @@ func TestAPIKeyService_OneWayHash(t *testing.T) {
 	service := NewAPIKeyService(pool)
 	ctx := context.Background()
 
-	userID := "user-123"
+	userID := CreateTestUser(t, ctx, pool)
 	token, dbKey, err := service.GenerateAPIKey(ctx, &userID, "Test Key")
 	require.NoError(t, err)
 
@@ -127,7 +127,7 @@ func TestAPIKeyService_KeyPrefix(t *testing.T) {
 	service := NewAPIKeyService(pool)
 	ctx := context.Background()
 
-	userID := "user-123"
+	userID := CreateTestUser(t, ctx, pool)
 	token, dbKey, err := service.GenerateAPIKey(ctx, &userID, "Test Key")
 	require.NoError(t, err)
 

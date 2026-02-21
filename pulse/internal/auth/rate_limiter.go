@@ -136,6 +136,10 @@ func (r *RateLimiter) GetCurrentCount(ctx context.Context, key string, windowTyp
 	`, key, windowType, windowStart).Scan(&count)
 
 	if err != nil {
+		// No rows means no requests yet, return 0
+		if err.Error() == "no rows in result set" {
+			return 0, nil
+		}
 		return 0, fmt.Errorf("failed to get current count: %w", err)
 	}
 

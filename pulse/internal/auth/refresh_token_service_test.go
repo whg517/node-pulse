@@ -16,12 +16,13 @@ func TestRefreshTokenService_CreateRefreshToken(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
-	token, dbToken, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	userID := CreateTestUser(t, ctx, pool)
+	token, dbToken, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 
 	require.NoError(t, err)
 	assert.NotEmpty(t, token)
 	assert.NotNil(t, dbToken)
-	assert.Equal(t, "user-123", dbToken.UserID)
+	assert.Equal(t, userID, dbToken.UserID.String())
 	assert.Nil(t, dbToken.RevokedAt)
 }
 
@@ -32,14 +33,16 @@ func TestRefreshTokenService_ValidateRefreshToken(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create token
-	token, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	token, _, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
 	// Validate token
 	dbToken, err := service.ValidateRefreshToken(ctx, token)
 	require.NoError(t, err)
-	assert.Equal(t, "user-123", dbToken.UserID)
+	assert.Equal(t, userID, dbToken.UserID.String())
 	assert.Nil(t, dbToken.RevokedAt)
 }
 
@@ -50,8 +53,10 @@ func TestRefreshTokenService_RotateRefreshToken(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create initial token
-	oldToken, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	oldToken, _, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
 	// Rotate token
@@ -59,7 +64,7 @@ func TestRefreshTokenService_RotateRefreshToken(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, newToken)
 	assert.NotEqual(t, oldToken, newToken)
-	assert.Equal(t, "user-123", newDbToken.UserID)
+	assert.Equal(t, userID, newDbToken.UserID.String())
 
 	// Try to use old token again - should fail
 	_, err = service.ValidateRefreshToken(ctx, oldToken)
@@ -74,8 +79,10 @@ func TestRefreshTokenService_ConcurrentRotation(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create initial token
-	oldToken, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	oldToken, _, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
 	// Launch concurrent rotations
@@ -112,8 +119,10 @@ func TestRefreshTokenService_SlidingExpiration(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create token with 30 day max validity
-	oldToken, originalToken, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	oldToken, originalToken, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
 	// Rotate immediately - should extend expiration
@@ -132,8 +141,10 @@ func TestRefreshTokenService_AbsoluteExpirationCap(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create token with short max validity (1 day)
-	oldToken, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 1)
+	oldToken, _, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 1)
 	require.NoError(t, err)
 
 	// Wait a moment
@@ -155,12 +166,14 @@ func TestRefreshTokenService_RevokeRefreshToken(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create token
-	tokenPlain, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	tokenPlain, dbToken, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
-	// Revoke token
-	err = service.RevokeRefreshToken(ctx, "user-123", tokenPlain)
+	// Revoke token using the token_id (UUID), not the plain token
+	err = service.RevokeRefreshToken(ctx, userID, dbToken.TokenID.String())
 	require.NoError(t, err)
 
 	// Try to validate - should fail
@@ -176,12 +189,14 @@ func TestRefreshTokenService_RevokeAllUserTokens(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create multiple tokens for same user
-	tokenPlain1, _, _ := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
-	tokenPlain2, _, _ := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	tokenPlain1, _, _ := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
+	tokenPlain2, _, _ := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 
 	// Revoke all tokens
-	err := service.RevokeAllUserTokens(ctx, "user-123")
+	err := service.RevokeAllUserTokens(ctx, userID)
 	require.NoError(t, err)
 
 	// Verify all tokens are revoked
@@ -199,14 +214,16 @@ func TestRefreshTokenService_GetUserRefreshTokens(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create multiple tokens
-	_, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	_, _, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
-	_, _, err = service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	_, _, err = service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
 	// Get all tokens
-	tokens, err := service.GetUserRefreshTokens(ctx, "user-123")
+	tokens, err := service.GetUserRefreshTokens(ctx, userID)
 	require.NoError(t, err)
 	assert.Len(t, tokens, 2)
 }
@@ -218,11 +235,13 @@ func TestRefreshTokenService_CleanupExpiredTokens(t *testing.T) {
 	service := NewRefreshTokenService(pool)
 	ctx := context.Background()
 
+	userID := CreateTestUser(t, ctx, pool)
+
 	// Create and immediately revoke a token
-	tokenPlain, _, err := service.CreateRefreshToken(ctx, "user-123", "Mozilla/5.0", "192.168.1.1", 30)
+	_, dbToken, err := service.CreateRefreshToken(ctx, userID, "Mozilla/5.0", "192.168.1.1", 30)
 	require.NoError(t, err)
 
-	err = service.RevokeRefreshToken(ctx, "user-123", tokenPlain)
+	err = service.RevokeRefreshToken(ctx, userID, dbToken.TokenID.String())
 	require.NoError(t, err)
 
 	// Run cleanup with 0 retention (delete all revoked)
@@ -230,7 +249,7 @@ func TestRefreshTokenService_CleanupExpiredTokens(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify revoked token was cleaned up
-	tokens, err := service.GetUserRefreshTokens(ctx, "user-123")
+	tokens, err := service.GetUserRefreshTokens(ctx, userID)
 	require.NoError(t, err)
 	assert.Len(t, tokens, 0, "Revoked tokens should be cleaned up")
 }

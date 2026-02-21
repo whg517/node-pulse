@@ -4,7 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/stretchr/testify/require"
 )
 
 // cleanupTables drops all test tables
@@ -126,4 +128,20 @@ func setupTestDBWithCleanup(t *testing.T) *pgxpool.Pool {
 	})
 
 	return pool
+}
+
+// CreateTestUser creates a test user and returns the UUID string
+func CreateTestUser(t *testing.T, ctx context.Context, pool *pgxpool.Pool) string {
+	t.Helper()
+
+	userID := uuid.New()
+	hashedPassword, _ := HashPassword("testpass")
+
+	_, err := pool.Exec(ctx, `
+		INSERT INTO users (user_id, username, password_hash, email, role, is_active)
+		VALUES ($1, $2, $3, $4, $5, true)
+	`, userID, "testuser", hashedPassword, "test@example.com", "admin")
+
+	require.NoError(t, err, "Failed to create test user")
+	return userID.String()
 }

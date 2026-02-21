@@ -100,7 +100,7 @@ func TestError_FutureExpirationTime(t *testing.T) {
 			validated, err := refreshService.ValidateRefreshToken(ctx, token)
 			assert.NoError(t, err)
 			assert.NotNil(t, validated)
-			assert.Equal(t, userID.String(), validated.UserID, "UserID should match")
+			assert.Equal(t, userID.String(), validated.UserID.String(), "UserID should match")
 		}
 	})
 }
