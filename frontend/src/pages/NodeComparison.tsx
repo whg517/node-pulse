@@ -312,7 +312,7 @@ export default function NodeComparisonPage() {
               </div>
 
               {/* Node List */}
-              <div className={`space-y-2 max-h-64 overflow-y-auto border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
+              <div data-testid="node-selector" className={`space-y-2 max-h-64 overflow-y-auto border ${isDark ? 'border-gray-700' : 'border-gray-200'} rounded-lg p-4`}>
                 {nodeOptions.map((node) => (
                   <label
                     key={node.node_id}
@@ -477,6 +477,7 @@ export default function NodeComparisonPage() {
         {/* Compare Button */}
         <div className="mb-6">
           <button
+            data-testid="compare-button"
             onClick={handleCompare}
             disabled={
               selectedNodeIds.length < 2 ||

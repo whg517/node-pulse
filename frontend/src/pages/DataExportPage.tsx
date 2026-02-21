@@ -168,6 +168,34 @@ export default function DataExportPage() {
           </div>
         )}
 
+        {/* Access Warning for Non-Admin Users */}
+        {!isLoading && !error && user?.role !== 'admin' && (
+          <div className="access-warning bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-md mb-6">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg
+                  className="h-5 w-5 text-yellow-400"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-yellow-800">Admin Only</h3>
+                <p className="text-sm text-yellow-700 mt-1">
+                  Data export is restricted to administrators. Please contact your administrator if you need access to this feature.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Loading State */}
         {isLoading && !error && (
           <div className="flex justify-center items-center py-12" data-testid="loading-spinner">
@@ -175,8 +203,8 @@ export default function DataExportPage() {
           </div>
         )}
 
-        {/* Content - Export Form and Current Exports */}
-        {!isLoading && !error && (
+        {/* Content - Export Form and Current Exports (Admin Only) */}
+        {!isLoading && !error && user?.role === 'admin' && (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Export Form */}
             <div className="bg-white rounded-lg shadow-md p-6">
