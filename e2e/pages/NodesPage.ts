@@ -10,6 +10,8 @@ export class NodesPage {
   readonly searchInput: Locator
   readonly editButtons: Locator
   readonly deleteButtons: Locator
+  readonly loadingSpinner: Locator
+  readonly emptyState: Locator
 
   // Form fields
   readonly nameInput: Locator
@@ -32,6 +34,8 @@ export class NodesPage {
     // Edit/Delete buttons in table rows
     this.editButtons = page.locator('button:has-text("Edit"), a:has-text("Edit")')
     this.deleteButtons = page.locator('button:has-text("Delete")')
+    this.loadingSpinner = page.locator('.animate-spin')
+    this.emptyState = page.locator('.text-center.py-12, .text-center:has-text("No"), .bg-white.rounded-lg.shadow-sm.p-6:has-text("No")')
 
     // Form fields - use ID selectors for reliability
     this.nameInput = page.locator('#name, input[name="name"]')
@@ -49,8 +53,24 @@ export class NodesPage {
     await this.page.waitForLoadState('networkidle')
   }
 
+  async waitForReady() {
+    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
+    await this.page.waitForTimeout(500)
+  }
+
   async expectTableVisible() {
-    await this.table.waitFor({ state: 'visible' })
+    await this.waitForReady()
+    const tableCount = await this.table.count()
+    if (tableCount === 0) {
+      await this.emptyState.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    } else {
+      await this.table.waitFor({ state: 'visible' })
+    }
+  }
+
+  async hasData(): Promise<boolean> {
+    await this.waitForReady()
+    return (await this.table.count()) > 0
   }
 
   async expectCreateButtonVisible() {

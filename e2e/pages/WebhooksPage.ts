@@ -12,6 +12,8 @@ export class WebhooksPage {
   readonly toggleButtons: Locator
   readonly modal: Locator
   readonly accessWarning: Locator
+  readonly loadingSpinner: Locator
+  readonly emptyState: Locator
 
   // Form fields
   readonly nameInput: Locator
@@ -32,6 +34,8 @@ export class WebhooksPage {
     this.modal = page.locator('.fixed.inset-0')
     // Access warning uses yellow background with "Admin-only" text
     this.accessWarning = page.locator('.bg-yellow-50:has-text("Admin-only"), .bg-yellow-50:has-text("admin")')
+    this.loadingSpinner = page.locator('.animate-spin')
+    this.emptyState = page.locator('.text-center.py-12, .text-center:has-text("No")')
 
     // Form fields
     this.nameInput = page.locator('#name, input[name="name"]')
@@ -46,8 +50,24 @@ export class WebhooksPage {
     await this.page.waitForLoadState('networkidle')
   }
 
+  async waitForReady() {
+    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
+    await this.page.waitForTimeout(500)
+  }
+
   async expectTableVisible() {
-    await this.table.waitFor({ state: 'visible' })
+    await this.waitForReady()
+    const tableCount = await this.table.count()
+    if (tableCount === 0) {
+      await this.emptyState.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    } else {
+      await this.table.waitFor({ state: 'visible' })
+    }
+  }
+
+  async hasData(): Promise<boolean> {
+    await this.waitForReady()
+    return (await this.table.count()) > 0
   }
 
   async expectAccessWarning() {

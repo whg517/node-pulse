@@ -11,6 +11,8 @@ export class AlertRulesPage {
   readonly deleteButtons: Locator
   readonly toggleButtons: Locator
   readonly modal: Locator
+  readonly loadingSpinner: Locator
+  readonly emptyState: Locator
 
   // Form fields
   readonly nameInput: Locator
@@ -28,6 +30,8 @@ export class AlertRulesPage {
     this.deleteButtons = page.locator('button:has-text("Delete")')
     this.toggleButtons = page.locator('input[type="checkbox"]')
     this.modal = page.locator('.fixed.inset-0')
+    this.loadingSpinner = page.locator('.animate-spin')
+    this.emptyState = page.locator('.text-center.py-12, .text-center:has-text("No")')
 
     // Form fields
     this.nameInput = page.locator('#name, input[name="name"]')
@@ -43,8 +47,28 @@ export class AlertRulesPage {
     await this.page.waitForLoadState('networkidle')
   }
 
+  async waitForReady() {
+    // Wait for loading to complete
+    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
+    // Small delay for rendering
+    await this.page.waitForTimeout(500)
+  }
+
   async expectTableVisible() {
-    await this.table.waitFor({ state: 'visible' })
+    await this.waitForReady()
+    // Check if table exists or empty state is shown
+    const tableCount = await this.table.count()
+    if (tableCount === 0) {
+      // Verify empty state is visible instead
+      await this.emptyState.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    } else {
+      await this.table.waitFor({ state: 'visible' })
+    }
+  }
+
+  async hasData(): Promise<boolean> {
+    await this.waitForReady()
+    return (await this.table.count()) > 0
   }
 
   async clickCreate() {
@@ -88,6 +112,8 @@ export class AlertRecordsPage {
   readonly statusFilter: Locator
   readonly nodeFilter: Locator
   readonly searchInput: Locator
+  readonly loadingSpinner: Locator
+  readonly emptyState: Locator
 
   constructor(page: Page) {
     this.page = page
@@ -96,6 +122,8 @@ export class AlertRecordsPage {
     this.statusFilter = page.locator('select[name="status"]')
     this.nodeFilter = page.locator('select[name="node"]')
     this.searchInput = page.locator('input[type="search"], input[placeholder*="search" i]')
+    this.loadingSpinner = page.locator('.animate-spin')
+    this.emptyState = page.locator('.text-center.py-12, .text-center:has-text("No")')
   }
 
   async goto() {
@@ -103,8 +131,24 @@ export class AlertRecordsPage {
     await this.page.waitForLoadState('networkidle')
   }
 
+  async waitForReady() {
+    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
+    await this.page.waitForTimeout(500)
+  }
+
   async expectTableVisible() {
-    await this.table.waitFor({ state: 'visible' })
+    await this.waitForReady()
+    const tableCount = await this.table.count()
+    if (tableCount === 0) {
+      await this.emptyState.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    } else {
+      await this.table.waitFor({ state: 'visible' })
+    }
+  }
+
+  async hasData(): Promise<boolean> {
+    await this.waitForReady()
+    return (await this.table.count()) > 0
   }
 
   async filterByStatus(status: string) {
@@ -135,12 +179,16 @@ export class AlertHistoryPage {
   readonly table: Locator
   readonly pagination: Locator
   readonly filterButton: Locator
+  readonly loadingSpinner: Locator
+  readonly emptyState: Locator
 
   constructor(page: Page) {
     this.page = page
     this.table = page.locator('table')
     this.pagination = page.locator('button:has-text("Next"), button:has-text("Previous")')
     this.filterButton = page.locator('button:has-text("Filter")')
+    this.loadingSpinner = page.locator('.animate-spin')
+    this.emptyState = page.locator('.text-center.py-12, .text-center:has-text("No")')
   }
 
   async goto() {
@@ -148,8 +196,24 @@ export class AlertHistoryPage {
     await this.page.waitForLoadState('networkidle')
   }
 
+  async waitForReady() {
+    await this.loadingSpinner.waitFor({ state: 'hidden', timeout: 10000 }).catch(() => {})
+    await this.page.waitForTimeout(500)
+  }
+
   async expectTableVisible() {
-    await this.table.waitFor({ state: 'visible' })
+    await this.waitForReady()
+    const tableCount = await this.table.count()
+    if (tableCount === 0) {
+      await this.emptyState.first().waitFor({ state: 'visible', timeout: 5000 }).catch(() => {})
+    } else {
+      await this.table.waitFor({ state: 'visible' })
+    }
+  }
+
+  async hasData(): Promise<boolean> {
+    await this.waitForReady()
+    return (await this.table.count()) > 0
   }
 
   async nextPage() {
