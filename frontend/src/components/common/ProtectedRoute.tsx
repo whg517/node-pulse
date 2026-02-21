@@ -66,6 +66,12 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation()
   const { isAuthenticated, tokenExpiresAt, isLoading, clearAuth } = useAuthStore()
 
+  // Check if token exists and is not expired
+  // MUST be called before any early returns to comply with Rules of Hooks
+  const isValid = useMemo(() => {
+    return tokenExpiresAt !== null && tokenExpiresAt > Date.now()
+  }, [tokenExpiresAt])
+
   // Show loading indicator while session is being restored
   // Prevents content flash
   if (isLoading) {
@@ -82,11 +88,6 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       </div>
     )
   }
-
-  // Check if token exists and is not expired
-  const isValid = useMemo(() => {
-    return tokenExpiresAt !== null && tokenExpiresAt > Date.now()
-  }, [tokenExpiresAt])
 
   if (!isAuthenticated || !isValid) {
     // Redirect loop protection
