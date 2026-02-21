@@ -195,13 +195,30 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 	// Wait for interrupt signal or context cancellation
 	sigChan := make(chan os.Signal, 1)
+	sighupChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	signal.Notify(sighupChan, syscall.SIGHUP)
 
-	select {
-	case <-sigChan:
-		// Signal received
-	case <-ctx.Done():
-		// Context cancelled (e.g., timeout in tests)
+	for {
+		select {
+		case <-sigChan:
+			// Shutdown signal received
+			logger.Info("Shutdown signal received...")
+		case <-sighupChan:
+			// SIGHUP received - trigger config reload
+			logger.Info("SIGHUP received, reloading configuration...")
+			if configWatcher != nil {
+				if err := configWatcher.TriggerReload(); err != nil {
+					logger.WithError(err).Error("Failed to reload configuration on SIGHUP")
+				}
+			} else {
+				logger.Warn("SIGHUP received but config watcher is not enabled")
+			}
+			continue // Continue running after SIGHUP
+		case <-ctx.Done():
+			// Context cancelled (e.g., timeout in tests)
+		}
+		break // Exit loop for shutdown signals and context cancellation
 	}
 
 	logger.Info("Shutting down gracefully...")

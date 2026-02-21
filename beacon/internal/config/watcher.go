@@ -316,3 +316,11 @@ func (fw *FileWatcher) GetReloadCount() int64 {
 func (fw *FileWatcher) GetLastReloadTime() time.Time {
 	return fw.lastReload
 }
+
+// TriggerReload manually triggers a configuration reload.
+// This is useful for SIGHUP signal handling to trigger reload without file modification.
+// Returns an error if the reload fails, but the watcher continues operating with the current config.
+func (fw *FileWatcher) TriggerReload() error {
+	fw.logger.Info("Manual config reload triggered (e.g., via SIGHUP)")
+	return fw.reloadConfig()
+}

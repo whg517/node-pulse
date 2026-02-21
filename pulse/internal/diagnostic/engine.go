@@ -1,6 +1,7 @@
 package diagnostic
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"sort"
@@ -89,11 +90,12 @@ type RegionalStats struct {
 
 // DiagnosticEngine performs problem diagnosis
 type DiagnosticEngine struct {
-	minNodes      int
-	timeWindow    time.Duration
+	minNodes           int
+	timeWindow         time.Duration
 	baselineLatency    float64
 	baselinePacketLoss float64
 	baselineJitter     float64
+	baselineCalculator *BaselineCalculator
 }
 
 // NewDiagnosticEngine creates a new diagnostic engine with hardcoded baselines
@@ -118,6 +120,35 @@ func NewDiagnosticEngineWithBaselines(latency, packetLoss, jitter float64) *Diag
 		baselinePacketLoss: packetLoss,
 		baselineJitter:     jitter,
 	}
+}
+
+// SetBaselineCalculator sets a baseline calculator for dynamic baseline updates
+// The engine will use the calculator to get baselines instead of hardcoded values
+func (e *DiagnosticEngine) SetBaselineCalculator(calc *BaselineCalculator) {
+	e.baselineCalculator = calc
+}
+
+// UpdateBaselinesFromCalculator refreshes baselines from the calculator if one is set
+// Returns true if baselines were updated, false if no calculator is available
+func (e *DiagnosticEngine) UpdateBaselinesFromCalculator(ctx context.Context) bool {
+	if e.baselineCalculator == nil {
+		return false
+	}
+
+	baseline, err := e.baselineCalculator.GetBaselines(ctx)
+	if err != nil {
+		return false
+	}
+
+	e.baselineLatency = baseline.LatencyMs
+	e.baselinePacketLoss = baseline.PacketLossRate
+	e.baselineJitter = baseline.JitterMs
+	return true
+}
+
+// GetBaselineCalculator returns the current baseline calculator
+func (e *DiagnosticEngine) GetBaselineCalculator() *BaselineCalculator {
+	return e.baselineCalculator
 }
 
 // Diagnose analyzes node metrics and determines problem type
