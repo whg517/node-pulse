@@ -130,7 +130,7 @@ func TestHandleHeartbeat_ValidNodeAndValidMetrics(t *testing.T) {
 	var resp models.HeartbeatSuccessResponse
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
-	assert.Equal(t, "心跳数据接收成功", resp.Message)
+	assert.Equal(t, "Heartbeat received successfully", resp.Message)
 	assert.True(t, resp.Data.Received)
 }
 
@@ -165,7 +165,7 @@ func TestHandleHeartbeat_InvalidNodeID_Returns400(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, "ERR_INVALID_NODE_ID", resp.Code)
-	assert.Contains(t, resp.Message, "节点 ID 格式无效")
+	assert.Contains(t, resp.Message, "Invalid node ID format")
 }
 
 func TestHandleHeartbeat_NodeNotFound_Returns400(t *testing.T) {
@@ -204,7 +204,7 @@ func TestHandleHeartbeat_NodeNotFound_Returns400(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, ErrNodeNotFound, resp.Code)
-	assert.Contains(t, resp.Message, "节点不存在")
+	assert.Contains(t, resp.Message, "Node not found")
 }
 
 func TestHandleHeartbeat_LatencyOutOfRange_Returns400(t *testing.T) {
@@ -258,7 +258,7 @@ func TestHandleHeartbeat_LatencyOutOfRange_Returns400(t *testing.T) {
 			err := json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
 			assert.Equal(t, ErrInvalidLatency, resp.Code)
-			assert.Contains(t, resp.Message, "时延超出范围")
+			assert.Contains(t, resp.Message, "Latency out of range")
 		})
 	}
 }
@@ -314,7 +314,7 @@ func TestHandleHeartbeat_PacketLossOutOfRange_Returns400(t *testing.T) {
 			err := json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
 			assert.Equal(t, ErrInvalidPacketLoss, resp.Code)
-			assert.Contains(t, resp.Message, "丢包率超出范围")
+			assert.Contains(t, resp.Message, "Packet loss rate out of range")
 		})
 	}
 }
@@ -370,7 +370,7 @@ func TestHandleHeartbeat_JitterOutOfRange_Returns400(t *testing.T) {
 			err := json.Unmarshal(w.Body.Bytes(), &resp)
 			require.NoError(t, err)
 			assert.Equal(t, ErrInvalidJitter, resp.Code)
-			assert.Contains(t, resp.Message, "抖动超出范围")
+			assert.Contains(t, resp.Message, "Jitter out of range")
 		})
 	}
 }
@@ -403,7 +403,7 @@ func TestHandleHeartbeat_MissingRequiredFields_Returns400(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, "ERR_INVALID_REQUEST", resp.Code)
-	assert.Contains(t, resp.Message, "请求参数无效")
+	assert.Contains(t, resp.Message, "Invalid request parameters")
 }
 
 func TestHandleHeartbeat_InvalidTimestampFormat_Returns400(t *testing.T) {
@@ -447,7 +447,7 @@ func TestHandleHeartbeat_InvalidTimestampFormat_Returns400(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	require.NoError(t, err)
 	assert.Equal(t, ErrInvalidTimestamp, resp.Code)
-	assert.Contains(t, resp.Message, "时间戳格式无效")
+	assert.Contains(t, resp.Message, "Invalid timestamp format")
 }
 
 func TestHandleHeartbeat_InvalidProbeID_Returns400(t *testing.T) {
