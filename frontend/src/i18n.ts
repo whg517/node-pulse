@@ -32,7 +32,8 @@ const getSavedLanguage = (): string => {
   return 'en'
 }
 
-i18n.use(initReactI18next).init({
+// Initialize i18n and export the promise so app can wait for it
+const i18nInitPromise = i18n.use(initReactI18next).init({
   resources,
   lng: getSavedLanguage(),
   fallbackLng: 'en',
@@ -45,6 +46,7 @@ i18n.use(initReactI18next).init({
 })
 
 export default i18n
+export { i18nInitPromise }
 
 // Supported languages
 export const supportedLanguages = [
