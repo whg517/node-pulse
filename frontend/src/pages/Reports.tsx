@@ -54,10 +54,11 @@ export default function ReportsPage() {
     setError(null)
     try {
       const response = await fetchNodes()
-      setNodes(response.data)
+      const nodesArray = response.data.nodes || []
+      setNodes(nodesArray)
       // Initialize comparison data with all nodes
       setComparisonData(
-        response.data.slice(0, 5).map((node) => ({
+        nodesArray.slice(0, 5).map((node) => ({
           nodeId: node.id,
           nodeName: node.name,
           region: node.region,

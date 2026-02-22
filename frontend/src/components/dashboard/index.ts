@@ -19,3 +19,4 @@ export type {
   GroupByType,
   ComparisonChartProps,
 } from './ComparisonChart'
+export { AlertStream } from './AlertStream'

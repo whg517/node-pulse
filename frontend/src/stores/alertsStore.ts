@@ -74,7 +74,7 @@ export const useAlertsStore = create<AlertsStore>((set) => ({
     try {
       const response = await fetchAlertRules()
 
-      const alertRules: AlertRule[] = response.data.map((rule) => ({
+      const alertRules: AlertRule[] = (response.data.alerts || []).map((rule) => ({
         id: rule.id,
         metric: rule.metric,
         threshold: rule.threshold,

@@ -18,16 +18,16 @@ export type { NodeDTO, CreateNodeRequest, UpdateNodeRequest }
 /**
  * Fetch all nodes from the API
  *
- * @returns Array of all nodes
+ * @returns Object containing nodes array
  * @throws AuthenticationError if user is not authenticated
  * @throws ApiError on other HTTP errors
  *
  * @example
  * const { data } = await fetchNodes()
- * console.log('Total nodes:', data.length)
+ * console.log('Total nodes:', data.nodes.length)
  */
-export async function fetchNodes(): Promise<{ data: NodeDTO[] }> {
-  return apiClient<{ data: NodeDTO[] }>('/api/v1/nodes')
+export async function fetchNodes(): Promise<{ data: { nodes: NodeDTO[] } }> {
+  return apiClient<{ data: { nodes: NodeDTO[] } }>('/api/v1/nodes')
 }
 
 /**

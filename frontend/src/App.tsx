@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { useEffect } from 'react'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
@@ -10,10 +10,34 @@ import AlertRecordsPage from './pages/AlertRecordsPage'
 import AlertHistoryPage from './pages/AlertHistoryPage'
 import WebhooksPage from './pages/WebhooksPage'
 import DataExportPage from './pages/DataExportPage'
-import PerformanceDashboard from './pages/PerformanceDashboard'
 import SessionsPage from './pages/SessionsPage'
+import ReportsPage from './pages/Reports'
+import PreferencesPage from './pages/PreferencesPage'
+import UsersPage from './pages/UsersPage'
+import SystemHealthPage from './pages/SystemHealthPage'
+import NotFoundPage from './pages/NotFoundPage'
 import ProtectedRoute from './components/common/ProtectedRoute'
+import { AppLayout } from './components/layout'
 import { useAuthStore, setupCrossTabLogoutSync, setupVisibilityHandler } from './stores/authStore'
+import { useAlertsStore } from './stores/alertsStore'
+
+/**
+ * Layout wrapper for protected routes
+ * Combines ProtectedRoute with AppLayout
+ */
+function ProtectedLayout() {
+  const alertRecords = useAlertsStore((state) => state.alertRecords)
+  // Count unresolved alerts for badge
+  const alertCount = alertRecords.filter((r) => r.status !== 'resolved').length
+
+  return (
+    <ProtectedRoute>
+      <AppLayout alertCount={alertCount}>
+        <Outlet />
+      </AppLayout>
+    </ProtectedRoute>
+  )
+}
 
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession)
@@ -40,106 +64,41 @@ function App() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
 
-        {/* Protected routes - require authentication */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
+        {/* Protected routes with AppLayout */}
+        <Route element={<ProtectedLayout />}>
+          {/* Dashboard */}
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* Sessions management */}
-        <Route
-          path="/sessions"
-          element={
-            <ProtectedRoute>
-              <SessionsPage />
-            </ProtectedRoute>
-          }
-        />
+          {/* Nodes */}
+          <Route path="/nodes" element={<NodeManagementPage />} />
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+          <Route path="/nodes/comparison" element={<NodeComparisonPage />} />
 
-        {/* Node management routes */}
-        <Route
-          path="/nodes"
-          element={
-            <ProtectedRoute>
-              <NodeManagementPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/nodes/:id"
-          element={
-            <ProtectedRoute>
-              <NodeDetailPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/comparison"
-          element={
-            <ProtectedRoute>
-              <NodeComparisonPage />
-            </ProtectedRoute>
-          }
-        />
+          {/* Alerts */}
+          <Route path="/alerts" element={<Navigate to="rules" replace />} />
+          <Route path="/alerts/rules" element={<AlertRulesPage />} />
+          <Route path="/alerts/records" element={<AlertRecordsPage />} />
+          <Route path="/alerts/history" element={<AlertHistoryPage />} />
 
-        {/* Alert routes */}
-        <Route
-          path="/alerts/rules"
-          element={
-            <ProtectedRoute>
-              <AlertRulesPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/alerts/records"
-          element={
-            <ProtectedRoute>
-              <AlertRecordsPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/alerts/history"
-          element={
-            <ProtectedRoute>
-              <AlertHistoryPage />
-            </ProtectedRoute>
-          }
-        />
+          {/* Reports */}
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/reports/history" element={<DataExportPage />} />
 
-        {/* Admin routes */}
-        <Route
-          path="/webhooks"
-          element={
-            <ProtectedRoute>
-              <WebhooksPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/export"
-          element={
-            <ProtectedRoute>
-              <DataExportPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/performance"
-          element={
-            <ProtectedRoute>
-              <PerformanceDashboard />
-            </ProtectedRoute>
-          }
-        />
+          {/* Integrations */}
+          <Route path="/integrations" element={<Navigate to="webhooks" replace />} />
+          <Route path="/integrations/webhooks" element={<WebhooksPage />} />
+          <Route path="/integrations/health" element={<SystemHealthPage />} />
 
-        {/* Default redirect */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          {/* Settings */}
+          <Route path="/settings" element={<Navigate to="preferences" replace />} />
+          <Route path="/settings/preferences" element={<PreferencesPage />} />
+          <Route path="/settings/sessions" element={<SessionsPage />} />
+          <Route path="/settings/users" element={<UsersPage />} />
+        </Route>
+
+        {/* 404 - Not Found */}
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </BrowserRouter>
   )

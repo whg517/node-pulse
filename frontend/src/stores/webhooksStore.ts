@@ -55,7 +55,7 @@ export const useWebhooksStore = create<WebhooksStore>((set) => ({
     try {
       const response = await webhooksAPI.fetchWebhooks()
 
-      const webhooks: Webhook[] = response.data.map((webhook) => ({
+      const webhooks: Webhook[] = (response.data.webhooks || []).map((webhook) => ({
         id: webhook.id,
         url: webhook.url,
         eventFormat: webhook.event_format,

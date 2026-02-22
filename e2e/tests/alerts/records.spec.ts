@@ -27,7 +27,9 @@ test.describe('Alert Records Page', () => {
 
     const headerText = await adminPage.locator('table thead').textContent()
 
-    expect(headerText).toMatch(/status|node|level/i)
+    // Headers may be in Chinese or English depending on locale
+    // Check for column content: 节点名称/Node, 告警级别/Level, 状态/Status, 指标类型/Metric, 时间戳/Time
+    expect(headerText).toMatch(/节点|node|级别|level|状态|status|指标|metric|时间|time/i)
   })
 })
 

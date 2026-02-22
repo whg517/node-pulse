@@ -29,11 +29,11 @@ export interface UpdateWebhookRequest {
 /**
  * Fetch all webhooks from the API
  *
- * @returns Array of all webhooks
+ * @returns Object containing webhooks array
  * @throws AuthenticationError if user is not authenticated
  */
-export async function fetchWebhooks(): Promise<{ data: WebhookDTO[] }> {
-  return apiClient<{ data: WebhookDTO[] }>('/api/v1/webhooks')
+export async function fetchWebhooks(): Promise<{ data: { webhooks: WebhookDTO[] } }> {
+  return apiClient<{ data: { webhooks: WebhookDTO[] } }>('/api/v1/webhooks')
 }
 
 /**

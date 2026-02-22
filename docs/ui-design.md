@@ -1,9 +1,9 @@
 # NodePulse UI/UX Design Document
 
-**Version:** 1.0
-**Date:** 2026-02-17
+**Version:** 2.0
+**Date:** 2026-02-22
 **Author:** Design Team
-**Status:** Draft
+**Status:** Approved
 
 ---
 
@@ -22,38 +22,41 @@ Based on PRD user journeys and functional requirements:
 
 ```
 NodePulse
-├── Dashboard (Global Overview)
-│   ├── Health Distribution Map (FR-4.3.1)
-│   ├── Core Metrics Panel (FR-4.3.2)
-│   ├── Alert Stream (FR-4.3.3)
+├── 📊 Dashboard                    /dashboard
+│   ├── World Map (节点分布)
+│   ├── Core Metrics Panel
+│   ├── Alert Stream
 │   └── Node Quick List
 │
-├── Nodes
-│   ├── Node List / Management (FR-4.3.7)
-│   ├── Node Detail (FR-4.3.4, FR-4.3.5)
+├── 🖥️ Nodes                       /nodes
+│   ├── Node List / Management     /nodes
+│   ├── Node Detail                /nodes/:id
 │   │   ├── Real-time Metrics
 │   │   ├── Trend Charts (24h/7d/30d)
 │   │   ├── MTR Path Visualization
-│   │   └── Diagnostic Report Export (FR-4.3.6)
-│   └── Node Comparison (FR-4.3.12)
+│   │   └── Diagnostic Report Export
+│   └── Node Comparison            /nodes/comparison
 │
-├── Alerts
-│   ├── Alert Rules (FR-4.3.8)
-│   ├── Active Alerts / Records (FR-4.3.3)
-│   └── Alert History
+├── 🚨 Alerts                      /alerts
+│   ├── Alert Rules                /alerts/rules
+│   ├── Active Alerts / Records    /alerts/records
+│   └── Alert History              /alerts/history
 │
-├── Reports
-│   ├── Health Report Generator (FR-4.3.11)
-│   ├── Performance Comparison (FR-4.3.12)
-│   └── Export History
+├── 📈 Reports                     /reports
+│   ├── Report Generator           /reports
+│   └── Export History             /reports/history
 │
-├── Integrations
-│   ├── Webhooks (FR-4.3.9)
-│   └── System Health (FR-4.3.10)
+├── 🔗 Integrations                /integrations
+│   ├── Webhooks                   /integrations/webhooks
+│   └── System Health              /integrations/health
 │
-└── Settings
-    ├── User Preferences (timezone, language - FR-4.3.14)
-    └── Session Management
+└── ⚙️ Settings                    /settings
+    ├── Preferences                /settings/preferences
+    │   ├── Timezone
+    │   ├── Language
+    │   └── Theme
+    ├── Sessions                   /settings/sessions
+    └── Users (Admin only)         /settings/users
 ```
 
 ### 1.2 Key User Flows
@@ -68,9 +71,79 @@ NodePulse
 
 ---
 
-## 2. Visual Design System
+## 2. Layout Architecture
 
-### 2.1 Color Palette - Health States (FR-4.3.1)
+### 2.1 Shared Layout Component
+
+All authenticated pages use a shared `AppLayout` component:
+
+```
++============================================================================+
+|                         [Header - 64px]                                    |
+|  [Hamburger] NodePulse        [Search...]    [TZ] [EN] [🌙] [User ▼]      |
++============================================================================+
+|        |                                                                   |
+|   S    |                                                                   |
+|   I    |                     Main Content                                  |
+|   D    |                                                                   |
+|   E    |                   (max-w-7xl, scrollable)                         |
+|   B    |                                                                   |
+|   A    |                                                                   |
+|   R    |                                                                   |
+|        |                                                                   |
+| 256px |                                                                   |
+| (64px |                                                                   |
+|collap)|                                                                   |
+|        |                                                                   |
++============================================================================+
+```
+
+### 2.2 Sidebar Design
+
+**Desktop (≥768px):**
+- Width: 256px (expanded) / 64px (collapsed)
+- Sections with collapsible groups
+- Active state highlighting
+- Badge counts for alerts
+
+**Mobile (<768px):**
+- Hidden by default
+- Overlay when opened (hamburger menu)
+- Full-height with backdrop
+- Touch-friendly tap targets (48px min)
+
+```typescript
+interface SidebarItem {
+  icon: React.ReactNode
+  label: string
+  path: string
+  badge?: number        // Alert count, etc.
+  children?: SidebarItem[]
+  requiredRole?: string // RBAC support
+}
+```
+
+### 2.3 Header Design
+
+```
++============================================================================+
+| [≡] NodePulse    [🔍 Search...]     [UTC+8 ▼] [EN/中文 ▼] [🌙] [Admin ▼]  |
++============================================================================+
+```
+
+**Components:**
+- **Logo/Brand:** "NodePulse" (consistent)
+- **Search:** Global search (future feature)
+- **Timezone Selector:** User's preferred timezone
+- **Language Switcher:** EN/中文
+- **Theme Toggle:** Dark/Light mode
+- **User Menu:** Profile, Settings, Logout
+
+---
+
+## 3. Visual Design System
+
+### 3.1 Color Palette - Health States
 
 ```css
 :root {
@@ -101,6 +174,11 @@ NodePulse
   --alert-p0: #dc2626;             /* Red - Critical */
   --alert-p1: #f59e0b;             /* Amber - Warning */
   --alert-p2: #3b82f6;             /* Blue - Notice */
+
+  /* Sidebar */
+  --sidebar-bg: #1e293b;           /* Slate-800 */
+  --sidebar-hover: #334155;        /* Slate-700 */
+  --sidebar-active: #3b82f6;       /* Blue-500 */
 }
 ```
 
@@ -111,7 +189,7 @@ NodePulse
 | Critical | Red | `#dc2626` | Severe fault |
 | Offline | Gray | `#9ca3af` | No response |
 
-### 2.2 Typography
+### 3.2 Typography
 
 ```css
 :root {
@@ -133,13 +211,15 @@ NodePulse
 .text-label { font: 600 0.75rem/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; }
 ```
 
-### 2.3 Dark/Light Mode
+### 3.3 Dark/Light Mode
 
 ```css
+/* Dark Mode (Default for monitoring systems) */
 @media (prefers-color-scheme: dark) {
   :root {
     --bg-primary: #0f172a;      /* Slate-900 */
     --bg-secondary: #1e293b;    /* Slate-800 */
+    --bg-tertiary: #334155;     /* Slate-700 */
     --text-primary: #f1f5f9;    /* Slate-100 */
     --text-secondary: #94a3b8;  /* Slate-400 */
     --border-color: #334155;    /* Slate-700 */
@@ -150,6 +230,7 @@ NodePulse
   :root {
     --bg-primary: #ffffff;
     --bg-secondary: #f8fafc;    /* Slate-50 */
+    --bg-tertiary: #f1f5f9;     /* Slate-100 */
     --text-primary: #0f172a;
     --text-secondary: #64748b;  /* Slate-500 */
     --border-color: #e2e8f0;    /* Slate-200 */
@@ -157,7 +238,7 @@ NodePulse
 }
 ```
 
-### 2.4 Chart Theme (ECharts)
+### 3.4 Chart Theme (ECharts)
 
 ```javascript
 const nodePulseTheme = {
@@ -187,9 +268,57 @@ const nodePulseTheme = {
 
 ---
 
-## 3. Key UI Patterns
+## 4. Key UI Patterns
 
-### 3.1 Health Distribution Map (FR-4.3.1)
+### 4.1 Dashboard Layout
+
+```
++============================================================================+
+|  DASHBOARD                           [Refresh] [Export] [24h ▼]            |
++============================================================================+
+|                                                                            |
+|  +--------------------------------------------------------------------+   |
+|  |                    WORLD MAP - ECharts Geo                         |   |
+|  |                                                                    |   |
+|  |   [Regional clusters with health color coding]                    |   |
+|  |   [Pulsing markers for critical alerts]                           |   |
+|  |   [Click to navigate to node detail]                              |   |
+|  |                                                                    |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                            |
+|  +------------+  +------------+  +------------+  +------------+           |
+|  | ONLINE     |  | ANOMALY    |  | 24H ALERTS |  | PROBE      |           |
+|  | 94.2%      |  | 5.8%       |  | 23         |  | SUCCESS    |           |
+|  | ^ 2.1%     |  | v 1.2%     |  | [sparkline]|  | 98.5%      |           |
+|  +------------+  +------------+  +------------+  +------------+           |
+|                                                                            |
+|  +---------------------------------------+  +-----------------------+     |
+|  | LATENCY TREND                         |  | PACKET LOSS TREND     |     |
+|  | ------------------------------------- |  | --------------------- |     |
+|  | [ECharts line chart with baseline]    |  | [ECharts area chart]  |     |
+|  | [24h/7d/30d toggle]                   |  | [Threshold markers]   |     |
+|  +---------------------------------------+  +-----------------------+     |
+|                                                                            |
+|  +---------------------------------------+  +-----------------------+     |
+|  | NODE HEALTH CARDS (Top 6)             |  | ALERT STREAM          |     |
+|  | ------------------------------------- |  | --------------------- |     |
+|  | [Card] [Card]                         |  | [P0] Packet Loss 85%  |     |
+|  | [Card] [Card]                         |  | [P1] Latency 320ms    |     |
+|  | [Card] [Card]                         |  | [P2] Jitter 45ms      |     |
+|  +---------------------------------------+  +-----------------------+     |
+|                                                                            |
+|  +--------------------------------------------------------------------+   |
+|  | NODE LIST TABLE                                                    |   |
+|  | ------------------------------------------------------------------ |   |
+|  | Name | Status | Region | Latency | Packet Loss | Jitter | Actions |   |
+|  | ------------------------------------------------------------------ |   |
+|  | ...  | ...    | ...    | ...     | ...         | ...    | ...     |   |
+|  +--------------------------------------------------------------------+   |
+|                                                                            |
++============================================================================+
+```
+
+### 4.2 Health Distribution Map (FR-4.3.1)
 
 **Implementation:**
 - ECharts `geo` component with world map
@@ -207,10 +336,34 @@ const nodePulseTheme = {
 
 **Interaction:**
 - **Hover:** Tooltip with node count, avg latency, worst node
-- **Click:** Navigate to filtered node list for that region
+- **Click:** Navigate to node detail page
 - **Long-press (mobile):** Context menu for quick actions
 
-### 3.2 MTR Path Visualization (FR-4.3.5)
+### 4.3 Alert Stream Component
+
+**Display:**
+- Latest 10 active alerts
+- Auto-scrolling (new alerts insert at top)
+- Each alert shows: Level (P0/P1/P2), Node name, Type, Time, Status
+
+**Status Indicators:**
+- Unacknowledged: Red background
+- In Progress: Yellow background
+- Resolved: Gray background
+
+```typescript
+interface AlertStreamItem {
+  id: string
+  level: 'P0' | 'P1' | 'P2'
+  nodeName: string
+  type: 'latency' | 'packet_loss' | 'jitter'
+  value: number
+  timestamp: string
+  status: 'new' | 'acknowledged' | 'resolved'
+}
+```
+
+### 4.4 MTR Path Visualization (FR-4.3.5)
 
 **Visual Design:**
 ```
@@ -239,7 +392,7 @@ Source                                              Destination
 | Timeout | Gray box with question mark |
 | Normal | Default blue/gray styling |
 
-### 3.3 Multi-Metric Time Series (FR-4.3.4)
+### 4.5 Multi-Metric Time Series (FR-4.3.4)
 
 **Features:**
 - Metric selector (latency/loss/jitter toggle)
@@ -248,166 +401,260 @@ Source                                              Destination
 - Export chart as PNG (ECharts toolbox)
 - Annotation markers for alert events
 
-### 3.4 Alert Stream (FR-4.3.3)
-
-**Display:**
-- Latest 10 active alerts
-- Auto-scrolling (new alerts insert at top)
-- Each alert shows: Level (P0/P1/P2), Node name, Type, Time, Status
-
-**Status Indicators:**
-- Unacknowledged: Red
-- In Progress: Yellow
-- Resolved: Gray
-
 ---
 
-## 4. Wireframes
+## 5. Wireframes
 
-### 4.1 Global Dashboard (Desktop)
-
-```
-+============================================================================+
-|  NODEPULSE                    [Dashboard] [Nodes] [Alerts] [Reports] [Set] |
-|  Network Monitoring                       [EN/中文] [UTC+8 v] [Refresh 5s] |
-+============================================================================+
-|                                                                            |
-|  +--------------------------------------------------------------------+   |
-|  |                                                                    |   |
-|  |                    [WORLD MAP - ECharts Geo]                       |   |
-|  |                                                                    |   |
-|  |   [Regional clusters with health color coding]                    |   |
-|  |   [Pulsing markers for alerts]                                    |   |
-|  |                                                                    |   |
-|  +--------------------------------------------------------------------+   |
-|                                                                            |
-|  +------------+  +------------+  +------------+  +------------+           |
-|  | ONLINE     |  | ANOMALY    |  | 24H ALERTS |  | AVG LATENCY|           |
-|  | 94.2%      |  | 5.8%       |  | 23         |  | 45ms       |           |
-|  | ^ 2.1%     |  | v 1.2%     |  | [mini]     |  | v 3ms      |           |
-|  +------------+  +------------+  +------------+  +------------+           |
-|                                                                            |
-|  +---------------------------------------+  +-----------------------+     |
-|  | NODE LIST (Top 10 by anomaly)         |  | ALERT STREAM          |     |
-|  | ------------------------------------- |  | --------------------- |     |
-|  | [!] Singapore-3  | 85% loss | 2m ago  |  | [P0] Packet Loss 85%  |     |
-|  | [!] Tokyo-1      | 320ms    | 5m ago  |  | [P1] Latency 320ms    |     |
-|  | [w] London-Edge  | 45ms jit | 12m ago |  | [P2] Jitter 45ms      |     |
-|  | ...                                   |  | ...                   |     |
-|  +---------------------------------------+  +-----------------------+     |
-|                                                                            |
-+============================================================================+
-```
-
-### 4.2 Node Detail Page (Desktop)
+### 5.1 Global Dashboard (Desktop) - With Sidebar
 
 ```
 +============================================================================+
-|  [<] Node: Singapore-Primary              [ONLINE] [Live] [Export PDF]    |
+|                         HEADER (64px)                                      |
+|  [≡] NodePulse Dashboard      [UTC+8 ▼] [EN ▼] [🌙] [Admin ▼]            |
 +============================================================================+
-|                                                                            |
-|  +--------------------------------------------------------------------+   |
-|  | NODE INFO                                                          |   |
-|  | IP: 203.0.113.45 | Region: APAC-SG | ISP: AWS | Uptime: 45d       |   |
-|  | Tags: [prod] [edge] [primary] | Last Heartbeat: 30s ago            |   |
-|  +--------------------------------------------------------------------+   |
-|                                                                            |
-|  +------------------+  +------------------+  +------------------+          |
-|  | LATENCY          |  | PACKET LOSS      |  | JITTER           |          |
-|  |      45 ms       |  |      0.2 %       |  |      12 ms       |          |
-|  |   [Good]         |  |   [Good]         |  |   [Good]         |          |
-|  +------------------+  +------------------+  +------------------+          |
-|                                                                            |
-|  TREND CHARTS                                     [24h] [7d] [30d]         |
-|  +--------------------------------------------------------------------+   |
-|  |                                                                    |   |
-|  |  [ECharts - Latency with baseline overlay]                         |   |
-|  |                                                                    |   |
-|  +--------------------------------------------------------------------+   |
-|                                                                            |
-|  MTR PATH (8 hops)                                                         |
-|  +--------------------------------------------------------------------+   |
-|  | [1] 10.0.0.1 -----> [2] 203.0.113.1 -----> [3] ... -----> [8]      |   |
-|  |  2ms, 0%            5ms, 0%             12ms, 0%       92ms, 0%    |   |
-|  |                                                                    |   |
-|  |  [!] Hop 5: 8.8.8.8 - 85ms, 15% loss [CRITICAL]                    |   |
-|  +--------------------------------------------------------------------+   |
-|                                                                            |
-|  DIAGNOSIS                                                         [Expand]|
-|  +--------------------------------------------------------------------+   |
-|  | Root Cause: Cross-border link degradation (Singapore -> US)        |   |
-|  | Confidence: High (85%)                                             |   |
-|  | Recommendation: Contact carrier, consider route optimization       |   |
-|  +--------------------------------------------------------------------+   |
-|                                                                            |
-+============================================================================+
-```
-
-### 4.3 Alert Management Page
-
-```
-+============================================================================+
-|  ALERTS                         [Rules] [Records] [History]               |
-+============================================================================+
-|                                                                            |
-|  Filter: [All Levels v] [All Nodes v] [All Status v]    [Search...]       |
-|                                                                            |
-|  +--------------------------------------------------------------------+   |
-|  | LEVEL | NODE           | TYPE        | VALUE    | TIME    | STATUS |   |
-|  |-------|----------------|-------------|----------|---------|--------|   |
-|  | [P0]  | Singapore-3    | Packet Loss | 85%      | 2m ago  | New    |   |
-|  | [P0]  | Tokyo-Primary  | Latency     | 500ms    | 5m ago  | Progress|  |
-|  | [P1]  | London-Edge    | Jitter      | 45ms     | 12m ago | Done   |   |
-|  | [P1]  | Sydney-Backup  | Latency     | 280ms    | 1h ago  | Done   |   |
-|  | [P2]  | Frankfurt-1    | Packet Loss | 3%       | 2h ago  | Done   |   |
-|  +--------------------------------------------------------------------+   |
-|                                                                            |
-|  Showing 5 of 23 active alerts                           [< 1 2 3 ... >] |
-|                                                                            |
+|        |                                                                   |
+|  S     |  DASHBOARD                                                        |
+|  I     |  Real-time Network Overview        [Refresh] [Export PDF]         |
+|  D     |                                                                   |
+|  E     |  +------------------------------------------------------------+   |
+|  B     |  |                                                            |   |
+|  A     |  |              [WORLD MAP - ECharts Geo]                     |   |
+|  R     |  |                                                            |   |
+|        |  |   [APAC: 12 nodes]  [EMEA: 8 nodes]  [AMER: 5 nodes]      |   |
+|  ───   |  |   [●] healthy       [●] warning      [●] critical          |   |
+|  📊    |  |                                                            |   |
+|  Dash  |  +------------------------------------------------------------+   |
+|  ───   |                                                                   |
+|  🖥️    |  +----------+  +----------+  +----------+  +----------+          |
+|  Nodes |  | ONLINE   |  | ANOMALY  |  | ALERTS   |  | LATENCY  |          |
+|  ───   |  | 94.2%    |  | 5.8%     |  | 23       |  | 45ms     |          |
+|  🚨    |  +----------+  +----------+  +----------+  +----------+          |
+|  Alerts|                                                                   |
+|  ───   |  +-----------------------------------+  +-------------------+    |
+|  📈    |  | LATENCY TREND (24h)               |  | PACKET LOSS       |    |
+|  Rep   |  | [Chart with baseline overlay]     |  | [Area chart]      |    |
+|  ───   |  +-----------------------------------+  +-------------------+    |
+|  🔗    |                                                                   |
+|  Integ |  +-----------------------------------+  +-------------------+    |
+|  ───   |  | NODE HEALTH CARDS (2x3 grid)     |  | ALERT STREAM      |    |
+|  ⚙️    |  | [SG-1] [TK-1] [LD-1]              |  | [P0] SG-3 Loss    |    |
+|  Set   |  | [NY-1] [FR-1] [SY-1]              |  | [P1] TK-1 Latency |    |
+|        |  +-----------------------------------+  +-------------------+    |
+|        |                                                                   |
+|        |  +------------------------------------------------------------+   |
+|        |  | NODE LIST TABLE                          [View All →]     |   |
+|        |  | Name | Status | Region | Latency | Loss | Jitter | Actions|   |
+|        |  +------------------------------------------------------------+   |
+|        |                                                                   |
 +============================================================================+
 ```
 
-### 4.4 Mobile Emergency View (FR-4.3.13)
+### 5.2 Node Detail Page (Desktop)
+
+```
++============================================================================+
+|                         HEADER                                             |
++============================================================================+
+|        |                                                                   |
+|  S     |  [<] Nodes / Singapore-Primary                                    |
+|  I     |                                                                   |
+|  D     |  +------------------------------------------------------------+   |
+|  E     |  | NODE INFO                                                  |   |
+|  B     |  | IP: 203.0.113.45 | Region: APAC-SG | ISP: AWS | Uptime: 45d|   |
+|  A     |  | Tags: [prod] [edge] [primary] | Last Heartbeat: 30s ago    |   |
+|  R     |  +------------------------------------------------------------+   |
+|        |                                                                   |
+|  ───   |  +------------------+  +------------------+  +------------------+  |
+|  📊    |  | LATENCY          |  | PACKET LOSS      |  | JITTER           |  |
+|  Dash  |  |      45 ms       |  |      0.2 %       |  |      12 ms       |  |
+|  ───   |  |   [Good]         |  |   [Good]         |  |   [Good]         |  |
+|  🖥️    |  +------------------+  +------------------+  +------------------+  |
+|  Nodes |                                                                   |
+|  ●     |  TREND CHARTS                                     [24h] [7d] [30d] |
+|  ───   |  +------------------------------------------------------------+   |
+|  🚨    |  |                                                            |   |
+|  Alerts|  |  [ECharts - Latency with baseline overlay]                 |   |
+|  ───   |  |                                                            |   |
+|  📈    |  +------------------------------------------------------------+   |
+|  Rep   |                                                                   |
+|  ───   |  MTR PATH (8 hops)                                                 |
+|  🔗    |  +------------------------------------------------------------+   |
+|  Integ |  | [1] 10.0.0.1 -----> [2] 203.0.113.1 -----> [3] ... -----> [8]|   |
+|  ───   |  |  2ms, 0%            5ms, 0%             12ms, 0%       92ms  |   |
+|  ⚙️    |  |                                                            |   |
+|  Set   |  |  [!] Hop 5: 8.8.8.8 - 85ms, 15% loss [CRITICAL]            |   |
+|        |  +------------------------------------------------------------+   |
+|        |                                                                   |
+|        |  DIAGNOSIS                                                 [Expand]|
+|        |  +------------------------------------------------------------+   |
+|        |  | Root Cause: Cross-border link degradation (SG -> US)       |   |
+|        |  | Confidence: High (85%)                                     |   |
+|        |  | Recommendation: Contact carrier, consider route optimization|   |
+|        |  +------------------------------------------------------------+   |
+|        |                                                                   |
++============================================================================+
+```
+
+### 5.3 Mobile Layout (<768px)
 
 ```
 +============================+
-|  NODEPULSE          [Menu] |
+|  [≡] NodePulse      [🌙]   |
 +============================+
 |                            |
-|  ALERT: Singapore-3        |
-|  Packet Loss: 85%          |
-|  Started: 2 min ago        |
+|  DASHBOARD                 |
+|  [Refresh] [Export]        |
 |                            |
-|  [View Details]            |
-|                            |
-+----------------------------+
-|                            |
-|  MTR PATH                  |
 |  +------------------------+|
-|  | 1. Gateway    2ms     ||
-|  | 2. ISP        5ms     ||
-|  | 3. Regional   12ms    ||
-|  | ...                    ||
-|  | 6. 8.8.8.8   85ms     ||
-|  |    [CRITICAL - 15%]   ||
+|  |      WORLD MAP         ||
+|  |   (simplified view)    ||
 |  +------------------------+|
 |                            |
-|  Add Note:                 |
+|  +--------+  +--------+    |
+|  | ONLINE |  |ANOMALY |    |
+|  | 94.2%  |  | 5.8%   |    |
+|  +--------+  +--------+    |
+|                            |
+|  ALERT STREAM              |
 |  +------------------------+|
-|  | Contacted carrier...  ||
+|  | [P0] SG-3: Loss 85%   ||
+|  | [P1] TK-1: 320ms      ||
 |  +------------------------+|
 |                            |
-|  [Mark In Progress]        |
-|  [Resolve]                 |
+|  NODE LIST                 |
+|  +------------------------+|
+|  | SG-1 | ● | 45ms       ||
+|  | TK-1 | ⚠ | 180ms      ||
+|  | LD-1 | ● | 32ms       ||
+|  +------------------------+|
 |                            |
++============================+
+
+Sidebar (overlay when opened):
++============================+
+|  NodePulse            [✕]  |
++============================+
+|  📊 Dashboard              |
+|  🖥️ Nodes                  |
+|  🚨 Alerts          [5]    |
+|  📈 Reports                |
+|  🔗 Integrations           |
+|  ─────────────────────     |
+|  ⚙️ Settings               |
+|  [Logout]                  |
 +============================+
 ```
 
 ---
 
-## 5. Accessibility & i18n
+## 6. Component Architecture
 
-### 5.1 WCAG 2.1 AA Compliance
+### 6.1 Layout Components
+
+```
+frontend/src/components/layout/
+├── AppLayout.tsx           # Main layout wrapper with sidebar + header
+├── Sidebar.tsx             # Navigation sidebar (collapsible)
+├── SidebarItem.tsx         # Individual navigation item
+├── SidebarGroup.tsx        # Grouped navigation items
+├── Header.tsx              # Top header with user actions
+├── Breadcrumb.tsx          # Navigation breadcrumbs
+├── PageHeader.tsx          # Standardized page header
+└── index.ts
+```
+
+### 6.2 Dashboard Components
+
+```
+frontend/src/components/dashboard/
+├── WorldMap.tsx            # ✓ Health distribution map
+├── AlertStream.tsx         # NEW: Real-time alert feed
+├── MetricsSummaryCards.tsx # ✓ Dashboard summary stats
+├── NodeSummaryCard.tsx     # ✓ Individual node card
+├── NodeListTable.tsx       # ✓ Node list table
+├── TopAnomaliesList.tsx    # ✓ Top anomalies list
+├── TrendChart.tsx          # ✓ Time series chart
+├── MetricCard.tsx          # ✓ Single metric display
+├── HealthStatusBadge.tsx   # ✓ Status badge
+├── ProblemDiagnosis.tsx    # ✓ Root cause analysis
+└── index.ts
+```
+
+### 6.3 Common Components
+
+```
+frontend/src/components/common/
+├── ThemeToggle.tsx         # ✓ Dark/light mode toggle
+├── LanguageSwitcher.tsx    # ✓ EN/中文 switcher
+├── TimezoneSelector.tsx    # ✓ Timezone picker
+├── ProtectedRoute.tsx      # ✓ Auth route guard
+├── LoadingSpinner.tsx      # Loading indicator
+├── ErrorBoundary.tsx       # Error handling
+├── EmptyState.tsx          # Empty data display
+└── ConfirmDialog.tsx       # Confirmation modal
+```
+
+---
+
+## 7. Route Structure
+
+### 7.1 App.tsx Routes
+
+```typescript
+<Routes>
+  {/* Public */}
+  <Route path="/login" element={<LoginPage />} />
+
+  {/* Protected - Wrapped in AppLayout */}
+  <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+    {/* Dashboard */}
+    <Route path="/dashboard" element={<DashboardPage />} />
+    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+    {/* Nodes */}
+    <Route path="/nodes" element={<NodeManagementPage />} />
+    <Route path="/nodes/:id" element={<NodeDetailPage />} />
+    <Route path="/nodes/comparison" element={<NodeComparisonPage />} />
+
+    {/* Alerts */}
+    <Route path="/alerts" element={<Navigate to="rules" replace />} />
+    <Route path="/alerts/rules" element={<AlertRulesPage />} />
+    <Route path="/alerts/records" element={<AlertRecordsPage />} />
+    <Route path="/alerts/history" element={<AlertHistoryPage />} />
+
+    {/* Reports */}
+    <Route path="/reports" element={<ReportsPage />} />
+    <Route path="/reports/history" element={<ExportHistoryPage />} />
+
+    {/* Integrations */}
+    <Route path="/integrations" element={<Navigate to="webhooks" replace />} />
+    <Route path="/integrations/webhooks" element={<WebhooksPage />} />
+    <Route path="/integrations/health" element={<SystemHealthPage />} />
+
+    {/* Settings */}
+    <Route path="/settings" element={<Navigate to="preferences" replace />} />
+    <Route path="/settings/preferences" element={<PreferencesPage />} />
+    <Route path="/settings/sessions" element={<SessionsPage />} />
+    <Route
+      path="/settings/users"
+      element={
+        <ProtectedRoute requiredRole="admin">
+          <UsersPage />
+        </ProtectedRoute>
+      }
+    />
+  </Route>
+
+  {/* 404 */}
+  <Route path="*" element={<NotFoundPage />} />
+</Routes>
+```
+
+---
+
+## 8. Accessibility & i18n
+
+### 8.1 WCAG 2.1 AA Compliance
 
 | Requirement | Implementation |
 |-------------|----------------|
@@ -418,14 +665,14 @@ Source                                              Destination
 | **Chart Alternatives** | Collapsible data tables for all visualizations |
 | **Motion** | Respect `prefers-reduced-motion`; disable animations |
 
-### 5.2 Multi-Timezone Display (FR-4.3.14)
+### 8.2 Multi-Timezone Display (FR-4.3.14)
 
 **Display Pattern:**
 ```
 +-------------------------------------------------------+
-| Timestamp: 2026-02-17 10:30:00 SGT (UTC+8)           |
-|           = 2026-02-17 02:30:00 UTC                  |
-|           = 2026-02-16 21:30:00 EST (UTC-5)          |
+| Timestamp: 2026-02-22 10:30:00 SGT (UTC+8)           |
+|           = 2026-02-22 02:30:00 UTC                  |
+|           = 2026-02-21 21:30:00 EST (UTC-5)          |
 +-------------------------------------------------------+
 ```
 
@@ -440,7 +687,7 @@ interface TimezoneConfig {
 }
 ```
 
-### 5.3 Chinese/English Language Switching
+### 8.3 Chinese/English Language Switching
 
 **i18n Structure:**
 ```
@@ -455,6 +702,11 @@ frontend/src/
 **Key Translations:**
 | English | Chinese |
 |---------|---------|
+| Dashboard | 仪表盘 |
+| Nodes | 节点 |
+| Alerts | 告警 |
+| Reports | 报告 |
+| Settings | 设置 |
 | Healthy | 健康 |
 | Warning | 预警 |
 | Critical | 异常 |
@@ -462,81 +714,73 @@ frontend/src/
 
 ---
 
-## 6. Component Architecture
+## 9. Implementation Priority
 
-### 6.1 New Components Required
+### Phase 1: Foundation (Week 1)
+| Priority | Task | Effort |
+|----------|------|--------|
+| **P0** | Create AppLayout component | High |
+| **P0** | Create Sidebar component | High |
+| **P0** | Create Header component | Medium |
+| **P0** | Update App.tsx routes | Medium |
 
-```
-frontend/src/components/
-├── dashboard/
-│   ├── WorldMap.tsx           # Health distribution map
-│   ├── AlertStream.tsx        # Real-time alert feed
-│   ├── TopNodesList.tsx       # Top anomalies/delays
-│   └── MetricsPanel.tsx       # Dashboard summary
-├── nodes/
-│   ├── MTRVisualization.tsx   # Route path display
-│   ├── NodeStatusHeader.tsx   # Status + live indicator
-│   └── DiagnosticSummary.tsx  # Root cause analysis
-├── alerts/
-│   ├── AlertRuleEditor.tsx    # Policy configuration
-│   └── AlertTimeline.tsx      # Event history
-├── reports/
-│   ├── ReportGenerator.tsx    # PDF export UI
-│   └── ComparisonView.tsx     # Before/after analysis
-└── common/
-    ├── LanguageSwitcher.tsx
-    ├── TimezoneSelector.tsx
-    └── AccessibilityToggle.tsx
-```
+### Phase 2: Migration (Week 2)
+| Priority | Task | Effort |
+|----------|------|--------|
+| **P0** | Migrate DashboardPage to AppLayout | Medium |
+| **P0** | Integrate WorldMap into Dashboard | Medium |
+| **P0** | Migrate all pages to AppLayout | High |
+| **P1** | Create AlertStream component | Medium |
 
-### 6.2 Components to Enhance
+### Phase 3: Enhancement (Week 3)
+| Priority | Task | Effort |
+|----------|------|--------|
+| **P1** | Create PreferencesPage | Medium |
+| **P1** | Create UsersPage | Medium |
+| **P1** | Create SystemHealthPage | Medium |
+| **P2** | Mobile responsive optimization | High |
 
-| Component | Enhancement |
-|-----------|-------------|
-| `TrendChart.tsx` | Add multi-metric overlay, improved baseline visualization |
-| `MetricCard.tsx` | Add sparkline mini-charts, improved accessibility |
-| `HealthStatusBadge.tsx` | Add animation for state changes |
-| `DashboardPage.tsx` | Add world map, reorganize layout |
+### Phase 4: Polish (Week 4)
+| Priority | Task | Effort |
+|----------|------|--------|
+| **P2** | E2E test updates | High |
+| **P2** | Accessibility audit | Medium |
+| **P2** | Performance optimization | Medium |
+| **P3** | Animation polish | Low |
 
 ---
 
-## 7. Implementation Priority
+## 10. Summary
 
-| Priority | Component | FR Reference | Effort |
-|----------|-----------|--------------|--------|
-| **P0** | Health Distribution Map | FR-4.3.1 | High |
-| **P0** | Alert Stream Component | FR-4.3.3 | Medium |
-| **P0** | Enhanced Metric Cards | FR-4.3.2 | Low |
-| **P1** | MTR Path Visualization | FR-4.3.5 | High |
-| **P1** | Node Detail Page Enhancements | FR-4.3.4, FR-4.3.6 | Medium |
-| **P1** | Alert Rules Editor | FR-4.3.8 | Medium |
-| **P2** | PDF Report Export | FR-4.3.6, FR-4.3.11 | High |
-| **P2** | Mobile Responsive Layout | NFR-5.4.1 | Medium |
-| **P2** | Dark Mode | - | Medium |
-| **P3** | Performance Comparison | FR-4.3.12 | Medium |
-| **P3** | Timezone/Language Switcher | FR-4.3.14 | Low |
-
----
-
-## 8. Summary
-
-This UI/UX design document provides a comprehensive framework for implementing NodePulse's frontend based on the PRD requirements.
+This UI/UX design document provides a comprehensive framework for NodePulse's frontend with a focus on:
 
 ### Key Design Highlights
 
-1. **Aesthetic Direction:** Technical-industrial with JetBrains Mono for data display and Source Sans 3 for body text
+1. **Shared Layout Architecture**
+   - Single AppLayout component for all authenticated pages
+   - Collapsible sidebar navigation for scalability
+   - Consistent header with global actions
 
-2. **Color System:** Health-state colors (emerald/amber/red/gray) with clear semantic meaning and WCAG-compliant contrast
+2. **Dashboard Enhancement**
+   - WorldMap integration for geographic node visualization
+   - AlertStream for real-time monitoring
+   - Improved visual hierarchy with card-based layout
 
-3. **Component Architecture:** Build on existing React/TypeScript/Tailwind/ECharts foundation with enhanced accessibility
+3. **Color System**
+   - Health-state colors (emerald/amber/red/gray) with clear semantic meaning
+   - WCAG-compliant contrast ratios
+   - Dark mode as default (appropriate for monitoring systems)
 
-4. **Key Differentiators:**
+4. **Key Differentiators**
    - Interactive world map with real-time health visualization
    - MTR path diagram with risk highlighting
    - Multi-timezone collaboration support
    - Bilingual (Chinese/English) interface
 
-5. **Mobile-First for Alerts:** Emergency response flow optimized for mobile with essential MTR and action capabilities
+5. **Mobile-First for Alerts**
+   - Emergency response flow optimized for mobile
+   - Overlay sidebar for navigation
+   - Touch-friendly interactions
 
 ---
 
@@ -545,3 +789,4 @@ This UI/UX design document provides a comprehensive framework for implementing N
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-02-17 | Design Team | Initial UI/UX design document |
+| 2.0 | 2026-02-22 | Design Team | Comprehensive restructure: added shared layout, sidebar navigation, integrated WorldMap, reorganized routes |

@@ -1,4 +1,15 @@
 {
+  "nav": {
+    "dashboard": "Dashboard",
+    "nodes": "Nodes",
+    "alerts": "Alerts",
+    "reports": "Reports",
+    "integrations": "Integrations",
+    "settings": "Settings",
+    "collapse": "Collapse",
+    "expandSidebar": "Expand sidebar",
+    "collapseSidebar": "Collapse sidebar"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Error",
@@ -18,6 +29,7 @@
     "previous": "Previous",
     "submit": "Submit",
     "refresh": "Refresh",
+    "refreshing": "Refreshing...",
     "export": "Export",
     "import": "Import",
     "actions": "Actions",
@@ -259,6 +271,19 @@
     "noWebhooks": "No webhooks configured",
     "confirmDelete": "Are you sure you want to delete this webhook?"
   },
+  "integrations": {
+    "title": "Integrations",
+    "webhooks": "Webhooks",
+    "systemHealth": "System Health",
+    "systemHealthDescription": "Monitor the health status of system components and services.",
+    "lastRefresh": "Last refresh",
+    "allSystemsOperational": "All Systems Operational",
+    "someSystemsDegraded": "Some Systems Degraded",
+    "someSystemsDown": "Some Systems Down",
+    "responseTime": "Response Time",
+    "uptime": "Uptime",
+    "recentEvents": "Recent Events"
+  },
   "settings": {
     "title": "Settings",
     "general": "General",
@@ -266,8 +291,11 @@
     "notifications": "Notifications",
     "security": "Security",
     "language": "Language",
+    "languageDescription": "Select your preferred language for the interface.",
     "theme": "Theme",
+    "themeDescription": "Choose between light and dark mode for the interface.",
     "timezone": "Timezone",
+    "timezoneDescription": "Select your preferred timezone for displaying timestamps.",
     "lightMode": "Light Mode",
     "darkMode": "Dark Mode",
     "systemDefault": "System Default",
@@ -275,7 +303,27 @@
     "utc": "UTC",
     "local": "Local",
     "nodeLocal": "Node Local",
-    "multi": "Multi"
+    "multi": "Multi",
+    "preferences": "Preferences",
+    "preferencesDescription": "Customize your experience with timezone, language, and theme settings.",
+    "users": "Users",
+    "usersDescription": "Manage user accounts and permissions.",
+    "username": "Username",
+    "email": "Email",
+    "role": "Role",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "disabled": "Disabled",
+    "addUser": "Add User",
+    "editUser": "Edit User",
+    "deleteUser": "Delete User",
+    "confirmDeleteUser": "Are you sure you want to delete this user?",
+    "enable": "Enable",
+    "disable": "Disable",
+    "delete": "Delete",
+    "savePreferences": "Save Preferences",
+    "saved": "Settings saved successfully"
   },
   "auth": {
     "loginTitle": "Sign In",
@@ -297,7 +345,12 @@
     "validationError": "Please check your input and try again.",
     "permissionDenied": "Permission denied",
     "failedToLoad": "Failed to load data",
-    "loadHistoricalError": "Failed to load historical data. Please try again."
+    "loadHistoricalError": "Failed to load historical data. Please try again.",
+    "pageNotFound": "Page Not Found",
+    "pageNotFoundDescription": "The page you're looking for doesn't exist or has been moved.",
+    "backToDashboard": "Back to Dashboard",
+    "accessDenied": "Access Denied",
+    "adminOnly": "Only administrators can access this page."
   },
   "time": {
     "justNow": "Just now",

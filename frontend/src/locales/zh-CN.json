@@ -1,4 +1,15 @@
 {
+  "nav": {
+    "dashboard": "仪表盘",
+    "nodes": "节点",
+    "alerts": "告警",
+    "reports": "报告",
+    "integrations": "集成",
+    "settings": "设置",
+    "collapse": "收起",
+    "expandSidebar": "展开侧边栏",
+    "collapseSidebar": "收起侧边栏"
+  },
   "common": {
     "loading": "加载中...",
     "error": "错误",

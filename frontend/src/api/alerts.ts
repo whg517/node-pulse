@@ -26,15 +26,15 @@ export type {
 /**
  * Fetch all alert rules from the API
  *
- * @returns Array of all alert rules
+ * @returns Object containing alerts array
  * @throws AuthenticationError if user is not authenticated
  *
  * @example
  * const { data } = await fetchAlertRules()
- * data.forEach(rule => console.log(rule.metric, rule.threshold))
+ * data.alerts.forEach(rule => console.log(rule.metric, rule.threshold))
  */
-export async function fetchAlertRules(): Promise<{ data: AlertRuleDTO[] }> {
-  return apiClient<{ data: AlertRuleDTO[] }>('/api/v1/alerts/rules')
+export async function fetchAlertRules(): Promise<{ data: { alerts: AlertRuleDTO[] } }> {
+  return apiClient<{ data: { alerts: AlertRuleDTO[] } }>('/api/v1/alerts/rules')
 }
 
 /**

@@ -34,7 +34,8 @@ test.describe('Alert Rules Page', () => {
 
     const headerText = await adminPage.locator('table thead').textContent()
 
-    expect(headerText).toMatch(/name|rule/i)
+    // Check for actual column headers: Metric, Threshold, Level, Node, Status
+    expect(headerText).toMatch(/metric|threshold|level|node|status/i)
   })
 })
 

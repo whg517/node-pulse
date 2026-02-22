@@ -144,3 +144,4 @@ trace.zip
 *.crt
 secrets/
 .secrets/
+e2e/screenshots/

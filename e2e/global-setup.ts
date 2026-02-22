@@ -180,14 +180,29 @@ async function authenticateAndSaveState(
     // Submit form
     await page.click('button[type="submit"]')
 
+    // Wait a moment for the form submission to process
+    await page.waitForTimeout(1000)
+
+    // Take a screenshot for debugging
+    await page.screenshot({ path: `.auth/debug-${username}-after-submit.png`, fullPage: true })
+    console.log(`[Global Setup] Saved screenshot: .auth/debug-${username}-after-submit.png`)
+
+    // Log current URL for debugging
+    console.log(`[Global Setup] Current URL after submit: ${page.url()}`)
+
     // Wait for successful login - either dashboard URL or a dashboard element
     // React Router SPA navigation might not trigger URL change detection reliably
     try {
       // First try waiting for URL change
-      await page.waitForURL('**/dashboard**', { timeout: 10000 })
+      await page.waitForURL('**/dashboard**', { timeout: 15000 })
     } catch {
+      // Take another screenshot before fallback
+      await page.screenshot({ path: `.auth/debug-${username}-fallback.png`, fullPage: true })
+      console.log(`[Global Setup] URL wait failed, trying selector fallback. URL: ${page.url()}`)
+
       // Fallback: wait for dashboard content to appear (SPA navigation)
-      await page.waitForSelector('text=/Welcome|Dashboard|Nodes/i', { timeout: 5000 })
+      // Include "NodePulse" as it's always visible in the nav (static, no i18n)
+      await page.waitForSelector('text=/NodePulse|Welcome|Dashboard|Nodes/i', { timeout: 10000 })
     }
 
     // Save storage state (includes cookies and localStorage)

@@ -72,7 +72,7 @@ export const useNodesStore = create<NodesStore>((set) => ({
     try {
       const response = await fetchNodesApi()
 
-      const nodes: Node[] = response.data.map((node) => ({
+      const nodes: Node[] = (response.data.nodes || []).map((node) => ({
         id: node.id,
         name: node.name,
         ip: node.ip,

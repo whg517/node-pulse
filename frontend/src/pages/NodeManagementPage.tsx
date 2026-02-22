@@ -40,7 +40,8 @@ export default function NodeManagementPage() {
     setError(null)
     try {
       const response = await fetchNodes()
-      setNodes(response.data)
+      // API returns { data: { nodes: [...] } }, extract the nodes array
+      setNodes(response.data.nodes || [])
     } catch (err) {
       setError(err as Error)
       console.error('Failed to load nodes:', err)
