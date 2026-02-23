@@ -1,21 +1,24 @@
 # Node-Pulse E2E Tests
 
-End-to-end tests for the Node-Pulse monitoring system using Playwright.
+End-to-end tests for the Node-Pulse distributed network monitoring system.
 
-## Prerequisites
-
-- Node.js 20+
-- Docker Desktop (for test database)
-- Go 1.21+ (for backend)
-- PostgreSQL (via Docker)
-
-## Setup
-
-### 1. Start Test Database
+## Quick Start
 
 ```bash
-cd pulse
-docker-compose -f docker-compose.test.yml up -d
+# Install dependencies
+npm install
+
+# Install Playwright browsers
+npx playwright install
+
+# Run all tests
+npm test
+
+# Run smoke tests (fast feedback)
+npm run test:smoke
+
+# Run visual regression tests
+npm run test:visual
 ```
 
 ### 2. Start Backend Server
