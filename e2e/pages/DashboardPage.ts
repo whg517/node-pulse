@@ -1,78 +1,172 @@
 /**
  * Dashboard Page Object Model
+ *
+ * Handles dashboard viewing:
+ * - Metrics display
+ * - Nodes overview
+ * - Alerts/anomalies
+ * - Auto-refresh
  */
-import { Page, Locator } from '@playwright/test'
+import { Page, Locator, expect } from '@playwright/test'
+import { BasePage, PageSelectors, DEFAULT_SELECTORS } from './common/BasePage'
 
-export class DashboardPage {
-  readonly page: Page
+export interface DashboardSelectors extends PageSelectors {
+  metricsSection?: string
+  nodeList?: string
+  alertList?: string
+  logoutButton?: string
+  title?: string
+  autoRefreshIndicator?: string
+  welcomeMessage?: string
+}
+
+export const DEFAULT_DASHBOARD_SELECTORS: DashboardSelectors = {
+  ...DEFAULT_SELECTORS,
+  metricsSection: '[data-testid="metrics-section"], .grid:has(.metric-card)',
+  nodeList: '[data-testid="node-list"], table',
+  alertList: '[data-testid="alert-list"], .alert-list, text=/anomaly/i',
+  logoutButton: '[data-testid="logout-button"], button:has-text("Logout")',
+  title: '[data-testid="dashboard-title"], h1:has-text("Dashboard"), h2:has-text("Dashboard")',
+  autoRefreshIndicator: '[data-testid="auto-refresh"], text=/auto.*refresh/i, text=/refreshing/i',
+  welcomeMessage: '[data-testid="welcome-message"], text=/welcome/i',
+}
+
+export class DashboardPage extends BasePage {
   readonly metricsSection: Locator
   readonly nodeList: Locator
-  readonly emptyNodesState: Locator
   readonly alertList: Locator
   readonly logoutButton: Locator
   readonly title: Locator
   readonly autoRefreshIndicator: Locator
+  readonly welcomeMessage: Locator
 
-  constructor(page: Page) {
-    this.page = page
-    // Metrics cards are rendered in a grid
-    this.metricsSection = page.locator('.grid')
-    // Node list table (or empty state)
-    this.nodeList = page.locator('table')
-    // Empty state when no nodes
-    this.emptyNodesState = page.locator('text=/No nodes/i')
-    // Top anomalies list
-    this.alertList = page.locator('text=/anomaly/i, text=/alert/i')
-    // Navigation logout button
-    this.logoutButton = page.locator('button:has-text("Logout")')
-    // Page title
-    this.title = page.locator('h2:has-text("Dashboard")')
-    // Auto-refresh indicator
-    this.autoRefreshIndicator = page.locator('text=/auto.*refresh/i')
+  constructor(page: Page, selectors: DashboardSelectors = {}) {
+    super(page, selectors)
+    const mergedSelectors = { ...DEFAULT_DASHBOARD_SELECTORS, ...selectors }
+
+    this.metricsSection = page.locator(mergedSelectors.metricsSection!)
+    this.nodeList = page.locator(mergedSelectors.nodeList!)
+    this.alertList = page.locator(mergedSelectors.alertList!)
+    this.logoutButton = page.locator(mergedSelectors.logoutButton!)
+    this.title = page.locator(mergedSelectors.title!)
+    this.autoRefreshIndicator = page.locator(mergedSelectors.autoRefreshIndicator!)
+    this.welcomeMessage = page.locator(mergedSelectors.welcomeMessage!)
   }
 
-  async goto() {
-    await this.page.goto('/dashboard')
-    await this.page.waitForLoadState('networkidle')
+  /**
+   * Navigate to dashboard
+   */
+  async goto(): Promise<void> {
+    await super.goto('/dashboard')
+    await this.waitForReady()
   }
 
-  async expectMetricsVisible() {
-    // Wait for metrics cards (grid) to be visible
+  /**
+   * Expect metrics visible
+   */
+  async expectMetricsVisible(): Promise<void> {
     await this.metricsSection.first().waitFor({ state: 'visible', timeout: 10000 })
   }
 
-  async expectNodesVisible() {
-    // Wait for either table OR empty state message
-    // Use locator with or() for complex selector logic
+  /**
+   * Expect nodes visible
+   */
+  async expectNodesVisible(): Promise<void> {
     const table = this.page.locator('table')
     const emptyState = this.page.getByText('No nodes')
-
-    // Wait for either to be visible
     await table.or(emptyState).first().waitFor({ state: 'visible', timeout: 10000 })
   }
 
-  async clickLogout() {
+  /**
+   * Expect alerts list visible
+   */
+  async expectAlertsVisible(): Promise<void> {
+    await this.alertList.first().waitFor({ state: 'visible', timeout: 10000 })
+  }
+
+  /**
+   * Click logout button
+   */
+  async clickLogout(): Promise<void> {
     await this.logoutButton.click()
   }
 
-  async waitForAutoRefresh() {
-    // Wait for API call to complete (auto-refresh is every 5 seconds)
-    await this.page.waitForResponse(resp =>
-      resp.url().includes('/api/v1/data/metrics') || resp.url().includes('/api/v1/nodes'),
+  /**
+   * Wait for auto-refresh to complete
+   */
+  async waitForAutoRefresh(): Promise<void> {
+    await this.page.waitForResponse(
+      (resp) => resp.url().includes('/api/v1/data/metrics') || resp.url().includes('/api/v1/nodes'),
       { timeout: 10000 }
     )
   }
 
+  /**
+   * Get node count
+   */
   async getNodeCount(): Promise<number> {
-    // Check if empty state is shown
-    if (await this.emptyNodesState.isVisible()) {
+    if (await this.isEmptyStateVisible()) {
       return 0
     }
     const rows = this.nodeList.locator('tbody tr')
     return await rows.count()
   }
 
+  /**
+   * Check if dashboard has nodes
+   */
   async hasNodes(): Promise<boolean> {
-    return !(await this.emptyNodesState.isVisible())
+    return !(await this.isEmptyStateVisible())
+  }
+
+  /**
+   * Get metrics count
+   */
+  async getMetricsCount(): Promise<number> {
+    const metricCards = this.metricsSection.locator('[data-testid="metric-card"], .metric-card')
+    return await metricCards.count()
+  }
+
+  /**
+   * Get metric value by name
+   */
+  async getMetricValue(metricName: string): Promise<string | null> {
+    const metricCard = this.page.locator(`[data-testid="metric-${metricName}"], .metric-card:has-text("${metricName}")`)
+    if (await metricCard.count() > 0) {
+      const valueLocator = metricCard.locator('[data-testid="metric-value"], .metric-value')
+      if (await valueLocator.count() > 0) {
+        return await valueLocator.first().textContent()
+      }
+    }
+    return null
+  }
+
+  /**
+   * Expect dashboard title
+   */
+  async expectTitle(): Promise<void> {
+    await expect(this.title.first()).toBeVisible()
+  }
+
+  /**
+   * Expect welcome message
+   */
+  async expectWelcomeMessage(): Promise<void> {
+    await expect(this.welcomeMessage.first()).toBeVisible()
+  }
+
+  /**
+   * Check if auto-refresh indicator is visible
+   */
+  async isAutoRefreshIndicatorVisible(): Promise<boolean> {
+    return await this.autoRefreshIndicator.first().isVisible().catch(() => false)
+  }
+
+  /**
+   * Logout and wait for redirect
+   */
+  async logoutAndWait(): Promise<void> {
+    await this.clickLogout()
+    await this.page.waitForURL('**/login**', { timeout: 10000 })
   }
 }

@@ -8,6 +8,8 @@
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
+    "test:visual": "playwright test tests/visual",
+    "test:visual:update": "playwright test tests/visual --update-snapshots",
     "report": "playwright show-report",
     "test:auth": "playwright test tests/auth",
     "test:rbac": "playwright test tests/rbac",

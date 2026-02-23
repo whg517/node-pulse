@@ -25,6 +25,10 @@ export default defineConfig({
   timeout: 45000, // Increased from 30000 for slower environments
   expect: {
     timeout: 10000,
+    toHaveScreenshot: {
+      maxDiffPixels: 100,
+      threshold: 0.2,
+    },
   },
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
@@ -43,6 +47,19 @@ export default defineConfig({
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+    },
+
+    // Visual regression tests
+    {
+      name: 'chromium-visual',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: '**/tests/visual/**/*.spec.ts',
+      expect: {
+        toHaveScreenshot: {
+          maxDiffPixels: 100,
+          threshold: 0.2,
+        },
+      },
     },
   ],
   // Global setup for database seeding
