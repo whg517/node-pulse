@@ -49,7 +49,19 @@ export default defineConfig({
       use: { ...devices['Desktop Chrome'] },
     },
 
-    // Visual regression tests
+    // Firefox tests - cross-browser compatibility
+    {
+      name: 'firefox',
+      use: { ...devices['Desktop Firefox'] },
+    },
+
+    // WebKit (Safari) tests - cross-browser compatibility
+    {
+      name: 'webkit',
+      use: { ...devices['Desktop Safari'] },
+    },
+
+    // Visual regression tests (Chromium only for consistency)
     {
       name: 'chromium-visual',
       use: { ...devices['Desktop Chrome'] },
