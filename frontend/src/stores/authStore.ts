@@ -140,43 +140,27 @@ export const useAuthStore = create<AuthStore>((set) => ({
     set({ isLoading: true })
     try {
       const response = await apiGetMe()
-
       const user: User = {
         id: response.data.user_id,
         username: response.data.username,
         role: response.data.role,
       }
 
-      const currentState = useAuthStore.getState()
-      
       set({
         user,
         isAuthenticated: true,
         role: response.data.role,
         isLoading: false,
-        accessToken: currentState.accessToken,
-        tokenExpiresAt: currentState.tokenExpiresAt,
       })
     } catch (error) {
-      // Session is invalid or expired
-      // Only clear auth if we were loading from previous state
-      const currentState = useAuthStore.getState()
-      if (currentState.isAuthenticated) {
-        set({
-          isLoading: false,
-        })
-      } else {
-        set({
-          user: null,
-          isAuthenticated: false,
-          role: null,
-          accessToken: null,
-          tokenExpiresAt: null,
-           isLoading: false,
-         })
-       }
-     }
-   },
+      // Session validation failed - DO NOT clear auth state
+      // Tokens may still be valid in memory, let 401 interceptor handle refresh
+      // Only set isLoading to false to unblock ProtectedRoute
+      set({
+        isLoading: false,
+      })
+    }
+  },
 }))
 
 // ============== Cross-Tab Logout Sync ==============

@@ -133,7 +133,7 @@ export function NodeTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-wrap gap-1">
-                    {node.tags.length > 0 ? (
+                    {Array.isArray(node.tags) && node.tags.length > 0 ? (
                       node.tags.map((tag, index) => (
                         <span
                           key={index}
@@ -180,7 +180,7 @@ export function NodeTable({
 /**
  * Node status badge component
  */
-function NodeStatusBadge({ status }: { status: NodeDTO['status'] }) {
+function NodeStatusBadge({ status }: { status?: NodeDTO['status'] }) {
   const statusConfig = {
     online: {
       bgColor: 'bg-green-100',
@@ -199,7 +199,17 @@ function NodeStatusBadge({ status }: { status: NodeDTO['status'] }) {
     },
   }
 
-  const config = statusConfig[status]
+  const config = status ? statusConfig[status] : undefined
+
+  // Handle unknown or missing status
+  if (!config) {
+    return (
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-500 mr-1.5" aria-hidden="true" />
+        {status || 'unknown'}
+      </span>
+    )
+  }
 
   return (
     <span

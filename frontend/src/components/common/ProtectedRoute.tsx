@@ -36,12 +36,14 @@ function clearRedirectCount(): void {
 
 /**
  * Error Boundary for catching crashes in protected routes
+ * Shows error UI on component crash - does NOT logout user
+ * Component errors should not affect authentication state
  */
 class AuthErrorBoundary extends Component<
-  { children: React.ReactNode; onLogout: () => void },
+  { children: React.ReactNode },
   { hasError: boolean }
 > {
-  constructor(props: { children: React.ReactNode; onLogout: () => void }) {
+  constructor(props: { children: React.ReactNode }) {
     super(props)
     this.state = { hasError: false }
   }
@@ -51,17 +53,26 @@ class AuthErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('[ProtectedRoute] Error caught by boundary:', error, errorInfo)
-    // Clear auth state - this is the proper place for side effects
-    this.props.onLogout()
+    console.error('[ProtectedRoute] Component error caught by boundary:', error, errorInfo)
+    // DO NOT clear auth state - component errors are not auth errors
+    // Let the error UI handle recovery
   }
 
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
-          <div className="text-center">
-            <p className="text-gray-600">Something went wrong. Redirecting to login...</p>
+          <div className="text-center max-w-md px-4">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-4">
+              <p className="text-sm font-medium">Something went wrong</p>
+              <p className="text-sm mt-1">The page encountered an error. You can try refreshing.</p>
+            </div>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Refresh Page
+            </button>
           </div>
         </div>
       )
@@ -146,7 +157,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   clearRedirectCount()
 
   return (
-    <AuthErrorBoundary onLogout={clearAuth}>
+    <AuthErrorBoundary>
       {children as ReactNode}
     </AuthErrorBoundary>
   )
