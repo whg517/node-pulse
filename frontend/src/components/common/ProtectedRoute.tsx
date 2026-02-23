@@ -1,4 +1,4 @@
-import { Component, type ReactNode, useMemo } from 'react'
+import { Component, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
 
@@ -9,6 +9,30 @@ interface ProtectedRouteProps {
 // Track redirect count for loop protection
 const REDIRECT_COUNT_KEY = 'auth:redirect_count'
 const MAX_REDIRECTS = 3
+
+/**
+ * Check if redirect should be allowed
+ * Returns true if redirect count is below threshold
+ */
+function checkRedirectCount(): boolean {
+  const redirectCount = parseInt(sessionStorage.getItem(REDIRECT_COUNT_KEY) || '0', 10)
+  return redirectCount < MAX_REDIRECTS
+}
+
+/**
+ * Increment redirect count in sessionStorage
+ */
+function incrementRedirectCount(): void {
+  const redirectCount = parseInt(sessionStorage.getItem(REDIRECT_COUNT_KEY) || '0', 10)
+  sessionStorage.setItem(REDIRECT_COUNT_KEY, String(redirectCount + 1))
+}
+
+/**
+ * Clear redirect count
+ */
+function clearRedirectCount(): void {
+  sessionStorage.removeItem(REDIRECT_COUNT_KEY)
+}
 
 /**
  * Error Boundary for catching crashes in protected routes
@@ -64,16 +88,10 @@ class AuthErrorBoundary extends Component<
  */
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   const location = useLocation()
-  const { isAuthenticated, tokenExpiresAt, isLoading, clearAuth } = useAuthStore()
-
-  // Check if token exists and is not expired
-  // MUST be called before any early returns to comply with Rules of Hooks
-  const isValid = useMemo(() => {
-    return tokenExpiresAt !== null && tokenExpiresAt > Date.now()
-  }, [tokenExpiresAt])
+  const { isAuthenticated, isLoading, clearAuth } = useAuthStore()
 
   // Show loading indicator while session is being restored
-  // Prevents content flash
+  // Prevents content flash and premature redirects
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -89,13 +107,11 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
     )
   }
 
-  if (!isAuthenticated || !isValid) {
-    // Redirect loop protection
-    const redirectCount = parseInt(sessionStorage.getItem(REDIRECT_COUNT_KEY) || '0', 10)
-
-    if (redirectCount >= MAX_REDIRECTS) {
-      // Clear the counter and force logout
-      sessionStorage.removeItem(REDIRECT_COUNT_KEY)
+  // Only check authentication after loading is complete
+  if (!isAuthenticated) {
+    // Check if we've exceeded redirect count (what was happening before)
+    if (!checkRedirectCount()) {
+      clearRedirectCount()
       clearAuth()
 
       return (
@@ -118,15 +134,16 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       )
     }
 
-    // Increment redirect counter
-    sessionStorage.setItem(REDIRECT_COUNT_KEY, String(redirectCount + 1))
+    incrementRedirectCount()
 
-    // Store the original location for post-login redirect
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
+  // User is authenticated, allow access
+  // Token validation happens server-side via 401 interceptor
+
   // Clear redirect counter on successful auth
-  sessionStorage.removeItem(REDIRECT_COUNT_KEY)
+  clearRedirectCount()
 
   return (
     <AuthErrorBoundary onLogout={clearAuth}>

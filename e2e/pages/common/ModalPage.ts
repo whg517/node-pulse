@@ -42,7 +42,7 @@ export abstract class ModalPage extends BasePage {
   readonly submitButton: Locator
   readonly confirmButton: Locator
   readonly overlay: Locator
-  protected declare selectors: ModalSelectors
+  protected selectors!: ModalSelectors
 
   constructor(page: Page, selectors: ModalSelectors = {}) {
     super(page, selectors)

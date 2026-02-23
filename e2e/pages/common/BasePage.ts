@@ -47,7 +47,7 @@ export abstract class BasePage {
    * Navigate to page path
    */
   async goto(path: string): Promise<void> {
-    await this.page.goto(path)
+    await this.page.goto(path, { waitUntil: 'networkidle' })
     await this.page.waitForLoadState('domcontentloaded')
   }
 

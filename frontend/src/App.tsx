@@ -42,10 +42,11 @@ function ProtectedLayout() {
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession)
 
-  // Restore session on app startup
+  // Restore session on app startup only once (not on every isAuthenticated change)
   useEffect(() => {
     restoreSession()
-  }, [restoreSession])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Setup cross-tab logout sync and visibility handler
   useEffect(() => {

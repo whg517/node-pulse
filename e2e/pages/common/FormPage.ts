@@ -40,7 +40,7 @@ export abstract class FormPage extends ModalPage {
   readonly cancelButton: Locator
   readonly resetButton: Locator
   readonly errorSummary: Locator
-  protected declare selectors: FormSelectors
+  protected selectors!: FormSelectors
 
   constructor(page: Page, selectors: FormSelectors = {}) {
     super(page, selectors)

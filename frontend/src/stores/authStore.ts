@@ -147,24 +147,36 @@ export const useAuthStore = create<AuthStore>((set) => ({
         role: response.data.role,
       }
 
+      const currentState = useAuthStore.getState()
+      
       set({
         user,
         isAuthenticated: true,
         role: response.data.role,
         isLoading: false,
+        accessToken: currentState.accessToken,
+        tokenExpiresAt: currentState.tokenExpiresAt,
       })
     } catch (error) {
       // Session is invalid or expired
-      set({
-        user: null,
-        isAuthenticated: false,
-        role: null,
-        accessToken: null,
-        tokenExpiresAt: null,
-        isLoading: false,
-      })
-    }
-  },
+      // Only clear auth if we were loading from previous state
+      const currentState = useAuthStore.getState()
+      if (currentState.isAuthenticated) {
+        set({
+          isLoading: false,
+        })
+      } else {
+        set({
+          user: null,
+          isAuthenticated: false,
+          role: null,
+          accessToken: null,
+          tokenExpiresAt: null,
+           isLoading: false,
+         })
+       }
+     }
+   },
 }))
 
 // ============== Cross-Tab Logout Sync ==============
@@ -243,15 +255,15 @@ export function setupVisibilityHandler(): () => void {
           } catch (error) {
             console.warn('[AuthStore] Session restoration failed on tab focus:', error)
           }
-        }
-      }
-    }
-  }
+         }
+       }
+     }
+   }
 
-  document.addEventListener('visibilitychange', handleVisibilityChange)
+   document.addEventListener('visibilitychange', handleVisibilityChange)
 
-  // Return cleanup function
-  return () => {
-    document.removeEventListener('visibilitychange', handleVisibilityChange)
-  }
+   // Return cleanup function
+   return () => {
+     document.removeEventListener('visibilitychange', handleVisibilityChange)
+   }
 }

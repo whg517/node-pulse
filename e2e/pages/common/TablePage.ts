@@ -47,7 +47,7 @@ export abstract class TablePage extends BasePage {
   readonly editButtons: Locator
   readonly deleteButtons: Locator
   readonly checkboxes: Locator
-  protected declare selectors: TableSelectors
+  protected selectors!: TableSelectors
 
   constructor(page: Page, selectors: TableSelectors = {}) {
     super(page, selectors)
