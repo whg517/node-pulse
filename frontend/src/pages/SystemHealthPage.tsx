@@ -19,7 +19,8 @@ interface HealthStatus {
   message?: string
 }
 
-// Mock health data
+// TODO: Replace mock data with real API calls to /api/v1/health/services
+// Mock health data (placeholder until backend API is implemented)
 const mockHealthData: HealthStatus[] = [
   {
     name: 'API Server',

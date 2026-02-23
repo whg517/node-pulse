@@ -217,7 +217,11 @@
     "noAlertHistory": "No alert history available for this node",
     "alertTime": "Time",
     "alertType": "Type",
-    "alertValue": "Value"
+    "alertValue": "Value",
+    "activeAlerts": "Active Alerts",
+    "noActiveAlerts": "No active alerts",
+    "allSystemsNormal": "All systems are operating normally",
+    "viewAllAlerts": "View all alerts"
   },
   "reports": {
     "title": "Reports",

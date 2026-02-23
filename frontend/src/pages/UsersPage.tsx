@@ -21,7 +21,8 @@ interface User {
   lastLogin?: string
 }
 
-// Mock users for demonstration
+// TODO: Replace mock data with real API calls to /api/v1/users
+// Mock users for demonstration (placeholder until user management API is implemented)
 const mockUsers: User[] = [
   {
     id: '1',
@@ -97,7 +98,9 @@ export default function UsersPage() {
   }
 
   const handleDelete = (userId: string) => {
-    if (confirm(t('settings.confirmDeleteUser'))) {
+    // TODO: Replace with a proper modal dialog component for better UX
+    // Using native confirm as a temporary solution
+    if (window.confirm(t('settings.confirmDeleteUser'))) {
       setUsers((prev) => prev.filter((u) => u.id !== userId))
     }
   }

@@ -18,12 +18,13 @@ const TEST_DB_URL = process.env.TEST_DB_URL || 'postgresql://testuser:testpass12
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:6532'
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173'
 
-// Test user credentials (using default admin for now)
+// Test user credentials - use environment variables for security
+// Falls back to defaults only for local development
 const TEST_USERS = {
   admin: {
-    username: 'admin',
-    password: 'Admin123',
-    role: 'admin',
+    username: process.env.TEST_ADMIN_USER || 'admin',
+    password: process.env.TEST_ADMIN_PASS || 'Admin123',
+    role: 'admin' as const,
   },
 }
 

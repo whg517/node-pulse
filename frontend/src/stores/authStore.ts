@@ -192,7 +192,9 @@ function broadcastLogout(): void {
 export function setupCrossTabLogoutSync(): () => void {
   const handleStorageEvent = (event: StorageEvent) => {
     if (event.key === LOGOUT_EVENT_KEY && event.newValue === LOGOUT_EVENT_VALUE) {
-      console.log('[AuthStore] Received logout event from another tab')
+      if (import.meta.env.DEV) {
+        console.log('[AuthStore] Received logout event from another tab')
+      }
 
       // Cancel any pending requests
       cancelPendingRequests()
@@ -233,7 +235,9 @@ export function setupVisibilityHandler(): () => void {
 
         // If token is expired, try to restore session
         if (now >= tokenExpiresAt) {
-          console.log('[AuthStore] Token expired on tab focus, restoring session...')
+          if (import.meta.env.DEV) {
+            console.log('[AuthStore] Token expired on tab focus, restoring session...')
+          }
           try {
             await useAuthStore.getState().restoreSession()
           } catch (error) {

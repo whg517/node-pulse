@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { memo, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAlertsStore } from '../../stores/alertsStore'
 import { useTheme } from '../../hooks/useTheme'
 import { memoCompare } from '../../utils/deepEqual'
@@ -64,8 +65,9 @@ function getLevelBadgeStyles(level: AlertLevel, isDark: boolean): string {
 
 /**
  * Format relative time (e.g., "2 minutes ago")
+ * Uses i18n for localization
  */
-function formatTimeAgo(timestamp: string): string {
+function formatTimeAgo(timestamp: string, t: (key: string, options?: Record<string, unknown>) => string): string {
   const date = new Date(timestamp)
   const now = new Date()
   const diffMs = now.getTime() - date.getTime()
@@ -73,10 +75,10 @@ function formatTimeAgo(timestamp: string): string {
   const diffHours = Math.floor(diffMs / 3600000)
   const diffDays = Math.floor(diffMs / 86400000)
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  return `${diffDays}d ago`
+  if (diffMins < 1) return t('time.justNow')
+  if (diffMins < 60) return t('time.minutesAgo', { count: diffMins })
+  if (diffHours < 24) return t('time.hoursAgo', { count: diffHours })
+  return t('time.daysAgo', { count: diffDays })
 }
 
 /**
@@ -110,6 +112,7 @@ export const AlertStream = memo(function AlertStream({
   isLoading = false,
 }: AlertStreamProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
   const { isDark } = useTheme()
   const alertRecords = useAlertsStore((state) => state.alertRecords)
 
@@ -169,7 +172,7 @@ export const AlertStream = memo(function AlertStream({
           <h3
             className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
-            Active Alerts
+            {t('alerts.activeAlerts')}
           </h3>
         </div>
         <div className="text-center py-8">
@@ -190,12 +193,12 @@ export const AlertStream = memo(function AlertStream({
           <p
             className={`mt-2 text-sm font-medium ${isDark ? 'text-gray-300' : 'text-gray-900'}`}
           >
-            No active alerts
+            {t('alerts.noActiveAlerts')}
           </p>
           <p
             className={`mt-1 text-xs ${isDark ? 'text-gray-500' : 'text-gray-500'}`}
           >
-            All systems are operating normally
+            {t('alerts.allSystemsNormal')}
           </p>
         </div>
       </div>
@@ -216,7 +219,7 @@ export const AlertStream = memo(function AlertStream({
           <h3
             className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
           >
-            Active Alerts
+            {t('alerts.activeAlerts')}
           </h3>
           <span
             className={`px-2 py-0.5 text-xs font-medium rounded-full ${
@@ -281,7 +284,7 @@ export const AlertStream = memo(function AlertStream({
                     isDark ? 'text-gray-500' : 'text-gray-400'
                   }`}
                 >
-                  {formatTimeAgo(alert.timestamp)}
+                  {formatTimeAgo(alert.timestamp, t)}
                 </span>
               </div>
             </li>
@@ -301,7 +304,7 @@ export const AlertStream = memo(function AlertStream({
             isDark ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-700'
           }`}
         >
-          View all alerts
+          {t('alerts.viewAllAlerts')}
         </button>
       </div>
     </div>

@@ -140,7 +140,9 @@ async function makeRequest<T>(
     if (timeUntilExpiry <= PRE_CHECK_THRESHOLD_MS && timeUntilExpiry > 0 && !preCheckMutex) {
       preCheckMutex = true
       try {
+        if (import.meta.env.DEV) {
         console.log('[apiClient] Token expiring soon, proactive refresh...')
+      }
         await performRefresh()
       } catch (error) {
         // Log but continue - the 401 interceptor will handle it
@@ -266,7 +268,9 @@ async function performRefresh(): Promise<string> {
     // Reset consecutive failures on success
     consecutiveRefreshFailures = 0
 
-    console.log(`[apiClient] Token refreshed successfully, expires at ${new Date(expiry).toISOString()}`)
+    if (import.meta.env.DEV) {
+      console.log(`[apiClient] Token refreshed successfully, expires at ${new Date(expiry).toISOString()}`)
+    }
 
     return data.data.access_token
   } catch (error) {
@@ -291,7 +295,9 @@ export function cancelPendingRequests(): void {
     controller.abort()
   })
   pendingRequests.clear()
-  console.log('[apiClient] Cancelled all pending requests')
+  if (import.meta.env.DEV) {
+    console.log('[apiClient] Cancelled all pending requests')
+  }
 }
 
 /**
