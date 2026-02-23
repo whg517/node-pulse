@@ -18,5 +18,3 @@ export type { HeaderProps } from './Header'
 
 export { Breadcrumb } from './Breadcrumb'
 
-export { PageHeader } from './PageHeader'
-export type { PageHeaderProps } from './PageHeader'

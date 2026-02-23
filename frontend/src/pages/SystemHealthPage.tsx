@@ -8,8 +8,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../hooks/useTheme'
-import { PageHeader } from '../components/layout'
-
 interface HealthStatus {
   name: string
   status: 'healthy' | 'degraded' | 'down'
@@ -134,25 +132,29 @@ export default function SystemHealthPage() {
 
   return (
     <div className="max-w-6xl mx-auto">
-      <PageHeader
-        title={t('integrations.systemHealth')}
-        subtitle={t('integrations.systemHealthDescription')}
-        actions={
-          <div className="flex items-center gap-3">
-            <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-              {t('integrations.lastRefresh')}: {lastRefresh.toLocaleTimeString()}
-            </span>
-            <button
-              type="button"
-              onClick={handleRefresh}
-              disabled={isLoading}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors"
-            >
-              {isLoading ? t('common.refreshing') : t('common.refresh')}
-            </button>
-          </div>
-        }
-      />
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {t('integrations.systemHealth')}
+          </h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            {t('integrations.systemHealthDescription')}
+          </p>
+        </div>
+        <div className="flex flex-shrink-0 items-center gap-3">
+          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+            {t('integrations.lastRefresh')}: {lastRefresh.toLocaleTimeString()}
+          </span>
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors"
+          >
+            {isLoading ? t('common.refreshing') : t('common.refresh')}
+          </button>
+        </div>
+      </div>
 
       {/* Overall Status */}
       <div className={`mb-6 p-4 rounded-lg border ${getStatusStyles(overallStatus).bg} border-current`}>

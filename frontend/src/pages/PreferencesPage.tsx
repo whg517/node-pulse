@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../hooks/useTheme'
-import { PageHeader } from '../components/layout'
+
 import { TimezoneSelector } from '../components/common/TimezoneSelector'
 import { LanguageSwitcher } from '../components/common/LanguageSwitcher'
 import { ThemeToggle } from '../components/common/ThemeToggle'
@@ -27,10 +27,14 @@ export default function PreferencesPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <PageHeader
-        title={t('settings.preferences')}
-        subtitle={t('settings.preferencesDescription')}
-      />
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {t('settings.preferences')}
+        </h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+          {t('settings.preferencesDescription')}
+        </p>
+      </div>
 
       <div className={`rounded-lg border shadow-sm ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
         {/* Timezone Setting */}

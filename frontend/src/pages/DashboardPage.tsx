@@ -47,20 +47,9 @@ function generateTrendData(baseValue: number, variance: number, points: number =
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { user, logout: storeLogout, clearAuth } = useAuthStore()
   const { nodes, metrics, isLoading, error, refetch } = useDashboardData()
   const { stats, sortedByAnomaly } = useDashboard(nodes, metrics)
   const { isDark } = useTheme()
-
-  const handleLogout = async () => {
-    try {
-      await storeLogout()
-      clearAuth()
-      navigate('/login')
-    } catch (err) {
-      console.error('Logout failed:', err)
-    }
-  }
 
   const latencyTrendData = generateTrendData(stats.averageLatency, 20)
   const packetLossTrendData = generateTrendData(stats.averagePacketLoss, 2)
@@ -70,34 +59,6 @@ export default function DashboardPage() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-slate-900' : 'bg-gray-50'}`}>
-      {/* Navigation */}
-      <nav className={`${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'} border-b shadow-sm`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className={`text-xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                NodePulse
-              </h1>
-              <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${isDark ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-800'}`}>
-                {t('nodes.live')}
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-                {t('common.welcome')}, {user?.username || 'Guest'}
-              </span>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150"
-              >
-                {t('common.logout')}
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
