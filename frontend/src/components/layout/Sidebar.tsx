@@ -106,13 +106,13 @@ export function Sidebar({ isCollapsed, isOpen, onToggle, alertCount = 0 }: Sideb
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-slate-800 transition-all duration-300 ease-in-out
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-gray-900 transition-all duration-300 ease-in-out
           ${isCollapsed ? 'w-16' : 'w-64'}
           ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className={`flex h-16 items-center border-b border-slate-700 ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
+        <div className={`flex h-16 items-center border-b border-gray-200 dark:border-gray-700 ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500">
               <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -120,7 +120,7 @@ export function Sidebar({ isCollapsed, isOpen, onToggle, alertCount = 0 }: Sideb
               </svg>
             </div>
             {!isCollapsed && (
-              <span className="text-lg font-bold text-white">NodePulse</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">NodePulse</span>
             )}
           </div>
         </div>
@@ -143,12 +143,12 @@ export function Sidebar({ isCollapsed, isOpen, onToggle, alertCount = 0 }: Sideb
         </nav>
 
         {/* Collapse toggle (desktop only) */}
-        <div className="hidden border-t border-slate-700 p-3 md:block">
+        <div className="hidden border-t border-gray-200 dark:border-gray-700 p-3 md:block">
           <button
             type="button"
             onClick={onToggle}
-            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-300
-              hover:bg-slate-700 hover:text-white transition-colors duration-200
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300
+              hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors duration-200
               ${isCollapsed ? 'justify-center px-2' : ''}`}
             title={isCollapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')}
           >
