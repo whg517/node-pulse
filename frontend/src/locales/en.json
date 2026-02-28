@@ -195,7 +195,11 @@
     "medium": "Medium",
     "low": "Low",
     "noProblem": "No issues detected",
-    "diagnosisNote": "Note: Current diagnosis uses client-side analysis of node metrics. A more advanced diagnosis engine will provide cross-node comparison, historical pattern analysis, and routing path detection for more accurate problem localization."
+    "diagnosisNote": "Note: Current diagnosis uses client-side analysis of node metrics. A more advanced diagnosis engine will provide cross-node comparison, historical pattern analysis, and routing path detection for more accurate problem localization.",
+    "management": "Node Management",
+    "managementDescription": "Manage monitoring nodes. Add, edit, or remove nodes from your monitoring infrastructure.",
+    "deleteTitle": "Delete Node",
+    "deleteMessage": "Are you sure you want to delete this node? This action cannot be undone."
   },
   "alerts": {
     "title": "Alerts",
@@ -221,7 +225,11 @@
     "activeAlerts": "Active Alerts",
     "noActiveAlerts": "No active alerts",
     "allSystemsNormal": "All systems are operating normally",
-    "viewAllAlerts": "View all alerts"
+    "viewAllAlerts": "View all alerts",
+    "rulesTitle": "Alert Rules",
+    "rulesDescription": "Configure alert thresholds and levels for network monitoring",
+    "deleteTitle": "Delete Alert Rule",
+    "deleteMessage": "Are you sure you want to delete this alert rule? This action cannot be undone."
   },
   "reports": {
     "title": "Reports",
@@ -273,7 +281,12 @@
     "status": "Status",
     "testWebhook": "Test Webhook",
     "noWebhooks": "No webhooks configured",
-    "confirmDelete": "Are you sure you want to delete this webhook?"
+    "confirmDelete": "Are you sure you want to delete this webhook?",
+    "description": "Configure webhook endpoints for alert notifications. All webhooks must use HTTPS for security.",
+    "adminOnly": "Admin-only access",
+    "adminOnlyDescription": "Webhook configuration is restricted to administrators. Contact your admin to make changes.",
+    "deleteTitle": "Delete Webhook",
+    "deleteMessage": "Are you sure you want to delete this webhook? Alert notifications will no longer be sent to this endpoint."
   },
   "integrations": {
     "title": "Integrations",

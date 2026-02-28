@@ -73,14 +73,14 @@ export function ProbeSuccessGauge({
           },
           progress: {
             show: true,
-            width: 20,
+            width: 18,
           },
           pointer: {
             show: false,
           },
           axisLine: {
             lineStyle: {
-              width: 20,
+              width: 18,
               color: isDark
                 ? [[1, '#374151']]
                 : [[1, '#e5e7eb']],
@@ -100,18 +100,18 @@ export function ProbeSuccessGauge({
           },
           title: {
             show: true,
-            offsetCenter: [0, '70%'],
-            fontSize: 14,
+            offsetCenter: [0, '35%'],
+            fontSize: 12,
             color: textColor,
             formatter: t('dashboard.probeSuccessRate'),
           },
           detail: {
             valueAnimation: true,
             width: '60%',
-            lineHeight: 40,
+            lineHeight: 32,
             borderRadius: 8,
-            offsetCenter: [0, '-10%'],
-            fontSize: 36,
+            offsetCenter: [0, '20%'],
+            fontSize: 28,
             fontWeight: 'bold',
             formatter: `{value}${t('units.percent')}`,
             color,

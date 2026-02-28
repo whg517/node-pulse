@@ -7,7 +7,6 @@
 
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore } from '../stores/authStore'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { useDashboard } from '../hooks/useDashboard'
 import { useTheme } from '../hooks/useTheme'
@@ -155,154 +154,173 @@ export default function DashboardPage() {
         {/* Health Overview Stats */}
         <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* Online Rate */}
-          <div className={`rounded-lg border p-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('metrics.onlineRate')}
-                </p>
-                <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  {stats.onlineRate.toFixed(1)}{t('units.percent')}
-                </p>
-              </div>
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: `${HEALTH_COLORS.healthy}20` }}
-              >
-                <svg
-                  className="w-6 h-6"
-                  style={{ color: HEALTH_COLORS.healthy }}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-              </div>
+          <div className={`rounded-lg border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <div className={`px-4 py-3 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+              <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('metrics.onlineRate')}
+              </h3>
             </div>
-            <div className="mt-2 flex items-center text-xs">
-              <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>
-                {stats.onlineNodes}/{stats.totalNodes} {t('status.online').toLowerCase()}
-              </span>
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    {stats.onlineRate.toFixed(1)}{t('units.percent')}
+                  </p>
+                </div>
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: `${HEALTH_COLORS.healthy}20` }}
+                >
+                  <svg
+                    className="w-6 h-6"
+                    style={{ color: HEALTH_COLORS.healthy }}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center text-xs">
+                <span className={isDark ? 'text-gray-500' : 'text-gray-400'}>
+                  {stats.onlineNodes}/{stats.totalNodes} {t('status.online').toLowerCase()}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Anomaly Rate */}
-          <div className={`rounded-lg border p-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('metrics.anomalyRate')}
-                </p>
-                <p
-                  className="text-2xl font-bold"
-                  style={{
-                    color: stats.anomalyRate > 10
-                      ? HEALTH_COLORS.critical
-                      : stats.anomalyRate > 5
-                        ? HEALTH_COLORS.warning
-                        : isDark ? '#fff' : '#111',
-                  }}
-                >
-                  {stats.anomalyRate.toFixed(1)}{t('units.percent')}
-                </p>
-              </div>
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{
-                  backgroundColor: stats.anomalyRate > 10
-                    ? `${HEALTH_COLORS.critical}20`
-                    : stats.anomalyRate > 5
-                      ? `${HEALTH_COLORS.warning}20`
-                      : `${HEALTH_COLORS.unknown}20`,
-                }}
-              >
-                <svg
-                  className="w-6 h-6"
-                  style={{
-                    color: stats.anomalyRate > 10
-                      ? HEALTH_COLORS.critical
-                      : stats.anomalyRate > 5
-                        ? HEALTH_COLORS.warning
-                        : HEALTH_COLORS.unknown,
-                  }}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-              </div>
+          <div className={`rounded-lg border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <div className={`px-4 py-3 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+              <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('metrics.anomalyRate')}
+              </h3>
             </div>
-            <div className="mt-2 flex items-center text-xs">
-              <span style={{ color: HEALTH_COLORS.warning }}>{stats.warningNodes}</span>
-              <span className={`mx-1 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>|</span>
-              <span style={{ color: HEALTH_COLORS.critical }}>{stats.criticalNodes}</span>
-              <span className={`ml-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t('dashboard.nodesRequiringAttention')}</span>
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p
+                    className="text-2xl font-bold"
+                    style={{
+                      color: stats.anomalyRate > 10
+                        ? HEALTH_COLORS.critical
+                        : stats.anomalyRate > 5
+                          ? HEALTH_COLORS.warning
+                          : isDark ? '#fff' : '#111',
+                    }}
+                  >
+                    {stats.anomalyRate.toFixed(1)}{t('units.percent')}
+                  </p>
+                </div>
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center"
+                  style={{
+                    backgroundColor: stats.anomalyRate > 10
+                      ? `${HEALTH_COLORS.critical}20`
+                      : stats.anomalyRate > 5
+                        ? `${HEALTH_COLORS.warning}20`
+                        : `${HEALTH_COLORS.unknown}20`,
+                  }}
+                >
+                  <svg
+                    className="w-6 h-6"
+                    style={{
+                      color: stats.anomalyRate > 10
+                        ? HEALTH_COLORS.critical
+                        : stats.anomalyRate > 5
+                          ? HEALTH_COLORS.warning
+                          : HEALTH_COLORS.unknown,
+                    }}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                    />
+                  </svg>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center text-xs">
+                <span style={{ color: HEALTH_COLORS.warning }}>{stats.warningNodes}</span>
+                <span className={`mx-1 ${isDark ? 'text-gray-600' : 'text-gray-300'}`}>|</span>
+                <span style={{ color: HEALTH_COLORS.critical }}>{stats.criticalNodes}</span>
+                <span className={`ml-1 ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>{t('dashboard.nodesRequiringAttention')}</span>
+              </div>
             </div>
           </div>
 
           {/* Average Latency */}
-          <div className={`rounded-lg border p-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {t('metrics.avgLatency')}
-                </p>
-                <p
-                  className="text-2xl font-bold"
-                  style={{
-                    color: stats.averageLatency > 200
-                      ? HEALTH_COLORS.critical
-                      : stats.averageLatency > 160
-                        ? HEALTH_COLORS.warning
-                        : isDark ? '#fff' : '#111',
-                  }}
+          <div className={`rounded-lg border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <div className={`px-4 py-3 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+              <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('metrics.avgLatency')}
+              </h3>
+            </div>
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p
+                    className="text-2xl font-bold"
+                    style={{
+                      color: stats.averageLatency > 200
+                        ? HEALTH_COLORS.critical
+                        : stats.averageLatency > 160
+                          ? HEALTH_COLORS.warning
+                          : isDark ? '#fff' : '#111',
+                    }}
+                  >
+                    {stats.averageLatency.toFixed(0)}{t('units.ms')}
+                  </p>
+                </div>
+                <div
+                  className="w-12 h-12 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: '#3b82f620' }}
                 >
-                  {stats.averageLatency.toFixed(0)}{t('units.ms')}
-                </p>
-              </div>
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: '#3b82f620' }}
-              >
-                <svg
-                  className="w-6 h-6 text-blue-500"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
+                  <svg
+                    className="w-6 h-6 text-blue-500"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                    />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Probe Success Rate Gauge */}
-          <div className={`rounded-lg border p-4 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
-            <ProbeSuccessGauge
-              value={100 - stats.averagePacketLoss}
-              height="120px"
-              isLoading={isLoading}
-            />
+          <div className={`rounded-lg border ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'}`}>
+            <div className={`px-4 py-3 border-b ${isDark ? 'border-slate-700' : 'border-gray-200'}`}>
+              <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                {t('dashboard.probeSuccessRate')}
+              </h3>
+            </div>
+            <div className="p-4">
+              <ProbeSuccessGauge
+                value={100 - stats.averagePacketLoss}
+                height="140px"
+                isLoading={isLoading}
+              />
+            </div>
           </div>
         </div>
 
