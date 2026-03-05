@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeDTO } from '../../api/types'
+import { HealthReportPDF, type HealthMetrics, type MTRHop, type RootCauseAnalysis, type TimelineEvent } from './HealthReportPDF'
 
 export type ReportType = 'health' | 'performance' | 'comparison'
 export type ExportFormat = 'csv' | 'pdf' | 'excel'
@@ -45,6 +46,17 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
   const [includeCharts, setIncludeCharts] = useState(true)
   const [includeSummary, setIncludeSummary] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  // PDF Preview state
+  const [showPdfPreview, setShowPdfPreview] = useState(false)
+  const [pdfReportData, setPdfReportData] = useState<{
+    node: NodeDTO
+    metrics: HealthMetrics
+    mtrPath?: MTRHop[]
+    rootCause?: RootCauseAnalysis
+    timeline?: TimelineEvent[]
+    reportPeriod: { start: string; end: string }
+  } | null>(null)
 
   const metricOptions = [
     { key: 'latency' as const, label: t('metrics.latency') },
@@ -114,10 +126,131 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
     return Object.keys(newErrors).length === 0
   }
 
+  const generateSampleMTRPath = (): MTRHop[] => {
+    return [
+      { hop: 1, ip: '192.168.1.1', location: 'Local Gateway', avgLatency: 1.2, lossRate: 0 },
+      { hop: 2, ip: '10.0.0.1', location: 'ISP Core', avgLatency: 5.4, lossRate: 0 },
+      { hop: 3, ip: '203.0.113.1', location: 'Regional Hub', avgLatency: 12.8, lossRate: 0.1 },
+      { hop: 4, ip: '198.51.100.1', location: 'International Gateway', avgLatency: 35.2, lossRate: 0.2 },
+      { hop: 5, ip: '192.0.2.1', location: 'Destination', avgLatency: 45.2, lossRate: 0.5 },
+    ]
+  }
+
+  const generateRootCauseAnalysis = (metrics: HealthMetrics): RootCauseAnalysis => {
+    const degradedMetrics = [
+      metrics.latency.trend === 'degraded' ? 'latency' : null,
+      metrics.packetLoss.trend === 'degraded' ? 'packet loss' : null,
+      metrics.jitter.trend === 'degraded' ? 'jitter' : null,
+    ].filter(Boolean)
+
+    if (degradedMetrics.length === 0) {
+      return {
+        probableCause: t('reports.noIssues'),
+        confidence: 'high',
+        impact: t('reports.healthyStatus'),
+        recommendation: t('reports.healthyStatus'),
+      }
+    }
+
+    return {
+      probableCause: `Network congestion affecting ${degradedMetrics.join(' and ')}`,
+      confidence: 'medium',
+      impact: 'Moderate impact on application performance',
+      recommendation: 'Monitor network path and consider routing optimization or bandwidth upgrade',
+    }
+  }
+
+  const generateTimelineEvents = (): TimelineEvent[] => {
+    const events: TimelineEvent[] = []
+    const now = Date.now()
+
+    if (Math.random() > 0.5) {
+      events.push({
+        timestamp: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+        event: 'Latency spike detected (85ms)',
+        severity: 'warning',
+      })
+    }
+
+    if (Math.random() > 0.7) {
+      events.push({
+        timestamp: new Date(now - 6 * 60 * 60 * 1000).toISOString(),
+        event: 'Packet loss threshold exceeded (2.5%)',
+        severity: 'critical',
+      })
+    }
+
+    if (Math.random() > 0.6) {
+      events.push({
+        timestamp: new Date(now - 24 * 60 * 60 * 1000).toISOString(),
+        event: 'Node reconnected after brief outage',
+        severity: 'warning',
+      })
+    }
+
+    events.push({
+      timestamp: new Date(now - 48 * 60 * 60 * 1000).toISOString(),
+      event: 'Scheduled maintenance completed',
+      severity: 'info',
+    })
+
+    return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!validate()) {
+      return
+    }
+
+    // Handle PDF format differently - show preview first
+    if (format === 'pdf') {
+      const selectedNode = nodes.find((n) => n.id === selectedNodeIds[0])
+      if (selectedNode) {
+        // Generate sample data for PDF report
+        const reportMetrics: HealthMetrics = {
+          latency: {
+            current: 45.2,
+            baseline: 42.1,
+            trend: 'stable' as const,
+            data: [],
+          },
+          packetLoss: {
+            current: 0.5,
+            baseline: 0.3,
+            trend: 'degraded' as const,
+            data: [],
+          },
+          jitter: {
+            current: 12.3,
+            baseline: 11.8,
+            trend: 'stable' as const,
+            data: [],
+          },
+          uptime: 99.5,
+          totalProbes: 10080,
+          failedProbes: 50,
+        }
+
+        const reportPeriod =
+          dateRange === 'custom'
+            ? { start: customStartDate!, end: customEndDate! }
+            : {
+                start: new Date(Date.now() - (dateRange === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000).toISOString(),
+                end: new Date().toISOString(),
+              }
+
+        setPdfReportData({
+          node: selectedNode,
+          metrics: reportMetrics,
+          mtrPath: generateSampleMTRPath(),
+          rootCause: generateRootCauseAnalysis(reportMetrics),
+          timeline: generateTimelineEvents(),
+          reportPeriod,
+        })
+        setShowPdfPreview(true)
+      }
       return
     }
 
@@ -132,6 +265,31 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
       includeCharts,
       includeSummary,
     })
+  }
+
+  const handlePdfClose = () => {
+    setShowPdfPreview(false)
+    setPdfReportData(null)
+  }
+
+  if (showPdfPreview && pdfReportData) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto p-4">
+        <div className="min-h-full flex items-start justify-center py-8">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full">
+            <HealthReportPDF
+              node={pdfReportData.node}
+              metrics={pdfReportData.metrics}
+              mtrPath={pdfReportData.mtrPath}
+              rootCause={pdfReportData.rootCause}
+              timeline={pdfReportData.timeline}
+              reportPeriod={pdfReportData.reportPeriod}
+              onClose={handlePdfClose}
+            />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

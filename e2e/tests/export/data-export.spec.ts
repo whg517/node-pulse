@@ -93,7 +93,7 @@ test.describe('Data Export Page - Admin', () => {
     const progressVisible = await adminPage.locator('[data-testid="progress-bar"], .progress, [role="progressbar"]').count() > 0
 
     // Progress may or may not be shown depending on export speed
-    expect(progressVisible || true).toBeTruthy()
+    expect(progressVisible || true).toBe(true)
   })
 
   test('export API works', async ({ adminPage }) => {

@@ -54,7 +54,7 @@ export function useDashboardData(pollingInterval = 5000): UseDashboardDataResult
 
       if (!isMountedRef.current) return
 
-      const newNodes = nodesResponse.data
+      const newNodes = nodesResponse.data.nodes
       const newMetrics = metricsResponse.data
 
       // Only update state if data has actually changed (deep comparison)

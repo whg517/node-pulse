@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as echarts from 'echarts'
 
-export type TimeRange = '24h' | '7d' | '30d'
+export type TimeRange = '24h' | '7d' | '30d' | 'custom'
 export type MetricType = 'latency_ms' | 'packet_loss_rate' | 'jitter_ms'
 export type GroupByType = 'region' | 'isp' | 'none'
+export type ComparisonMode = 'node' | 'timeRange'
 
 export interface ComparisonDataPoint {
   timestamp: string
@@ -18,17 +19,54 @@ export interface NodeComparisonData {
   data: ComparisonDataPoint[]
 }
 
-export interface ComparisonChartProps {
-  nodes: NodeComparisonData[]  // 2-5 nodes
+export interface TimeRangeComparisonData {
+  baseline: {
+    start: string
+    end: string
+    label?: string
+    data: ComparisonDataPoint[]
+  }
+  current: {
+    start: string
+    end: string
+    label?: string
+    data: ComparisonDataPoint[]
+  }
   metric: MetricType
-  timeRange: TimeRange
+}
+
+export interface StatisticalSummary {
+  avg: number
+  median: number // P50
+  p95: number
+  p99: number
+  min: number
+  max: number
+  stdDev?: number
+}
+
+export interface ComparisonModeChange {
+  mode: ComparisonMode
+  nodes?: NodeComparisonData[]
+  timeRangeData?: TimeRangeComparisonData
+}
+
+export interface ComparisonChartProps {
+  nodes?: NodeComparisonData[]  // 2-5 nodes (for node comparison mode)
+  timeRangeData?: TimeRangeComparisonData  // For time range comparison mode
+  mode?: ComparisonMode  // Default to 'node' for backward compatibility
+  metric: MetricType
+  timeRange?: TimeRange  // For node comparison mode
   showStatistics?: boolean  // Show avg/max/min
   highlightDifferences?: boolean  // Highlight significant differences
   groupBy?: GroupByType
   height?: string
   className?: string
   onTimeRangeChange?: (range: TimeRange) => void
+  onModeChange?: (change: ComparisonModeChange) => void
   isLoading?: boolean
+  showPercentileStats?: boolean  // Show P50, P95, P99 values
+  onExportPdf?: () => void  // Callback for PDF export
 }
 
 interface StatisticsResult {
@@ -41,22 +79,27 @@ interface StatisticsResult {
   minNode?: string
 }
 
+
+
 /**
  * ComparisonChart component for displaying multi-node time-series comparison using ECharts
  *
  * Features:
  * - Multi-node comparison (2-5 nodes)
- * - Time range selection (24h/7d/30d)
+ * - Time range comparison (baseline vs current)
+ * - Comparison mode toggle (node vs time range)
+ * - Time range selection (24h/7d/30d/custom)
  * - Multi-metric support (latency/packet loss/jitter)
  * - Statistics panel (avg/max/min/diff)
+ * - Percentile statistics (P50, P95, P99)
+ * - Percentage change calculation
  * - Difference highlighting with color coding
  * - Grouping by region or ISP
  * - Hover tooltips with all node values
  * - Zoom functionality (mouse wheel)
+ * - PDF export functionality
  * - Responsive design
- *
- * @param props - ComparisonChart props
- * @returns ComparisonChart component
+ * - WCAG 2.1 AA accessibility compliance
  *
  * @example
  * <ComparisonChart
@@ -71,6 +114,8 @@ interface StatisticsResult {
  */
 export default function ComparisonChart({
   nodes,
+  timeRangeData,
+  mode = 'node',
   metric,
   timeRange,
   showStatistics = true,
@@ -79,11 +124,23 @@ export default function ComparisonChart({
   height = '400px',
   className = '',
   onTimeRangeChange,
+  onModeChange,
   isLoading = false,
+  showPercentileStats = false,
+  onExportPdf,
 }: ComparisonChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<echarts.ECharts | null>(null)
-  const [localTimeRange, setLocalTimeRange] = useState<TimeRange>(timeRange)
+  const [localTimeRange, setLocalTimeRange] = useState<TimeRange>(timeRange || '24h')
+  const [localMode, setLocalMode] = useState<ComparisonMode>(mode)
+
+  // Time range comparison state
+  const [baselineStart, setBaselineStart] = useState('')
+  const [baselineEnd, setBaselineEnd] = useState('')
+  const [currentStart, setCurrentStart] = useState('')
+  const [currentEnd, setCurrentEnd] = useState('')
+  const [customBaselineTimeRange, setCustomBaselineTimeRange] = useState<TimeRange>('7d')
+  const [customCurrentTimeRange, setCustomCurrentTimeRange] = useState<TimeRange>('7d')
 
   // Metric configuration
   const metricConfig = {
@@ -124,13 +181,119 @@ export default function ComparisonChart({
     '#8b5cf6', // purple-500
   ]
 
+  // Calculate percentile value from sorted array
+  const calculatePercentile = (sortedValues: number[], percentile: number): number => {
+    if (sortedValues.length === 0) return 0
+    const index = (percentile / 100) * (sortedValues.length - 1)
+    const lower = Math.floor(index)
+    const upper = Math.ceil(index)
+    if (lower === upper) return sortedValues[lower]
+    const weight = index - lower
+    return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight
+  }
+
+  // Calculate statistical summary with percentiles
+  const calculateStatisticalSummary = (data: ComparisonDataPoint[]): StatisticalSummary | null => {
+    if (!data || data.length === 0) return null
+
+    const values = data.map((d) => d.value).sort((a, b) => a - b)
+    const n = values.length
+
+    const avg = values.reduce((sum, v) => sum + v, 0) / n
+    const min = values[0]
+    const max = values[n - 1]
+    const median = calculatePercentile(values, 50)
+    const p95 = calculatePercentile(values, 95)
+    const p99 = calculatePercentile(values, 99)
+
+    // Calculate standard deviation
+    const variance = values.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / n
+    const stdDev = Math.sqrt(variance)
+
+    return { avg, median, p95, p99, min, max, stdDev }
+  }
+
+  // Calculate percentage change between baseline and current
+  const calculatePercentageChange = (baseline: number, current: number): number => {
+    if (baseline === 0) return current > 0 ? 100 : 0
+    return ((current - baseline) / Math.abs(baseline)) * 100
+  }
+
+  // Get time range dates based on selection
+  const getTimeRangeDates = (range: TimeRange): { start: string; end: string } => {
+    const now = new Date()
+    const end = now.toISOString()
+    let start: Date
+
+    switch (range) {
+      case '24h':
+        start = new Date(now.getTime() - 24 * 60 * 60 * 1000)
+        break
+      case '7d':
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      case '30d':
+        start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        break
+      case 'custom':
+        start = new Date(baselineStart || now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        break
+      default:
+        start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    }
+
+    return {
+      start: start.toISOString(),
+      end: range === 'custom' ? (baselineEnd || end) : end,
+    }
+  }
+
+
   // Time range options
   const timeRangeOptions: { value: TimeRange; label: string }[] = [
     { value: '24h', label: '24 Hours' },
     { value: '7d', label: '7 Days' },
     { value: '30d', label: '30 Days' },
+    { value: 'custom', label: 'Custom' },
   ]
 
+  // Handle mode change
+  const handleModeChange = (newMode: ComparisonMode) => {
+    setLocalMode(newMode)
+    if (onModeChange) {
+      onModeChange({ mode: newMode, nodes: nodes || [], timeRangeData })
+    }
+  }
+
+  // Handle PDF export using browser print
+  const handleExportPdf = () => {
+    if (onExportPdf) {
+      onExportPdf()
+    } else {
+      // Fallback to browser print
+      window.print()
+    }
+  }
+
+  // Handle baseline time range change
+  const handleBaselineTimeRangeChange = (range: TimeRange) => {
+    setCustomBaselineTimeRange(range)
+    if (range !== 'custom') {
+      const dates = getTimeRangeDates(range)
+      setBaselineStart(dates.start)
+      setBaselineEnd(dates.end)
+    }
+  }
+
+  // Handle current time range change
+  const handleCurrentTimeRangeChange = (range: TimeRange) => {
+    setCustomCurrentTimeRange(range)
+    if (range !== 'custom') {
+      const dates = getTimeRangeDates(range)
+      setCurrentStart(dates.start)
+      setCurrentEnd(dates.end)
+    }
+  }
   // Handle time range change
   const handleTimeRangeChange = (newRange: TimeRange) => {
     setLocalTimeRange(newRange)
@@ -155,7 +318,7 @@ export default function ComparisonChart({
 
   // Pre-calculate all statistics for all timestamps (performance optimization)
   const allStatistics = useMemo(() => {
-    if (!nodes || nodes.length === 0) return {}
+    if (localMode === 'timeRange' || !nodes || nodes.length === 0) return {}
 
     // Get all unique timestamps from all nodes
     const allTimestamps = Array.from(
@@ -198,7 +361,30 @@ export default function ComparisonChart({
     })
 
     return stats
-  }, [nodes])
+  }, [nodes, localMode])
+
+  // Calculate statistics for time range comparison
+  const timeRangeStatistics = useMemo(() => {
+    if (localMode !== 'timeRange' || !timeRangeData) return null
+
+    const baselineStats = calculateStatisticalSummary(timeRangeData.baseline.data)
+    const currentStats = calculateStatisticalSummary(timeRangeData.current.data)
+
+    if (!baselineStats || !currentStats) return null
+
+    return {
+      baseline: baselineStats,
+      current: currentStats,
+      changes: {
+        avg: calculatePercentageChange(baselineStats.avg, currentStats.avg),
+        median: calculatePercentageChange(baselineStats.median, currentStats.median),
+        p95: calculatePercentageChange(baselineStats.p95, currentStats.p95),
+        p99: calculatePercentageChange(baselineStats.p99, currentStats.p99),
+        min: calculatePercentageChange(baselineStats.min, currentStats.min),
+        max: calculatePercentageChange(baselineStats.max, currentStats.max),
+      },
+    }
+  }, [localMode, timeRangeData])
 
   // Calculate statistics for a specific timestamp (used in tooltip)
   const calculateStatistics = (timestamp: string): StatisticsResult | null => {
@@ -426,7 +612,7 @@ export default function ComparisonChart({
     }
 
     chartInstance.current.setOption(option, true)
-  }, [nodes, localTimeRange, config, showStatistics, groupBy, highlightDifferences])
+  }, [nodes, localTimeRange, config, showStatistics, groupBy, highlightDifferences, localMode, timeRangeData, timeRangeStatistics])
 
   // Handle window resize with debounce for performance
   useEffect(() => {
@@ -477,31 +663,198 @@ export default function ComparisonChart({
       role="region"
       aria-label={`${config.label} comparison chart`}
     >
-      {/* Time Range Selector */}
+      {/* Comparison Mode Toggle */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold text-gray-900">{config.label} Comparison</h3>
-        <div className="flex space-x-2" role="group" aria-label="Time range selector">
-          {timeRangeOptions.map((option) => (
+        <div className="flex items-center space-x-4">
+          {/* Mode Toggle */}
+          <div className="flex items-center space-x-2" role="group" aria-label="Comparison mode selector">
             <button
-              key={option.value}
-              onClick={() => handleTimeRangeChange(option.value)}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                localTimeRange === option.value
+              onClick={() => handleModeChange('node')}
+              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                localMode === 'node'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
-              aria-pressed={localTimeRange === option.value}
+              aria-pressed={localMode === 'node'}
               disabled={isLoading}
             >
-              {option.label}
+              Node Comparison
             </button>
-          ))}
+            <button
+              onClick={() => handleModeChange('timeRange')}
+              className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                localMode === 'timeRange'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+              aria-pressed={localMode === 'timeRange'}
+              disabled={isLoading}
+            >
+              Time Range Comparison
+            </button>
+          </div>
+
+          {/* PDF Export Button */}
+          <button
+            onClick={handleExportPdf}
+            disabled={isLoading}
+            className="flex items-center space-x-2 px-3 py-1.5 rounded text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+            aria-label="Export chart as PDF"
+            title="Export as PDF"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Export PDF</span>
+          </button>
         </div>
       </div>
 
-      {/* Statistics Panel - only show when there are nodes */}
-      {showStatistics && overallStats && nodes && nodes.length > 0 && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+      {/* Time Range Comparison Mode - Dual Time Range Selectors */}
+      {localMode === 'timeRange' && (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg" role="group" aria-label="Time range selection">
+          <div className="grid grid-cols-2 gap-6">
+            {/* Baseline Time Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2" id="baseline-label">
+                Baseline Period
+              </label>
+              <div className="space-y-2">
+                <div className="flex space-x-2" role="group" aria-labelledby="baseline-label">
+                  {['24h', '7d', '30d', 'custom'].map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => handleBaselineTimeRangeChange(range as TimeRange)}
+                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                        customBaselineTimeRange === range
+                          ? 'bg-green-600 text-white'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                      aria-pressed={customBaselineTimeRange === range}
+                      disabled={isLoading}
+                    >
+                      {range === '24h' ? '24 Hours' : range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : 'Custom'}
+                    </button>
+                  ))}
+                </div>
+                {customBaselineTimeRange === 'custom' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label htmlFor="baselineStart" className="sr-only">Baseline Start Date</label>
+                      <input
+                        id="baselineStart"
+                        type="date"
+                        value={baselineStart ? baselineStart.split('T')[0] : ''}
+                        onChange={(e) => setBaselineStart(e.target.value ? new Date(e.target.value).toISOString() : '')}
+                        max={baselineEnd || new Date().toISOString().split('T')[0]}
+                        disabled={isLoading}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="baselineEnd" className="sr-only">Baseline End Date</label>
+                      <input
+                        id="baselineEnd"
+                        type="date"
+                        value={baselineEnd ? baselineEnd.split('T')[0] : ''}
+                        onChange={(e) => setBaselineEnd(e.target.value ? new Date(e.target.value).toISOString() : '')}
+                        min={baselineStart}
+                        max={new Date().toISOString().split('T')[0]}
+                        disabled={isLoading}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Current Time Range */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2" id="current-label">
+                Current Period
+              </label>
+              <div className="space-y-2">
+                <div className="flex space-x-2" role="group" aria-labelledby="current-label">
+                  {['24h', '7d', '30d', 'custom'].map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => handleCurrentTimeRangeChange(range as TimeRange)}
+                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                        customCurrentTimeRange === range
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      }`}
+                      aria-pressed={customCurrentTimeRange === range}
+                      disabled={isLoading}
+                    >
+                      {range === '24h' ? '24 Hours' : range === '7d' ? '7 Days' : range === '30d' ? '30 Days' : 'Custom'}
+                    </button>
+                  ))}
+                </div>
+                {customCurrentTimeRange === 'custom' && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label htmlFor="currentStart" className="sr-only">Current Start Date</label>
+                      <input
+                        id="currentStart"
+                        type="date"
+                        value={currentStart ? currentStart.split('T')[0] : ''}
+                        onChange={(e) => setCurrentStart(e.target.value ? new Date(e.target.value).toISOString() : '')}
+                        max={currentEnd || new Date().toISOString().split('T')[0]}
+                        disabled={isLoading}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="currentEnd" className="sr-only">Current End Date</label>
+                      <input
+                        id="currentEnd"
+                        type="date"
+                        value={currentEnd ? currentEnd.split('T')[0] : ''}
+                        onChange={(e) => setCurrentEnd(e.target.value ? new Date(e.target.value).toISOString() : '')}
+                        min={currentStart}
+                        max={new Date().toISOString().split('T')[0]}
+                        disabled={isLoading}
+                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Node Comparison Mode - Single Time Range Selector */}
+      {localMode === 'node' && (
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-gray-900">{config.label} Comparison</h3>
+          <div className="flex space-x-2" role="group" aria-label="Time range selector">
+            {timeRangeOptions.filter((opt) => opt.value !== 'custom').map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleTimeRangeChange(option.value)}
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+                  localTimeRange === option.value
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+                aria-pressed={localTimeRange === option.value}
+                disabled={isLoading}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Statistics Panel - Node Comparison Mode */}
+      {localMode === 'node' && showStatistics && overallStats && nodes && nodes.length > 0 && (
+        <div className="mb-4 p-3 bg-gray-50 rounded-lg" role="region" aria-label="Node comparison statistics">
           <div className="grid grid-cols-5 gap-4 text-center">
             <div>
               <div className="text-sm text-gray-600">Average</div>
@@ -540,6 +893,140 @@ export default function ComparisonChart({
               </div>
             </div>
           </div>
+          {showPercentileStats && nodes.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="text-sm font-medium text-gray-700 mb-2">Percentile Statistics</div>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-sm text-gray-600">P50 (Median)</div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {calculateStatisticalSummary(nodes[0].data)?.median.toFixed(2) || '0.00'} {config.unit}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">P95</div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {calculateStatisticalSummary(nodes[0].data)?.p95.toFixed(2) || '0.00'} {config.unit}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-sm text-gray-600">P99</div>
+                  <div className="text-lg font-semibold text-gray-900">
+                    {calculateStatisticalSummary(nodes[0].data)?.p99.toFixed(2) || '0.00'} {config.unit}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Statistics Panel - Time Range Comparison Mode */}
+      {localMode === 'timeRange' && showStatistics && timeRangeStatistics && (
+        <div className="mb-4 p-4 bg-gray-50 rounded-lg" role="region" aria-label="Time range comparison statistics">
+          <div className="grid grid-cols-2 gap-6">
+            {/* Baseline Statistics */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Baseline Period</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Average:</span>
+                  <span className="text-base font-semibold text-gray-900">
+                    {timeRangeStatistics.baseline.avg.toFixed(2)} {config.unit}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">P50 (Median):</span>
+                  <span className="text-base font-semibold text-gray-900">
+                    {timeRangeStatistics.baseline.median.toFixed(2)} {config.unit}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">P95:</span>
+                  <span className="text-base font-semibold text-gray-900">
+                    {timeRangeStatistics.baseline.p95.toFixed(2)} {config.unit}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">P99:</span>
+                  <span className="text-base font-semibold text-gray-900">
+                    {timeRangeStatistics.baseline.p99.toFixed(2)} {config.unit}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Min - Max:</span>
+                  <span className="text-base font-semibold text-gray-900">
+                    {timeRangeStatistics.baseline.min.toFixed(2)} - {timeRangeStatistics.baseline.max.toFixed(2)} {config.unit}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Current Statistics with Percentage Change */}
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Current Period</h4>
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Average:</span>
+                  <div className="text-right">
+                    <span className="text-base font-semibold text-gray-900 mr-2">
+                      {timeRangeStatistics.current.avg.toFixed(2)} {config.unit}
+                    </span>
+                    <span className={`text-xs font-medium ${
+                      timeRangeStatistics.changes.avg > 0 ? 'text-red-600' : timeRangeStatistics.changes.avg < 0 ? 'text-green-600' : 'text-gray-600'
+                    }`}>
+                      {timeRangeStatistics.changes.avg > 0 ? '↑' : timeRangeStatistics.changes.avg < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.avg).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">P50 (Median):</span>
+                  <div className="text-right">
+                    <span className="text-base font-semibold text-gray-900 mr-2">
+                      {timeRangeStatistics.current.median.toFixed(2)} {config.unit}
+                    </span>
+                    <span className={`text-xs font-medium ${
+                      timeRangeStatistics.changes.median > 0 ? 'text-red-600' : timeRangeStatistics.changes.median < 0 ? 'text-green-600' : 'text-gray-600'
+                    }`}>
+                      {timeRangeStatistics.changes.median > 0 ? '↑' : timeRangeStatistics.changes.median < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.median).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">P95:</span>
+                  <div className="text-right">
+                    <span className="text-base font-semibold text-gray-900 mr-2">
+                      {timeRangeStatistics.current.p95.toFixed(2)} {config.unit}
+                    </span>
+                    <span className={`text-xs font-medium ${
+                      timeRangeStatistics.changes.p95 > 0 ? 'text-red-600' : timeRangeStatistics.changes.p95 < 0 ? 'text-green-600' : 'text-gray-600'
+                    }`}>
+                      {timeRangeStatistics.changes.p95 > 0 ? '↑' : timeRangeStatistics.changes.p95 < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.p95).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">P99:</span>
+                  <div className="text-right">
+                    <span className="text-base font-semibold text-gray-900 mr-2">
+                      {timeRangeStatistics.current.p99.toFixed(2)} {config.unit}
+                    </span>
+                    <span className={`text-xs font-medium ${
+                      timeRangeStatistics.changes.p99 > 0 ? 'text-red-600' : timeRangeStatistics.changes.p99 < 0 ? 'text-green-600' : 'text-gray-600'
+                    }`}>
+                      {timeRangeStatistics.changes.p99 > 0 ? '↑' : timeRangeStatistics.changes.p99 < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.p99).toFixed(1)}%
+                    </span>
+                  </div>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Min - Max:</span>
+                  <span className="text-base font-semibold text-gray-900">
+                    {timeRangeStatistics.current.min.toFixed(2)} - {timeRangeStatistics.current.max.toFixed(2)} {config.unit}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -549,7 +1036,7 @@ export default function ComparisonChart({
         className="relative"
         style={{ height }}
         role="img"
-        aria-label={`${config.label} comparison chart showing ${nodes.length} nodes`}
+        aria-label={`${config.label} comparison chart showing ${localMode === 'timeRange' ? 'baseline vs current' : `${nodes?.length || 0} nodes`}`}
       >
         {/* Loading Overlay */}
         {isLoading && (
@@ -592,8 +1079,8 @@ export default function ComparisonChart({
         )}
       </div>
 
-      {/* Legend - only show when there are nodes */}
-      {nodes && nodes.length > 0 && (
+      {/* Legend - Node Comparison Mode */}
+      {localMode === 'node' && nodes && nodes.length > 0 && (
         <div className="mt-4 flex items-center justify-center space-x-6 text-sm flex-wrap gap-y-2">
           {nodes.map((node, index) => (
             <div key={node.node_id} className="flex items-center space-x-2">
@@ -609,6 +1096,26 @@ export default function ComparisonChart({
               </span>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Legend - Time Range Comparison Mode */}
+      {localMode === 'timeRange' && timeRangeData && (
+        <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
+          <div className="flex items-center space-x-2">
+            <div
+              className="w-4 h-1 bg-green-600"
+              aria-hidden="true"
+            />
+            <span className="text-gray-700">Baseline Period</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <div
+              className="w-4 h-1 bg-blue-600"
+              aria-hidden="true"
+            />
+            <span className="text-gray-700">Current Period</span>
+          </div>
         </div>
       )}
     </div>

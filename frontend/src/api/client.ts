@@ -189,7 +189,7 @@ async function makeRequest<T>(
         await refreshPromise
         // Retry original request with new token
         return makeRequest<T>(endpoint, options, true)
-      } catch (_error) {
+    } catch {
         // Refresh failed - check if we should force logout
         if (consecutiveRefreshFailures >= MAX_CONSECUTIVE_FAILURES) {
           console.error('[apiClient] Too many consecutive refresh failures, forcing logout')

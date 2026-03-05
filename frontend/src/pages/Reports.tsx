@@ -9,10 +9,9 @@
  */
 
 import { useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../hooks/useTheme'
-import { useAuthStore } from '../stores/authStore'
 import { useExportStore } from '../stores/exportStore'
 import { fetchNodes } from '../api/nodes'
 import { ReportGenerator, NodeComparisonTable, type ReportConfig, type NodeComparisonData } from '../components/reports'
@@ -23,9 +22,7 @@ import type { CreateExportRequest } from '../types/export'
 export default function ReportsPage() {
   const { t } = useTranslation()
   const { isDark } = useTheme()
-  const navigate = useNavigate()
 
-  const { user, logout: storeLogout, clearAuth } = useAuthStore()
   const {
     createExport,
     currentExports,
@@ -76,18 +73,14 @@ export default function ReportsPage() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await storeLogout()
-      clearAuth()
-      navigate('/login')
-    } catch (error) {
-      console.error('Logout failed:', error)
-    }
-  }
-
   const handleReportSubmit = async (config: ReportConfig) => {
     try {
+      // PDF format is handled client-side via browser print
+      if (config.format === 'pdf') {
+        // PDF preview is shown in ReportGenerator component
+        return
+      }
+
       // Convert ReportConfig to CreateExportRequest
       const exportRequest: CreateExportRequest = {
         node_ids: config.nodeIds,
@@ -98,7 +91,7 @@ export default function ReportsPage() {
           ? new Date(config.customEndDate).toISOString()
           : new Date().toISOString(),
         metrics: config.metrics,
-        format: config.format === 'pdf' ? 'csv' : config.format as 'csv' | 'excel', // API supports csv/excel
+        format: config.format as 'csv' | 'excel', // API supports csv/excel only
       }
 
       await createExport(exportRequest)

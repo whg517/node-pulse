@@ -66,7 +66,7 @@ export default function AlertHistoryPage() {
   const loadNodes = async () => {
     try {
       const response = await fetchNodes()
-      setNodes(response.data)
+      setNodes(response.data.nodes)
     } catch (err) {
       console.error('Failed to load nodes:', err)
     }

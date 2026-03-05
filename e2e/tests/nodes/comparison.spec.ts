@@ -68,7 +68,7 @@ test.describe('Node Comparison Page', () => {
       const chartVisible = await adminPage.locator('[data-testid="comparison-chart"], canvas, .chart').count() > 0
 
       // May or may not have chart depending on implementation
-      expect(chartVisible || true).toBeTruthy()
+      expect(chartVisible || true).toBe(true)
     } else {
       test.skip(true, 'Need at least 2 nodes for comparison')
     }

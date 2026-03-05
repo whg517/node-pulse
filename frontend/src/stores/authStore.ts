@@ -151,13 +151,17 @@ export const useAuthStore = create<AuthStore>((set) => ({
         isAuthenticated: true,
         role: response.data.role,
         isLoading: false,
-      })
-    } catch (error) {
-      // Session validation failed - DO NOT clear auth state
-      // Tokens may still be valid in memory, let 401 interceptor handle refresh
-      // Only set isLoading to false to unblock ProtectedRoute
+    } catch {
+      // Session validation failed - clear auth state to prevent stale UI
+      // This ensures ProtectedRoute doesn't show authenticated content when session is invalid
       set({
+        user: null,
+        isAuthenticated: false,
+        role: null,
+        accessToken: null,
+        tokenExpiresAt: null,
         isLoading: false,
+        refreshFailureCount: 0,
       })
     }
   },

@@ -33,6 +33,19 @@ export interface AlertRecordDTO {
   status: AlertRecordStatus
   created_at: string
   updated_at: string
+  notes?: AlertNoteDTO[]
+}
+
+/**
+ * Alert note data transfer object
+ */
+export interface AlertNoteDTO {
+  id: string
+  alert_id: string
+  user_id: string
+  user_name: string
+  content: string
+  created_at: string
 }
 
 /**
@@ -54,6 +67,7 @@ export interface AlertRecordFilters {
  */
 export interface UpdateAlertRecordStatusRequest {
   status: AlertRecordStatus
+  note?: string
 }
 
 // ============================================================================
@@ -160,10 +174,52 @@ export async function getAlertRecords(
  */
 export async function updateAlertRecordStatus(
   id: string,
-  status: AlertRecordStatus
+  status: AlertRecordStatus,
+  note?: string
 ): Promise<{ data: AlertRecordDTO; message: string; timestamp: string }> {
+  const body: UpdateAlertRecordStatusRequest = { status }
+  if (note) {
+    body.note = note
+  }
+  
   return apiClient(`/api/v1/alerts/records/${id}/status`, {
     method: 'PUT',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify(body),
   })
+}
+
+/**
+ * Add a note to an alert record
+ *
+ * @param id - Alert record ID
+ * @param note - Note content
+ * @returns Updated alert record with notes
+ * @throws AuthenticationError if user is not authenticated
+ * @throws NotFoundError if alert record does not exist
+ *
+ * @example
+ * const { data } = await addAlertNote('record-id', 'Investigating the issue...')
+ */
+export async function addAlertNote(
+  id: string,
+  note: string
+): Promise<{ data: AlertRecordDTO; message: string; timestamp: string }> {
+  return apiClient(`/api/v1/alerts/records/${id}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({ note }),
+  })
+}
+
+/**
+ * Fetch notes for an alert record
+ *
+ * @param id - Alert record ID
+ * @returns Array of notes for the alert
+ * @throws AuthenticationError if user is not authenticated
+ * @throws NotFoundError if alert record does not exist
+ */
+export async function getAlertNotes(
+  id: string
+): Promise<{ data: AlertNoteDTO[]; message: string; timestamp: string }> {
+  return apiClient(`/api/v1/alerts/records/${id}/notes`)
 }

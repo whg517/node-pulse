@@ -71,7 +71,7 @@ export default function NodeComparisonPage() {
         setIsLoadingNodes(true)
         setError(null)
         const { data } = await fetchNodes()
-        setAvailableNodes(data)
+        setAvailableNodes(data.nodes)
       } catch (err) {
         const message = err instanceof Error ? err.message : t('errors.failedToLoad')
         setError(message)

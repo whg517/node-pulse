@@ -34,7 +34,7 @@ test.describe('Sessions Page', () => {
 
     // May or may not have explicit indicator
     const hasIndicator = await currentIndicator.count() > 0
-    expect(hasIndicator || true).toBeTruthy()
+    expect(hasIndicator || true).toBe(true)
   })
 
   test('table has expected columns', async ({ adminPage }) => {

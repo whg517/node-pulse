@@ -167,8 +167,8 @@ export default function AlertRecordsPage() {
     try {
       const response = await fetchNodes()
       if (isMounted.current) {
-        setNodes(response.data)
-        return response.data
+        setNodes(response.data.nodes)
+        return response.data.nodes
       }
       return []
     } catch (err) {

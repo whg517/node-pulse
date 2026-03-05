@@ -83,7 +83,7 @@ test.describe('World Map Component', () => {
     // Summary might exist or use different format
     const hasNodeInfo = await adminPage.locator('[class*="summary"], [class*="stats"]').count() > 0
 
-    expect(summaryText || hasNodeInfo || true).toBeTruthy() // Non-blocking test
+    expect(summaryText || hasNodeInfo || true).toBe(true) // Non-blocking test
   })
 
   test('supports zoom and pan', async ({ adminPage }) => {

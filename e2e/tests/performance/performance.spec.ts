@@ -38,7 +38,7 @@ test.describe('Performance Dashboard Page', () => {
     const chartVisible = await adminPage.locator('[data-testid="trend-chart"], canvas, .chart').count() > 0
 
     // Chart may or may not be visible depending on data
-    expect(chartVisible || true).toBeTruthy()
+    expect(chartVisible || true).toBe(true)
   })
 
   test('shows last updated timestamp', async ({ adminPage }) => {
@@ -47,7 +47,7 @@ test.describe('Performance Dashboard Page', () => {
     const lastUpdatedVisible = await adminPage.locator('[data-testid="last-updated"], .last-updated').count() > 0
 
     // May or may not have this element
-    expect(lastUpdatedVisible || true).toBeTruthy()
+    expect(lastUpdatedVisible || true).toBe(true)
   })
 
   test('manual refresh button works', async ({ adminPage }) => {
