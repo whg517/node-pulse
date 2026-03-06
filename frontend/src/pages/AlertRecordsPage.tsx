@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
+import { useTheme } from '../hooks/useTheme'
 import { getAlertRecords, updateAlertRecordStatus, isValidStatusTransition } from '../api/alertRecords'
 import { fetchNodes } from '../api/nodes'
 import { exportData } from '../api/data'
@@ -9,6 +10,8 @@ import type { NodeDTO } from '../api/types'
 import { AlertRecordsTable } from '../components/alerts/AlertRecordsTable'
 import { AlertRecordsFilter } from '../components/alerts/AlertRecordsFilter'
 import { AlertRecordDetailModal } from '../components/alerts/AlertRecordDetailModal'
+import { PageContainer, ErrorBanner, LoadingSpinner } from '../components/common'
+import { PageHeader } from '../components/layout/PageHeader'
 
 type ToastType = 'success' | 'error' | 'warning' | 'info'
 
@@ -23,8 +26,9 @@ type SortField = 'timestamp' | 'level' | 'status' | null
 type SortOrder = 'asc' | 'desc'
 
 export default function AlertRecordsPage() {
-  const navigate = useNavigate()
-  const { user, logout: storeLogout, clearAuth } = useAuthStore()
+  const { t } = useTranslation()
+  const { isDark } = useTheme()
+  const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [records, setRecords] = useState<AlertRecordDTO[]>([])
@@ -177,16 +181,6 @@ export default function AlertRecordsPage() {
     }
   }
 
-  const handleLogout = async () => {
-    try {
-      await storeLogout()
-      clearAuth()
-      navigate('/login')
-    } catch (error) {
-      console.error('Logout failed:', error)
-    }
-  }
-
   const handleFilterChange = (newFilters: AlertRecordFilters) => {
     setFilters(newFilters)
     setPage(0) // Reset to first page when filters change
@@ -285,19 +279,19 @@ export default function AlertRecordsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <PageContainer>
       {/* Toast Notifications */}
       {toasts.map((toast) => (
         <div
           key={toast.id}
           className={`fixed top-4 right-4 z-50 p-4 rounded-lg border shadow-lg transition-all duration-300 ${
             toast.type === 'success'
-              ? 'bg-green-100 text-green-800 border-green-300'
+              ? 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700'
               : toast.type === 'error'
-              ? 'bg-red-100 text-red-800 border-red-300'
+              ? 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700'
               : toast.type === 'warning'
-              ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-              : 'bg-blue-100 text-blue-800 border-blue-300'
+              ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700'
+              : 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700'
           }`}
           role="alert"
         >
@@ -319,139 +313,77 @@ export default function AlertRecordsPage() {
         </div>
       ))}
 
-      {/* Navigation */}
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-bold text-gray-900">Node Pulse</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-700">
-                Welcome, {user?.username || 'Guest'}
-              </span>
+      <main className={isDark ? 'bg-slate-900' : 'bg-gray-50'}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <PageHeader
+            title={t('alerts.alertHistory')}
+            subtitle={t('alerts.viewManageHistory')}
+            showBreadcrumb
+            actions={
               <button
                 type="button"
-                onClick={handleLogout}
-                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150"
+                onClick={handleExportCSV}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
               >
-                Logout
+                {t('common.export')} CSV
               </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8 flex justify-between items-center">
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900">告警记录</h2>
-            <p className="mt-2 text-gray-600">
-              查看和管理所有告警记录
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-          >
-            Export to CSV
-          </button>
-        </div>
-
-        {/* Error State */}
-        {error && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-400 p-4 rounded-md">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg
-                  className="h-5 w-5 text-red-400"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  aria-hidden="true"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-red-700">{error.message}</p>
-              </div>
-              <div className="ml-auto pl-3">
-                <div className="-mx-1.5 -my-1.5">
-                  <button
-                    onClick={() => loadData()}
-                    className="inline-flex bg-red-50 rounded-md p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
-                  >
-                    <svg
-                      className="h-5 w-5"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      aria-hidden="true"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Filters */}
-        <AlertRecordsFilter
-          filters={filters}
-          nodes={nodes}
-          searchQuery={searchQuery}
-          onFilterChange={handleFilterChange}
-          onSearchChange={handleSearchChange}
-          onReset={handleResetFilters}
-        />
-
-        {/* Loading State */}
-        {isLoading && !error && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          </div>
-        )}
-
-        {/* Content */}
-        {!isLoading && !error && (
-          <AlertRecordsTable
-            records={records}
-            nodes={nodes}
-            onViewDetail={handleViewDetail}
-            page={page}
-            pageSize={pageSize}
-            totalCount={totalCount}
-            onPageChange={handlePageChange}
-            sortField={sortField}
-            sortOrder={sortOrder}
-            onSort={handleSort}
+            }
           />
-        )}
 
-        {/* Detail Modal */}
-        {selectedRecord && (
-          <AlertRecordDetailModal
-            record={selectedRecord}
+          {/* Error State */}
+          {error && (
+            <ErrorBanner
+              error={error}
+              onRetry={loadData}
+              className="mb-6"
+            />
+          )}
+
+          {/* Filters */}
+          <AlertRecordsFilter
+            filters={filters}
             nodes={nodes}
-            canEdit={canEdit}
-            onClose={handleCloseModal}
-            onStatusUpdate={handleStatusUpdate}
+            searchQuery={searchQuery}
+            onFilterChange={handleFilterChange}
+            onSearchChange={handleSearchChange}
+            onReset={handleResetFilters}
           />
-        )}
+
+          {/* Loading State */}
+          {isLoading && !error && (
+            <div className="py-12">
+              <LoadingSpinner />
+            </div>
+          )}
+
+          {/* Content */}
+          {!isLoading && !error && (
+            <AlertRecordsTable
+              records={records}
+              nodes={nodes}
+              onViewDetail={handleViewDetail}
+              page={page}
+              pageSize={pageSize}
+              totalCount={totalCount}
+              onPageChange={handlePageChange}
+              sortField={sortField}
+              sortOrder={sortOrder}
+              onSort={handleSort}
+            />
+          )}
+
+          {/* Detail Modal */}
+          {selectedRecord && (
+            <AlertRecordDetailModal
+              record={selectedRecord}
+              nodes={nodes}
+              canEdit={canEdit}
+              onClose={handleCloseModal}
+              onStatusUpdate={handleStatusUpdate}
+            />
+          )}
+        </div>
       </main>
-    </div>
+    </PageContainer>
   )
 }

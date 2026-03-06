@@ -9,13 +9,14 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../hooks/useTheme'
 import { useExportStore } from '../stores/exportStore'
 import { fetchNodes } from '../api/nodes'
 import { ReportGenerator, NodeComparisonTable, type ReportConfig, type NodeComparisonData } from '../components/reports'
 import { ExportStatusCard, ExportHistoryTable } from '../components/export'
+import { PageContainer } from '../components/common'
+import { PageHeader } from '../components/layout/PageHeader'
 import type { NodeDTO } from '../api/types'
 import type { CreateExportRequest } from '../types/export'
 
@@ -102,35 +103,12 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <nav className="mb-4 text-sm">
-          <ol className="flex items-center space-x-2">
-            <li>
-              <Link
-                to="/dashboard"
-                className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                {t('navigation.dashboard')}
-              </Link>
-            </li>
-            <li className={`${isDark ? 'text-gray-500' : 'text-gray-400'}`}>/</li>
-            <li className={`${isDark ? 'text-gray-300 font-medium' : 'text-gray-700 font-medium'}`}>
-              {t('reports.title')}
-            </li>
-          </ol>
-        </nav>
-
-        {/* Page Header */}
-        <div className="mb-8">
-          <h2 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
-            {t('reports.title')}
-          </h2>
-          <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-            {t('reports.generateReport')} - {t('reports.exportHistory')}
-          </p>
-        </div>
+    <PageContainer>
+      <PageHeader
+        title={t('reports.title')}
+        subtitle={`${t('reports.generateReport')} - ${t('reports.exportHistory')}`}
+        showBreadcrumb
+      />
 
         {/* Error State */}
         {error && (
@@ -238,7 +216,6 @@ export default function ReportsPage() {
             )}
           </div>
         )}
-      </main>
-    </div>
+    </PageContainer>
   )
 }
