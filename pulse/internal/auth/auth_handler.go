@@ -42,13 +42,15 @@ type AuthHandler struct {
 // NewAuthHandler creates a new auth handler
 func NewAuthHandler(
 	pool *pgxpool.Pool,
-	jwtSecret string,
+	jwtPrivateKey string,
+	jwtPublicKey string,
+	jwtKeyID string,
 	accessExpirationMinutes int,
 	refreshExpirationDays int,
 	maxValidityDays int,
 	cookieSecure bool,
 ) *AuthHandler {
-	jwtService := NewJWTService(jwtSecret, accessExpirationMinutes, pool)
+	jwtService := NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, accessExpirationMinutes, pool)
 	refreshTokenService := NewRefreshTokenService(pool)
 	apiKeyService := NewAPIKeyService(pool)
 	rateLimiter := NewRateLimiter(pool)

@@ -42,6 +42,19 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		return err
 	}
 
+	// RBAC tables (must be before seedAdminUser for role references)
+	if err := createRolesTable(ctx, pool); err != nil {
+		return err
+	}
+
+	if err := createPermissionsTable(ctx, pool); err != nil {
+		return err
+	}
+
+	if err := createRolePermissionsTable(ctx, pool); err != nil {
+		return err
+	}
+
 	if err := createNodesTable(ctx, pool); err != nil {
 		return err
 	}
@@ -99,17 +112,20 @@ func createUsersTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE TABLE IF NOT EXISTS users (
 			user_id UUID PRIMARY KEY,
 			username VARCHAR(50) NOT NULL UNIQUE,
+			email VARCHAR(255) UNIQUE,
 			password_hash VARCHAR(100) NOT NULL,
 			role VARCHAR(20) NOT NULL,
 			failed_login_attempts INTEGER DEFAULT 0,
-			locked_until TIMESTAMP NULL,
+			locked_until TIMESTAMPTZ,
 			mfa_enabled BOOLEAN DEFAULT false,
-			mfa_secret TEXT NULL,
-			created_at TIMESTAMP DEFAULT NOW(),
-			updated_at TIMESTAMP DEFAULT NOW()
+			mfa_secret TEXT,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+		CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+		CREATE INDEX IF NOT EXISTS idx_users_locked ON users(locked_until) WHERE locked_until IS NOT NULL;
 	`
 
 	_, err := pool.Exec(ctx, query)
@@ -120,16 +136,22 @@ func createUsersTable(ctx context.Context, pool *pgxpool.Pool) error {
 func createSessionsTable(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS sessions (
-			session_id UUID PRIMARY KEY,
+			session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-			role VARCHAR(20) NOT NULL,
-			expired_at TIMESTAMP NOT NULL,
-			created_at TIMESTAMP DEFAULT NOW()
+			device_id VARCHAR(255),
+			ip_address INET,
+			user_agent TEXT,
+			remember_me BOOLEAN DEFAULT false,
+			expires_at TIMESTAMPTZ NOT NULL,
+			max_valid_until TIMESTAMPTZ NOT NULL,
+			last_activity_at TIMESTAMPTZ DEFAULT NOW(),
+			created_at TIMESTAMPTZ DEFAULT NOW()
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-		CREATE INDEX IF NOT EXISTS idx_sessions_expired_at ON sessions(expired_at);
-		CREATE INDEX IF NOT EXISTS idx_sessions_user_expired ON sessions(user_id, expired_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);
+		CREATE INDEX IF NOT EXISTS idx_sessions_user_expired ON sessions(user_id, expires_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_sessions_device ON sessions(device_id) WHERE device_id IS NOT NULL;
 	`
 
 	_, err := pool.Exec(ctx, query)
@@ -484,22 +506,24 @@ func dropAndRecreateRefreshTokensTable(ctx context.Context, pool *pgxpool.Pool) 
 		-- Create new table with sliding + absolute expiration support
 		CREATE TABLE refresh_tokens (
 			id SERIAL PRIMARY KEY,
-			token_id UUID UNIQUE NOT NULL,
-			token_hash TEXT NOT NULL,
+			token_id UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
+			token_hash TEXT NOT NULL UNIQUE,
 			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
-			expires_at TIMESTAMP NOT NULL,
-			max_valid_until TIMESTAMP NOT NULL,
-			revoked_at TIMESTAMP,
+			session_id UUID REFERENCES sessions(session_id) ON DELETE CASCADE,
+			expires_at TIMESTAMPTZ NOT NULL,
+			max_valid_until TIMESTAMPTZ NOT NULL,
+			revoked_at TIMESTAMPTZ,
 			replaced_by UUID REFERENCES refresh_tokens(token_id),
 			user_agent TEXT,
 			ip_address INET,
-			created_at TIMESTAMP DEFAULT NOW(),
-			updated_at TIMESTAMP DEFAULT NOW()
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			updated_at TIMESTAMPTZ DEFAULT NOW()
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_revoked ON refresh_tokens(user_id, revoked_at);
 		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_id ON refresh_tokens(token_id);
 		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token_hash ON refresh_tokens(token_hash);
+		CREATE INDEX IF NOT EXISTS idx_refresh_tokens_session ON refresh_tokens(session_id) WHERE session_id IS NOT NULL;
 	`
 
 	_, err := pool.Exec(ctx, query)
@@ -512,23 +536,42 @@ func dropAndRecreateBeaconTokensAsAPIKeys(ctx context.Context, pool *pgxpool.Poo
 		-- Drop existing table
 		DROP TABLE IF EXISTS beacon_tokens CASCADE;
 		DROP TABLE IF EXISTS api_keys CASCADE;
+		DROP TABLE IF EXISTS service_accounts CASCADE;
+
+		-- Create service_accounts table first
+		CREATE TABLE service_accounts (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			name VARCHAR(255) NOT NULL,
+			description TEXT,
+			scopes JSONB NOT NULL DEFAULT '[]',
+			is_active BOOLEAN DEFAULT true,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			expires_at TIMESTAMPTZ
+		);
 
 		-- Create renamed table with improved schema
 		CREATE TABLE api_keys (
 			id SERIAL PRIMARY KEY,
-			key_hash TEXT UNIQUE NOT NULL,
-			key_prefix TEXT NOT NULL,
+			key_id VARCHAR(20) NOT NULL UNIQUE,
+			key_hash TEXT NOT NULL UNIQUE,
+			key_prefix VARCHAR(20) NOT NULL,
 			user_id UUID REFERENCES users(user_id) ON DELETE CASCADE,
+			service_account_id UUID REFERENCES service_accounts(id) ON DELETE CASCADE,
 			name TEXT NOT NULL,
 			is_active BOOLEAN DEFAULT true,
-			expires_at TIMESTAMP,
-			created_at TIMESTAMP DEFAULT NOW(),
-			last_used_at TIMESTAMP
+			expires_at TIMESTAMPTZ,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			last_used_at TIMESTAMPTZ,
+			CONSTRAINT chk_owner_xor CHECK (
+				(user_id IS NOT NULL)::integer + (service_account_id IS NOT NULL)::integer = 1
+			)
 		);
 
 		CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+		CREATE INDEX IF NOT EXISTS idx_api_keys_service_account_id ON api_keys(service_account_id);
 		CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
 		CREATE INDEX IF NOT EXISTS idx_api_keys_active_expires ON api_keys(is_active, expires_at);
+		CREATE INDEX IF NOT EXISTS idx_api_keys_prefix ON api_keys(key_prefix);
 	`
 
 	_, err := pool.Exec(ctx, query)
@@ -540,11 +583,14 @@ func createTokenBlacklistTable(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS token_blacklist (
 			jti TEXT PRIMARY KEY,
-			revoked_at TIMESTAMP NOT NULL,
-			expires_at TIMESTAMP NOT NULL
+			user_id UUID REFERENCES users(user_id),
+			revoked_at TIMESTAMPTZ NOT NULL,
+			expires_at TIMESTAMPTZ NOT NULL,
+			reason TEXT
 		);
 
-		CREATE INDEX ON token_blacklist(expires_at);
+		CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
+		CREATE INDEX IF NOT EXISTS idx_token_blacklist_user ON token_blacklist(user_id, expires_at);
 	`
 
 	_, err := pool.Exec(ctx, query)
@@ -555,15 +601,21 @@ func createTokenBlacklistTable(ctx context.Context, pool *pgxpool.Pool) error {
 func createAuthAuditLogsTable(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS auth_audit_logs (
-			id SERIAL PRIMARY KEY,
-			event_type VARCHAR(50) NOT NULL,
-			user_id UUID,
+			id BIGSERIAL PRIMARY KEY,
+			event_type VARCHAR(100) NOT NULL,
+			user_id UUID REFERENCES users(user_id),
+			service_account_id UUID REFERENCES service_accounts(id),
+			session_id UUID REFERENCES sessions(session_id),
 			ip_address INET,
+			user_agent TEXT,
 			details JSONB,
-			created_at TIMESTAMP DEFAULT NOW()
+			created_at TIMESTAMPTZ DEFAULT NOW()
 		);
 
-		CREATE INDEX ON auth_audit_logs(event_type, created_at);
+		CREATE INDEX IF NOT EXISTS idx_audit_events ON auth_audit_logs(event_type, created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_audit_users ON auth_audit_logs(user_id, created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_audit_ips ON auth_audit_logs(ip_address, created_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_audit_service_accounts ON auth_audit_logs(service_account_id, created_at DESC);
 	`
 
 	_, err := pool.Exec(ctx, query)
@@ -574,15 +626,120 @@ func createAuthAuditLogsTable(ctx context.Context, pool *pgxpool.Pool) error {
 func createRateLimitsTable(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `
 		CREATE TABLE IF NOT EXISTS rate_limits (
-			id SERIAL PRIMARY KEY,
-			key VARCHAR(255) NOT NULL,
+			id BIGSERIAL PRIMARY KEY,
+			key TEXT NOT NULL,
 			window_type VARCHAR(10) NOT NULL,
-			window_start TIMESTAMP NOT NULL,
+			window_start TIMESTAMPTZ NOT NULL,
 			request_count INTEGER DEFAULT 1,
 			UNIQUE(key, window_type, window_start)
 		);
 
-		CREATE INDEX ON rate_limits(key, window_start);
+		CREATE INDEX IF NOT EXISTS idx_rate_limits_lookup ON rate_limits(key, window_type, window_start);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createRolesTable creates the roles table for RBAC
+func createRolesTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS roles (
+			id SERIAL PRIMARY KEY,
+			name VARCHAR(50) NOT NULL UNIQUE,
+			description TEXT,
+			is_system_role BOOLEAN DEFAULT false,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);
+
+		-- Seed default roles
+		INSERT INTO roles (name, description, is_system_role) VALUES
+			('admin', 'Full system access', true),
+			('operator', 'Can manage nodes and view alerts', true),
+			('viewer', 'Read-only access', true)
+		ON CONFLICT (name) DO NOTHING;
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createPermissionsTable creates the permissions table for RBAC
+func createPermissionsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS permissions (
+			id SERIAL PRIMARY KEY,
+			resource VARCHAR(50) NOT NULL,
+			action VARCHAR(20) NOT NULL,
+			description TEXT,
+			UNIQUE(resource, action)
+		);
+
+		-- Seed default permissions
+		INSERT INTO permissions (resource, action, description) VALUES
+			('nodes', 'read', 'View nodes'),
+			('nodes', 'write', 'Create and update nodes'),
+			('nodes', 'delete', 'Delete nodes'),
+			('probes', 'read', 'View probes'),
+			('probes', 'write', 'Create and update probes'),
+			('probes', 'delete', 'Delete probes'),
+			('alerts', 'read', 'View alerts'),
+			('alerts', 'write', 'Create and update alerts'),
+			('alerts', 'delete', 'Delete alerts'),
+			('webhooks', 'read', 'View webhooks'),
+			('webhooks', 'write', 'Create and update webhooks'),
+			('webhooks', 'delete', 'Delete webhooks'),
+			('users', 'read', 'View users'),
+			('users', 'write', 'Create and update users'),
+			('users', 'delete', 'Delete users'),
+			('settings', 'read', 'View system settings'),
+			('settings', 'write', 'Update system settings'),
+			('reports', 'read', 'View reports'),
+			('reports', 'write', 'Generate reports'),
+			('api_keys', 'read', 'View API keys'),
+			('api_keys', 'write', 'Create and update API keys'),
+			('api_keys', 'delete', 'Delete API keys')
+		ON CONFLICT (resource, action) DO NOTHING;
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createRolePermissionsTable creates the role_permissions junction table for RBAC
+func createRolePermissionsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS role_permissions (
+			role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+			permission_id INTEGER REFERENCES permissions(id) ON DELETE CASCADE,
+			granted_at TIMESTAMPTZ DEFAULT NOW(),
+			PRIMARY KEY (role_id, permission_id)
+		);
+
+		-- Seed default role permissions
+		-- Admin: all permissions
+		INSERT INTO role_permissions (role_id, permission_id)
+		SELECT r.id, p.id FROM roles r CROSS JOIN permissions p
+		WHERE r.name = 'admin'
+		ON CONFLICT DO NOTHING;
+
+		-- Operator: nodes, probes, alerts, webhooks (read/write), reports (read/write)
+		INSERT INTO role_permissions (role_id, permission_id)
+		SELECT r.id, p.id FROM roles r
+		CROSS JOIN permissions p
+		WHERE r.name = 'operator'
+			AND p.resource IN ('nodes', 'probes', 'alerts', 'webhooks', 'reports')
+			AND p.action IN ('read', 'write')
+		ON CONFLICT DO NOTHING;
+
+		-- Viewer: read-only access to all resources except users and settings
+		INSERT INTO role_permissions (role_id, permission_id)
+		SELECT r.id, p.id FROM roles r
+		CROSS JOIN permissions p
+		WHERE r.name = 'viewer'
+			AND p.action = 'read'
+			AND p.resource NOT IN ('users', 'settings')
+		ON CONFLICT DO NOTHING;
 	`
 
 	_, err := pool.Exec(ctx, query)

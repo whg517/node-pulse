@@ -2,6 +2,12 @@
  * Authentication TypeScript types
  *
  * Aligned with backend pulse/internal/auth/auth_handler.go response structures
+ *
+ * JWT Token Details:
+ * - Algorithm: RS256 (RSA asymmetric signing)
+ * - Access tokens: Signed with RSA private key, verified with public key
+ * - Key ID (kid): Included in token header for key rotation support
+ * - Refresh tokens: Opaque tokens stored in HttpOnly cookies
  */
 
 // ============== User Types ==============

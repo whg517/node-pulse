@@ -56,14 +56,18 @@ func TestRegression_NodeHandlersWithNewAuth(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	// Create JWT service
+	// Create JWT service with RSA keys
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
 	cfg := &config.JWTConfig{
 		Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		PrivateKey:                     privateKeyPEM,
+		PublicKey:                      publicKeyPEM,
+		KeyID:                          "test-key-id",
 		AccessTokenExpirationMinutes:   15,
 		RefreshTokenExpirationDays:     7,
 		RefreshTokenMaxValidityDays:    30,
 	}
-	jwtService := NewJWTService(cfg.Secret, cfg.AccessTokenExpirationMinutes, pool)
+	jwtService := NewJWTService(cfg.PrivateKey, cfg.PublicKey, cfg.KeyID, cfg.AccessTokenExpirationMinutes, pool)
 
 	// Simulate node handlers with JWT middleware
 	router := gin.New()
@@ -231,7 +235,8 @@ func TestRegression_ProbeHandlersWithNewAuth(t *testing.T) {
 	`, userID, "testuser", hashedPassword, "test@example.com", "admin")
 	require.NoError(t, err)
 
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, pool)
 	token, _, _ := jwtService.GenerateAccessToken(userID.String(), "admin")
 
 	// Simulate probe handlers with JWT middleware
@@ -342,7 +347,8 @@ func TestRegression_RBACMiddlewareCompatibility(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, pool)
 
 	// RBAC middleware that checks roles from JWT claims
 	requireRole := func(allowedRoles ...string) gin.HandlerFunc {
@@ -465,7 +471,8 @@ func TestRegression_BeaconHeartbeatWithNewJWT(t *testing.T) {
 	`, beaconID, "beacon-1", hashedPassword, "beacon@example.com", "beacon")
 	require.NoError(t, err)
 
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, pool)
 	beaconToken, jti, _ := jwtService.GenerateAccessToken(beaconID.String(), "beacon")
 
 	// Simulate beacon heartbeat endpoint with JWT auth
@@ -635,7 +642,8 @@ func TestRegression_TokenExpirationTests(t *testing.T) {
 	cleanupTables(ctx, pool)
 	createTestTables(ctx, t, pool)
 
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, pool)
 	userID := uuid.New().String()
 
 	// Test 1: Valid token works
@@ -661,8 +669,9 @@ func TestRegression_TokenExpirationTests(t *testing.T) {
 
 	// Test 3: Token with invalid signature fails
 	t.Run("InvalidSignatureRejected", func(t *testing.T) {
-		// Generate token with different secret
-		otherService := NewJWTService("different-secret-0123456789abcdef0123456789abcdef0123456789abcdef0123456789", 15, nil)
+		// Generate token with different RSA keys
+		otherPrivateKeyPEM, otherPublicKeyPEM := GenerateTestRSAKeyPair(t)
+		otherService := NewJWTService(otherPrivateKeyPEM, otherPublicKeyPEM, "different-key-id", 15, nil)
 		token, _, _ := otherService.GenerateAccessToken(userID, "admin")
 
 		// Try to validate with different service

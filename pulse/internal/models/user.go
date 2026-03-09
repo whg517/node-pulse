@@ -4,16 +4,17 @@ import "github.com/jackc/pgx/v5/pgtype"
 
 // User represents a user in system
 type User struct {
-	UserID              string              `json:"user_id" db:"user_id"`
-	Username            string              `json:"username" db:"username"`
-	PasswordHash        string              `json:"-" db:"password_hash"` // Never expose in JSON
-	Role                string              `json:"role" db:"role"`
-	FailedLoginAttempts int                 `json:"failed_login_attempts" db:"failed_login_attempts"`
-	LockedUntil         *pgtype.Timestamp   `json:"locked_until,omitempty" db:"locked_until"`
-	MFAEnabled          bool                `json:"mfa_enabled" db:"mfa_enabled"`           // For future MFA support
-	MFASecret           *string             `json:"-" db:"mfa_secret"`                      // Never expose in JSON
-	CreatedAt           pgtype.Timestamp    `json:"created_at" db:"created_at"`
-	UpdatedAt           pgtype.Timestamp    `json:"updated_at" db:"updated_at"`
+	UserID              string            `json:"user_id" db:"user_id"`
+	Username            string            `json:"username" db:"username"`
+	Email               *string           `json:"email,omitempty" db:"email"`
+	PasswordHash        string            `json:"-" db:"password_hash"` // Never expose in JSON
+	Role                string            `json:"role" db:"role"`
+	FailedLoginAttempts int               `json:"failed_login_attempts" db:"failed_login_attempts"`
+	LockedUntil         *pgtype.Timestamp `json:"locked_until,omitempty" db:"locked_until"`
+	MFAEnabled          bool              `json:"mfa_enabled" db:"mfa_enabled"` // For future MFA support
+	MFASecret           *string           `json:"-" db:"mfa_secret"`            // Never expose in JSON
+	CreatedAt           pgtype.Timestamp  `json:"created_at" db:"created_at"`
+	UpdatedAt           pgtype.Timestamp  `json:"updated_at" db:"updated_at"`
 }
 
 // LoginRequest represents login credentials

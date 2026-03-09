@@ -151,6 +151,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         isAuthenticated: true,
         role: response.data.role,
         isLoading: false,
+      })
     } catch {
       // Session validation failed - clear auth state to prevent stale UI
       // This ensures ProtectedRoute doesn't show authenticated content when session is invalid

@@ -153,17 +153,22 @@ func TestSecurity_AccountEnumerationPrevention(t *testing.T) {
 	cleanupTables(ctx, pool)
 	createTestTables(ctx, t, pool)
 
-	// Create test config
+	// Create test config with RSA keys
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+
 	cfg := &config.JWTConfig{
 		Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		PrivateKey:                     privateKeyPEM,
+		PublicKey:                      publicKeyPEM,
+		KeyID:                          "test-key-id",
 		AccessTokenExpirationMinutes:   15,
 		RefreshTokenExpirationDays:     7,
 		RefreshTokenMaxValidityDays:    30,
 	}
 
-	jwtService := NewJWTService(cfg.Secret, cfg.AccessTokenExpirationMinutes, pool)
-	handler := NewAuthHandler(pool, cfg.Secret, cfg.AccessTokenExpirationMinutes,
-		cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false)
+	jwtService := NewJWTService(cfg.PrivateKey, cfg.PublicKey, cfg.KeyID, cfg.AccessTokenExpirationMinutes, pool)
+	handler := NewAuthHandler(pool, cfg.PrivateKey, cfg.PublicKey, cfg.KeyID,
+		cfg.AccessTokenExpirationMinutes, cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false)
 	handler.jwtService = jwtService
 
 	router := gin.New()
@@ -221,7 +226,8 @@ func TestSecurity_TokenBindingPrevention(t *testing.T) {
 	cleanupTables(ctx, pool)
 	createTestTables(ctx, t, pool)
 
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, pool)
 
 	// Generate token for user
 	userID := uuid.New().String()
@@ -273,7 +279,8 @@ func TestSecurity_PrivilegeEscalationPrevention(t *testing.T) {
 	cleanupTables(ctx, pool)
 	createTestTables(ctx, t, pool)
 
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, pool)
 
 	// Create users with different roles
 	viewerID := uuid.New().String()
@@ -414,16 +421,22 @@ func TestSecurity_BruteForceProtection(t *testing.T) {
 	cleanupTables(ctx, pool)
 	createTestTables(ctx, t, pool)
 
+	// Generate RSA keys for testing
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+
 	cfg := &config.JWTConfig{
 		Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		PrivateKey:                     privateKeyPEM,
+		PublicKey:                      publicKeyPEM,
+		KeyID:                          "test-key-id",
 		AccessTokenExpirationMinutes:   15,
 		RefreshTokenExpirationDays:     7,
 		RefreshTokenMaxValidityDays:    30,
 	}
 
-	jwtService := NewJWTService(cfg.Secret, cfg.AccessTokenExpirationMinutes, pool)
-	handler := NewAuthHandler(pool, cfg.Secret, cfg.AccessTokenExpirationMinutes,
-		cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false)
+	jwtService := NewJWTService(cfg.PrivateKey, cfg.PublicKey, cfg.KeyID, cfg.AccessTokenExpirationMinutes, pool)
+	handler := NewAuthHandler(pool, cfg.PrivateKey, cfg.PublicKey, cfg.KeyID,
+		cfg.AccessTokenExpirationMinutes, cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false)
 	handler.jwtService = jwtService
 
 	router := gin.New()

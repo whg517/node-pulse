@@ -2,7 +2,10 @@ package api
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"os"
 
@@ -39,27 +42,38 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	// Initialize rate limiter
 	middleware.InitRateLimiter()
 
+	// Initialize mTLS configuration (mandatory for production beacons)
+	middleware.InitMTLSConfig()
+
 	// Apply error handling and rate limiting middleware
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.RateLimitMiddleware())
 
 	// Get JWT configuration from environment or use defaults
-	jwtSecret := getEnvOrDefault("PULSE_JWT_SECRET", "")
-	if jwtSecret == "" {
-		// Auto-generate 512-bit secret if not provided
-		jwtSecret = generateJWTSecret()
+	jwtPrivateKey := getEnvOrDefault("PULSE_JWT_PRIVATE_KEY", "")
+	jwtPublicKey := getEnvOrDefault("PULSE_JWT_PUBLIC_KEY", "")
+	jwtKeyID := getEnvOrDefault("PULSE_JWT_KEY_ID", "")
+
+	// If no RSA keys provided, generate them for RS256
+	if jwtPrivateKey == "" || jwtPublicKey == "" {
+		jwtPrivateKey, jwtPublicKey = generateRSAKeyPair()
+		if jwtKeyID == "" {
+			jwtKeyID = "default-key"
+		}
 	}
 
 	// Get cookie secure setting from environment (default false for development)
 	cookieSecure := getEnvOrDefault("PULSE_SESSION_COOKIE_SECURE", "false") == "true"
 
-	// Initialize JWT service
-	jwtService := auth.NewJWTService(jwtSecret, 15, pool)
+	// Initialize JWT service with RS256
+	jwtService := auth.NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, 15, pool)
 
 	// Initialize auth handler
 	authHandler := auth.NewAuthHandler(
 		pool,
-		jwtSecret,
+		jwtPrivateKey,
+		jwtPublicKey,
+		jwtKeyID,
 		15,  // 15 minutes access token
 		7,   // 7 days refresh token
 		30,  // 30 days max validity
@@ -118,10 +132,14 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		beacon := v1.Group("/beacon")
 		{
-			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (JWT auth required)
-			beacon.POST("/heartbeat", middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleHeartbeat)
+			// POST /api/v1/beacon/token - Exchange API key for JWT token (public, API key auth)
+			// This is the entry point for beacons to obtain JWT tokens
+			beacon.POST("/token", authHandler.ExchangeAPIKey)
+
+			// POST /api/v1/beacon/heartbeat - Receive heartbeat data (JWT + mTLS auth required)
+			beacon.POST("/heartbeat", middleware.MTLSAuthMiddleware(), middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleHeartbeat)
 			// POST /api/v1/beacon/heartbeat/compressed - Receive compressed heartbeat data (FR-4.1.5)
-			beacon.POST("/heartbeat/compressed", middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleCompressedHeartbeat)
+			beacon.POST("/heartbeat/compressed", middleware.MTLSAuthMiddleware(), middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleCompressedHeartbeat)
 		}
 
 		// Beacon config management routes (require auth) (FR-4.2.4)
@@ -156,8 +174,6 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			authGroup.POST("/refresh", authHandler.Refresh)
 			// POST /api/v1/auth/logout - Logout (requires valid token to blacklist it)
 			authGroup.POST("/logout", middleware.JWTAuthMiddleware(jwtService), authHandler.Logout)
-			// POST /api/v1/auth/token/api-key - Exchange API key for JWT token (public for beacons/devices)
-			authGroup.POST("/token/api-key", authHandler.ExchangeAPIKey)
 			// GET /api/v1/auth/me - Get current user info (requires auth)
 			authGroup.GET("/me", middleware.JWTAuthMiddleware(jwtService), authHandler.GetMe)
 			// GET /api/v1/auth/sessions - Get user sessions (requires auth)
@@ -372,6 +388,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 }
 
 // generateJWTSecret generates a 512-bit (64 byte) random JWT secret using crypto/rand
+// Deprecated: Use generateRSAKeyPair for RS256 signing instead
 func generateJWTSecret() string {
 	secret := make([]byte, 64)
 	// Use crypto/rand for cryptographically secure random bytes
@@ -382,4 +399,33 @@ func generateJWTSecret() string {
 	}
 	// Return as hex string for easier configuration
 	return hex.EncodeToString(secret)
+}
+
+// generateRSAKeyPair generates an RSA-2048 key pair for JWT RS256 signing
+// Returns private key and public key in PEM format
+func generateRSAKeyPair() (string, string) {
+	// Generate 2048-bit RSA private key (minimum per design spec)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		panic(fmt.Sprintf("failed to generate RSA private key: %v", err))
+	}
+
+	// Encode private key to PEM format
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	})
+
+	// Encode public key to PEM format
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		panic(fmt.Sprintf("failed to marshal public key: %v", err))
+	}
+	publicKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicKeyBytes,
+	})
+
+	return string(privateKeyPEM), string(publicKeyPEM)
 }

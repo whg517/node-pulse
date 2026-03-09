@@ -2,6 +2,10 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"testing"
 
 	"github.com/google/uuid"
@@ -37,11 +41,24 @@ func createTestTables(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 			updated_at TIMESTAMP DEFAULT NOW()
 		)`,
 		// Other tables can reference users
+		`CREATE TABLE IF NOT EXISTS sessions (
+			session_id UUID PRIMARY KEY,
+			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+			device_id VARCHAR(255),
+			ip_address INET,
+			user_agent TEXT,
+			remember_me BOOLEAN DEFAULT false,
+			expires_at TIMESTAMP NOT NULL,
+			max_valid_until TIMESTAMP NOT NULL,
+			last_activity_at TIMESTAMP DEFAULT NOW(),
+			created_at TIMESTAMP DEFAULT NOW()
+		)`,
 		`CREATE TABLE IF NOT EXISTS refresh_tokens (
 			id SERIAL PRIMARY KEY,
 			token_id UUID UNIQUE NOT NULL,
 			token_hash TEXT NOT NULL,
 			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+			session_id UUID REFERENCES sessions(session_id) ON DELETE CASCADE,
 			expires_at TIMESTAMP NOT NULL,
 			max_valid_until TIMESTAMP NOT NULL,
 			revoked_at TIMESTAMP,
@@ -144,4 +161,38 @@ func CreateTestUser(t *testing.T, ctx context.Context, pool *pgxpool.Pool) strin
 
 	require.NoError(t, err, "Failed to create test user")
 	return userID.String()
+}
+
+// GenerateTestRSAKeyPair generates an RSA-2048 key pair for testing
+// Returns private key and public key in PEM format
+func GenerateTestRSAKeyPair(t *testing.T) (string, string) {
+	t.Helper()
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err, "Failed to generate RSA private key")
+
+	// Encode private key to PEM format
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	})
+
+	// Encode public key to PEM format
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	require.NoError(t, err, "Failed to marshal public key")
+	publicKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicKeyBytes,
+	})
+
+	return string(privateKeyPEM), string(publicKeyPEM)
+}
+
+// NewTestJWTService creates a JWT service with test RSA keys
+func NewTestJWTService(t *testing.T, accessExpirationMinutes int, pool *pgxpool.Pool) *JWTService {
+	t.Helper()
+
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	return NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", accessExpirationMinutes, pool)
 }

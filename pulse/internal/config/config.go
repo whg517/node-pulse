@@ -2,12 +2,16 @@ package config
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -82,10 +86,13 @@ type SessionConfig struct {
 
 // JWTConfig holds JWT configuration
 type JWTConfig struct {
-	Secret                       string
+	Secret                       string // Deprecated: Use PrivateKey/PublicKey for RS256
+	PrivateKey                   string // RSA private key in PEM format for RS256 signing
+	PublicKey                    string // RSA public key in PEM format for RS256 verification
 	AccessTokenExpirationMinutes int
 	RefreshTokenExpirationDays   int
 	RefreshTokenMaxValidityDays  int // Absolute cap for refresh tokens (sliding window)
+	KeyID                        string // Key identifier for key rotation (kid header)
 }
 
 // RateLimitConfig holds rate limiting configuration for auth endpoints
@@ -293,6 +300,15 @@ func mergeConfig(dst, src *Config) {
 	if src.JWT.Secret != "" {
 		dst.JWT.Secret = src.JWT.Secret
 	}
+	if src.JWT.PrivateKey != "" {
+		dst.JWT.PrivateKey = src.JWT.PrivateKey
+	}
+	if src.JWT.PublicKey != "" {
+		dst.JWT.PublicKey = src.JWT.PublicKey
+	}
+	if src.JWT.KeyID != "" {
+		dst.JWT.KeyID = src.JWT.KeyID
+	}
 	if src.JWT.AccessTokenExpirationMinutes != 0 {
 		dst.JWT.AccessTokenExpirationMinutes = src.JWT.AccessTokenExpirationMinutes
 	}
@@ -331,7 +347,22 @@ func generateSecrets(cfg *Config) error {
 		cfg.Session.Secret = secret
 	}
 
-	// Generate JWT secret if not provided
+	// Generate RSA key pair for RS256 JWT if not provided
+	if cfg.JWT.PrivateKey == "" || cfg.JWT.PublicKey == "" {
+		privateKeyPEM, publicKeyPEM, err := generateRSAKeyPair()
+		if err != nil {
+			return fmt.Errorf("failed to generate RSA key pair: %w", err)
+		}
+		cfg.JWT.PrivateKey = privateKeyPEM
+		cfg.JWT.PublicKey = publicKeyPEM
+	}
+
+	// Generate KeyID if not provided
+	if cfg.JWT.KeyID == "" {
+		cfg.JWT.KeyID = fmt.Sprintf("key-%d", time.Now().Unix())
+	}
+
+	// Generate legacy JWT secret if not provided (for backward compatibility)
 	if cfg.JWT.Secret == "" {
 		secret, err := generateRandomSecret(64) // 64 bytes (512 bits) for NIST compliance
 		if err != nil {
@@ -350,6 +381,35 @@ func generateRandomSecret(length int) (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+// generateRSAKeyPair generates an RSA-2048 key pair for JWT RS256 signing
+// Returns private key and public key in PEM format
+func generateRSAKeyPair() (string, string, error) {
+	// Generate 2048-bit RSA private key (minimum per design spec)
+	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate RSA private key: %w", err)
+	}
+
+	// Encode private key to PEM format
+	privateKeyBytes := x509.MarshalPKCS1PrivateKey(privateKey)
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: privateKeyBytes,
+	})
+
+	// Encode public key to PEM format
+	publicKeyBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to marshal public key: %w", err)
+	}
+	publicKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "PUBLIC KEY",
+		Bytes: publicKeyBytes,
+	})
+
+	return string(privateKeyPEM), string(publicKeyPEM), nil
 }
 
 // defaultConfig returns configuration with default values
@@ -622,6 +682,15 @@ func mergeFromEnv(cfg *Config) *Config {
 		// Legacy fallback
 		cfg.JWT.Secret = v
 	}
+	if v := os.Getenv("PULSE_JWT_PRIVATE_KEY"); v != "" {
+		cfg.JWT.PrivateKey = v
+	}
+	if v := os.Getenv("PULSE_JWT_PUBLIC_KEY"); v != "" {
+		cfg.JWT.PublicKey = v
+	}
+	if v := os.Getenv("PULSE_JWT_KEY_ID"); v != "" {
+		cfg.JWT.KeyID = v
+	}
 	if v := os.Getenv("PULSE_JWT_ACCESS_TOKEN_EXPIRATION_MINUTES"); v != "" {
 		if i := parseInt(v, cfg.JWT.AccessTokenExpirationMinutes); i > 0 {
 			cfg.JWT.AccessTokenExpirationMinutes = i
@@ -827,11 +896,29 @@ func (c *SessionConfig) Validate() error {
 
 // Validate validates JWT configuration
 func (c *JWTConfig) Validate() error {
-	if c.Secret == "" {
-		return fmt.Errorf("jwt secret cannot be empty")
-	}
-	if len(c.Secret) < 64 {
-		return fmt.Errorf("jwt secret must be at least 64 bytes (512 bits) for security, got %d bytes", len(c.Secret))
+	// Validate RSA keys for RS256 (preferred)
+	if c.PrivateKey != "" || c.PublicKey != "" {
+		if c.PrivateKey == "" {
+			return fmt.Errorf("jwt private_key must be provided when public_key is set")
+		}
+		if c.PublicKey == "" {
+			return fmt.Errorf("jwt public_key must be provided when private_key is set")
+		}
+		// Basic PEM format validation
+		if !strings.Contains(c.PrivateKey, "BEGIN RSA PRIVATE KEY") && !strings.Contains(c.PrivateKey, "BEGIN PRIVATE KEY") {
+			return fmt.Errorf("jwt private_key must be in PEM format")
+		}
+		if !strings.Contains(c.PublicKey, "BEGIN PUBLIC KEY") {
+			return fmt.Errorf("jwt public_key must be in PEM format")
+		}
+	} else {
+		// Fallback to legacy Secret validation for backward compatibility
+		if c.Secret == "" {
+			return fmt.Errorf("jwt secret or rsa key pair (private_key/public_key) must be provided")
+		}
+		if len(c.Secret) < 64 {
+			return fmt.Errorf("jwt secret must be at least 64 bytes (512 bits) for security, got %d bytes", len(c.Secret))
+		}
 	}
 	if c.AccessTokenExpirationMinutes <= 0 {
 		return fmt.Errorf("jwt access_token_expiration_minutes must be positive, got %d", c.AccessTokenExpirationMinutes)

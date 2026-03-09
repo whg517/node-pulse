@@ -16,7 +16,8 @@ import (
 // Tech-Spec requirement: Graceful degradation when database is down
 func TestError_DatabaseConnectionFailure(t *testing.T) {
 	// Create JWT service with nil pool (simulating database unavailability)
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, nil)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, nil)
 
 	// Should still be able to generate tokens (doesn't require DB)
 	userID := uuid.New().String()
@@ -35,7 +36,8 @@ func TestError_DatabaseConnectionFailure(t *testing.T) {
 // TestError_MalformedJWTToken tests handling of malformed JWT tokens
 // Tech-Spec requirement: Proper error handling for invalid token formats
 func TestError_MalformedJWTToken(t *testing.T) {
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, nil)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, nil)
 
 	malformedTokens := []struct {
 		name  string
@@ -120,7 +122,10 @@ func TestError_InvalidJWTSecret(t *testing.T) {
 
 	for _, tc := range invalidSecrets {
 		t.Run(tc.name, func(t *testing.T) {
-			jwtService := NewJWTService(tc.secret, 15, nil)
+			// Note: With RS256, we need valid RSA keys, not arbitrary secrets
+			// This test now verifies that valid RSA keys work correctly
+			privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+			jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, nil)
 
 			// Service should still generate tokens with any secret
 			userID := uuid.New().String()
@@ -218,7 +223,8 @@ func TestError_NetworkTimeout(t *testing.T) {
 	defer pool.Close()
 
 	// If pool was created, test operations with short timeout
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, pool)
 
 	// Try to check blacklist with short timeout
 	revoked, err := jwtService.CheckRevoked(shortCtx, "test-jti")

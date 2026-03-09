@@ -51,8 +51,8 @@ func setupTestRouter(nodeQuerier db.NodesQuerier, nodeID string) (*gin.Engine, s
 	router := gin.New()
 
 	// Create JWT service for testing (config loaded in TestMain)
-	jwtSecret := "test-secret-key-32-bytes-long"
-	jwtService := auth.NewJWTService(jwtSecret, 15, nil) // nil DB for tests
+	privateKeyPEM, publicKeyPEM := auth.GenerateTestRSAKeyPair(&testing.T{})
+	jwtService := auth.NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, nil) // nil DB for tests
 
 	// Generate a beacon JWT token for testing with the given nodeID
 	token, _, err := jwtService.GenerateAccessToken(nodeID, "beacon")

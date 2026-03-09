@@ -60,10 +60,13 @@ func setupAuthHandlerTest(t *testing.T) (*pgxpool.Pool, *AuthHandler, *config.Co
 		},
 	}
 
-	// Create auth handler using correct constructor
+	// Create auth handler using correct constructor with RSA keys
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
 	handler := NewAuthHandler(
 		pool,
-		cfg.JWT.Secret,
+		privateKeyPEM,
+		publicKeyPEM,
+		"test-key-id",
 		cfg.JWT.AccessTokenExpirationMinutes,
 		cfg.JWT.RefreshTokenExpirationDays,
 		cfg.JWT.RefreshTokenMaxValidityDays,
@@ -217,7 +220,8 @@ func TestAuthHandler_ExchangeAPIKey_InvalidKey(t *testing.T) {
 	router := gin.New()
 
 	pool := setupTestDB(t)
-	handler := auth.NewAuthHandler(pool, jwtSecret, 15, 7, 30, false)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
+	handler := auth.NewAuthHandler(pool, privateKeyPEM, publicKeyPEM, "test-key-id", 15, 7, 30, false)
 	router.POST("/api/v1/beacon/token", handler.ExchangeAPIKey)
 
 	reqBody := map[string]string{"api_key": "invalid-key-123"}

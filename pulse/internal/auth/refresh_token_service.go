@@ -15,16 +15,16 @@ import (
 
 // mutexWithTimestamp wraps a mutex with last-used timestamp for cleanup
 type mutexWithTimestamp struct {
-	mu    *sync.Mutex
+	mu     *sync.Mutex
 	usedAt time.Time
 }
 
 // RefreshTokenService manages refresh tokens with concurrency protection
 type RefreshTokenService struct {
-	pool         *pgxpool.Pool
-	mutexes      map[string]*mutexWithTimestamp
-	mu           sync.Mutex
-	cleanupDone  chan struct{}
+	pool        *pgxpool.Pool
+	mutexes     map[string]*mutexWithTimestamp
+	mu          sync.Mutex
+	cleanupDone chan struct{}
 }
 
 // NewRefreshTokenService creates a new refresh token service
@@ -75,7 +75,7 @@ func (s *RefreshTokenService) getMutex(userID string) *sync.Mutex {
 
 	if _, exists := s.mutexes[userID]; !exists {
 		s.mutexes[userID] = &mutexWithTimestamp{
-			mu:    &sync.Mutex{},
+			mu:     &sync.Mutex{},
 			usedAt: time.Now(),
 		}
 	} else {
@@ -151,6 +151,61 @@ func (s *RefreshTokenService) CreateRefreshToken(ctx context.Context, userID str
 		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
 		RETURNING id, token_id, user_id, expires_at, max_valid_until, revoked_at, replaced_by, user_agent, ip_address, created_at, updated_at
 	`, tokenID, tokenHash, userID, expiresAt, maxValidUntil, userAgentPtr, ipAddressPtr).Scan(
+		&dbToken.ID,
+		&dbToken.TokenID,
+		&dbToken.UserID,
+		&dbToken.ExpiresAt,
+		&dbToken.MaxValidUntil,
+		&dbToken.RevokedAt,
+		&dbToken.ReplacedBy,
+		&dbToken.UserAgent,
+		&dbToken.IPAddress,
+		&dbToken.CreatedAt,
+		&dbToken.UpdatedAt,
+	)
+
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to create refresh token: %w", err)
+	}
+
+	return tokenPlain, &dbToken, nil
+}
+
+// CreateRefreshTokenForSession creates a new refresh token linked to a specific session
+func (s *RefreshTokenService) CreateRefreshTokenForSession(ctx context.Context, userID string, sessionID uuid.UUID, userAgent, ipAddress string, maxValidityDays int) (string, *models.RefreshToken, error) {
+	// Generate token_id (UUID) as database identifier
+	tokenID := uuid.New()
+
+	// Generate refresh token (random string for client)
+	tokenPlain := uuid.New().String()
+
+	// Hash the token for storage
+	hash := sha256.Sum256([]byte(tokenPlain))
+	tokenHash := hex.EncodeToString(hash[:])
+
+	now := time.Now()
+	expiresAt := now.Add(7 * 24 * time.Hour) // 7 days
+	maxValidUntil := now.Add(time.Duration(maxValidityDays) * 24 * time.Hour)
+
+	// Handle empty IP address (set to NULL)
+	var ipAddressPtr *string
+	if ipAddress != "" {
+		ipAddressPtr = &ipAddress
+	}
+
+	// Handle empty user agent (set to NULL)
+	var userAgentPtr *string
+	if userAgent != "" {
+		userAgentPtr = &userAgent
+	}
+
+	// Insert into database with session linkage
+	var dbToken models.RefreshToken
+	err := s.pool.QueryRow(ctx, `
+		INSERT INTO refresh_tokens (token_id, token_hash, user_id, session_id, expires_at, max_valid_until, user_agent, ip_address, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+		RETURNING id, token_id, user_id, expires_at, max_valid_until, revoked_at, replaced_by, user_agent, ip_address, created_at, updated_at
+	`, tokenID, tokenHash, userID, sessionID, expiresAt, maxValidUntil, userAgentPtr, ipAddressPtr).Scan(
 		&dbToken.ID,
 		&dbToken.TokenID,
 		&dbToken.UserID,

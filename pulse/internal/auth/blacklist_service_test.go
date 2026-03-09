@@ -36,8 +36,8 @@ func setupBlacklistTest(t *testing.T) (*pgxpool.Pool, *JWTService, func()) {
 	cleanupTables(ctx, pool)
 	createTestTables(ctx, t, pool)
 
-	// Create JWT service
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	// Create JWT service with RSA keys
+	jwtService := NewTestJWTService(t, 15, pool)
 
 	cleanup := func() {
 		cleanupTables(ctx, pool)
@@ -313,7 +313,7 @@ func TestBlacklistService_MultipleTokens(t *testing.T) {
 // TestBlacklistService_NilPool tests that nil pool returns error (fail-closed)
 func TestBlacklistService_NilPool(t *testing.T) {
 	// Create JWT service with nil pool
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, nil)
+	jwtService := NewTestJWTService(t, 15, nil)
 
 	ctx := context.Background()
 	_, err := jwtService.CheckRevoked(ctx, "test-jti")
@@ -339,7 +339,8 @@ func BenchmarkBlacklistService_CheckPerformance(b *testing.B) {
 	cleanupTables(ctx, pool)
 	createTestTables(ctx, &testing.T{}, pool)
 
-	jwtService := NewJWTService("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", 15, pool)
+	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(&testing.T{})
+	jwtService := NewJWTService(privateKeyPEM, publicKeyPEM, "test-key-id", 15, pool)
 
 	// Add 10,000 blacklist entries
 	b.StopTimer()

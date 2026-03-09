@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"sync"
 	"time"
 
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
+	"github.com/whg517/node-pulse/pulse/internal/security"
 )
 
 // PushService handles webhook push operations
@@ -144,6 +146,26 @@ func (s *PushService) SendAlert(ctx context.Context, alertEvent *models.AlertEve
 
 // sendHTTP sends a single HTTP POST request to a webhook
 func (s *PushService) sendHTTP(ctx context.Context, alertEvent *models.AlertEvent, webhook *models.Webhook) error {
+	// SSRF Protection: Validate webhook URL before sending
+	if err := security.ValidateWebhookURL(webhook.URL); err != nil {
+		slog.Warn("Webhook URL failed SSRF validation",
+			"webhook_id", webhook.ID,
+			"url", webhook.URL,
+			"error", err)
+		return fmt.Errorf("webhook URL validation failed: %w", err)
+	}
+
+	// Parse and validate URL structure
+	parsedURL, err := url.Parse(webhook.URL)
+	if err != nil {
+		return fmt.Errorf("invalid webhook URL: %w", err)
+	}
+
+	// Additional security: Ensure URL has required components
+	if parsedURL.Host == "" {
+		return fmt.Errorf("webhook URL missing host")
+	}
+
 	// Format alert event according to webhook's event format or default
 	payload, err := s.formatAlertEvent(alertEvent, webhook)
 	if err != nil {
