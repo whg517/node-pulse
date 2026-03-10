@@ -18,6 +18,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/alert"
 	"github.com/whg517/node-pulse/pulse/internal/auth"
 	"github.com/whg517/node-pulse/pulse/internal/cache"
+	"github.com/whg517/node-pulse/pulse/internal/csrf"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/export"
 	"github.com/whg517/node-pulse/pulse/internal/health"
@@ -74,9 +75,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		jwtPrivateKey,
 		jwtPublicKey,
 		jwtKeyID,
-		15,  // 15 minutes access token
-		7,   // 7 days refresh token
-		30,  // 30 days max validity
+		15, // 15 minutes access token
+		7,  // 7 days refresh token
+		30, // 30 days max validity
 		cookieSecure,
 	)
 
@@ -180,8 +181,18 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			authGroup.GET("/sessions", middleware.JWTAuthMiddleware(jwtService), authHandler.GetSessions)
 			// DELETE /api/v1/auth/sessions/:id - Revoke specific session (requires auth)
 			authGroup.DELETE("/sessions/:id", middleware.JWTAuthMiddleware(jwtService), authHandler.DeleteSession)
+			// POST /api/v1/auth/sessions/revoke-all - Revoke all own sessions (requires auth)
+			authGroup.POST("/sessions/revoke-all", middleware.JWTAuthMiddleware(jwtService), authHandler.RevokeAllMySessions)
 			// GET /api/v1/auth/session-info - Get session expiration info (requires auth)
 			authGroup.GET("/session-info", middleware.JWTAuthMiddleware(jwtService), authHandler.GetSessionInfo)
+			// GET /api/v1/auth/verify - Validate current token and return claims (requires auth)
+			authGroup.GET("/verify", middleware.JWTAuthMiddleware(jwtService), authHandler.GetMe)
+			// POST /api/v1/auth/password/reset/request - Request password reset
+			authGroup.POST("/password/reset/request", authHandler.RequestPasswordReset)
+			// POST /api/v1/auth/password/reset/confirm - Confirm password reset
+			authGroup.POST("/password/reset/confirm", authHandler.ConfirmPasswordReset)
+			// POST /api/v1/auth/password/change - Change password (requires auth + CSRF)
+			authGroup.POST("/password/change", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.ChangePassword)
 		}
 
 		// Admin auth routes (admin only)
@@ -191,6 +202,66 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		{
 			// POST /api/v1/admin/auth/revoke-all/:userId - Revoke all user sessions
 			adminAuth.POST("/revoke-all/:userId", authHandler.RevokeAllSessions)
+		}
+
+		// Admin audit log routes (admin only)
+		adminAuditHandler := NewAdminAuditHandler(pool)
+		adminAudit := v1.Group("/admin/audit")
+		adminAudit.Use(middleware.JWTAuthMiddleware(jwtService))
+		adminAudit.Use(middleware.RBACMiddleware([]string{"admin"}))
+		{
+			// GET /api/v1/admin/audit/logs - Query audit logs (admin only)
+			adminAudit.GET("/logs", adminAuditHandler.GetAuditLogs)
+			// GET /api/v1/admin/audit/logs/:id - Get audit log by ID (admin only)
+			adminAudit.GET("/logs/:id", adminAuditHandler.GetAuditLogByID)
+		}
+
+		// Admin user management routes (admin only)
+		auditLogger := auth.NewAuditLogger(pool)
+		adminUserHandler := NewAdminUserHandler(db.NewUserQuerier(pool), auditLogger)
+
+		adminUsers := v1.Group("/admin/users")
+		adminUsers.Use(middleware.JWTAuthMiddleware(jwtService))
+		adminUsers.Use(middleware.RBACMiddleware([]string{"admin"}))
+		{
+			// GET /api/v1/admin/users - List all users (admin only)
+			adminUsers.GET("", adminUserHandler.ListUsers)
+
+			// GET /api/v1/admin/users/:id - Get user by ID (admin only)
+			adminUsers.GET("/:id", adminUserHandler.GetUser)
+
+			// POST /api/v1/admin/users - Create new user (admin only)
+			adminUsers.POST("", adminUserHandler.CreateUser)
+
+			// PUT /api/v1/admin/users/:id - Update user (admin only)
+			adminUsers.PUT("/:id", adminUserHandler.UpdateUser)
+
+			// DELETE /api/v1/admin/users/:id - Delete user (admin only)
+			adminUsers.DELETE("/:id", adminUserHandler.DeleteUser)
+		}
+
+		// Admin API key management routes (admin only)
+		apiKeyService := auth.NewAPIKeyService(pool)
+		adminAPIKeyHandler := NewAdminAPIKeyHandler(apiKeyService)
+
+		adminAPIKeys := v1.Group("/admin/apikeys")
+		adminAPIKeys.Use(middleware.JWTAuthMiddleware(jwtService))
+		adminAPIKeys.Use(middleware.RBACMiddleware([]string{"admin"}))
+		{
+			// GET /api/v1/admin/apikeys - List all API keys (admin only)
+			adminAPIKeys.GET("", adminAPIKeyHandler.ListAPIKeysHandler)
+
+			// GET /api/v1/admin/apikeys/:id - Get API key by ID (admin only)
+			adminAPIKeys.GET("/:id", adminAPIKeyHandler.GetAPIKeyByIDHandler)
+
+			// POST /api/v1/admin/apikeys - Create new API key (admin only)
+			adminAPIKeys.POST("", adminAPIKeyHandler.CreateAPIKeyHandler)
+
+			// POST /api/v1/admin/apikeys/:id/rotate - Rotate API key (admin only)
+			adminAPIKeys.POST("/:id/rotate", adminAPIKeyHandler.RotateAPIKeyHandler)
+
+			// DELETE /api/v1/admin/apikeys/:id - Revoke API key (admin only)
+			adminAPIKeys.DELETE("/:id", adminAPIKeyHandler.RevokeAPIKeyHandler)
 		}
 
 		// Config management routes (require admin auth only)
@@ -224,6 +295,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		nodes.GET("/:id", nodeHandler.GetNodeByIDHandler)
 
 		// Create/Update/Delete routes require RBAC (admin or operator)
+		// Add CSRF protection for state-changing operations
+		nodes.Use(csrf.CSRFMiddleware())
 		nodes.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 
 		// POST /api/v1/nodes - Create node (admin/operator only)
@@ -250,6 +323,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		probes.GET("/:id", probeHandler.GetProbeByIDHandler)
 
 		// Create/Update/Delete routes require RBAC (admin or operator)
+		// Add CSRF protection for state-changing operations
+		nodes.Use(csrf.CSRFMiddleware())
 		probes.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 
 		// POST /api/v1/probes - Create probe (admin/operator only)
@@ -313,6 +388,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		alerts.GET("/rules/:id", alertHandler.GetAlertRuleByIDHandler)
 
 		// Create/Update/Delete routes require RBAC (admin or operator)
+		// Add CSRF protection for state-changing operations
+		nodes.Use(csrf.CSRFMiddleware())
 		alerts.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 
 		// POST /api/v1/alerts/rules - Create alert rule (admin/operator only)

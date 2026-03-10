@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/google/uuid"
@@ -13,94 +14,40 @@ import (
 
 // Migrate creates all database tables and indexes
 func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
-	if err := createUsersTable(ctx, pool); err != nil {
-		return err
+	steps := []struct {
+		name string
+		fn   func(context.Context, *pgxpool.Pool) error
+	}{
+		{"createUsersTable", createUsersTable},
+		{"createSessionsTable", createSessionsTable},
+		{"dropAndRecreateRefreshTokensTable", dropAndRecreateRefreshTokensTable},
+		{"dropAndRecreateBeaconTokensAsAPIKeys", dropAndRecreateBeaconTokensAsAPIKeys},
+		{"createTokenBlacklistTable", createTokenBlacklistTable},
+		{"createAuthAuditLogsTable", createAuthAuditLogsTable},
+		{"createRateLimitsTable", createRateLimitsTable},
+		{"createPasswordResetTokensTable", createPasswordResetTokensTable},
+		{"createRolesTable", createRolesTable},
+		{"createPermissionsTable", createPermissionsTable},
+		{"createRolePermissionsTable", createRolePermissionsTable},
+		{"createNodesTable", createNodesTable},
+		{"addNodeStatusFields", addNodeStatusFields},
+		{"createProbesTable", createProbesTable},
+		{"createProbesTrigger", createProbesTrigger},
+		{"createMetricsTable", createMetricsTable},
+		{"createAlertsTable", createAlertsTable},
+		{"createWebhooksTable", createWebhooksTable},
+		{"createAlertEventsTable", createAlertEventsTable},
+		{"createAlertSuppressionsTable", createAlertSuppressionsTable},
+		{"createWebhookLogsTable", createWebhookLogsTable},
+		{"createAlertRecordsTable", createAlertRecordsTable},
+		{"seedAdminUser", seedAdminUser},
 	}
 
-	if err := createSessionsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	// JWT Auth Rewrite: Drop and recreate with new schema
-	if err := dropAndRecreateRefreshTokensTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := dropAndRecreateBeaconTokensAsAPIKeys(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createTokenBlacklistTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createAuthAuditLogsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createRateLimitsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	// RBAC tables (must be before seedAdminUser for role references)
-	if err := createRolesTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createPermissionsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createRolePermissionsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createNodesTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := addNodeStatusFields(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createProbesTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createProbesTrigger(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createMetricsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createAlertsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createWebhooksTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createAlertEventsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createAlertSuppressionsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createWebhookLogsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := createAlertRecordsTable(ctx, pool); err != nil {
-		return err
-	}
-
-	if err := seedAdminUser(ctx, pool); err != nil {
-		return err
+	for _, step := range steps {
+		log.Printf("[Migration] Running step: %s", step.name)
+		if err := step.fn(ctx, pool); err != nil {
+			return fmt.Errorf("step %s failed: %w", step.name, err)
+		}
 	}
 
 	return nil
@@ -122,6 +69,24 @@ func createUsersTable(ctx context.Context, pool *pgxpool.Pool) error {
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			updated_at TIMESTAMPTZ DEFAULT NOW()
 		);
+
+		-- Add mfa_enabled/mfa_secret columns if missing (schema upgrade from older test-schema versions)
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='users' AND column_name='mfa_enabled'
+			) THEN
+				ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT false;
+			END IF;
+
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='users' AND column_name='mfa_secret'
+			) THEN
+				ALTER TABLE users ADD COLUMN mfa_secret TEXT;
+			END IF;
+		END $$;
 
 		CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 		CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
@@ -589,6 +554,17 @@ func createTokenBlacklistTable(ctx context.Context, pool *pgxpool.Pool) error {
 			reason TEXT
 		);
 
+		-- Add user_id column if missing (schema upgrade from older versions)
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='token_blacklist' AND column_name='user_id'
+			) THEN
+				ALTER TABLE token_blacklist ADD COLUMN user_id UUID REFERENCES users(user_id);
+			END IF;
+		END $$;
+
 		CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
 		CREATE INDEX IF NOT EXISTS idx_token_blacklist_user ON token_blacklist(user_id, expires_at);
 	`
@@ -611,6 +587,17 @@ func createAuthAuditLogsTable(ctx context.Context, pool *pgxpool.Pool) error {
 			details JSONB,
 			created_at TIMESTAMPTZ DEFAULT NOW()
 		);
+
+		-- Add service_account_id column if missing (schema upgrade from older versions)
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='auth_audit_logs' AND column_name='service_account_id'
+			) THEN
+				ALTER TABLE auth_audit_logs ADD COLUMN service_account_id UUID REFERENCES service_accounts(id);
+			END IF;
+		END $$;
 
 		CREATE INDEX IF NOT EXISTS idx_audit_events ON auth_audit_logs(event_type, created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_audit_users ON auth_audit_logs(user_id, created_at DESC);
@@ -751,4 +738,27 @@ func createBeaconTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
 	// DEPRECATED: Replaced by api_keys table in JWT auth rewrite
 	// Kept for backward compatibility during migration
 	return nil
+}
+
+// createPasswordResetTokensTable creates password_reset_tokens table with indexes
+func createPasswordResetTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS password_reset_tokens (
+			id SERIAL PRIMARY KEY,
+			user_id UUID NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+			token_hash TEXT NOT NULL UNIQUE,
+			expires_at TIMESTAMPTZ NOT NULL,
+			used_at TIMESTAMPTZ,
+			ip_address INET,
+			user_agent TEXT,
+			created_at TIMESTAMPTZ DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
+		CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+		CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_hash ON password_reset_tokens(token_hash);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
 }

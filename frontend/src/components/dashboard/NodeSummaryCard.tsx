@@ -198,7 +198,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
       </div>
 
       {/* Tags */}
-      {node.tags && node.tags.length > 0 && (
+      {Array.isArray(node.tags) && node.tags.length > 0 && (
         <div className="mt-2 flex flex-wrap gap-1">
           {node.tags.slice(0, 3).map((tag) => (
             <span

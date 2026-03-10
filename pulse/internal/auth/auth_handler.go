@@ -6,37 +6,41 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/whg517/node-pulse/pulse/internal/csrf"
 	"github.com/whg517/node-pulse/pulse/internal/models"
 )
 
 const (
 	// Security constants (F29: Moved from magic numbers to named constants)
-	MaxFailedLoginAttempts    = 5
-	AccountLockDuration        = 10 * time.Minute
-	MaxSessionsPerUser         = 10
-	MaxLoginAttemptsPerMinute  = 5
+	MaxFailedLoginAttempts      = 5
+	AccountLockDuration         = 10 * time.Minute
+	MaxSessionsPerUser          = 10
+	MaxLoginAttemptsPerMinute   = 5
 	MaxRefreshAttemptsPerMinute = 10
-	MaxLogoutAttemptsPerMinute = 10
-	MaxAPIKeyAttemptsPerMinute = 11
-	ConstantAuthDelay          = 150 * time.Millisecond
+	MaxLogoutAttemptsPerMinute  = 10
+	MaxAPIKeyAttemptsPerMinute  = 11
+	ConstantAuthDelay           = 150 * time.Millisecond
 )
 
 // AuthHandler handles authentication endpoints
+// AuthHandler handles authentication endpoints
 type AuthHandler struct {
-	pool              *pgxpool.Pool
-	jwtService        *JWTService
-	refreshTokenService *RefreshTokenService
-	apiKeyService     *APIKeyService
-	rateLimiter       *RateLimiter
-	auditLogger       *AuditLogger
+	pool                    *pgxpool.Pool
+	jwtService              *JWTService
+	refreshTokenService     *RefreshTokenService
+	apiKeyService           *APIKeyService
+	passwordResetService    *PasswordResetService
+	rateLimiter             *RateLimiter
+	auditLogger             *AuditLogger
 	accessExpirationMinutes int
-	refreshExpirationDays  int
-	maxValidityDays        int
-	cookieSecure           bool
+	refreshExpirationDays   int
+	maxValidityDays         int
+	cookieSecure            bool
 }
 
 // NewAuthHandler creates a new auth handler
@@ -55,14 +59,16 @@ func NewAuthHandler(
 	apiKeyService := NewAPIKeyService(pool)
 	rateLimiter := NewRateLimiter(pool)
 	auditLogger := NewAuditLogger(pool)
+	passwordResetService := NewPasswordResetService(pool)
 
 	return &AuthHandler{
-		pool:                  pool,
-		jwtService:           jwtService,
-		refreshTokenService:  refreshTokenService,
-		apiKeyService:        apiKeyService,
-		rateLimiter:          rateLimiter,
-		auditLogger:          auditLogger,
+		pool:                    pool,
+		jwtService:              jwtService,
+		refreshTokenService:     refreshTokenService,
+		apiKeyService:           apiKeyService,
+		passwordResetService:    passwordResetService,
+		rateLimiter:             rateLimiter,
+		auditLogger:             auditLogger,
 		accessExpirationMinutes: accessExpirationMinutes,
 		refreshExpirationDays:   refreshExpirationDays,
 		maxValidityDays:         maxValidityDays,
@@ -152,7 +158,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	}
 
 	// Verify password using bcrypt directly (constant-time comparison)
-		err = VerifyPassword(req.Password, passwordHash)
+	err = VerifyPassword(req.Password, passwordHash)
 	if err != nil {
 		// Password incorrect - increment failed attempts and log security event
 		newAttempts := failedAttempts + 1
@@ -225,6 +231,19 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		"user_agent": userAgent,
 	})
 
+	// Generate CSRF token
+	csrfToken, err := csrf.GenerateCSRFToken()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "CSRF_GENERATION_FAILED",
+			Message: "Failed to generate CSRF token",
+		})
+		return
+	}
+
+	// Set CSRF token as httpOnly, SameSite=Strict cookie
+	csrf.SetCSRFCookie(c, csrfToken, h.cookieSecure)
+
 	// Set refresh token as HTTP-only cookie (must be set before JSON response)
 	// Use Lax mode to allow cookies with proxied requests in development
 	sameSiteMode := http.SameSiteLaxMode
@@ -248,11 +267,13 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			Username    string `json:"username"`
 			Role        string `json:"role"`
 			AccessToken string `json:"access_token"`
+			CSRFToken   string `json:"csrf_token"`
 		}{
 			UserID:      userID,
 			Username:    req.Username,
 			Role:        role,
 			AccessToken: accessToken,
+			CSRFToken:   csrfToken,
 		},
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
@@ -386,9 +407,9 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		Name:     "refresh_token",
 		Value:    newRefreshToken,
 		MaxAge:   h.refreshExpirationDays * 86400, // Convert days to seconds
-		HttpOnly: true,                          // Prevent XSS
-		Secure:   h.cookieSecure,                // HTTPS only (configurable)
-		SameSite: sameSiteMode,                  // Lax for dev, Strict for prod
+		HttpOnly: true,                            // Prevent XSS
+		Secure:   h.cookieSecure,                  // HTTPS only (configurable)
+		SameSite: sameSiteMode,                    // Lax for dev, Strict for prod
 		Path:     "/",
 	})
 
@@ -483,14 +504,14 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	c.ShouldBindJSON(&req)
 
 	if req.RefreshToken != "" {
-		// Hash and revoke
+		// Hash and revoke by token_hash (not token_id)
 		hash := sha256.Sum256([]byte(req.RefreshToken))
 		tokenHash := hex.EncodeToString(hash[:])
 
 		_, err = h.pool.Exec(ctx, `
 			UPDATE refresh_tokens
 			SET revoked_at = NOW(), updated_at = NOW()
-			WHERE token_id = $1 AND user_id = $2
+			WHERE token_hash = $1 AND user_id = $2
 		`, tokenHash, userID)
 
 		// Don't fail if refresh token revocation fails
@@ -696,6 +717,47 @@ func (h *AuthHandler) GetSessionInfo(c *gin.Context) {
 	})
 }
 
+// RevokeAllMySessions revokes all sessions for the current user (self-service)
+// @Summary Revoke all my sessions
+// @Description Revoke all refresh tokens for the current authenticated user
+// @Tags auth
+// @Produce json
+// @Security Bearer
+// @Success 200
+// @Failure 401 {object} models.ErrorResponse
+// @Router /api/v1/auth/sessions/revoke-all [post]
+func (h *AuthHandler) RevokeAllMySessions(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	userID := c.GetString("user_id")
+	if userID == "" {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "UNAUTHORIZED",
+			Message: "Authorization required",
+		})
+		return
+	}
+
+	// Revoke all user's refresh tokens
+	err := h.refreshTokenService.RevokeAllUserTokens(ctx, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "REVOKE_FAILED",
+			Message: "Failed to revoke sessions",
+		})
+		return
+	}
+
+	// Log self-service revoke-all event
+	h.logAuditEvent(ctx, "self_revoke_all", &userID, c.ClientIP(), map[string]interface{}{
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "All sessions revoked successfully",
+	})
+}
+
 // RevokeAllSessions revokes all user sessions (admin endpoint)
 // @Summary Revoke all sessions (Admin)
 // @Description Revoke all refresh tokens for a user
@@ -741,37 +803,44 @@ func (h *AuthHandler) RevokeAllSessions(c *gin.Context) {
 	})
 }
 
-// ExchangeAPIKey exchanges an API key for JWT tokens (for beacon/device auth)
+// ExchangeAPIKey exchanges an API key for JWT access token (for beacon/device auth)
 // @Summary Exchange API key
-// @Description Exchange API key for access and refresh tokens
+// @Description Exchange API key for access token (RFC 6750 Bearer token in Authorization header)
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param request body map[string]string true "API key"
-// @Success 200 {object} models.TokenResponse
+// @Param Authorization header string true "Bearer API_KEY" default(Bearer )
+// @Success 200 {object} models.BeaconTokenResponse
 // @Failure 401 {object} models.ErrorResponse
 // @Router /api/v1/beacon/token [post]
 func (h *AuthHandler) ExchangeAPIKey(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Validate Content-Type header (prevent content-type confusion attacks)
-	contentType := c.GetHeader("Content-Type")
-	if contentType != "application/json" {
-		c.JSON(http.StatusUnsupportedMediaType, models.ErrorResponse{
-			Code:    "UNSUPPORTED_MEDIA_TYPE",
-			Message: "Content-Type must be application/json",
+	// Get API key from Authorization header (RFC 6750 Bearer token)
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "MISSING_AUTHORIZATION",
+			Message: "Authorization header is required",
 		})
 		return
 	}
 
-	var req struct {
-		APIKey string `json:"api_key" binding:"required"`
+	// Parse Bearer token
+	parts := strings.SplitN(authHeader, " ", 2)
+	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "INVALID_AUTHORIZATION_FORMAT",
+			Message: "Authorization header must be in format: Bearer <api_key>",
+		})
+		return
 	}
 
-	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, models.ErrorResponse{
-			Code:    "INVALID_REQUEST",
-			Message: "Invalid request format",
+	apiKeyString := parts[1]
+	if apiKeyString == "" {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "MISSING_API_KEY",
+			Message: "API key is required in Authorization header",
 		})
 		return
 	}
@@ -799,7 +868,7 @@ func (h *AuthHandler) ExchangeAPIKey(c *gin.Context) {
 	}
 
 	// Validate API key
-	apiKey, err := h.apiKeyService.ValidateAPIKey(ctx, req.APIKey)
+	validatedKey, err := h.apiKeyService.ValidateAPIKey(ctx, apiKeyString)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
 			Code:    "INVALID_API_KEY",
@@ -808,16 +877,24 @@ func (h *AuthHandler) ExchangeAPIKey(c *gin.Context) {
 		return
 	}
 
-	// Generate tokens
-	// API keys don't have a user, so we use a special beacon user
-	// The role will be "beacon"
-	userID := apiKey.UserID
-	if userID == nil {
-		// Create a beacon-specific user ID
-		userID = &apiKey.KeyPrefix
+	// Generate access token with 60-minute expiry for beacons
+	// API keys must be associated with a user_id or service_account_id
+	var beaconSubject string
+	switch {
+	case validatedKey.UserID != nil:
+		beaconSubject = *validatedKey.UserID
+	case validatedKey.ServiceAccountID != nil:
+		beaconSubject = *validatedKey.ServiceAccountID
+	default:
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "API_KEY_NOT_ASSOCIATED",
+			Message: "API key is not associated with any user or service account",
+		})
+		return
 	}
 
-	accessToken, jti, err := h.jwtService.GenerateAccessToken(*userID, "beacon")
+	// Generate access token with 60-minute expiry (FR-4.1.1)
+	accessToken, jti, err := h.jwtService.GenerateAccessTokenWithExpiry(beaconSubject, "beacon", 60)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "TOKEN_GENERATION_FAILED",
@@ -826,51 +903,40 @@ func (h *AuthHandler) ExchangeAPIKey(c *gin.Context) {
 		return
 	}
 
-	userAgent := c.GetHeader("User-Agent")
-	refreshToken, _, err := h.refreshTokenService.CreateRefreshToken(
-		ctx, *userID, userAgent, ipAddress, h.maxValidityDays,
-	)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Code:    "TOKEN_GENERATION_FAILED",
-			Message: "Failed to generate refresh token",
-		})
-		return
-	}
-
 	// Log API key exchange
-	h.logAuditEvent(ctx, "api_key_exchange", userID, ipAddress, map[string]interface{}{
+	h.logAuditEvent(ctx, "api_key_exchange", &beaconSubject, ipAddress, map[string]interface{}{
 		"jti":          jti,
-		"api_key_id":   apiKey.ID,
-		"api_key_name": apiKey.Name,
+		"api_key_id":   validatedKey.ID,
+		"api_key_name": validatedKey.Name,
 	})
 
-	c.JSON(http.StatusOK, models.TokenResponse{
-		AccessToken:      accessToken,
-		RefreshToken:     refreshToken,
-		TokenType:        "Bearer",
-		ExpiresIn:        h.accessExpirationMinutes * 60,
-		RefreshExpiresIn: h.refreshExpirationDays * 86400,
+	// Return access token only (no refresh token for beacons)
+	// Beacons must re-authenticate with API key when JWT expires
+	c.JSON(http.StatusOK, gin.H{
+		"access_token": accessToken,
+		"token_type":   "Bearer",
+		"expires_in":   3600, // 60 minutes in seconds
 	})
 }
 
 // logAuditEvent logs security events to the audit log table
 func (h *AuthHandler) logAuditEvent(ctx context.Context, eventType string, userID *string, ipAddress string, details map[string]interface{}) {
-	if userID == nil {
-		uid := ""
-		userID = &uid
-	}
-
 	// Handle empty IP address (set to NULL)
 	var ipAddressPtr *string
 	if ipAddress != "" {
 		ipAddressPtr = &ipAddress
 	}
 
+	// Pass nil for user_id when empty to avoid UUID constraint violation
+	var userIDPtr *string
+	if userID != nil && *userID != "" {
+		userIDPtr = userID
+	}
+
 	_, err := h.pool.Exec(ctx, `
 		INSERT INTO auth_audit_logs (event_type, user_id, ip_address, details)
 		VALUES ($1, $2, $3, $4)
-	`, eventType, *userID, ipAddressPtr, details)
+	`, eventType, userIDPtr, ipAddressPtr, details)
 
 	if err != nil {
 		// Log sanitized error (no sensitive details)
@@ -882,4 +948,203 @@ func (h *AuthHandler) logAuditEvent(ctx context.Context, eventType string, userI
 // on authentication failures. This ensures all failed auth paths take the same time.
 func constantAuthDelay() {
 	time.Sleep(150 * time.Millisecond)
+}
+
+// RequestPasswordReset initiates password reset flow
+// @Summary Request password reset
+// @Description Request a password reset token via email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.PasswordResetRequest true "Email address"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 429 {object} models.ErrorResponse "Rate limit exceeded"
+// @Router /api/v1/auth/password/reset/request [post]
+func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// Validate Content-Type header
+	contentType := c.GetHeader("Content-Type")
+	if contentType != "application/json" {
+		c.JSON(http.StatusUnsupportedMediaType, models.ErrorResponse{
+			Code:    "UNSUPPORTED_MEDIA_TYPE",
+			Message: "Content-Type must be application/json",
+		})
+		return
+	}
+
+	var req models.PasswordResetRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "INVALID_REQUEST",
+			Message: "Invalid request format",
+		})
+		return
+	}
+
+	ipAddress := c.ClientIP()
+	rateLimitKey := fmt.Sprintf("password_reset:%s", ipAddress)
+
+	// Rate limit: 3 requests per minute
+	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, 3)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "RATE_LIMIT_ERROR",
+			Message: "Failed to check rate limit",
+		})
+		return
+	}
+
+	if !allowed {
+		c.Header("X-RateLimit-Reset", resetTime.Format(time.RFC3339))
+		c.JSON(http.StatusTooManyRequests, models.ErrorResponse{
+			Code:    "ERR_RATE_LIMIT_EXCEEDED",
+			Message: "Too many password reset requests",
+			Details: resetTime.Format(time.RFC3339),
+		})
+		return
+	}
+
+	// Look up user by email
+	var userID string
+	var username string
+	err = h.pool.QueryRow(ctx, `
+		SELECT user_id, username FROM users WHERE email = $1
+	`, req.Email).Scan(&userID, &username)
+
+	if err != nil {
+		// Generic response to prevent user enumeration
+		// Add constant delay to prevent timing attacks
+		constantAuthDelay()
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "If the email exists, a password reset link has been sent",
+		})
+		return
+	}
+
+	// Generate reset token
+	userAgent := c.GetHeader("User-Agent")
+	_, err = h.passwordResetService.GenerateResetToken(ctx, userID, ipAddress, userAgent)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "TOKEN_GENERATION_FAILED",
+			Message: "Failed to generate reset token",
+		})
+		return
+	}
+
+	// Log password reset request
+	h.logAuditEvent(ctx, "password_reset_requested", &userID, ipAddress, map[string]interface{}{
+		"username": username,
+		"email":    req.Email,
+	})
+
+	// In production, send email with reset link
+	// For now, return token (development only - remove in production)
+	// TODO: Implement email sending
+	c.JSON(http.StatusOK, gin.H{
+		"message": "If the email exists, a password reset link has been sent",
+		// Uncomment for development testing:
+		// "token": token,
+	})
+}
+
+// ConfirmPasswordReset completes password reset flow
+// @Summary Confirm password reset
+// @Description Reset password using token from email
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param request body models.PasswordResetConfirmRequest true "Token and new password"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 401 {object} models.ErrorResponse "Invalid or expired token"
+// @Router /api/v1/auth/password/reset/confirm [post]
+func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	// Validate Content-Type header
+	contentType := c.GetHeader("Content-Type")
+	if contentType != "application/json" {
+		c.JSON(http.StatusUnsupportedMediaType, models.ErrorResponse{
+			Code:    "UNSUPPORTED_MEDIA_TYPE",
+			Message: "Content-Type must be application/json",
+		})
+		return
+	}
+
+	var req models.PasswordResetConfirmRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "INVALID_REQUEST",
+			Message: "Invalid request format",
+		})
+		return
+	}
+
+	// Validate new password
+	if err := ValidatePassword(req.NewPassword); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "INVALID_PASSWORD",
+			Message: err.Error(),
+		})
+		return
+	}
+
+	// Validate token and get userID
+	userID, err := h.passwordResetService.ValidateResetToken(ctx, req.Token)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, models.ErrorResponse{
+			Code:    "INVALID_TOKEN",
+			Message: "Invalid or expired reset token",
+		})
+		return
+	}
+
+	// Hash new password
+	passwordHash, err := HashPassword(req.NewPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "PASSWORD_HASH_FAILED",
+			Message: "Failed to hash password",
+		})
+		return
+	}
+
+	// Update password in database
+	userIDStr := userID.String()
+	_, err = h.pool.Exec(ctx, `
+		UPDATE users
+		SET password_hash = $1,
+		    failed_login_attempts = 0,
+		    locked_until = NULL,
+		    updated_at = NOW()
+		WHERE user_id = $2
+	`, passwordHash, userIDStr)
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "PASSWORD_UPDATE_FAILED",
+			Message: "Failed to update password",
+		})
+		return
+	}
+
+	// Consume token (mark as used)
+	if err := h.passwordResetService.ConsumeResetToken(ctx, req.Token); err != nil {
+		// Log but do not fail - password was already changed
+		fmt.Printf("WARN: failed to consume reset token: %v\n", err)
+	}
+
+	// Log password reset completion
+	h.logAuditEvent(ctx, "password_reset_completed", &userIDStr, c.ClientIP(), nil)
+
+	// Revoke all user sessions for security
+	h.refreshTokenService.RevokeAllUserTokens(ctx, userIDStr)
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Password reset successfully",
+	})
 }

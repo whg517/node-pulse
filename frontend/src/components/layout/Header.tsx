@@ -150,7 +150,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 <p className="text-xs text-gray-500 dark:text-gray-400">{user?.role}</p>
               </div>
               <Link
-                to="/sessions"
+                to="/settings/sessions"
                 onClick={() => setIsUserMenuOpen(false)}
                 className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               >
@@ -158,7 +158,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
                 {t('nav.profile')}
               </Link>
               <Link
-                to="/export"
+                to="/settings/preferences"
                 onClick={() => setIsUserMenuOpen(false)}
                 className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
               >

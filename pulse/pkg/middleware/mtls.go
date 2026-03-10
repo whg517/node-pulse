@@ -22,8 +22,8 @@ var (
 
 // TLSConfig holds mTLS configuration
 type TLSConfig struct {
-	// Enabled enables mTLS enforcement
-	Enabled bool
+	// Mode controls mTLS enforcement: "disabled", "warn", or "strict"
+	Mode string
 	// CASpecifiedCertificates when true, requires certificate to be signed by internal CA
 	CASpecifiedCertificates bool
 	// AllowedCNPrefixes is list of allowed Common Name prefixes (empty = any CN allowed)
@@ -44,25 +44,49 @@ var (
 
 // InitMTLSConfig initializes mTLS configuration from environment
 // Environment variables:
-//   PULSE_MTLS_ENABLED=false - Enable mTLS enforcement (default: false for dev, true for production)
-//   PULSE_MTLS_CA_CERTS - Path to CA certificates file (PEM format, multiple allowed)
-//   PULSE_MTLS_CN_PREFIXES - Comma-separated list of allowed CN prefixes
-//   PULSE_MTLS_ALLOWED_OUS - Comma-separated list of allowed OUs
-//   PULSE_MTLS_MIN_CERT_EXPIRY_DAYS=7 - Minimum certificate validity in days
+//
+//	PULSE_MTLS_ENABLED=disabled|warn|strict - Enable mTLS enforcement (default: disabled for dev, strict for production)
+//	  - "disabled": mTLS is not enforced
+//	  - "warn": mTLS violations are logged but requests are allowed (for gradual migration)
+//	  - "strict": mTLS is fully enforced (rejects invalid certificates)
+//	PULSE_MTLS_CA_CERTS - Path to CA certificates file (PEM format, multiple allowed)
+//	PULSE_MTLS_CN_PREFIXES - Comma-separated list of allowed CN prefixes
+//	PULSE_MTLS_ALLOWED_OUS - Comma-separated list of allowed OUs
+//	PULSE_MTLS_MIN_CERT_EXPIRY_DAYS=7 - Minimum certificate validity in days
+//
+// Note: For backward compatibility, boolean values true/false/1/0 are also accepted:
+//   - true maps to "strict"
+//   - false maps to "disabled"
 func InitMTLSConfig() {
 	mTLSConfigOnce.Do(func() {
-		// Check if mTLS is enabled via environment
-		enabled := getEnvBool("PULSE_MTLS_ENABLED", false)
+		// Get mTLS mode from environment
+		mode := getEnvOrDefault("PULSE_MTLS_ENABLED", "")
 
-		// Check server mode - mTLS is MANDATORY for production
-		serverMode := getEnvOrDefault("PULSE_SERVER_MODE", "debug")
-		if serverMode == "production" && !enabled {
-			// Force enable mTLS in production
-			enabled = true
+		// Handle backward compatibility with boolean values
+		if mode == "" {
+			// Check server mode - mTLS is MANDATORY for production
+			serverMode := getEnvOrDefault("PULSE_SERVER_MODE", "debug")
+			if serverMode == "production" {
+				mode = "strict"
+			} else {
+				mode = "disabled"
+			}
+		} else if mode == "true" || mode == "1" || mode == "enabled" {
+			// Backward compatibility: boolean true maps to "strict"
+			mode = "strict"
+		} else if mode == "false" || mode == "0" || mode == "disabled" {
+			mode = "disabled"
 		}
 
-		if !enabled {
-			mTLSConfig = &TLSConfig{Enabled: false}
+		// Validate mode value
+		if mode != "disabled" && mode != "warn" && mode != "strict" {
+			// Invalid mode, default to disabled with a warning
+			mode = "disabled"
+		}
+
+		// If disabled, no need to load other config
+		if mode == "disabled" {
+			mTLSConfig = &TLSConfig{Mode: mode}
 			return
 		}
 
@@ -91,10 +115,10 @@ func InitMTLSConfig() {
 		minExpiryDays := getEnvInt("PULSE_MTLS_MIN_CERT_EXPIRY_DAYS", 7)
 
 		mTLSConfig = &TLSConfig{
-			Enabled:                true,
+			Mode:                    mode,
 			CASpecifiedCertificates: len(caCerts) > 0,
 			AllowedCNPrefixes:       cnPrefixes,
-			AllowedOUs:             allowedOUs,
+			AllowedOUs:              allowedOUs,
 			MinCertExpiryDays:       minExpiryDays,
 			TrustedCAPEMs:           caCerts,
 		}
@@ -140,19 +164,27 @@ func loadTrustedCACerts() []string {
 // This middleware should be applied to beacon-specific routes
 //
 // Usage:
-//   beacon.Use(middleware.MTLSAuthMiddleware())
+//
+//	beacon.Use(middleware.MTLSAuthMiddleware())
 func MTLSAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Check if mTLS is enabled
-		if mTLSConfig == nil || !mTLSConfig.Enabled {
-			// mTLS not configured, skip validation (development mode)
+		// Check if mTLS is configured
+		if mTLSConfig == nil || mTLSConfig.Mode == "disabled" {
+			// mTLS not configured or disabled, skip validation
 			c.Next()
 			return
 		}
 
 		// Get TLS connection state from request
 		if c.Request.TLS == nil {
-			// No TLS connection - reject in production
+			// No TLS connection
+			if mTLSConfig.Mode == "warn" {
+				// Warn mode: log warning but allow request
+				fmt.Printf("[MTLS WARN] Request from %s without TLS connection (mTLS warn mode)\n", c.ClientIP())
+				c.Next()
+				return
+			}
+			// Strict mode: reject request
 			c.JSON(http.StatusForbidden, gin.H{
 				"code":    "MTLS_REQUIRED",
 				"message": "TLS connection is required for beacon authentication",
@@ -164,6 +196,13 @@ func MTLSAuthMiddleware() gin.HandlerFunc {
 		// Extract peer certificates
 		state := c.Request.TLS
 		if len(state.PeerCertificates) == 0 {
+			if mTLSConfig.Mode == "warn" {
+				// Warn mode: log warning but allow request
+				fmt.Printf("[MTLS WARN] Request from %s without client certificate (mTLS warn mode)\n", c.ClientIP())
+				c.Next()
+				return
+			}
+			// Strict mode: reject request
 			c.JSON(http.StatusForbidden, gin.H{
 				"code":    "CERTIFICATE_REQUIRED",
 				"message": "Client certificate is required",
@@ -174,6 +213,13 @@ func MTLSAuthMiddleware() gin.HandlerFunc {
 
 		// Validate certificates
 		if err := validatePeerCertificates(state.PeerCertificates); err != nil {
+			if mTLSConfig.Mode == "warn" {
+				// Warn mode: log warning but allow request
+				fmt.Printf("[MTLS WARN] Request from %s with invalid certificate: %s (mTLS warn mode)\n", c.ClientIP(), err.Error())
+				c.Next()
+				return
+			}
+			// Strict mode: reject request
 			c.JSON(http.StatusForbidden, gin.H{
 				"code":    "CERTIFICATE_INVALID",
 				"message": formatValidationError(err),
@@ -343,7 +389,7 @@ func parseIntSafe(s string) (int, error) {
 // GetMTLSConfig returns the current mTLS configuration (for testing)
 func GetMTLSConfig() *TLSConfig {
 	if mTLSConfig == nil {
-		return &TLSConfig{Enabled: false}
+		return &TLSConfig{Mode: "disabled"}
 	}
 	return mTLSConfig
 }

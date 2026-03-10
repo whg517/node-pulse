@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -128,4 +129,164 @@ func (a *AuditLogger) LogRateLimitExceeded(ctx context.Context, userID *uuid.UUI
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
 	a.LogEvent(ctx, EventRateLimitExceeded, userID, ipAddress, details)
+}
+
+// AuditLogFilter represents filters for querying audit logs
+type AuditLogFilter struct {
+	EventType string
+	UserID    *string
+	IPAddress *string
+	StartTime *time.Time
+	EndTime   *time.Time
+	Limit     int
+	Offset    int
+}
+
+// QueryAuditLogs retrieves audit logs with filtering and pagination
+func (a *AuditLogger) QueryAuditLogs(ctx context.Context, filters AuditLogFilter) ([]map[string]interface{}, int, error) {
+	// Build dynamic query
+	baseQuery := `
+		SELECT id, event_type, user_id, ip_address, details, created_at
+		FROM auth_audit_logs
+		WHERE 1=1
+	`
+	countQuery := `SELECT COUNT(*) FROM auth_audit_logs WHERE 1=1`
+
+	args := []interface{}{}
+	argCount := 1
+
+	// Apply filters
+	if filters.EventType != "" {
+		baseQuery += fmt.Sprintf(" AND event_type = $%d", argCount)
+		countQuery += fmt.Sprintf(" AND event_type = $%d", argCount)
+		args = append(args, filters.EventType)
+		argCount++
+	}
+
+	if filters.UserID != nil {
+		baseQuery += fmt.Sprintf(" AND user_id = $%d", argCount)
+		countQuery += fmt.Sprintf(" AND user_id = $%d", argCount)
+		args = append(args, *filters.UserID)
+		argCount++
+	}
+
+	if filters.IPAddress != nil {
+		baseQuery += fmt.Sprintf(" AND ip_address = $%d", argCount)
+		countQuery += fmt.Sprintf(" AND ip_address = $%d", argCount)
+		args = append(args, *filters.IPAddress)
+		argCount++
+	}
+
+	if filters.StartTime != nil {
+		baseQuery += fmt.Sprintf(" AND created_at >= $%d", argCount)
+		countQuery += fmt.Sprintf(" AND created_at >= $%d", argCount)
+		args = append(args, *filters.StartTime)
+		argCount++
+	}
+
+	if filters.EndTime != nil {
+		baseQuery += fmt.Sprintf(" AND created_at <= $%d", argCount)
+		countQuery += fmt.Sprintf(" AND created_at <= $%d", argCount)
+		args = append(args, *filters.EndTime)
+		argCount++
+	}
+
+	// Get total count
+	var totalCount int
+	err := a.pool.QueryRow(ctx, countQuery, args...).Scan(&totalCount)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	baseQuery += " ORDER BY created_at DESC"
+
+	if filters.Limit > 0 {
+		baseQuery += fmt.Sprintf(" LIMIT $%d", argCount)
+		args = append(args, filters.Limit)
+		argCount++
+	}
+
+	if filters.Offset > 0 {
+		baseQuery += fmt.Sprintf(" OFFSET $%d", argCount)
+		args = append(args, filters.Offset)
+	}
+
+	rows, err := a.pool.Query(ctx, baseQuery, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var results []map[string]interface{}
+	for rows.Next() {
+		var id int
+		var eventType, userID string
+		var ipAddress *string
+		var detailsJSON []byte
+		var createdAt time.Time
+
+		err := rows.Scan(&id, &eventType, &userID, &ipAddress, &detailsJSON, &createdAt)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		// Parse JSONB details
+		var details map[string]interface{}
+		if detailsJSON != nil {
+			err = json.Unmarshal(detailsJSON, &details)
+			if err != nil {
+				return nil, 0, err
+			}
+		}
+
+		result := map[string]interface{}{
+			"id":         id,
+			"event_type": eventType,
+			"user_id":    userID,
+			"ip_address": ipAddress,
+			"details":    details,
+			"created_at": createdAt,
+		}
+		results = append(results, result)
+	}
+
+	return results, totalCount, nil
+}
+
+// GetAuditLogByID retrieves a single audit log entry by ID
+func (a *AuditLogger) GetAuditLogByID(ctx context.Context, id int64) (map[string]interface{}, error) {
+	var eventType, userID string
+	var ipAddress *string
+	var detailsJSON []byte
+	var createdAt time.Time
+
+	err := a.pool.QueryRow(ctx, `
+		SELECT event_type, user_id, ip_address, details, created_at
+		FROM auth_audit_logs
+		WHERE id = $1
+	`, id).Scan(&eventType, &userID, &ipAddress, &detailsJSON, &createdAt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse JSONB details
+	var details map[string]interface{}
+	if detailsJSON != nil {
+		err = json.Unmarshal(detailsJSON, &details)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	log := map[string]interface{}{
+		"id":         id,
+		"event_type": eventType,
+		"user_id":    userID,
+		"ip_address": ipAddress,
+		"details":    details,
+		"created_at": createdAt,
+	}
+
+	return log, nil
 }

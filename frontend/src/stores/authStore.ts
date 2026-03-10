@@ -25,6 +25,7 @@ export interface AuthState {
   role: UserRole | null
   accessToken: string | null
   tokenExpiresAt: number | null
+  csrfToken: string | null
   isLoading: boolean
   refreshFailureCount: number
 }
@@ -35,6 +36,7 @@ export interface AuthActions {
   setUser: (user: User) => void
   clearAuth: () => void
   setAccessToken: (token: string, expiresIn: number) => void
+  setCsrfToken: (token: string) => void
   restoreSession: () => Promise<void>
 }
 
@@ -54,7 +56,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
   role: null,
   accessToken: null,
   tokenExpiresAt: null,
-  isLoading: false,
+  csrfToken: null,
+  isLoading: true, // Start as true to prevent premature redirects before restoreSession runs
   refreshFailureCount: 0,
 
   // Actions
@@ -74,6 +77,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
       role: response.data.role,
       accessToken: response.data.access_token,
       tokenExpiresAt: expiry,
+      csrfToken: response.data.csrf_token || null,
       refreshFailureCount: 0,
     })
   },
@@ -97,6 +101,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         role: null,
         accessToken: null,
         tokenExpiresAt: null,
+        csrfToken: null,
         refreshFailureCount: 0,
       })
     }
@@ -123,8 +128,13 @@ export const useAuthStore = create<AuthStore>((set) => ({
       role: null,
       accessToken: null,
       tokenExpiresAt: null,
+      csrfToken: null,
       refreshFailureCount: 0,
     })
+  },
+
+  setCsrfToken: (token: string) => {
+    set({ csrfToken: token })
   },
 
   setAccessToken: (token: string, expiresIn: number) => {

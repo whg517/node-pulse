@@ -66,7 +66,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
  * console.log(`Current session: ${data.current_session_id}`)
  */
 export async function getSessionInfo(): Promise<SessionInfoResponse> {
-  return apiClient<SessionInfoResponse>('/api/v1/auth/sessions/info', {
+  return apiClient<SessionInfoResponse>('/api/v1/auth/session-info', {
     method: 'GET',
   })
 }

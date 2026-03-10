@@ -164,6 +164,45 @@ func (s *JWTService) GenerateAccessTokenWithSession(userID, role, sessionID stri
 	return tokenString, jti, nil
 }
 
+// GenerateAccessTokenWithExpiry generates a token with custom expiry time in minutes
+func (s *JWTService) GenerateAccessTokenWithExpiry(userID, role string, expiryMinutes int) (string, string, error) {
+	jti := uuid.New().String()
+	now := time.Now()
+
+	claims := Claims{
+		UserID: userID,
+		Role:   role,
+		JTI:    jti,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    s.issuer,
+			Subject:   userID,
+			Audience:  s.audience,
+			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(expiryMinutes) * time.Minute)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
+		},
+	}
+
+	privateKey, err := s.parsePrivateKey()
+	if err != nil {
+		return "", "", fmt.Errorf("failed to parse private key for signing: %w", err)
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodRS256, claims)
+
+	// Set key ID (kid) header for key rotation support
+	if s.keyID != "" {
+		token.Header["kid"] = s.keyID
+	}
+
+	tokenString, err := token.SignedString(privateKey)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to sign token: %w", err)
+	}
+
+	return tokenString, jti, nil
+}
+
 // ValidateAccessToken validates an RS256-signed access token and returns the claims
 // Uses 60-second clock skew tolerance as specified in tech-spec
 func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {

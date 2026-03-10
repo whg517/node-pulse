@@ -155,6 +155,11 @@ async function makeRequest<T>(
 
   // Get fresh token after potential pre-check refresh
   const currentToken = useAuthStore.getState().accessToken
+  const { csrfToken } = useAuthStore.getState()
+
+  // Determine if this is a state-changing request that needs CSRF protection
+  const method = (options.method || 'GET').toUpperCase()
+  const isMutation = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE'
 
   const config: RequestInit = {
     ...options,
@@ -162,6 +167,7 @@ async function makeRequest<T>(
     headers: {
       'Content-Type': 'application/json',
       ...(currentToken && { Authorization: `Bearer ${currentToken}` }),
+      ...(isMutation && csrfToken && { 'X-CSRF-Token': csrfToken }),
       ...options.headers,
     },
     credentials: 'include', // Send HttpOnly cookies (refresh_token)

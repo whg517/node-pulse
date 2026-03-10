@@ -129,7 +129,7 @@ func (s *SessionService) CreateSession(ctx context.Context, userID string, ipAdd
 	}
 
 	if activeCount >= MaxSessionsPerUser { // MaxSessionsPerUser is defined in auth_handler.go
-		// Delete oldest session to make room
+		// Delete oldest session to make room (use subquery: PostgreSQL DELETE does not support ORDER BY/LIMIT directly)
 		_, err = s.pool.Exec(ctx, `
 			DELETE FROM refresh_tokens
 			WHERE session_id IN (
@@ -145,9 +145,12 @@ func (s *SessionService) CreateSession(ctx context.Context, userID string, ipAdd
 
 		_, err = s.pool.Exec(ctx, `
 			DELETE FROM sessions
-			WHERE user_id = $1 AND expires_at > NOW()
-			ORDER BY created_at ASC
-			LIMIT 1
+			WHERE session_id = (
+				SELECT session_id FROM sessions
+				WHERE user_id = $1 AND expires_at > NOW()
+				ORDER BY created_at ASC
+				LIMIT 1
+			)
 		`, userID)
 		if err != nil {
 			return nil, "", nil, fmt.Errorf("failed to cleanup old sessions: %w", err)

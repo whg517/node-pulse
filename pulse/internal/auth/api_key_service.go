@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -68,6 +69,12 @@ func (s *APIKeyService) GenerateAPIKey(ctx context.Context, userID *string, name
 
 // ValidateAPIKey validates an API key and returns the database record
 func (s *APIKeyService) ValidateAPIKey(ctx context.Context, token string) (*models.APIKey, error) {
+	// Strip np_live_ prefix if present (tokens may be provided with or without prefix)
+	const keyPrefix = "np_live_"
+	if strings.HasPrefix(token, keyPrefix) {
+		token = strings.TrimPrefix(token, keyPrefix)
+	}
+
 	// Decode the token to get raw bytes
 	tokenBytes, err := base64.URLEncoding.DecodeString(token)
 	if err != nil {
@@ -196,4 +203,146 @@ func (s *APIKeyService) CleanupExpiredKeys(ctx context.Context, retentionDays in
 	}
 
 	return nil
+}
+
+// ListAllAPIKeys returns all API keys in the system (admin only)
+func (s *APIKeyService) ListAllAPIKeys(ctx context.Context) ([]models.APIKey, error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT id, key_id, key_hash, key_prefix, user_id, service_account_id, name, is_active, expires_at, created_at, last_used_at
+		FROM api_keys
+		ORDER BY created_at DESC
+	`)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to query all API keys: %w", err)
+	}
+	defer rows.Close()
+
+	var keys []models.APIKey
+	for rows.Next() {
+		var key models.APIKey
+		err := rows.Scan(
+			&key.ID,
+			&key.KeyID,
+			&key.KeyHash,
+			&key.KeyPrefix,
+			&key.UserID,
+			&key.ServiceAccountID,
+			&key.Name,
+			&key.IsActive,
+			&key.ExpiresAt,
+			&key.CreatedAt,
+			&key.LastUsedAt,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to scan API key: %w", err)
+		}
+		keys = append(keys, key)
+	}
+
+	return keys, nil
+}
+
+// GetAPIKeyByID retrieves an API key by its database ID
+func (s *APIKeyService) GetAPIKeyByID(ctx context.Context, keyID int) (*models.APIKey, error) {
+	var key models.APIKey
+	err := s.pool.QueryRow(ctx, `
+		SELECT id, key_id, key_hash, key_prefix, user_id, service_account_id, name, is_active, expires_at, created_at, last_used_at
+		FROM api_keys
+		WHERE id = $1
+	`, keyID).Scan(
+		&key.ID,
+		&key.KeyID,
+		&key.KeyHash,
+		&key.KeyPrefix,
+		&key.UserID,
+		&key.ServiceAccountID,
+		&key.Name,
+		&key.IsActive,
+		&key.ExpiresAt,
+		&key.CreatedAt,
+		&key.LastUsedAt,
+	)
+
+	if err != nil {
+		return nil, fmt.Errorf("API key not found: %w", err)
+	}
+
+	return &key, nil
+}
+
+// RotateAPIKey creates a new key while keeping the old key valid for 24 hours
+func (s *APIKeyService) RotateAPIKey(ctx context.Context, oldKeyID int) (string, *models.APIKey, *models.APIKey, error) {
+	// Get the old key
+	oldKey, err := s.GetAPIKeyByID(ctx, oldKeyID)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to get old key: %w", err)
+	}
+
+	// Set old key to expire in 24 hours
+	expiryTime := time.Now().Add(24 * time.Hour)
+	_, err = s.pool.Exec(ctx, `
+		UPDATE api_keys
+		SET expires_at = $1
+		WHERE id = $2
+	`, expiryTime, oldKeyID)
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to update old key expiry: %w", err)
+	}
+
+	// Generate new key with np_live_ prefix
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", nil, nil, fmt.Errorf("failed to generate random token: %w", err)
+	}
+
+	// Encode as base64 URL-safe string
+	token := base64.URLEncoding.EncodeToString(tokenBytes)
+
+	// Add np_live_ prefix
+	fullToken := "np_live_" + token
+
+	// Hash the token for storage (hash only the base64 part, not the prefix)
+	hash := sha256.Sum256(tokenBytes)
+	tokenHash := hex.EncodeToString(hash[:])
+
+	// Generate key_id (20 char unique identifier)
+	keyIDBytes := make([]byte, 10)
+	if _, err := rand.Read(keyIDBytes); err != nil {
+		return "", nil, nil, fmt.Errorf("failed to generate key_id: %w", err)
+	}
+	keyIDStr := hex.EncodeToString(keyIDBytes)
+
+	// Extract key prefix (first 8 chars of base64) for identification
+	keyPrefix := token[:8]
+
+	// Insert new key into database
+	var newKey models.APIKey
+	err = s.pool.QueryRow(ctx, `
+		INSERT INTO api_keys (key_id, key_hash, key_prefix, user_id, service_account_id, name, is_active, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, true, NOW())
+		RETURNING id, key_id, key_hash, key_prefix, user_id, service_account_id, name, is_active, expires_at, created_at, last_used_at
+	`, keyIDStr, tokenHash, keyPrefix, oldKey.UserID, oldKey.ServiceAccountID, oldKey.Name).Scan(
+		&newKey.ID,
+		&newKey.KeyID,
+		&newKey.KeyHash,
+		&newKey.KeyPrefix,
+		&newKey.UserID,
+		&newKey.ServiceAccountID,
+		&newKey.Name,
+		&newKey.IsActive,
+		&newKey.ExpiresAt,
+		&newKey.CreatedAt,
+		&newKey.LastUsedAt,
+	)
+
+	if err != nil {
+		return "", nil, nil, fmt.Errorf("failed to create new API key: %w", err)
+	}
+
+	// Refresh old key with updated expiry
+	oldKey.ExpiresAt.Time = expiryTime
+	oldKey.ExpiresAt.Valid = true
+
+	return fullToken, oldKey, &newKey, nil
 }

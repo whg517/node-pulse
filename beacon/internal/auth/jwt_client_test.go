@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -631,6 +632,52 @@ func TestErrorResponse(t *testing.T) {
 	// Should contain the error message
 	if err.Error() == "" {
 		t.Error("Expected non-empty error message")
+	}
+}
+
+// TestGetAccessToken_APIKeyInAuthorizationHeader verifies that when no refresh token is available
+// the client sends the API key in the Authorization header (RFC 6750 Bearer token), NOT in the
+// request body. This tests the fix that corrected the incorrect body-based API key transmission.
+func TestGetAccessToken_APIKeyInAuthorizationHeader(t *testing.T) {
+	var receivedAuthHeader string
+	var receivedBodyBytes []byte
+
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/api/v1/beacon/token" {
+			receivedAuthHeader = r.Header.Get("Authorization")
+			receivedBodyBytes, _ = io.ReadAll(r.Body)
+		}
+		resp := TokenResponse{
+			AccessToken:      testToken,
+			TokenType:        "Bearer",
+			ExpiresIn:        900,
+			NodeID:           testNodeID,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer mockServer.Close()
+
+	client := mustNewJWTClient(mockServer.URL, testAPIKey, nil)
+	ctx := context.Background()
+
+	_, err := client.GetAccessToken(ctx)
+	if err != nil {
+		t.Fatalf("GetAccessToken failed: %v", err)
+	}
+
+	// Verify API key is sent in Authorization header as RFC 6750 Bearer token
+	expectedAuth := "Bearer " + testAPIKey
+	if receivedAuthHeader != expectedAuth {
+		t.Errorf("API key should be in Authorization header: want %q, got %q", expectedAuth, receivedAuthHeader)
+	}
+
+	// Verify API key is NOT present in the request body
+	var bodyData map[string]interface{}
+	if err := json.Unmarshal(receivedBodyBytes, &bodyData); err == nil {
+		if _, found := bodyData["api_key"]; found {
+			t.Error("API key must NOT be in request body; it must be sent via Authorization header only")
+		}
 	}
 }
 

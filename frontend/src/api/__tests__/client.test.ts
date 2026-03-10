@@ -2,9 +2,10 @@
  * Tests for API client functionality
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { apiClient, resetModuleState } from '../client'
 import { AuthenticationError, ValidationError, NotFoundError } from '../errors'
+import { useAuthStore } from '../../stores/authStore'
 
 // Mock localStorage for cross-tab logout sync
 const localStorageMock = {
@@ -272,5 +273,105 @@ describe('apiClient', () => {
 
       vi.unstubAllGlobals()
     })
+  })
+})
+
+// ============ CSRF header tests ============
+
+describe('X-CSRF-Token header injection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetModuleState()
+    // Reset auth store state
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      role: null,
+      accessToken: null,
+      tokenExpiresAt: null,
+      csrfToken: null,
+      isLoading: false,
+      refreshFailureCount: 0,
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    useAuthStore.setState({ csrfToken: null })
+  })
+
+  it('should include X-CSRF-Token header on POST when csrfToken is set', async () => {
+    useAuthStore.setState({ csrfToken: 'test-csrf-token-abc' })
+
+    const mockFetch = vi.fn(() =>
+      Promise.resolve({ ok: true, json: async () => ({ data: 'ok' }) } as Response)
+    )
+    vi.stubGlobal('fetch', mockFetch)
+
+    await apiClient('/api/v1/test', { method: 'POST', body: '{}' })
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+    const headers = options.headers as Record<string, string>
+    expect(headers['X-CSRF-Token']).toBe('test-csrf-token-abc')
+  })
+
+  it('should include X-CSRF-Token header on PUT requests', async () => {
+    useAuthStore.setState({ csrfToken: 'csrf-for-put' })
+
+    const mockFetch = vi.fn(() =>
+      Promise.resolve({ ok: true, json: async () => ({}) } as Response)
+    )
+    vi.stubGlobal('fetch', mockFetch)
+
+    await apiClient('/api/v1/test', { method: 'PUT', body: '{}' })
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+    const headers = options.headers as Record<string, string>
+    expect(headers['X-CSRF-Token']).toBe('csrf-for-put')
+  })
+
+  it('should include X-CSRF-Token header on DELETE requests', async () => {
+    useAuthStore.setState({ csrfToken: 'csrf-for-delete' })
+
+    const mockFetch = vi.fn(() =>
+      Promise.resolve({ ok: true, json: async () => ({}) } as Response)
+    )
+    vi.stubGlobal('fetch', mockFetch)
+
+    await apiClient('/api/v1/test', { method: 'DELETE' })
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+    const headers = options.headers as Record<string, string>
+    expect(headers['X-CSRF-Token']).toBe('csrf-for-delete')
+  })
+
+  it('should NOT include X-CSRF-Token header on GET requests', async () => {
+    useAuthStore.setState({ csrfToken: 'should-not-appear' })
+
+    const mockFetch = vi.fn(() =>
+      Promise.resolve({ ok: true, json: async () => ({}) } as Response)
+    )
+    vi.stubGlobal('fetch', mockFetch)
+
+    await apiClient('/api/v1/test') // default GET
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+    const headers = options.headers as Record<string, string>
+    expect(headers['X-CSRF-Token']).toBeUndefined()
+  })
+
+  it('should NOT include X-CSRF-Token on POST when csrfToken is null', async () => {
+    // csrfToken is already null from beforeEach
+
+    const mockFetch = vi.fn(() =>
+      Promise.resolve({ ok: true, json: async () => ({}) } as Response)
+    )
+    vi.stubGlobal('fetch', mockFetch)
+
+    await apiClient('/api/v1/test', { method: 'POST', body: '{}' })
+
+    const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
+    const headers = options.headers as Record<string, string>
+    expect(headers['X-CSRF-Token']).toBeUndefined()
   })
 })

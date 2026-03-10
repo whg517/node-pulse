@@ -427,3 +427,102 @@ describe('visibility handler', () => {
     removeEventListenerSpy.mockRestore()
   })
 })
+
+// ============ CSRF token tests ============
+
+describe('csrfToken state management', () => {
+  beforeEach(() => {
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      role: null,
+      accessToken: null,
+      tokenExpiresAt: null,
+      csrfToken: null,
+      isLoading: false,
+      refreshFailureCount: 0,
+    })
+    vi.clearAllMocks()
+  })
+
+  it('should store csrfToken from login response', async () => {
+    const mockLoginResponse = {
+      data: {
+        user_id: 'user-123',
+        username: 'testuser',
+        role: 'admin' as const,
+        access_token: 'test-access-token',
+        csrf_token: 'test-csrf-token-xyz',
+      },
+      message: 'Login successful',
+      timestamp: '2024-01-01T00:00:00Z',
+    }
+    vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
+
+    await useAuthStore.getState().login('testuser', 'password123')
+
+    expect(useAuthStore.getState().csrfToken).toBe('test-csrf-token-xyz')
+  })
+
+  it('should set csrfToken to null when login response lacks csrf_token', async () => {
+    const mockLoginResponse = {
+      data: {
+        user_id: 'user-123',
+        username: 'testuser',
+        role: 'admin' as const,
+        access_token: 'test-access-token',
+        // no csrf_token field
+      },
+      message: 'Login successful',
+      timestamp: '2024-01-01T00:00:00Z',
+    }
+    vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
+
+    await useAuthStore.getState().login('testuser', 'password123')
+
+    expect(useAuthStore.getState().csrfToken).toBeNull()
+  })
+
+  it('should clear csrfToken on logout', async () => {
+    useAuthStore.setState({
+      user: { id: 'user-123', username: 'testuser', role: 'admin' },
+      isAuthenticated: true,
+      role: 'admin',
+      accessToken: 'test-access-token',
+      tokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      csrfToken: 'existing-csrf-token',
+      refreshFailureCount: 0,
+    })
+
+    vi.mocked(authApi.logout).mockResolvedValue({
+      message: 'Logout successful',
+      timestamp: '2024-01-01T00:00:00Z',
+    })
+
+    await useAuthStore.getState().logout()
+
+    expect(useAuthStore.getState().csrfToken).toBeNull()
+  })
+
+  it('should clear csrfToken via clearAuth', () => {
+    useAuthStore.setState({
+      user: { id: 'user-123', username: 'testuser', role: 'admin' },
+      isAuthenticated: true,
+      accessToken: 'test-token',
+      tokenExpiresAt: Date.now() + 3600_000,
+      csrfToken: 'some-csrf-token',
+      role: 'admin',
+      refreshFailureCount: 0,
+    })
+
+    useAuthStore.getState().clearAuth()
+
+    expect(useAuthStore.getState().csrfToken).toBeNull()
+  })
+
+  it('should set csrfToken via setCsrfToken action', () => {
+    useAuthStore.getState().setCsrfToken('manually-set-csrf-token')
+
+    expect(useAuthStore.getState().csrfToken).toBe('manually-set-csrf-token')
+  })
+})

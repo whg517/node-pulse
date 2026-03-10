@@ -253,18 +253,31 @@ func (c *JWTClient) refreshToken(ctx context.Context) (string, error) {
 
 // makeTokenRequest creates and sends a token request
 func (c *JWTClient) makeTokenRequest(ctx context.Context, endpoint string, reqBody TokenRequest) (*http.Response, error) {
-	jsonData, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal token request: %w", err)
-	}
-
 	url := c.serverURL + endpoint
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
+	var req *http.Request
+	var err error
 
-	req.Header.Set("Content-Type", "application/json")
+	if reqBody.RefreshToken != "" {
+		// Refresh token flow: send token in JSON body via /auth/refresh
+		jsonData, err := json.Marshal(map[string]string{"refresh_token": reqBody.RefreshToken})
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal refresh request: %w", err)
+		}
+		req, err = http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(jsonData))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+	} else {
+		// API key flow: send key in Authorization header (RFC 6750 Bearer token)
+		// Backend reads from Authorization header, NOT request body
+		req, err = http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBufferString("{}"))
+		if err != nil {
+			return nil, fmt.Errorf("failed to create request: %w", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+reqBody.APIKey)
+	}
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

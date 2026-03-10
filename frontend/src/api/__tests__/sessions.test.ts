@@ -160,7 +160,7 @@ describe('sessions API', () => {
       const result = await getSessionInfo()
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/api/v1/auth/sessions/info'),
+        expect.stringContaining('/api/v1/auth/session-info'),
         expect.objectContaining({
           method: 'GET',
           credentials: 'include',

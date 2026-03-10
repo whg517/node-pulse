@@ -77,7 +77,7 @@ function App() {
           <Route path="/nodes/comparison" element={<NodeComparisonPage />} />
 
           {/* Alerts */}
-          <Route path="/alerts" element={<Navigate to="rules" replace />} />
+          <Route path="/alerts" element={<Navigate to="/alerts/rules" replace />} />
           <Route path="/alerts/rules" element={<AlertRulesPage />} />
           <Route path="/alerts/records" element={<AlertRecordsPage />} />
           <Route path="/alerts/history" element={<AlertHistoryPage />} />
@@ -87,12 +87,12 @@ function App() {
           <Route path="/reports/history" element={<DataExportPage />} />
 
           {/* Integrations */}
-          <Route path="/integrations" element={<Navigate to="webhooks" replace />} />
+          <Route path="/integrations" element={<Navigate to="/integrations/webhooks" replace />} />
           <Route path="/integrations/webhooks" element={<WebhooksPage />} />
           <Route path="/integrations/health" element={<SystemHealthPage />} />
 
           {/* Settings */}
-          <Route path="/settings" element={<Navigate to="preferences" replace />} />
+          <Route path="/settings" element={<Navigate to="/settings/preferences" replace />} />
           <Route path="/settings/preferences" element={<PreferencesPage />} />
           <Route path="/settings/sessions" element={<SessionsPage />} />
           <Route path="/settings/users" element={<UsersPage />} />

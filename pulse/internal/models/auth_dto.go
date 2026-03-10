@@ -24,3 +24,38 @@ type SessionResponse struct {
 	UserAgent     *string   `json:"user_agent,omitempty"`
 	IPAddress     *string   `json:"ip_address,omitempty"`
 }
+
+// PasswordResetRequest represents a password reset request
+type PasswordResetRequest struct {
+	Email string `json:"email" binding:"required,email"`
+}
+
+// PasswordResetConfirmRequest represents a password reset confirmation
+type PasswordResetConfirmRequest struct {
+	Token       string `json:"token" binding:"required"`
+	NewPassword string `json:"new_password" binding:"required,min=8"`
+}
+
+// ChangePasswordRequest represents password change request
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
+}
+
+// ChangePasswordResponse represents password change response
+type ChangePasswordResponse struct {
+	Message         string `json:"message"`
+	SessionsRevoked bool   `json:"sessions_revoked"`
+}
+
+// AuditLogFilter represents filters for querying audit logs
+type AuditLogFilter struct {
+	UserID    *string
+	EventType *string
+	IPAddress *string
+	StartTime *string
+	EndTime   *string
+	Page      int
+	Limit     int
+	Offset    int
+}

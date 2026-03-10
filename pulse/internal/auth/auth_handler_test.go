@@ -3,7 +3,12 @@ package auth
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -313,6 +318,257 @@ func measureTime(fn func()) time.Duration {
 	start := time.Now()
 	fn()
 	return time.Since(start)
+}
+
+// ============ Tests for bug fixes ============
+
+// TestAuthHandler_ExchangeAPIKey_MissingAuthorizationHeader verifies that ExchangeAPIKey
+// returns 401 when the Authorization header is absent (no DB access needed for this path).
+func TestAuthHandler_ExchangeAPIKey_MissingAuthorizationHeader(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := &AuthHandler{}
+	router := gin.New()
+	router.POST("/api/v1/beacon/token", handler.ExchangeAPIKey)
+
+	req, _ := http.NewRequest("POST", "/api/v1/beacon/token", bytes.NewBufferString("{}"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, "MISSING_AUTHORIZATION", resp["code"])
+}
+
+// TestAuthHandler_ExchangeAPIKey_InvalidBearerFormat verifies that ExchangeAPIKey
+// returns 401 when Authorization header is not in "Bearer <token>" format.
+func TestAuthHandler_ExchangeAPIKey_InvalidBearerFormat(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	handler := &AuthHandler{}
+	router := gin.New()
+	router.POST("/api/v1/beacon/token", handler.ExchangeAPIKey)
+
+	req, _ := http.NewRequest("POST", "/api/v1/beacon/token", bytes.NewBufferString("{}"))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Basic dXNlcjpwYXNz") // Basic auth, not Bearer
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, "INVALID_AUTHORIZATION_FORMAT", resp["code"])
+}
+
+// TestAuthHandler_ExchangeAPIKey_NoAssociation_Returns401 tests that ExchangeAPIKey returns 401
+// when an API key exists in the DB but has no associated user_id or service_account_id.
+// This tests the fix ensuring unassociated API keys cannot generate tokens.
+func TestAuthHandler_ExchangeAPIKey_NoAssociation_Returns401(t *testing.T) {
+	_, handler, _, cleanup := setupAuthHandlerTest(t)
+	if cleanup == nil {
+		return
+	}
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Generate a valid RFC 6750-style API key (32 raw bytes, base64 URL-encoded)
+	rawKey := make([]byte, 32)
+	_, err := rand.Read(rawKey)
+	require.NoError(t, err)
+	apiKeyStr := base64.URLEncoding.EncodeToString(rawKey)
+
+	// Hash the raw bytes for DB storage (matches ValidateAPIKey logic)
+	hashArr := sha256.Sum256(rawKey)
+	tokenHash := hex.EncodeToString(hashArr[:])
+	keyPrefix := apiKeyStr[:8]
+
+	// Insert API key with user_id = NULL (no user or service account association)
+	_, err = handler.pool.Exec(ctx, `
+		INSERT INTO api_keys (key_hash, key_prefix, user_id, name, is_active, created_at)
+		VALUES ($1, $2, NULL, 'orphan-key', true, NOW())
+	`, tokenHash, keyPrefix)
+	require.NoError(t, err)
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.POST("/api/v1/beacon/token", handler.ExchangeAPIKey)
+
+	req, _ := http.NewRequest("POST", "/api/v1/beacon/token", bytes.NewBufferString("{}"))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKeyStr)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Equal(t, "API_KEY_NOT_ASSOCIATED", resp["code"])
+}
+
+// TestAuthHandler_Logout_RefreshTokenRevocationByHash tests that Logout correctly revokes
+// the refresh token by token_hash (not token_id), which was the bug that was fixed.
+func TestAuthHandler_Logout_RefreshTokenRevocationByHash(t *testing.T) {
+	pool, handler, _, cleanup := setupAuthHandlerTest(t)
+	if cleanup == nil {
+		return
+	}
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Create a test user
+	userID := uuid.New()
+	hashedPassword, _ := HashPassword("TestPass123")
+	_, err := pool.Exec(ctx, `
+		INSERT INTO users (user_id, username, password_hash, email, role, is_active)
+		VALUES ($1, $2, $3, $4, $5, true)
+	`, userID, "logouttest", hashedPassword, "logout@test.com", "admin")
+	require.NoError(t, err)
+
+	// Generate a JWT access token for the user
+	accessToken, _, err := handler.jwtService.GenerateAccessToken(userID.String(), "admin")
+	require.NoError(t, err)
+
+	// Insert a refresh token into DB (raw token string → hash stored)
+	refreshTokenStr := "test-refresh-" + uuid.NewString()
+	hashArr := sha256.Sum256([]byte(refreshTokenStr))
+	tokenHash := hex.EncodeToString(hashArr[:])
+	tokenID := uuid.New()
+	_, err = pool.Exec(ctx, `
+		INSERT INTO refresh_tokens (token_id, token_hash, user_id, expires_at, max_valid_until, created_at, updated_at)
+		VALUES ($1, $2, $3, NOW() + interval '7 days', NOW() + interval '30 days', NOW(), NOW())
+	`, tokenID, tokenHash, userID)
+	require.NoError(t, err)
+
+	// Call Logout with middleware simulation (user_id set in gin context)
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	userIDStr := userID.String()
+	router.POST("/api/v1/auth/logout", func(c *gin.Context) {
+		c.Set("user_id", userIDStr)
+		handler.Logout(c)
+	})
+
+	reqBody, _ := json.Marshal(map[string]string{"refresh_token": refreshTokenStr})
+	req, _ := http.NewRequest("POST", "/api/v1/auth/logout", bytes.NewReader(reqBody))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Verify the refresh token was revoked (revoked_at is now set for that token_hash)
+	var revokedCount int
+	err = pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM refresh_tokens WHERE token_hash = $1 AND revoked_at IS NOT NULL`,
+		tokenHash,
+	).Scan(&revokedCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, revokedCount, "refresh token should be marked revoked via token_hash lookup")
+}
+
+// TestAuthHandler_RevokeAllMySessions_Success tests the POST /auth/sessions/revoke-all endpoint
+// (new route added in the fix). Verifies all of a user's sessions are revoked.
+func TestAuthHandler_RevokeAllMySessions_Success(t *testing.T) {
+	pool, handler, _, cleanup := setupAuthHandlerTest(t)
+	if cleanup == nil {
+		return
+	}
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Create a test user
+	userID := uuid.New()
+	hashedPassword, _ := HashPassword("TestPass123")
+	_, err := pool.Exec(ctx, `
+		INSERT INTO users (user_id, username, password_hash, email, role, is_active)
+		VALUES ($1, $2, $3, $4, $5, true)
+	`, userID, "revoketest", hashedPassword, "revoke@test.com", "admin")
+	require.NoError(t, err)
+
+	// Insert 3 active refresh tokens
+	for i := 0; i < 3; i++ {
+		tokenID := uuid.New()
+		rawToken := fmt.Sprintf("token-%d-%s", i, uuid.NewString())
+		hashArr := sha256.Sum256([]byte(rawToken))
+		tokenHash := hex.EncodeToString(hashArr[:])
+		_, err = pool.Exec(ctx, `
+			INSERT INTO refresh_tokens (token_id, token_hash, user_id, expires_at, max_valid_until, created_at, updated_at)
+			VALUES ($1, $2, $3, NOW() + interval '7 days', NOW() + interval '30 days', NOW(), NOW())
+		`, tokenID, tokenHash, userID)
+		require.NoError(t, err)
+	}
+
+	// Confirm 3 active tokens before revoking
+	var beforeCount int
+	pool.QueryRow(ctx, `SELECT COUNT(*) FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL`, userID).Scan(&beforeCount)
+	assert.Equal(t, 3, beforeCount)
+
+	// Call RevokeAllMySessions with middleware simulation
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	userIDStr := userID.String()
+	router.POST("/api/v1/auth/sessions/revoke-all", func(c *gin.Context) {
+		c.Set("user_id", userIDStr)
+		handler.RevokeAllMySessions(c)
+	})
+
+	req, _ := http.NewRequest("POST", "/api/v1/auth/sessions/revoke-all", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.Contains(t, resp["message"], "revoked")
+
+	// Verify all tokens are now revoked
+	var activeCount int
+	err = pool.QueryRow(ctx, `SELECT COUNT(*) FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL`, userID).Scan(&activeCount)
+	require.NoError(t, err)
+	assert.Equal(t, 0, activeCount, "all sessions should be revoked")
+}
+
+// TestAuthHandler_LogAuditEvent_NullOrEmptyUserID verifies that logAuditEvent correctly
+// handles empty or nil userID by inserting NULL (not an empty string) into the UUID column.
+// This prevents a PostgreSQL UUID constraint violation that existed before the fix.
+func TestAuthHandler_LogAuditEvent_NullOrEmptyUserID(t *testing.T) {
+	pool, handler, _, cleanup := setupAuthHandlerTest(t)
+	if cleanup == nil {
+		return
+	}
+	defer cleanup()
+
+	ctx := context.Background()
+
+	// Test with empty string pointer — should not panic or error
+	emptyUserID := ""
+	assert.NotPanics(t, func() {
+		handler.logAuditEvent(ctx, "test_empty_userid", &emptyUserID, "127.0.0.1", nil)
+	})
+
+	var emptyCount int
+	err := pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM auth_audit_logs WHERE event_type = 'test_empty_userid' AND user_id IS NULL
+	`).Scan(&emptyCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, emptyCount, "audit log for empty userID should have NULL user_id column")
+
+	// Test with nil pointer — should also insert NULL user_id
+	assert.NotPanics(t, func() {
+		handler.logAuditEvent(ctx, "test_nil_userid", nil, "127.0.0.1", nil)
+	})
+
+	var nilCount int
+	err = pool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM auth_audit_logs WHERE event_type = 'test_nil_userid' AND user_id IS NULL
+	`).Scan(&nilCount)
+	require.NoError(t, err)
+	assert.Equal(t, 1, nilCount, "audit log for nil userID should have NULL user_id column")
 }
 
 // Benchmark login handler performance

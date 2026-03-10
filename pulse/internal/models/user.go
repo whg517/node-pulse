@@ -30,6 +30,7 @@ type LoginResponse struct {
 		Username    string `json:"username"`
 		Role        string `json:"role"`
 		AccessToken string `json:"access_token"`
+		CSRFToken   string `json:"csrf_token"`
 	} `json:"data"`
 	Message   string `json:"message"`
 	Timestamp string `json:"timestamp"`

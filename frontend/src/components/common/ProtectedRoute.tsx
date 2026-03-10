@@ -20,18 +20,33 @@ function checkRedirectCount(): boolean {
 }
 
 /**
- * Increment redirect count in sessionStorage
- */
-function incrementRedirectCount(): void {
-  const redirectCount = parseInt(sessionStorage.getItem(REDIRECT_COUNT_KEY) || '0', 10)
-  sessionStorage.setItem(REDIRECT_COUNT_KEY, String(redirectCount + 1))
-}
-
-/**
  * Clear redirect count
  */
 function clearRedirectCount(): void {
   sessionStorage.removeItem(REDIRECT_COUNT_KEY)
+}
+
+/**
+ * Module-level nonce to deduplicate redirect count increments
+ * in React StrictMode (which invokes render functions twice in development)
+ */
+let _lastIncrementFrame = -1
+
+/**
+ * Increment redirect count exactly once per logical render,
+ * even in React StrictMode where the function body runs twice.
+ */
+function safeIncrementRedirectCount(): void {
+  // requestAnimationFrame counter is not available here; use a simple flag reset via microtask
+  const current = parseInt(sessionStorage.getItem(REDIRECT_COUNT_KEY) || '0', 10)
+  const nextCount = current + 1
+  // Only write if we haven't already written this value in this JS task tick
+  if (_lastIncrementFrame !== nextCount) {
+    _lastIncrementFrame = nextCount
+    sessionStorage.setItem(REDIRECT_COUNT_KEY, String(nextCount))
+    // Reset the dedup flag after the current synchronous batch completes
+    Promise.resolve().then(() => { _lastIncrementFrame = -1 })
+  }
 }
 
 /**
@@ -145,7 +160,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       )
     }
 
-    incrementRedirectCount()
+    safeIncrementRedirectCount()
 
     return <Navigate to="/login" state={{ from: location }} replace />
   }

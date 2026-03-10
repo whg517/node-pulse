@@ -33,6 +33,7 @@ export interface LoginResponse {
     username: string
     role: UserRole
     access_token: string
+    csrf_token: string
   }
   message: string
   timestamp: string

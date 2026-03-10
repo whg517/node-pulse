@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -233,97 +232,42 @@ func (e *EnhancedAuditLogger) logEvent(
 	return err
 }
 
-// QueryAuditLogs retrieves audit logs with filtering
-func (e *EnhancedAuditLogger) QueryAuditLogs(
-	ctx context.Context,
-	filter AuditLogFilter,
-) ([]map[string]interface{}, error) {
-	query := `
-		SELECT id, event_type, user_id, ip_address, details, created_at
+// GetAuditLogByID retrieves a single audit log entry by ID
+func (e *EnhancedAuditLogger) GetAuditLogByID(ctx context.Context, id int64) (map[string]interface{}, error) {
+	var eventType string
+	var userID *string
+	var ipAddress *string
+	var detailsJSON []byte
+	var createdAt time.Time
+
+	err := e.pool.QueryRow(ctx, `
+		SELECT event_type, user_id, ip_address, details, created_at
 		FROM auth_audit_logs
-		WHERE 1=1
-	`
-	args := []interface{}{}
-	argCount := 1
+		WHERE id = $1
+	`, id).Scan(&eventType, &userID, &ipAddress, &detailsJSON, &createdAt)
 
-	if filter.EventType != "" {
-		query += fmt.Sprintf(" AND event_type = $%d", argCount)
-		args = append(args, filter.EventType)
-		argCount++
-	}
-
-	if filter.UserID != nil {
-		query += fmt.Sprintf(" AND user_id = $%d", argCount)
-		args = append(args, *filter.UserID)
-		argCount++
-	}
-
-	if filter.StartTime != nil {
-		query += fmt.Sprintf(" AND created_at >= $%d", argCount)
-		args = append(args, *filter.StartTime)
-		argCount++
-	}
-
-	if filter.EndTime != nil {
-		query += fmt.Sprintf(" AND created_at <= $%d", argCount)
-		args = append(args, *filter.EndTime)
-		argCount++
-	}
-
-	query += " ORDER BY created_at DESC"
-
-	if filter.Limit > 0 {
-		query += fmt.Sprintf(" LIMIT $%d", argCount)
-		args = append(args, filter.Limit)
-	}
-
-	rows, err := e.pool.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var results []map[string]interface{}
-	for rows.Next() {
-		var id int
-		var eventType string
-		var userID *string
-		var ipAddress *string
-		var detailsJSON []byte
-		var createdAt time.Time
-
-		err = rows.Scan(&id, &eventType, &userID, &ipAddress, &detailsJSON, &createdAt)
+	// Parse JSONB details
+	var details map[string]interface{}
+	if detailsJSON != nil {
+		err = json.Unmarshal(detailsJSON, &details)
 		if err != nil {
 			return nil, err
 		}
-
-		var details map[string]interface{}
-		if detailsJSON != nil {
-			err = json.Unmarshal(detailsJSON, &details)
-			if err != nil {
-				return nil, err
-			}
-		}
-
-		result := map[string]interface{}{
-			"id":         id,
-			"event_type": eventType,
-			"user_id":    userID,
-			"ip_address": ipAddress,
-			"details":    details,
-			"created_at": createdAt,
-		}
-		results = append(results, result)
 	}
 
-	return results, nil
+	log := map[string]interface{}{
+		"id":         id,
+		"event_type": eventType,
+		"user_id":    userID,
+		"ip_address": ipAddress,
+		"details":    details,
+		"created_at": createdAt,
+	}
+
+	return log, nil
 }
 
-// AuditLogFilter provides filtering options for audit log queries
-type AuditLogFilter struct {
-	EventType string
-	UserID    *string
-	StartTime *time.Time
-	EndTime   *time.Time
-	Limit     int
-}

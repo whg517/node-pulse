@@ -8,7 +8,19 @@
     "settings": "设置",
     "collapse": "收起",
     "expandSidebar": "展开侧边栏",
-    "collapseSidebar": "收起侧边栏"
+    "collapseSidebar": "收起侧边栏",
+    "alertRules": "告警规则",
+    "alertRecords": "告警记录",
+    "alertHistory": "告警历史",
+    "comparison": "对比",
+    "export": "导出",
+    "profile": "个人资料",
+    "logout": "退出登录",
+    "toggleMenu": "切换菜单",
+    "home": "首页",
+    "details": "详情",
+    "sessions": "会话",
+    "preferences": "偏好设置"
   },
   "common": {
     "loading": "加载中...",

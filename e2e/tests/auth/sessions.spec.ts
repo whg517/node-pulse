@@ -5,6 +5,7 @@
  * - List sessions
  * - Revoke session
  * - Current session indicator
+ * - Revoke all sessions (new route)
  */
 
 import { test, expect } from '../../fixtures/auth.fixture'
@@ -74,6 +75,40 @@ test.describe('Session Expiry', () => {
       expect([200, 401, 404, 403]).toContain(status)
     } else {
       // Request failed - endpoint may not exist
+    }
+  })
+})
+
+test.describe('Revoke All Sessions (new route)', () => {
+  test('POST /api/v1/auth/sessions/revoke-all route exists (added in bug fix)', async ({ adminPage }) => {
+    // This endpoint was added as part of the fix for the missing route.
+    // Without authentication (no JWT in Authorization header), it should return 401, NOT 404.
+    // 404 would indicate the route was never registered.
+    const response = await adminPage.request.post('/api/v1/auth/sessions/revoke-all', {
+      headers: { 'Content-Type': 'application/json' },
+      data: {},
+    }).catch(() => null)
+
+    if (response) {
+      const status = response.status()
+      // Route exists: 401 (missing/expired token) or 200 (authenticated)
+      // Route missing: 404 — this would be a bug
+      expect(status).not.toBe(404)
+      expect([200, 401, 403]).toContain(status)
+    }
+  })
+
+  test('GET /api/v1/auth/verify route exists (added in bug fix)', async ({ adminPage }) => {
+    // This endpoint was added as an alias to /auth/me for token validation.
+    // Without authentication, it should return 401, NOT 404.
+    const response = await adminPage.request.get('/api/v1/auth/verify').catch(() => null)
+
+    if (response) {
+      const status = response.status()
+      // Route exists: 401 (no auth) or 200 (authenticated)
+      // Route missing: 404 — this would be a bug
+      expect(status).not.toBe(404)
+      expect([200, 401, 403]).toContain(status)
     }
   })
 })

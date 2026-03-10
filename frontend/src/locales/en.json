@@ -8,7 +8,19 @@
     "settings": "Settings",
     "collapse": "Collapse",
     "expandSidebar": "Expand sidebar",
-    "collapseSidebar": "Collapse sidebar"
+    "collapseSidebar": "Collapse sidebar",
+    "alertRules": "Alert Rules",
+    "alertRecords": "Alert Records",
+    "alertHistory": "Alert History",
+    "comparison": "Comparison",
+    "export": "Export",
+    "profile": "Profile",
+    "logout": "Logout",
+    "toggleMenu": "Toggle menu",
+    "home": "Home",
+    "details": "Details",
+    "sessions": "Sessions",
+    "preferences": "Preferences"
   },
   "common": {
     "loading": "Loading...",
