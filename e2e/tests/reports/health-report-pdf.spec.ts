@@ -9,8 +9,8 @@
  * - Email sharing
  */
 
-import { test, expect, Download } from '../../../fixtures/auth.fixture'
-import { ReportsPage } from '../../../pages/ReportsPage'
+import { test, expect } from '../../fixtures/auth.fixture'
+import { ReportsPage } from '../../pages/ReportsPage'
 
 test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   let reportsPage: ReportsPage

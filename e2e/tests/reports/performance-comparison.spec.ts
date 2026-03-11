@@ -9,8 +9,8 @@
  * - Export functionality
  */
 
-import { test, expect } from '../../../fixtures/auth.fixture'
-import { PerformancePage } from '../../../pages/PerformancePage'
+import { test, expect } from '../../fixtures/auth.fixture'
+import { PerformancePage } from '../../pages/PerformancePage'
 
 test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   let perfPage: PerformancePage
