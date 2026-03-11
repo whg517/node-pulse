@@ -53,7 +53,7 @@ jobs:
         run: |
           cd pulse
           go mod download
-          go build -o bin/pulse ./cmd/pulse
+          go build -o bin/pulse ./cmd/server
 
       - name: Start Pulse server
         run: |
