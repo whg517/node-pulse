@@ -168,21 +168,23 @@ async function authenticateAndSaveState(
   const page = await context.newPage()
 
   try {
-    // Navigate to login page
-    await page.goto(`${FRONTEND_BASE_URL}/login`)
+    // Navigate to login page - use domcontentloaded to avoid timeout on pages with periodic API calls
+    await page.goto(`${FRONTEND_BASE_URL}/login`, { waitUntil: 'domcontentloaded' })
 
-    // Wait for the form to be ready (using id selectors)
-    await page.waitForSelector('#username', { timeout: 10000 })
+    // Wait for the form to be ready (using id selectors with state: visible)
+    await page.waitForSelector('#username', { state: 'visible', timeout: 10000 })
+    await page.waitForSelector('#password', { state: 'visible', timeout: 5000 })
+    await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: 5000 })
 
     // Fill in credentials
     await page.fill('#username', username)
     await page.fill('#password', password)
 
+    // Small delay to ensure form state is updated
+    await page.waitForTimeout(100)
+
     // Submit form
     await page.click('button[type="submit"]')
-
-    // Wait a moment for the form submission to process
-    await page.waitForTimeout(1000)
 
     // Take a screenshot for debugging
     await page.screenshot({ path: `.auth/debug-${username}-after-submit.png`, fullPage: true })
@@ -191,20 +193,12 @@ async function authenticateAndSaveState(
     // Log current URL for debugging
     console.log(`[Global Setup] Current URL after submit: ${page.url()}`)
 
-    // Wait for successful login - either dashboard URL or a dashboard element
-    // React Router SPA navigation might not trigger URL change detection reliably
-    try {
-      // First try waiting for URL change
-      await page.waitForURL('**/dashboard**', { timeout: 15000 })
-    } catch {
-      // Take another screenshot before fallback
-      await page.screenshot({ path: `.auth/debug-${username}-fallback.png`, fullPage: true })
-      console.log(`[Global Setup] URL wait failed, trying selector fallback. URL: ${page.url()}`)
-
-      // Fallback: wait for dashboard content to appear (SPA navigation)
-      // Include "NodePulse" as it's always visible in the nav (static, no i18n)
-      await page.waitForSelector('text=/NodePulse|Welcome|Dashboard|Nodes/i', { timeout: 10000 })
-    }
+    // Wait for successful login - use domcontentloaded to avoid timeout with periodic API calls
+    // Use Promise.race for reliability - check for URL change OR dashboard element
+    await Promise.race([
+      page.waitForURL('**/dashboard**', { timeout: 25000, waitUntil: 'domcontentloaded' }),
+      page.waitForSelector('nav, [data-testid="sidebar"], .sidebar', { timeout: 25000 }),
+    ])
 
     // Save storage state (includes cookies and localStorage)
     await context.storageState({ path: statePath })
