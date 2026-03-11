@@ -188,7 +188,8 @@ async function authenticateAndSaveState(
       // Wait for form elements to be visible
       await page.waitForSelector('#username', { state: 'visible', timeout: 10000 })
       await page.waitForSelector('#password', { state: 'visible', timeout: 5000 })
-      await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: 5000 })
+      // Wait for submit button to be enabled (not disabled by isLoading state)
+      await page.waitForSelector('button[type="submit"]:not([disabled])', { state: 'visible', timeout: 10000 })
 
       // Fill in credentials
       await page.fill('#username', username)

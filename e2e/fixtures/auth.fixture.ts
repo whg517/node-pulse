@@ -136,7 +136,8 @@ async function performLogin(page: Page, username: string, password: string, maxR
       // Wait for form to be visible and interactive
       await page.waitForSelector('#username', { state: 'visible', timeout: 15000 })
       await page.waitForSelector('#password', { state: 'visible', timeout: 5000 })
-      await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: 5000 })
+      // Wait for submit button to be enabled (not disabled by isLoading state)
+      await page.waitForSelector('button[type="submit"]:not([disabled])', { state: 'visible', timeout: 10000 })
 
       // Clear and fill form
       await page.fill('#username', username)
