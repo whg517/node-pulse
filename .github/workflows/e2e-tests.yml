@@ -13,6 +13,7 @@ env:
   PULSE_SESSION_SECRET: test-session-secret-for-ci
   PULSE_ADMIN_USERNAME: admin
   PULSE_ADMIN_PASSWORD: Admin123
+  PULSE_CORS_ALLOWED_ORIGINS: http://localhost:3000,http://localhost:5173,http://localhost:4173,http://localhost:6532
   API_BASE_URL: http://localhost:6532
   FRONTEND_BASE_URL: http://localhost:4173
 
