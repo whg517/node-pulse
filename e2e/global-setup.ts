@@ -171,6 +171,26 @@ async function authenticateAndSaveState(
     const context = await browser.newContext()
     const page = await context.newPage()
 
+    // Capture browser console messages for debugging
+    const consoleMessages: string[] = []
+    page.on('console', msg => {
+      const text = `[Browser Console] ${msg.type()}: ${msg.text()}`
+      consoleMessages.push(text)
+      console.log(text)
+    })
+
+    // Capture network failures for debugging
+    page.on('requestfailed', request => {
+      console.log(`[Network] Failed: ${request.method()} ${request.url()} - ${request.failure()?.errorText}`)
+    })
+
+    // Capture API responses for debugging
+    page.on('response', response => {
+      if (response.url().includes('/api/')) {
+        console.log(`[Network] ${response.status()} ${response.request().method()} ${response.url()}`)
+      }
+    })
+
     try {
       console.log(`[Global Setup] Login attempt ${attempt} for ${username}`)
 
