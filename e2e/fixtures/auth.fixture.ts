@@ -177,35 +177,6 @@ async function performLogin(page: Page, username: string, password: string, maxR
 }
 
 /**
- * Verify auth state is still valid
- */
-async function verifyAuthState(page: Page, role: Role): Promise<boolean> {
-  // Check cache first
-  const cacheKey = `${WORKER_INDEX}-${role}`
-  if (verifiedContexts.has(cacheKey)) {
-    return true
-  }
-
-  try {
-    await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 25000 })
-
-    // Wait for SPA to settle
-    await page.waitForTimeout(1000)
-
-    // If still on dashboard (not redirected to login), state is valid
-    const currentUrl = page.url()
-    if (!currentUrl.includes('login')) {
-      verifiedContexts.add(cacheKey)
-      return true
-    }
-  } catch {
-    // Verification failed
-  }
-
-  return false
-}
-
-/**
  * Create authenticated context using saved storage state or fresh login
  */
 async function createAuthenticatedContext(
@@ -226,22 +197,8 @@ async function createAuthenticatedContext(
     console.log(`[auth.fixture] Using saved storage state for ${role}`)
     context = await browser.newContext({ storageState: statePath })
     page = await context.newPage()
-
-    // Verify the session is still valid
-    const isValid = await verifyAuthState(page, role)
-
-    if (!isValid) {
-      console.log(`[auth.fixture] Saved state expired for ${role}, performing fresh login`)
-      await context.close()
-      await clearRateLimits()
-
-      context = await browser.newContext()
-      page = await context.newPage()
-      await performLogin(page, credentials.username, credentials.password)
-
-      // Save the new state
-      await context.storageState({ path: statePath })
-    }
+    // Skip verification to avoid race conditions with parallel workers
+    // If the state is invalid, the test will fail and retry naturally
   } else {
     // No saved state, perform fresh login
     console.log(`[auth.fixture] No saved state for ${role}, performing fresh login`)
