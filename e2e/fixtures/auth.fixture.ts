@@ -131,15 +131,23 @@ async function performLogin(page: Page, username: string, password: string, maxR
         await new Promise(resolve => setTimeout(resolve, 500))
       }
 
-      await page.goto('/login', { waitUntil: 'networkidle' })
-      await page.waitForSelector('#username', { timeout: 15000 })
+      // Use domcontentloaded to avoid timeout on pages with periodic API calls
+      await page.goto('/login', { waitUntil: 'domcontentloaded' })
+      // Wait for form to be visible and interactive
+      await page.waitForSelector('#username', { state: 'visible', timeout: 15000 })
+      await page.waitForSelector('#password', { state: 'visible', timeout: 5000 })
+      await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: 5000 })
+
+      // Clear and fill form
       await page.fill('#username', username)
       await page.fill('#password', password)
+      // Small delay to ensure form state is updated
+      await page.waitForTimeout(100)
       await page.click('button[type="submit"]')
       console.log('[auth.fixture] Login form submitted, waiting for redirect...')
 
-      // Wait for successful login - check URL first, then content
-      await page.waitForURL('**/dashboard**', { timeout: 25000 })
+      // Wait for successful login - use domcontentloaded to avoid timeout with periodic API calls
+      await page.waitForURL('**/dashboard**', { timeout: 25000, waitUntil: 'domcontentloaded' })
 
       // Wait for page to be interactive (SPA hydration)
       await page.waitForLoadState('domcontentloaded')
@@ -178,7 +186,7 @@ async function verifyAuthState(page: Page, role: Role): Promise<boolean> {
   }
 
   try {
-    await page.goto('/dashboard', { waitUntil: 'networkidle', timeout: 25000 })
+    await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 25000 })
 
     // Wait for SPA to settle
     await page.waitForTimeout(1000)
