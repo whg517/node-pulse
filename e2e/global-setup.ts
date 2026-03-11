@@ -154,62 +154,87 @@ async function seedTestAlertRules(pool: Pool): Promise<void> {
 }
 
 /**
- * Authenticate user and save storage state
+ * Authenticate user and save storage state with retry logic
  */
 async function authenticateAndSaveState(
   username: string,
   password: string,
-  statePath: string
+  statePath: string,
+  maxRetries = 3
 ): Promise<void> {
   console.log(`[Global Setup] Authenticating ${username}...`)
 
-  const browser = await chromium.launch()
-  const context = await browser.newContext()
-  const page = await context.newPage()
+  let lastError: Error | null = null
 
-  try {
-    // Navigate to login page - use domcontentloaded to avoid timeout on pages with periodic API calls
-    await page.goto(`${FRONTEND_BASE_URL}/login`, { waitUntil: 'domcontentloaded' })
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const browser = await chromium.launch()
+    const context = await browser.newContext()
+    const page = await context.newPage()
 
-    // Wait for the form to be ready (using id selectors with state: visible)
-    await page.waitForSelector('#username', { state: 'visible', timeout: 10000 })
-    await page.waitForSelector('#password', { state: 'visible', timeout: 5000 })
-    await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: 5000 })
+    try {
+      console.log(`[Global Setup] Login attempt ${attempt} for ${username}`)
 
-    // Fill in credentials
-    await page.fill('#username', username)
-    await page.fill('#password', password)
+      // Clear rate limits before login attempt (except first try)
+      if (attempt > 1) {
+        const pool = new Pool({ connectionString: TEST_DB_URL })
+        await clearRateLimits(pool)
+        await pool.end()
+        await new Promise(resolve => setTimeout(resolve, 500))
+      }
 
-    // Small delay to ensure form state is updated
-    await page.waitForTimeout(100)
+      // Navigate to login page - use domcontentloaded to avoid timeout
+      await page.goto(`${FRONTEND_BASE_URL}/login`, { waitUntil: 'domcontentloaded' })
 
-    // Submit form
-    await page.click('button[type="submit"]')
+      // Wait for form elements to be visible
+      await page.waitForSelector('#username', { state: 'visible', timeout: 10000 })
+      await page.waitForSelector('#password', { state: 'visible', timeout: 5000 })
+      await page.waitForSelector('button[type="submit"]', { state: 'visible', timeout: 5000 })
 
-    // Take a screenshot for debugging
-    await page.screenshot({ path: `.auth/debug-${username}-after-submit.png`, fullPage: true })
-    console.log(`[Global Setup] Saved screenshot: .auth/debug-${username}-after-submit.png`)
+      // Fill in credentials
+      await page.fill('#username', username)
+      await page.fill('#password', password)
 
-    // Log current URL for debugging
-    console.log(`[Global Setup] Current URL after submit: ${page.url()}`)
+      // Small delay to ensure form state is updated
+      await page.waitForTimeout(100)
 
-    // Wait for successful login - use domcontentloaded to avoid timeout with periodic API calls
-    // Use Promise.race for reliability - check for URL change OR dashboard element
-    await Promise.race([
-      page.waitForURL('**/dashboard**', { timeout: 25000, waitUntil: 'domcontentloaded' }),
-      page.waitForSelector('nav, [data-testid="sidebar"], .sidebar', { timeout: 25000 }),
-    ])
+      // Submit form
+      await page.click('button[type="submit"]')
+      console.log(`[Global Setup] Login form submitted for ${username}, waiting for redirect...`)
 
-    // Save storage state (includes cookies and localStorage)
-    await context.storageState({ path: statePath })
+      // Wait for successful login - use Promise.race for reliability
+      await Promise.race([
+        page.waitForURL('**/dashboard**', { timeout: 25000, waitUntil: 'domcontentloaded' }),
+        page.waitForSelector('nav, [data-testid="sidebar"], .sidebar', { timeout: 25000 }),
+      ])
 
-    console.log(`[Global Setup] Saved auth state for ${username} to ${statePath}`)
-  } catch (error) {
-    console.error(`[Global Setup] Failed to authenticate ${username}:`, error)
-    throw error
-  } finally {
-    await browser.close()
+      // Save storage state
+      await context.storageState({ path: statePath })
+      console.log(`[Global Setup] Saved auth state for ${username} to ${statePath}`)
+
+      await browser.close()
+      return // Success!
+    } catch (error) {
+      lastError = error as Error
+      console.error(`[Global Setup] Login attempt ${attempt} failed for ${username}:`, error)
+
+      // Take screenshot for debugging
+      try {
+        await page.screenshot({ path: `.auth/debug-${username}-attempt-${attempt}.png`, fullPage: true })
+        console.log(`[Global Setup] Current URL: ${page.url()}`)
+      } catch {
+        // Ignore screenshot errors
+      }
+
+      await browser.close()
+
+      if (attempt < maxRetries) {
+        console.log(`[Global Setup] Retrying login for ${username}...`)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+    }
   }
+
+  throw lastError || new Error(`[Global Setup] Failed to authenticate ${username} after ${maxRetries} attempts`)
 }
 
 /**
