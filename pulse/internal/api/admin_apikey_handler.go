@@ -22,6 +22,17 @@ func NewAdminAPIKeyHandler(apiKeyService *auth.APIKeyService) *AdminAPIKeyHandle
 }
 
 // ListAPIKeysHandler handles GET /api/v1/admin/apikeys
+// @Summary		List all API keys
+// @Description	Retrieves all API keys. Admin role required.
+// @Tags			Admin API Keys
+// @Accept			json
+// @Produce		json
+// @Success		200	{object}	map[string]interface{}	"List of API keys"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Failure		500	{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/admin/apikeys [get]
 func (h *AdminAPIKeyHandler) ListAPIKeysHandler(c *gin.Context) {
 	keys, err := h.apiKeyService.ListAllAPIKeys(c.Request.Context())
 	if err != nil {
@@ -43,6 +54,19 @@ func (h *AdminAPIKeyHandler) ListAPIKeysHandler(c *gin.Context) {
 }
 
 // GetAPIKeyByIDHandler handles GET /api/v1/admin/apikeys/:id
+// @Summary		Get API key by ID
+// @Description	Retrieves an API key by its integer ID. Admin role required.
+// @Tags			Admin API Keys
+// @Accept			json
+// @Produce		json
+// @Param			id	path		int	true	"API key ID"
+// @Success		200	{object}	map[string]interface{}	"API key details"
+// @Failure		400	{object}	map[string]interface{}	"Invalid ID"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Failure		404	{object}	map[string]interface{}	"API key not found"
+// @Security		BearerAuth
+// @Router			/admin/apikeys/{id} [get]
 func (h *AdminAPIKeyHandler) GetAPIKeyByIDHandler(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
@@ -82,6 +106,19 @@ type CreateAPIKeyRequest struct {
 }
 
 // CreateAPIKeyHandler handles POST /api/v1/admin/apikeys
+// @Summary		Create a new API key
+// @Description	Creates a new API key. The full key is only shown once on creation. Admin role required.
+// @Tags			Admin API Keys
+// @Accept			json
+// @Produce		json
+// @Param			request	body		CreateAPIKeyRequest		true	"API key creation request"
+// @Success		201		{object}	map[string]interface{}	"API key created successfully"
+// @Failure		400		{object}	map[string]interface{}	"Validation failed"
+// @Failure		401		{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403		{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Failure		500		{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/admin/apikeys [post]
 func (h *AdminAPIKeyHandler) CreateAPIKeyHandler(c *gin.Context) {
 	var req CreateAPIKeyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -118,6 +155,19 @@ func (h *AdminAPIKeyHandler) CreateAPIKeyHandler(c *gin.Context) {
 }
 
 // RotateAPIKeyHandler handles POST /api/v1/admin/apikeys/:id/rotate
+// @Summary		Rotate an API key
+// @Description	Rotates an API key, generating a new key value. The old key remains valid for 24 hours. Admin role required.
+// @Tags			Admin API Keys
+// @Accept			json
+// @Produce		json
+// @Param			id	path		int						true	"API key ID"
+// @Success		200	{object}	map[string]interface{}	"API key rotated successfully"
+// @Failure		400	{object}	map[string]interface{}	"Invalid ID"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Failure		500	{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/admin/apikeys/{id}/rotate [post]
 func (h *AdminAPIKeyHandler) RotateAPIKeyHandler(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)
@@ -152,6 +202,19 @@ func (h *AdminAPIKeyHandler) RotateAPIKeyHandler(c *gin.Context) {
 }
 
 // RevokeAPIKeyHandler handles DELETE /api/v1/admin/apikeys/:id
+// @Summary		Revoke an API key
+// @Description	Revokes (deletes) an API key by its integer ID. Admin role required.
+// @Tags			Admin API Keys
+// @Accept			json
+// @Produce		json
+// @Param			id	path		int						true	"API key ID"
+// @Success		200	{object}	map[string]interface{}	"API key revoked successfully"
+// @Failure		400	{object}	map[string]interface{}	"Invalid ID"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Failure		404	{object}	map[string]interface{}	"API key not found"
+// @Security		BearerAuth
+// @Router			/admin/apikeys/{id} [delete]
 func (h *AdminAPIKeyHandler) RevokeAPIKeyHandler(c *gin.Context) {
 	idParam := c.Param("id")
 	id, err := strconv.Atoi(idParam)

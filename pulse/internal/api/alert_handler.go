@@ -23,6 +23,19 @@ func NewAlertHandler(querier db.AlertQuerier) *AlertHandler {
 }
 
 // CreateAlertRuleHandler handles POST /api/v1/alerts/rules
+// @Summary		Create an alert rule
+// @Description	Creates a new alert rule. Requires admin or operator role.
+// @Tags			Alerts
+// @Accept			json
+// @Produce		json
+// @Param			request	body		models.CreateAlertRequest	true	"Alert rule creation request"
+// @Success		200		{object}	models.CreateAlertResponse	"Alert rule created successfully"
+// @Failure		400		{object}	map[string]interface{}		"Validation failed"
+// @Failure		401		{object}	map[string]interface{}		"Unauthorized"
+// @Failure		403		{object}	map[string]interface{}		"Forbidden (requires admin or operator role)"
+// @Failure		500		{object}	map[string]interface{}		"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/rules [post]
 func (h *AlertHandler) CreateAlertRuleHandler(c *gin.Context) {
 	var req models.CreateAlertRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -67,6 +80,17 @@ func (h *AlertHandler) CreateAlertRuleHandler(c *gin.Context) {
 }
 
 // GetAlertRulesHandler handles GET /api/v1/alerts/rules
+// @Summary		List alert rules
+// @Description	Retrieves all alert rules. Optionally filtered by node_id.
+// @Tags			Alerts
+// @Accept			json
+// @Produce		json
+// @Param			node_id	query		string					false	"Filter by node UUID"
+// @Success		200		{object}	models.GetAlertsResponse	"List of alert rules"
+// @Failure		401		{object}	map[string]interface{}		"Unauthorized"
+// @Failure		500		{object}	map[string]interface{}		"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/rules [get]
 func (h *AlertHandler) GetAlertRulesHandler(c *gin.Context) {
 	nodeID := c.Query("node_id")
 	var nodeIDPtr *string
@@ -95,6 +119,18 @@ func (h *AlertHandler) GetAlertRulesHandler(c *gin.Context) {
 }
 
 // GetAlertRuleByIDHandler handles GET /api/v1/alerts/rules/:id
+// @Summary		Get alert rule by ID
+// @Description	Retrieves an alert rule by its ID.
+// @Tags			Alerts
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string						true	"Alert rule ID"
+// @Success		200	{object}	models.GetAlertByIDResponse	"Alert rule details"
+// @Failure		401	{object}	map[string]interface{}		"Unauthorized"
+// @Failure		404	{object}	map[string]interface{}		"Alert rule not found"
+// @Failure		500	{object}	map[string]interface{}		"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/rules/{id} [get]
 func (h *AlertHandler) GetAlertRuleByIDHandler(c *gin.Context) {
 	id := c.Param("id")
 
@@ -126,6 +162,21 @@ func (h *AlertHandler) GetAlertRuleByIDHandler(c *gin.Context) {
 }
 
 // UpdateAlertRuleHandler handles PUT /api/v1/alerts/rules/:id
+// @Summary		Update an alert rule
+// @Description	Updates an existing alert rule. Requires admin or operator role.
+// @Tags			Alerts
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string						true	"Alert rule ID"
+// @Param			request	body		models.UpdateAlertRequest	true	"Alert rule update request"
+// @Success		200		{object}	models.UpdateAlertResponse	"Alert rule updated successfully"
+// @Failure		400		{object}	map[string]interface{}		"Validation failed"
+// @Failure		401		{object}	map[string]interface{}		"Unauthorized"
+// @Failure		403		{object}	map[string]interface{}		"Forbidden (requires admin or operator role)"
+// @Failure		404		{object}	map[string]interface{}		"Alert rule not found"
+// @Failure		500		{object}	map[string]interface{}		"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/rules/{id} [put]
 func (h *AlertHandler) UpdateAlertRuleHandler(c *gin.Context) {
 	id := c.Param("id")
 
@@ -167,6 +218,19 @@ func (h *AlertHandler) UpdateAlertRuleHandler(c *gin.Context) {
 }
 
 // DeleteAlertRuleHandler handles DELETE /api/v1/alerts/rules/:id
+// @Summary		Delete an alert rule
+// @Description	Deletes an alert rule by its ID. Requires admin or operator role.
+// @Tags			Alerts
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string						true	"Alert rule ID"
+// @Success		200	{object}	models.DeleteAlertResponse	"Alert rule deleted successfully"
+// @Failure		401	{object}	map[string]interface{}		"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}		"Forbidden (requires admin or operator role)"
+// @Failure		404	{object}	map[string]interface{}		"Alert rule not found"
+// @Failure		500	{object}	map[string]interface{}		"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/rules/{id} [delete]
 func (h *AlertHandler) DeleteAlertRuleHandler(c *gin.Context) {
 	id := c.Param("id")
 

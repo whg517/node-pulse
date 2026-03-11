@@ -42,6 +42,22 @@ type CreateExportResponse struct {
 
 // CreateExportHandler handles POST /api/v1/data/export
 // Creates a new export task and returns immediately
+// @Summary		Create data export task
+// @Description	Creates an asynchronous export task for metrics data. Admin role required.
+// @Tags			Export
+// @Accept			json
+// @Produce		json
+// @Param			node_ids	query		string					true	"Node UUIDs to export (1-50, repeatable)"
+// @Param			start_time	query		string					true	"Start time in ISO 8601 format"
+// @Param			end_time	query		string					true	"End time in ISO 8601 format"
+// @Param			metrics		query		string					true	"Metrics to export: latency, packet_loss_rate, jitter (repeatable)"
+// @Param			format		query		string					false	"Export format (only csv supported)"	default(csv)
+// @Success		202	{object}	CreateExportResponse	"Export task created"
+// @Failure		400	{object}	map[string]interface{}	"Invalid request parameters"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Security		BearerAuth
+// @Router			/data/export [post]
 func (h *ExportHandler) CreateExportHandler(c *gin.Context) {
 	// Get user ID from context (set by auth middleware)
 	userID, exists := c.Get("user_id")
@@ -159,6 +175,19 @@ type GetExportStatusResponse struct {
 
 // GetExportStatusHandler handles GET /api/v1/data/export/:id
 // Returns the status of an export task
+// @Summary		Get export task status
+// @Description	Returns the current status of an export task. Admin role required.
+// @Tags			Export
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string					true	"Export task ID"
+// @Success		200	{object}	GetExportStatusResponse	"Export task status"
+// @Failure		400	{object}	map[string]interface{}	"Missing export ID"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Failure		404	{object}	map[string]interface{}	"Export task not found"
+// @Security		BearerAuth
+// @Router			/data/export/{id} [get]
 func (h *ExportHandler) GetExportStatusHandler(c *gin.Context) {
 	exportID := c.Param("id")
 	if exportID == "" {
@@ -198,6 +227,18 @@ func (h *ExportHandler) GetExportStatusHandler(c *gin.Context) {
 
 // DownloadExportHandler handles GET /api/v1/data/export/:id/download
 // Downloads the export file
+// @Summary		Download export file
+// @Description	Downloads the completed export file as CSV. Admin role required.
+// @Tags			Export
+// @Produce		text/csv
+// @Param			id	path		string	true	"Export task ID"
+// @Success		200	{file}		binary	"CSV file download"
+// @Failure		400	{object}	map[string]interface{}	"Export not ready"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Failure		404	{object}	map[string]interface{}	"Export task or file not found"
+// @Security		BearerAuth
+// @Router			/data/export/{id}/download [get]
 func (h *ExportHandler) DownloadExportHandler(c *gin.Context) {
 	exportID := c.Param("id")
 	if exportID == "" {

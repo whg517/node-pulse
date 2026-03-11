@@ -810,7 +810,7 @@ func (h *AuthHandler) RevokeAllSessions(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param Authorization header string true "Bearer API_KEY" default(Bearer )
-// @Success 200 {object} models.BeaconTokenResponse
+// @Success 200 {object} map[string]interface{} "Access token response"
 // @Failure 401 {object} models.ErrorResponse
 // @Router /api/v1/beacon/token [post]
 func (h *AuthHandler) ExchangeAPIKey(c *gin.Context) {

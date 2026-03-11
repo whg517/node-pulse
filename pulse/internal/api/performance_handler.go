@@ -11,6 +11,17 @@ import (
 
 // GetPerformanceData handles GET /api/v1/data/performance
 // Returns performance metrics with targets, anomaly detection, and trend data
+// @Summary		Get performance data with targets
+// @Description	Returns performance metrics with SLA targets, trend data, anomaly detection, and overall system health status.
+// @Tags			Metrics
+// @Accept			json
+// @Produce		json
+// @Param			time_range	query		string					false	"Time range (e.g. 24h, 7d)"	default(24h)
+// @Success		200	{object}	map[string]interface{}	"Performance data with targets and health status"
+// @Failure		400	{object}	map[string]interface{}	"Invalid time_range parameter"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Security		BearerAuth
+// @Router			/data/performance [get]
 func (h *MetricsHandler) GetPerformanceData(c *gin.Context) {
 	// Parse time range parameter (default 24 hours)
 	timeRange := c.DefaultQuery("time_range", "24h")

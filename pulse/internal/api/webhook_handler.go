@@ -43,6 +43,19 @@ func ValidateHTTPSURL(urlStr string) error {
 }
 
 // CreateWebhookHandler handles POST /api/v1/webhooks
+// @Summary		Create a webhook configuration
+// @Description	Creates a new webhook configuration. URL must use HTTPS. Admin role required.
+// @Tags			Webhooks
+// @Accept			json
+// @Produce		json
+// @Param			request	body		models.CreateWebhookRequest		true	"Webhook creation request"
+// @Success		200		{object}	models.CreateWebhookResponse	"Webhook created successfully"
+// @Failure		400		{object}	map[string]interface{}			"Validation failed or invalid HTTPS URL"
+// @Failure		401		{object}	map[string]interface{}			"Unauthorized"
+// @Failure		403		{object}	map[string]interface{}			"Forbidden (requires admin role)"
+// @Failure		500		{object}	map[string]interface{}			"Internal server error"
+// @Security		BearerAuth
+// @Router			/webhooks [post]
 func (h *WebhookHandler) CreateWebhookHandler(c *gin.Context) {
 	var req models.CreateWebhookRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -100,6 +113,17 @@ func (h *WebhookHandler) CreateWebhookHandler(c *gin.Context) {
 }
 
 // GetWebhooksHandler handles GET /api/v1/webhooks
+// @Summary		List all webhooks
+// @Description	Retrieves all webhook configurations. Admin role required.
+// @Tags			Webhooks
+// @Accept			json
+// @Produce		json
+// @Success		200	{object}	models.GetWebhooksResponse	"List of webhook configurations"
+// @Failure		401	{object}	map[string]interface{}		"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}		"Forbidden (requires admin role)"
+// @Failure		500	{object}	map[string]interface{}		"Internal server error"
+// @Security		BearerAuth
+// @Router			/webhooks [get]
 func (h *WebhookHandler) GetWebhooksHandler(c *gin.Context) {
 	webhooks, err := h.querier.GetWebhooks(c.Request.Context())
 	if err != nil {
@@ -121,6 +145,19 @@ func (h *WebhookHandler) GetWebhooksHandler(c *gin.Context) {
 }
 
 // GetWebhookByIDHandler handles GET /api/v1/webhooks/:id
+// @Summary		Get webhook by ID
+// @Description	Retrieves a webhook configuration by its ID. Admin role required.
+// @Tags			Webhooks
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string						true	"Webhook ID"
+// @Success		200	{object}	models.UpdateWebhookResponse	"Webhook configuration"
+// @Failure		401	{object}	map[string]interface{}		"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}		"Forbidden (requires admin role)"
+// @Failure		404	{object}	map[string]interface{}		"Webhook not found"
+// @Failure		500	{object}	map[string]interface{}		"Internal server error"
+// @Security		BearerAuth
+// @Router			/webhooks/{id} [get]
 func (h *WebhookHandler) GetWebhookByIDHandler(c *gin.Context) {
 	id := c.Param("id")
 
@@ -152,6 +189,21 @@ func (h *WebhookHandler) GetWebhookByIDHandler(c *gin.Context) {
 }
 
 // UpdateWebhookHandler handles PUT /api/v1/webhooks/:id
+// @Summary		Update a webhook
+// @Description	Updates an existing webhook configuration. URL must use HTTPS if provided. Admin role required.
+// @Tags			Webhooks
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string						true	"Webhook ID"
+// @Param			request	body		models.UpdateWebhookRequest	true	"Webhook update request"
+// @Success		200		{object}	models.UpdateWebhookResponse	"Webhook updated successfully"
+// @Failure		400		{object}	map[string]interface{}			"Validation failed or invalid HTTPS URL"
+// @Failure		401		{object}	map[string]interface{}			"Unauthorized"
+// @Failure		403		{object}	map[string]interface{}			"Forbidden (requires admin role)"
+// @Failure		404		{object}	map[string]interface{}			"Webhook not found"
+// @Failure		500		{object}	map[string]interface{}			"Internal server error"
+// @Security		BearerAuth
+// @Router			/webhooks/{id} [put]
 func (h *WebhookHandler) UpdateWebhookHandler(c *gin.Context) {
 	id := c.Param("id")
 
@@ -205,6 +257,19 @@ func (h *WebhookHandler) UpdateWebhookHandler(c *gin.Context) {
 }
 
 // DeleteWebhookHandler handles DELETE /api/v1/webhooks/:id
+// @Summary		Delete a webhook
+// @Description	Deletes a webhook configuration by its ID. Admin role required.
+// @Tags			Webhooks
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string						true	"Webhook ID"
+// @Success		200	{object}	models.DeleteWebhookResponse	"Webhook deleted successfully"
+// @Failure		401	{object}	map[string]interface{}			"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}			"Forbidden (requires admin role)"
+// @Failure		404	{object}	map[string]interface{}			"Webhook not found"
+// @Failure		500	{object}	map[string]interface{}			"Internal server error"
+// @Security		BearerAuth
+// @Router			/webhooks/{id} [delete]
 func (h *WebhookHandler) DeleteWebhookHandler(c *gin.Context) {
 	id := c.Param("id")
 

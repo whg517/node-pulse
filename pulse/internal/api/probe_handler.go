@@ -49,6 +49,20 @@ func NewProbeHandler(probeQuerier db.ProbesQuerier, nodeQuerier db.NodesQuerier)
 }
 
 // CreateProbeHandler handles POST /api/v1/probes
+// @Summary		Create a new probe
+// @Description	Creates a new probe configuration for a node. Requires admin or operator role.
+// @Tags			Probes
+// @Accept			json
+// @Produce		json
+// @Param			request	body		models.CreateProbeRequest	true	"Probe creation request"
+// @Success		201		{object}	models.CreateProbeResponse	"Probe created successfully"
+// @Failure		400		{object}	models.ErrorResponse		"Invalid request parameters"
+// @Failure		401		{object}	models.ErrorResponse		"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse		"Forbidden (requires admin or operator role)"
+// @Failure		404		{object}	models.ErrorResponse		"Node not found"
+// @Failure		500		{object}	models.ErrorResponse		"Internal server error"
+// @Security		BearerAuth
+// @Router			/probes [post]
 func (h *ProbeHandler) CreateProbeHandler(c *gin.Context) {
 	// Parse request body
 	var req models.CreateProbeRequest
@@ -172,6 +186,18 @@ func (h *ProbeHandler) CreateProbeHandler(c *gin.Context) {
 }
 
 // GetProbesHandler handles GET /api/v1/probes
+// @Summary		List all probes
+// @Description	Retrieves all probe configurations. Optionally filtered by node_id.
+// @Tags			Probes
+// @Accept			json
+// @Produce		json
+// @Param			node_id	query		string					false	"Filter by node UUID"
+// @Success		200		{object}	models.GetProbesResponse	"List of probes"
+// @Failure		400		{object}	models.ErrorResponse	"Invalid node_id format"
+// @Failure		401		{object}	models.ErrorResponse	"Unauthorized"
+// @Failure		500		{object}	models.ErrorResponse	"Internal server error"
+// @Security		BearerAuth
+// @Router			/probes [get]
 func (h *ProbeHandler) GetProbesHandler(c *gin.Context) {
 	ctx := context.Background()
 
@@ -219,6 +245,19 @@ func (h *ProbeHandler) GetProbesHandler(c *gin.Context) {
 }
 
 // GetProbeByIDHandler handles GET /api/v1/probes/:id
+// @Summary		Get probe by ID
+// @Description	Retrieves a probe configuration by its UUID.
+// @Tags			Probes
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string					true	"Probe UUID"
+// @Success		200	{object}	models.GetProbeResponse	"Probe details"
+// @Failure		400	{object}	models.ErrorResponse	"Invalid UUID format"
+// @Failure		401	{object}	models.ErrorResponse	"Unauthorized"
+// @Failure		404	{object}	models.ErrorResponse	"Probe not found"
+// @Failure		500	{object}	models.ErrorResponse	"Internal server error"
+// @Security		BearerAuth
+// @Router			/probes/{id} [get]
 func (h *ProbeHandler) GetProbeByIDHandler(c *gin.Context) {
 	// Parse UUID from path parameter
 	idParam := c.Param("id")
@@ -268,6 +307,21 @@ func (h *ProbeHandler) GetProbeByIDHandler(c *gin.Context) {
 }
 
 // UpdateProbeHandler handles PUT /api/v1/probes/:id
+// @Summary		Update a probe
+// @Description	Updates an existing probe configuration. Requires admin or operator role.
+// @Tags			Probes
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string						true	"Probe UUID"
+// @Param			request	body		models.UpdateProbeRequest	true	"Probe update request"
+// @Success		200		{object}	models.UpdateProbeResponse	"Probe updated successfully"
+// @Failure		400		{object}	models.ErrorResponse		"Invalid request parameters"
+// @Failure		401		{object}	models.ErrorResponse		"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse		"Forbidden (requires admin or operator role)"
+// @Failure		404		{object}	models.ErrorResponse		"Probe not found"
+// @Failure		500		{object}	models.ErrorResponse		"Internal server error"
+// @Security		BearerAuth
+// @Router			/probes/{id} [put]
 func (h *ProbeHandler) UpdateProbeHandler(c *gin.Context) {
 	// Parse UUID from path parameter
 	idParam := c.Param("id")
@@ -389,6 +443,21 @@ func (h *ProbeHandler) UpdateProbeHandler(c *gin.Context) {
 }
 
 // DeleteProbeHandler handles DELETE /api/v1/probes/:id
+// @Summary		Delete a probe
+// @Description	Deletes a probe configuration. Requires confirmation query parameter and admin or operator role.
+// @Tags			Probes
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string					true	"Probe UUID"
+// @Param			confirm	query		string					true	"Must be 'true' to confirm deletion"
+// @Success		200		{object}	models.DeleteProbeResponse	"Probe deleted successfully"
+// @Failure		400		{object}	models.ErrorResponse		"Invalid request or confirmation required"
+// @Failure		401		{object}	models.ErrorResponse		"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse		"Forbidden (requires admin or operator role)"
+// @Failure		404		{object}	models.ErrorResponse		"Probe not found"
+// @Failure		500		{object}	models.ErrorResponse		"Internal server error"
+// @Security		BearerAuth
+// @Router			/probes/{id} [delete]
 func (h *ProbeHandler) DeleteProbeHandler(c *gin.Context) {
 	// Parse UUID from path parameter
 	idParam := c.Param("id")
