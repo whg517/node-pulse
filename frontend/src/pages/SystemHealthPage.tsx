@@ -7,7 +7,8 @@
 
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTheme } from '../hooks/useTheme'
+import { PageContainer, ActionButton } from '../components/common'
+import { PageHeader } from '../components/layout/PageHeader'
 interface HealthStatus {
   name: string
   status: 'healthy' | 'degraded' | 'down'
@@ -80,7 +81,6 @@ const mockEvents: SystemEvent[] = [
 
 export default function SystemHealthPage() {
   const { t } = useTranslation()
-  const { isDark } = useTheme()
   const [healthData] = useState<HealthStatus[]>(mockHealthData)
   const [events] = useState<SystemEvent[]>(mockEvents)
   const [isLoading, setIsLoading] = useState(false)
@@ -131,30 +131,22 @@ export default function SystemHealthPage() {
     : 'degraded'
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('integrations.systemHealth')}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('integrations.systemHealthDescription')}
-          </p>
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-3">
-          <span className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-            {t('integrations.lastRefresh')}: {lastRefresh.toLocaleTimeString()}
-          </span>
-          <button
-            type="button"
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-lg transition-colors"
-          >
-            {isLoading ? t('common.refreshing') : t('common.refresh')}
-          </button>
-        </div>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title={t('integrations.systemHealth')}
+        subtitle={t('integrations.systemHealthDescription')}
+        showBreadcrumb
+        actions={
+          <div className="flex flex-shrink-0 items-center gap-3">
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {t('integrations.lastRefresh')}: {lastRefresh.toLocaleTimeString()}
+            </span>
+            <ActionButton onClick={handleRefresh} disabled={isLoading}>
+              {isLoading ? t('common.refreshing') : t('common.refresh')}
+            </ActionButton>
+          </div>
+        }
+      />
 
       {/* Overall Status */}
       <div className={`mb-6 p-4 rounded-lg border ${getStatusStyles(overallStatus).bg} border-current`}>
@@ -173,10 +165,10 @@ export default function SystemHealthPage() {
           return (
             <div
               key={service.name}
-              className={`rounded-lg border p-4 ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}
+              className="rounded-lg border p-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
             >
               <div className="flex items-center justify-between mb-3">
-                <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
                   {service.name}
                 </h3>
                 <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${statusStyles.bg} ${statusStyles.text}`}>
@@ -186,14 +178,14 @@ export default function SystemHealthPage() {
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{t('integrations.responseTime')}:</span>
-                  <span className={`ml-2 font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                  <span className="text-gray-500 dark:text-gray-400">{t('integrations.responseTime')}:</span>
+                  <span className="ml-2 font-medium text-gray-900 dark:text-gray-200">
                     {service.responseTime}ms
                   </span>
                 </div>
                 <div>
-                  <span className={isDark ? 'text-gray-400' : 'text-gray-500'}>{t('integrations.uptime')}:</span>
-                  <span className={`ml-2 font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                  <span className="text-gray-500 dark:text-gray-400">{t('integrations.uptime')}:</span>
+                  <span className="ml-2 font-medium text-gray-900 dark:text-gray-200">
                     {service.uptime}
                   </span>
                 </div>
@@ -204,9 +196,9 @@ export default function SystemHealthPage() {
       </div>
 
       {/* Recent Events */}
-      <div className={`rounded-lg border ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-        <div className={`px-4 py-3 border-b ${isDark ? 'border-gray-700' : 'border-gray-200'}`}>
-          <h3 className={`text-sm font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+      <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
             {t('integrations.recentEvents')}
           </h3>
         </div>
@@ -217,10 +209,10 @@ export default function SystemHealthPage() {
               className={`p-4 border-l-4 ${getEventStyles(event.type)}`}
             >
               <div className="flex items-center justify-between">
-                <p className={`text-sm ${isDark ? 'text-gray-200' : 'text-gray-800'}`}>
+                <p className="text-sm text-gray-800 dark:text-gray-200">
                   {event.message}
                 </p>
-                <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
                   {new Date(event.timestamp).toLocaleString()}
                 </span>
               </div>
@@ -228,6 +220,6 @@ export default function SystemHealthPage() {
           ))}
         </div>
       </div>
-    </div>
+    </PageContainer>
   )
 }

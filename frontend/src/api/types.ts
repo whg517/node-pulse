@@ -118,6 +118,7 @@ export interface CreateAlertRuleRequest {
   threshold: number
   level: 'P0' | 'P1' | 'P2'
   node_id: string | null
+  enabled?: boolean
 }
 
 /**

@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import type { AlertRule } from '../../stores/types'
-import type { NodeDTO } from '../../api/types'
+import type { NodeDTO, CreateAlertRuleRequest } from '../../api/types'
 
 interface AlertRuleFormProps {
   mode: 'create' | 'edit'
   initialData?: AlertRule
   nodes: NodeDTO[]
-  onSubmit: (data: any) => Promise<void>
+  onSubmit: (data: CreateAlertRuleRequest) => Promise<void>
   onCancel: () => void
 }
 
@@ -38,19 +38,12 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
 
     setIsSubmitting(true)
     try {
-      const data: any = {
+      const data: CreateAlertRuleRequest = {
         metric,
         threshold,
         level,
+        node_id: nodeId || null,
         enabled,
-      }
-
-      // Only include node_id if it's not null
-      if (nodeId) {
-        data.node_id = nodeId
-      } else {
-        // For global rules, explicitly set to null
-        data.node_id = null
       }
 
       await onSubmit(data)

@@ -1,12 +1,12 @@
 import { AlertRuleForm } from './AlertRuleForm'
 import type { AlertRule } from '../../stores/types'
-import type { NodeDTO } from '../../api/types'
+import type { NodeDTO, CreateAlertRuleRequest } from '../../api/types'
 
 interface AlertRuleDialogProps {
   mode: 'create' | 'edit'
   initialData?: AlertRule
   nodes: NodeDTO[]
-  onSubmit: (data: any) => Promise<void>
+  onSubmit: (data: CreateAlertRuleRequest) => Promise<void>
   onCancel: () => void
 }
 

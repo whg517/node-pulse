@@ -8,7 +8,8 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
-import { useTheme } from '../hooks/useTheme'
+import { PageContainer, ConfirmDialog } from '../components/common'
+import { PageHeader } from '../components/layout/PageHeader'
 
 interface User {
   id: string
@@ -54,33 +55,30 @@ const mockUsers: User[] = [
 
 export default function UsersPage() {
   const { t } = useTranslation()
-  const { isDark } = useTheme()
   const user = useAuthStore((state) => state.user)
   const [users, setUsers] = useState<User[]>(mockUsers)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<string | undefined>(undefined)
 
   // Check if current user is admin
   const isAdmin = user?.role === 'admin'
 
   if (!isAdmin) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('settings.users')}
-          </h1>
-        </div>
-        <div className={`rounded-lg border p-8 text-center ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
-          <svg className={`mx-auto h-12 w-12 ${isDark ? 'text-red-400' : 'text-red-500'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <PageContainer>
+        <PageHeader title={t('settings.users')} />
+        <div className="rounded-lg border p-8 text-center bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+          <svg className="mx-auto h-12 w-12 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <h2 className={`mt-4 text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+          <h2 className="mt-4 text-xl font-semibold text-gray-900 dark:text-white">
             {t('errors.accessDenied')}
           </h2>
-          <p className={`mt-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">
             {t('errors.adminOnly')}
           </p>
         </div>
-      </div>
+      </PageContainer>
     )
   }
 
@@ -101,11 +99,16 @@ export default function UsersPage() {
   }
 
   const handleDelete = (userId: string) => {
-    // TODO: Replace with a proper modal dialog component for better UX
-    // Using native confirm as a temporary solution
-    if (window.confirm(t('settings.confirmDeleteUser'))) {
-      setUsers((prev) => prev.filter((u) => u.id !== userId))
+    setUserToDelete(userId)
+    setDeleteConfirmOpen(true)
+  }
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      setUsers((prev) => prev.filter((u) => u.id !== userToDelete))
     }
+    setDeleteConfirmOpen(false)
+    setUserToDelete(undefined)
   }
 
   const getStatusStyles = (status: User['status']): string => {
@@ -115,67 +118,57 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            {t('settings.users')}
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {t('settings.usersDescription')}
-          </p>
-        </div>
-        <div className="flex flex-shrink-0 items-center gap-2">
+    <PageContainer>
+      <PageHeader
+        title={t('settings.users')}
+        subtitle={t('settings.usersDescription')}
+        actions={
           <button
             type="button"
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
           >
             {t('settings.addUser')}
           </button>
-        </div>
-      </div>
+        }
+      />
 
-      <div className={`rounded-lg border shadow-sm overflow-hidden ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
+      <div className="rounded-lg border shadow-sm overflow-hidden bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className={isDark ? 'bg-gray-900' : 'bg-gray-50'}>
+            <thead className="bg-gray-50 dark:bg-gray-900">
               <tr>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('settings.username')}
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('settings.email')}
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('settings.role')}
                 </th>
-                <th className={`px-6 py-3 text-left text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('settings.status')}
                 </th>
-                <th className={`px-6 py-3 text-right text-xs font-medium uppercase tracking-wider ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
                   {t('settings.actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className={`divide-y ${isDark ? 'divide-gray-700' : 'divide-gray-200'}`}>
+            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
               {users.map((u) => (
-                <tr key={u.id} className={isDark ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                     {u.username}
                   </td>
-                  <td className={`px-6 py-4 whitespace-nowrap text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                     {u.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
                       value={u.role}
                       onChange={(e) => handleRoleChange(u.id, e.target.value as User['role'])}
-                      className={`text-sm rounded-md border px-2 py-1 ${
-                        isDark
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                      disabled={u.id === '1'} // Cannot change admin role
+                      className="text-sm rounded-md border px-2 py-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                      disabled={u.id === '1'}
                     >
                       <option value="admin">Admin</option>
                       <option value="operator">Operator</option>
@@ -194,7 +187,7 @@ export default function UsersPage() {
                           ? 'text-yellow-600 hover:text-yellow-900 dark:text-yellow-400'
                           : 'text-green-600 hover:text-green-900 dark:text-green-400'
                       }`}
-                      disabled={u.id === '1'} // Cannot disable admin
+                      disabled={u.id === '1'}
                     >
                       {u.status === 'active' ? t('settings.disable') : t('settings.enable')}
                     </button>
@@ -202,7 +195,7 @@ export default function UsersPage() {
                       type="button"
                       onClick={() => handleDelete(u.id)}
                       className="text-red-600 hover:text-red-900 dark:text-red-400"
-                      disabled={u.id === '1'} // Cannot delete admin
+                      disabled={u.id === '1'}
                     >
                       {t('settings.delete')}
                     </button>
@@ -213,6 +206,20 @@ export default function UsersPage() {
           </table>
         </div>
       </div>
-    </div>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title={t('settings.confirmDeleteUser')}
+        message={t('settings.confirmDeleteUserMessage')}
+        confirmText={t('common.delete')}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          setDeleteConfirmOpen(false)
+          setUserToDelete(undefined)
+        }}
+        loading={false}
+        variant="danger"
+      />
+    </PageContainer>
   )
 }

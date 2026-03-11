@@ -11,7 +11,7 @@ import { useAlertsStore } from '../stores/alertsStore'
 import { useAuthStore } from '../stores/authStore'
 import { fetchNodes } from '../api/nodes'
 import type { AlertRule } from '../stores/types'
-import type { NodeDTO } from '../api/types'
+import type { NodeDTO, CreateAlertRuleRequest } from '../api/types'
 import { PageContainer, ErrorBanner, ConfirmDialog, ActionButton, LoadingSpinner } from '../components/common'
 import { PageHeader } from '../components/layout/PageHeader'
 import { AlertRulesTable } from '../components/alerts/AlertRulesTable'
@@ -103,7 +103,7 @@ export default function AlertRulesPage() {
     }
   }
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: CreateAlertRuleRequest) => {
     try {
       if (dialogMode === 'create') {
         await addAlertRule(data)
