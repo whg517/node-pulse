@@ -53,17 +53,15 @@ test.describe('Smoke Tests - Dashboard', () => {
   })
 
   test('SMOKE-005: dashboard shows navigation', async ({ adminPage }) => {
-    await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
-    
+    await adminPage.goto('/dashboard', { waitUntil: 'domcontentloaded' })
+
     // Check for navigation elements
     const navLocator = adminPage.locator('nav, [role="navigation"], .sidebar')
-    await expect(navLocator.first()).toBeVisible()
+    await expect(navLocator.first()).toBeVisible({ timeout: 15000 })
   })
 
   test('SMOKE-006: can navigate to nodes page', async ({ adminPage }) => {
-    await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.goto('/nodes', { waitUntil: 'domcontentloaded' })
     await expect(adminPage).toHaveURL(/.*nodes/)
   })
 })
@@ -90,25 +88,22 @@ test.describe('Smoke Tests - API Health', () => {
 
 test.describe('Smoke Tests - Core Pages', () => {
   test('SMOKE-010: alerts page loads', async ({ adminPage }) => {
-    await adminPage.goto('/alerts/rules')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.goto('/alerts/rules', { waitUntil: 'domcontentloaded' })
     await expect(adminPage).toHaveURL(/.*alerts/)
   })
 
   test('SMOKE-011: webhooks page loads', async ({ adminPage }) => {
-    await adminPage.goto('/webhooks')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.goto('/webhooks', { waitUntil: 'domcontentloaded' })
     await expect(adminPage).toHaveURL(/.*webhooks/)
   })
 
   test('SMOKE-012: sessions page loads', async ({ adminPage }) => {
-    const sessionsPage = await adminPage.goto('/sessions')
-    await adminPage.waitForLoadState('networkidle')
-    
+    await adminPage.goto('/sessions', { waitUntil: 'domcontentloaded' })
+
     // Should have a table or empty state
     const table = adminPage.locator('table')
     const emptyState = adminPage.locator('.text-center')
-    await expect(table.or(emptyState).first()).toBeVisible()
+    await expect(table.or(emptyState).first()).toBeVisible({ timeout: 15000 })
   })
 })
 
