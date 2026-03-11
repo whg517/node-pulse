@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { fetchAlertRules, fetchAlertRecords } from '../api/alerts'
+import { fetchAlertRules, fetchAlertRecords, createAlertRule } from '../api/alerts'
 import type { AlertRule, AlertRecord, AlertFilter } from './types'
+import type { CreateAlertRuleRequest } from '../api/types'
 
 // ============== Types ==============
 export interface AlertsState {
@@ -12,7 +13,7 @@ export interface AlertsState {
 export interface AlertsActions {
   setAlertRules: (rules: AlertRule[]) => void
   setAlertRecords: (records: AlertRecord[]) => void
-  addAlertRule: (rule: AlertRule) => void
+  addAlertRule: (rule: CreateAlertRuleRequest) => Promise<void>
   updateAlertRule: (id: string, updates: Partial<AlertRule>) => void
   removeAlertRule: (id: string) => void
   setFilter: (filter: AlertFilter) => void
@@ -46,9 +47,18 @@ export const useAlertsStore = create<AlertsStore>((set) => ({
     set({ alertRecords: records })
   },
 
-  addAlertRule: (rule: AlertRule) => {
+  addAlertRule: async (rule: CreateAlertRuleRequest) => {
+    const response = await createAlertRule(rule)
+    const newRule: AlertRule = {
+      id: response.data.id,
+      metric: response.data.metric,
+      threshold: response.data.threshold,
+      level: response.data.level,
+      nodeId: response.data.node_id,
+      enabled: response.data.enabled,
+    }
     set((state) => ({
-      alertRules: [...state.alertRules, rule],
+      alertRules: [...state.alertRules, newRule],
     }))
   },
 
