@@ -18,7 +18,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
   test.beforeEach(async ({ adminPage }) => {
     // Navigate to nodes page first
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
   })
 
@@ -28,7 +28,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
 
     if (nodeCount > 0) {
       await nodeRows.first().click()
-      await adminPage.waitForLoadState('networkidle')
+      await adminPage.waitForLoadState('domcontentloaded')
       await adminPage.waitForTimeout(1000)
 
       // Look for MTR section/tab with multiple possible selectors
@@ -56,7 +56,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // If MTR data exists, should have at least 3 hops for meaningful visualization
@@ -80,7 +80,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for MTR run button
@@ -103,7 +103,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
   })
 
-  test('AC-4.3.5-4: hop timeline renders增高 visualization', async ({ adminPage }) => {
+  test('AC-4.3.5-4: hop timeline renders visualization', async ({ adminPage }) => {
     const nodeRows = adminPage.locator('table tbody tr')
     if (await nodeRows.count() === 0) {
       test.skip(true, 'No nodes available')
@@ -111,7 +111,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for hop timeline with enhanced visualization
@@ -135,7 +135,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for RTT values in ms format
@@ -156,7 +156,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for loss percentage
@@ -183,7 +183,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for destination IP or hostname
@@ -194,6 +194,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     // May or may not show destination depending on MTR data
     const hasDestination = await destination.count() > 0
     expect(hasDestination || true).toBe(true)
+  })
 
   test('AC-4.3.5-8: hop count indicator visible', async ({ adminPage }) => {
     const nodeRows = adminPage.locator('table tbody tr')
@@ -203,7 +204,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for hop count
@@ -230,7 +231,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for average RTT
@@ -251,7 +252,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for min RTT
@@ -278,7 +279,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for max RTT
@@ -305,7 +306,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for jitter/std dev
@@ -325,7 +326,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for path health summary
@@ -349,7 +350,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for numbered hops
@@ -375,7 +376,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Click MTR section if available
@@ -401,7 +402,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for hop interaction
@@ -424,7 +425,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for zoom controls
@@ -448,7 +449,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for pan functionality
@@ -472,7 +473,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for export button
@@ -496,20 +497,27 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
+
+    // Look for refresh button
+    const refreshButton = adminPage.locator(
+      'button:has-text("Refresh"), button:has-text("Re-run"), [data-testid="refresh-mtr"]'
+    )
+
     const hasRefresh = await refreshButton.count() > 0
     if (hasRefresh) {
       await expect(refreshButton.first()).toBeVisible()
     }
 
     expect(true).toBe(true)
+  })
 })
 
 test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
   })
 
@@ -521,7 +529,7 @@ test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     // Look for healthy hop indicators (green)
@@ -542,7 +550,7 @@ test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     // Look for degraded hop indicators (yellow)
@@ -562,7 +570,7 @@ test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     // Look for problematic hop indicators (red/critical)
@@ -582,7 +590,7 @@ test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for health legend
@@ -606,7 +614,7 @@ test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for threshold settings
@@ -630,7 +638,7 @@ test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Check for health status display
@@ -655,7 +663,7 @@ test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for health summary alert
@@ -672,12 +680,12 @@ test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {
 test.describe('MTR Visualization - Enhanced Avaibility Tests FR-4.3.5', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
   })
 
   test('AC-4.3.5-28: page loads without errors', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for MTR section
@@ -699,7 +707,7 @@ test.describe('MTR Visualization - Enhanced Avaibility Tests FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for error state
@@ -724,7 +732,7 @@ test.describe('MTR Visualization - Enhanced Avaibility Tests FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for empty state
@@ -749,7 +757,7 @@ test.describe('MTR Visualization - Enhanced Avaibility Tests FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for retry button
@@ -773,7 +781,7 @@ test.describe('MTR Visualization - Enhanced Avaibility Tests FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for timeout indicator
@@ -798,7 +806,7 @@ test.describe('MTR Visualization - Enhanced Avaibility Tests FR-4.3.5', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Check for partial data indicator
@@ -818,7 +826,7 @@ test.describe('MTR Visualization - Enhanced Mobile FR-4.3.5', () => {
 
   test('AC-4.3.5-34: MTR chart adapts to mobile viewport', async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     const mtrSection = adminPage.locator('[data-testid="mtr-visualization"], [class*="mtr"]')
@@ -833,7 +841,7 @@ test.describe('MTR Visualization - Enhanced Mobile FR-4.3.5', () => {
 
   test('AC-4.3.5-35: timeline scrollable on mobile', async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for MTR timeline
@@ -853,7 +861,7 @@ test.describe('MTR Visualization - Enhanced Mobile FR-4.3.5', () => {
 
   test('AC-4.3.5-36: touch targets minimum 44x44pt on mobile', async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for MTR-related buttons
@@ -867,7 +875,7 @@ test.describe('MTR Visualization - Enhanced Mobile FR-4.3.5', () => {
 
   test('AC-4.3.5-37: RTT data readable on mobile', async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for RTT text
@@ -880,7 +888,7 @@ test.describe('MTR Visualization - Enhanced Mobile FR-4.3.5', () => {
 
   test('AC-4.3.5-38: hop list accessible vertically on mobile', async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for hop list
@@ -902,7 +910,7 @@ test.describe('MTR Visualization - Enhanced Mobile FR-4.3.5', () => {
 test.describe('MTR Visualization - Enhanced Bilingual Support FR-4.3.5', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
   })
 
@@ -925,7 +933,7 @@ test.describe('MTR Visualization - Enhanced Bilingual Support FR-4.3.5', () => {
   })
 
   test('AC-4.3.5-41: hop count labels bilingual', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const hopLabels = adminPage.locator('text=/hop|node|跳/i')
@@ -936,7 +944,7 @@ test.describe('MTR Visualization - Enhanced Bilingual Support FR-4.3.5', () => {
   })
 
   test('AC-4.3.5-42: RTT unit labels bilingual', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const rttLabels = adminPage.locator('text=/ms|毫秒/i')
@@ -946,7 +954,7 @@ test.describe('MTR Visualization - Enhanced Bilingual Support FR-4.3.5', () => {
   })
 
   test('AC-4.3.5-43: health status labels bilingual', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const healthLabels = adminPage.locator('text=/healthy|degraded|problematic|healthy|精良|中等|有问题/i')
@@ -959,7 +967,7 @@ test.describe('MTR Visualization - Enhanced Bilingual Support FR-4.3.5', () => {
 test.describe('MTR Visualization - Enhanced FR-4.3.5 Integration', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
   })
 
@@ -971,7 +979,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5 Integration', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for link to health report
@@ -988,7 +996,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5 Integration', () => {
   })
 
   test('integration: MTR triggers FR-4.3.13 push notification on issue', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for notification settings
@@ -1012,7 +1020,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5 Integration', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for performance data link
@@ -1029,7 +1037,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5 Integration', () => {
   })
 
   test('integration: MTR visualization FR-4.3.14 dashboard widget', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for MTR widget on dashboard
@@ -1045,7 +1053,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5 Integration', () => {
 test.describe('MTR Visualization - FR-4.3.5 Acceptance Tests', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
   })
 
@@ -1057,7 +1065,7 @@ test.describe('MTR Visualization - FR-4.3.5 Acceptance Tests', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Verify MTR visualization is visible
@@ -1075,7 +1083,7 @@ test.describe('MTR Visualization - FR-4.3.5 Acceptance Tests', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     const hopTimeline = adminPage.locator('[class*="hop-list"], [class*="timeline"]')
@@ -1092,7 +1100,7 @@ test.describe('MTR Visualization - FR-4.3.5 Acceptance Tests', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const rttStats = adminPage.locator('text=/\\d+\\.?\\d*\\s*ms/i')
@@ -1109,7 +1117,7 @@ test.describe('MTR Visualization - FR-4.3.5 Acceptance Tests', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const pathHealth = adminPage.locator('[data-testid="path-health"], text=/Path.*Health/i')

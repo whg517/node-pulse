@@ -55,8 +55,8 @@ test.describe('Smoke Tests - Dashboard', () => {
   test('SMOKE-005: dashboard shows navigation', async ({ adminPage }) => {
     await adminPage.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
-    // Check for navigation elements
-    const navLocator = adminPage.locator('nav, [role="navigation"], .sidebar')
+    // Check for navigation elements (aside is the sidebar container, nav is inside)
+    const navLocator = adminPage.locator('aside, nav, [role="navigation"], .sidebar')
     await expect(navLocator.first()).toBeVisible({ timeout: 15000 })
   })
 
