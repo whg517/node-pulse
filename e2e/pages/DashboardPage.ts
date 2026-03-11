@@ -22,7 +22,7 @@ export interface DashboardSelectors extends PageSelectors {
 
 export const DEFAULT_DASHBOARD_SELECTORS: DashboardSelectors = {
   ...DEFAULT_SELECTORS,
-  metricsSection: '[data-testid="metrics-section"], .grid:has(.metric-card)',
+  metricsSection: '[data-testid="metrics-section"], .grid:has(.metric-card), .grid:has(.rounded-lg)',
   nodeList: '[data-testid="node-list"], table',
   alertList: '[data-testid="alert-list"], .alert-list, text=/anomaly/i',
   logoutButton: '[data-testid="logout-button"], button:has-text("Logout")',
