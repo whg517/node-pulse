@@ -20,9 +20,8 @@ test.describe('Dashboard Visual Tests', () => {
   })
 
   test('dashboard default light mode', async ({ adminPage }) => {
-    // Ensure light mode
-    await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
+    // Ensure light mode (use domcontentloaded to avoid timeout with periodic API polling)
+    await adminPage.goto('/dashboard', { waitUntil: 'domcontentloaded' })
     await adminPage.waitForTimeout(2000)
 
     await expect(adminPage).toHaveScreenshot('dashboard-light-default.png', {

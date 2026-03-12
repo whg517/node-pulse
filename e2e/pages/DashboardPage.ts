@@ -25,7 +25,7 @@ export const DEFAULT_DASHBOARD_SELECTORS: DashboardSelectors = {
   metricsSection: '[data-testid="metrics-section"], .grid:has(.metric-card), .grid:has(.rounded-lg)',
   nodeList: '[data-testid="node-list"], table',
   alertList: '[data-testid="alert-list"], .alert-list, text=/anomaly/i',
-  logoutButton: '[data-testid="logout-button"], button:has-text("Logout")',
+  logoutButton: '[data-testid="logout-button"], button:has-text("Logout"), button:has-text("logout"), button:has-text("登出"), button:has-text("退出")',
   title: '[data-testid="dashboard-title"], h1:has-text("Dashboard"), h2:has-text("Dashboard")',
   autoRefreshIndicator: '[data-testid="auto-refresh"], text=/auto.*refresh/i, text=/refreshing/i',
   welcomeMessage: '[data-testid="welcome-message"], text=/welcome/i',
@@ -86,8 +86,15 @@ export class DashboardPage extends BasePage {
 
   /**
    * Click logout button
+   * Note: Logout is in a dropdown menu, so we need to open the user menu first
    */
   async clickLogout(): Promise<void> {
+    // First, click the user menu button to open the dropdown
+    const userMenuButton = this.page.locator('button:has(.rounded-full), [aria-haspopup="menu"]').first()
+    await userMenuButton.click()
+
+    // Wait for dropdown to appear and click logout
+    await this.page.waitForTimeout(300)
     await this.logoutButton.click()
   }
 
