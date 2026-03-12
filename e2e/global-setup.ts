@@ -24,29 +24,25 @@ const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:517
 const TEST_USER_PREFIX = 'e2e_test_'  // Makes it obvious these are test artifacts
 
 /**
- * Get shard-specific admin username (runtime access, not module-load time)
+ * Get shard-specific username for a given role (runtime access, not module-load time)
  * IMPORTANT: This function MUST be called at runtime, not captured at module scope
  */
-const getShardAdminUsername = (): string => {
+const getShardUsername = (role: 'admin' | 'operator' | 'viewer'): string => {
   const shardId = process.env.SHARD_ID
   if (shardId) {
     // Parse shard number from "1/3" format if needed
     const shardNum = shardId.split('/')[0]
-    const username = `${TEST_USER_PREFIX}shard_${shardNum}_admin`
-    console.log(`[Global Setup] Using shard admin: ${username}`)
+    const username = `${TEST_USER_PREFIX}shard_${shardNum}_${role}`
+    console.log(`[Global Setup] Using shard ${role}: ${username}`)
     return username
   }
-  return process.env.TEST_ADMIN_USER || 'admin' // Local dev fallback
-}
-
-// Test user credentials - use environment variables for security
-// Falls back to defaults only for local development
-const TEST_USERS = {
-  admin: {
-    username: process.env.TEST_ADMIN_USER || 'admin',
-    password: process.env.TEST_ADMIN_PASS || 'Admin123',
-    role: 'admin' as const,
-  },
+  // Local dev fallback - use shared users
+  const fallbacks = {
+    admin: process.env.TEST_ADMIN_USER || 'admin',
+    operator: 'e2e_operator',
+    viewer: 'e2e_viewer',
+  }
+  return fallbacks[role]
 }
 
 /**
@@ -144,8 +140,8 @@ async function seedTestUsers(pool: Pool): Promise<void> {
  * Seed shard-specific admin user for CI parallel execution
  * SECURITY: These users are for E2E testing ONLY. Never use in production.
  */
-async function seedShardAdminUser(pool: Pool, username: string, password: string): Promise<void> {
-  console.log(`[Global Setup] Checking shard admin user: ${username}...`)
+async function seedShardUser(pool: Pool, username: string, password: string, role: 'admin' | 'operator' | 'viewer'): Promise<void> {
+  console.log(`[Global Setup] Checking shard ${role} user: ${username}...`)
 
   const existingUser = await pool.query(
     'SELECT user_id FROM users WHERE username = $1',
@@ -156,12 +152,12 @@ async function seedShardAdminUser(pool: Pool, username: string, password: string
     const passwordHash = await bcrypt.hash(password, 12)
     await pool.query(`
       INSERT INTO users (user_id, username, password_hash, role, created_at, updated_at)
-      VALUES (gen_random_uuid(), $1, $2, 'admin', NOW(), NOW())
+      VALUES (gen_random_uuid(), $1, $2, $3, NOW(), NOW())
       ON CONFLICT (username) DO NOTHING
-    `, [username, passwordHash])
-    console.log(`[Global Setup] Created shard admin user: ${username}`)
+    `, [username, passwordHash, role])
+    console.log(`[Global Setup] Created shard ${role} user: ${username}`)
   } else {
-    console.log(`[Global Setup] Shard admin user already exists: ${username}`)
+    console.log(`[Global Setup] Shard ${role} user already exists: ${username}`)
   }
 }
 
@@ -333,13 +329,19 @@ export default async function globalSetup(_config: FullConfig) {
     await seedTestNodes(pool)
     await seedTestAlertRules(pool)
 
-    // Determine admin credentials based on SHARD_ID
-    const adminUsername = getShardAdminUsername()
+    // Determine credentials based on SHARD_ID
+    const adminUsername = getShardUsername('admin')
     const adminPassword = 'Admin123'
+    const operatorUsername = getShardUsername('operator')
+    const operatorPassword = 'E2eOperator123!'
+    const viewerUsername = getShardUsername('viewer')
+    const viewerPassword = 'E2eViewer123!'
 
-    // Create shard-specific admin user if SHARD_ID is set
+    // Create shard-specific users if SHARD_ID is set
     if (process.env.SHARD_ID) {
-      await seedShardAdminUser(pool, adminUsername, adminPassword)
+      await seedShardUser(pool, adminUsername, adminPassword, 'admin')
+      await seedShardUser(pool, operatorUsername, operatorPassword, 'operator')
+      await seedShardUser(pool, viewerUsername, viewerPassword, 'viewer')
     }
 
     // Authenticate and save state for all roles
@@ -351,14 +353,14 @@ export default async function globalSetup(_config: FullConfig) {
       )
 
       await authenticateAndSaveState(
-        'e2e_operator',
-        'E2eOperator123!',
+        operatorUsername,
+        operatorPassword,
         '.auth/operator.json'
       )
 
       await authenticateAndSaveState(
-        'e2e_viewer',
-        'E2eViewer123!',
+        viewerUsername,
+        viewerPassword,
         '.auth/viewer.json'
       )
 

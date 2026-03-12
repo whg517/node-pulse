@@ -28,37 +28,44 @@ export const AUTH_STATES = {
 const TEST_USER_PREFIX = 'e2e_test_'
 
 /**
- * Get shard-specific admin username (runtime access, not module-load time)
+ * Get shard-specific username for a given role (runtime access, not module-load time)
  * IMPORTANT: This must be called at runtime, not captured at module scope
  */
-const getShardAdminUsername = (): string => {
+const getShardUsername = (role: 'admin' | 'operator' | 'viewer'): string => {
   const shardId = process.env.SHARD_ID
   if (shardId) {
     // Parse shard number from "1/3" format if needed
     const shardNum = shardId.split('/')[0]
-    return `${TEST_USER_PREFIX}shard_${shardNum}_admin`
+    return `${TEST_USER_PREFIX}shard_${shardNum}_${role}`
   }
-  return 'admin' // Local dev fallback
+  // Local dev fallbacks
+  const fallbacks = {
+    admin: 'admin',
+    operator: 'e2e_operator',
+    viewer: 'e2e_viewer',
+  }
+  return fallbacks[role]
 }
 
-// Test user credentials - use RUNTIME GETTERS for admin to ensure
+// Test user credentials - use RUNTIME GETTERS for all roles to ensure
 // environment variables are read after Playwright worker processes fork
 export const TEST_CREDENTIALS = {
   admin: {
-    // CRITICAL: Use a getter to ensure SHARD_ID is read at runtime, not module load time
     get username() {
-      const username = getShardAdminUsername()
-      console.log(`[auth.fixture] Using admin username: ${username}`)
-      return username
+      return getShardUsername('admin')
     },
     password: 'Admin123',
   },
   operator: {
-    username: 'e2e_operator',
+    get username() {
+      return getShardUsername('operator')
+    },
     password: 'E2eOperator123!',
   },
   viewer: {
-    username: 'e2e_viewer',
+    get username() {
+      return getShardUsername('viewer')
+    },
     password: 'E2eViewer123!',
   },
 }
