@@ -31,6 +31,16 @@ async function cleanupTestData(pool: Pool): Promise<void> {
       DELETE FROM users WHERE username IN ('e2e_operator', 'e2e_viewer')
     `)
 
+    // TODO: Remove this cleanup when shard-specific user workaround is removed
+    // SECURITY: Only cleans up users with the test-only prefix
+    // Clean up shard-specific admin users (matches e2e_test_shard_%_admin pattern)
+    const shardUserResult = await pool.query(`
+      DELETE FROM users WHERE username LIKE 'e2e_test_shard_%_admin'
+    `)
+    if (shardUserResult.rowCount && shardUserResult.rowCount > 0) {
+      console.log(`[Global Teardown] Cleaned up ${shardUserResult.rowCount} shard-specific test users`)
+    }
+
     // Delete test alert records first (foreign key constraint)
     await pool.query(`
       DELETE FROM alert_records WHERE node_id IN (

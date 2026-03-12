@@ -24,10 +24,33 @@ export const AUTH_STATES = {
   viewer: `${AUTH_DIR}/viewer.json`,
 }
 
-// Test user credentials
+// SECURITY: These users are for E2E testing ONLY. Never use in production.
+const TEST_USER_PREFIX = 'e2e_test_'
+
+/**
+ * Get shard-specific admin username (runtime access, not module-load time)
+ * IMPORTANT: This must be called at runtime, not captured at module scope
+ */
+const getShardAdminUsername = (): string => {
+  const shardId = process.env.SHARD_ID
+  if (shardId) {
+    // Parse shard number from "1/3" format if needed
+    const shardNum = shardId.split('/')[0]
+    return `${TEST_USER_PREFIX}shard_${shardNum}_admin`
+  }
+  return 'admin' // Local dev fallback
+}
+
+// Test user credentials - use RUNTIME GETTERS for admin to ensure
+// environment variables are read after Playwright worker processes fork
 export const TEST_CREDENTIALS = {
   admin: {
-    username: 'admin',
+    // CRITICAL: Use a getter to ensure SHARD_ID is read at runtime, not module load time
+    get username() {
+      const username = getShardAdminUsername()
+      console.log(`[auth.fixture] Using admin username: ${username}`)
+      return username
+    },
     password: 'Admin123',
   },
   operator: {
