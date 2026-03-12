@@ -273,7 +273,7 @@ jobs:
           curl -f http://localhost:4173 || exit 1
 
       - name: Run visual tests
-        run: cd e2e && npm run test:visual
+        run: cd e2e && npx playwright test tests/visual --project=chromium-visual
 
       - name: Upload visual test results
         uses: actions/upload-artifact@v4

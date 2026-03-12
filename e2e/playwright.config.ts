@@ -44,21 +44,25 @@ export default defineConfig({
   },
   projects: [
     // Chromium tests - globalSetup handles seeding and auth state
+    // Note: Visual tests are excluded and run in chromium-visual project only
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
+      testIgnore: '**/tests/visual/**/*.spec.ts',
     },
 
     // Firefox tests - cross-browser compatibility
     {
       name: 'firefox',
       use: { ...devices['Desktop Firefox'] },
+      testIgnore: '**/tests/visual/**/*.spec.ts',
     },
 
     // WebKit (Safari) tests - cross-browser compatibility
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+      testIgnore: '**/tests/visual/**/*.spec.ts',
     },
 
     // Visual regression tests (Chromium only for consistency)
