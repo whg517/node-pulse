@@ -14,7 +14,7 @@ import { test, expect } from '../../fixtures/auth.fixture'
 test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
   })
 
@@ -37,7 +37,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-2: push notification configuration form', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for push notification configuration
@@ -54,7 +54,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-3: webhook URL input field', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for webhook URL input
@@ -71,7 +71,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-4: push notification enable toggle', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for enable/disable toggle
@@ -88,7 +88,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-5: alert level selection', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for alert level selector
@@ -105,7 +105,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-6: save configuration works', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for save button
@@ -122,7 +122,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-7: test notification functionality', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for test notification button
@@ -139,7 +139,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-8: notification preferences display', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for notification preferences
@@ -156,7 +156,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-9: push notification history', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for notification history table
@@ -173,7 +173,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-10: real-time alert delivery', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for real-time indicator
@@ -190,7 +190,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-11: alert priority levels supported', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for priority selector
@@ -207,7 +207,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-12: notification scheduling', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for scheduling controls
@@ -224,7 +224,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-13: batch notifications', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for batch notification option
@@ -241,7 +241,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-14: push notification delivery status', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for delivery status indicators
@@ -258,7 +258,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-15: retry configuration', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for retry settings
@@ -275,7 +275,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-16: notification throttling', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for throttling controls
@@ -292,7 +292,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-17: push notification templates', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for template selector
@@ -309,7 +309,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-18: custom notification fields', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for custom field inputs
@@ -326,7 +326,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-19: push notification analytics', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for analytics section
@@ -343,7 +343,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   })
 
   test('AC-4.3.13-20: multi-webhook support', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for webhook list
@@ -363,7 +363,7 @@ test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
 test.describe('Alert Push Notifications - Access Control', () => {
   test('AC-4.3.13-21: admin can configure push notifications', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const pushSection = adminPage.locator(
@@ -379,7 +379,7 @@ test.describe('Alert Push Notifications - Access Control', () => {
 
   test('AC-4.3.13-22: operator can view push notification status', async ({ operatorPage }) => {
     await operatorPage.goto('/alerts')
-    await operatorPage.waitForLoadState('networkidle')
+    await operatorPage.waitForLoadState('domcontentloaded')
     await operatorPage.waitForTimeout(1000)
 
     // Operator may have read-only access
@@ -392,7 +392,7 @@ test.describe('Alert Push Notifications - Access Control', () => {
 
   test('AC-4.3.13-23: viewer can view push history', async ({ viewerPage }) => {
     await viewerPage.goto('/alerts')
-    await viewerPage.waitForLoadState('networkidle')
+    await viewerPage.waitForLoadState('domcontentloaded')
     await viewerPage.waitForTimeout(1000)
 
     // Viewer should be able to view history
@@ -410,7 +410,7 @@ test.describe('Alert Push Notifications - Access Control', () => {
 
   test('AC-4.3.13-24: operator cannot modify push config', async ({ operatorPage }) => {
     await operatorPage.goto('/alerts')
-    await operatorPage.waitForLoadState('networkidle')
+    await operatorPage.waitForLoadState('domcontentloaded')
     await operatorPage.waitForTimeout(1000)
 
     // Check for edit buttons
@@ -428,7 +428,7 @@ test.describe('Alert Push Notifications - Access Control', () => {
 test.describe('Alert Push Notifications - Accessibility', () => {
   test('AC-4.3.13-25: form has proper ARIA labels', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const inputsWithAria = adminPage.locator(
@@ -446,7 +446,7 @@ test.describe('Alert Push Notifications - Accessibility', () => {
 
   test('AC-4.3.13-26: keyboard navigation works', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Tab through interactive elements
@@ -464,7 +464,7 @@ test.describe('Alert Push Notifications - Accessibility', () => {
 
   test('AC-4.3.13-27: screen reader accessible', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Check for semantic HTML
@@ -476,7 +476,7 @@ test.describe('Alert Push Notifications - Accessibility', () => {
 
   test('AC-4.3.13-28: error messages are announced', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for alert/error regions
@@ -497,7 +497,7 @@ test.describe('Alert Push Notifications - Mobile Responsiveness', () => {
 
   test('AC-4.3.13-29: form adapts to mobile viewport', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const pushSection = adminPage.locator('[data-testid="push-section"], .push-section')
@@ -508,7 +508,7 @@ test.describe('Alert Push Notifications - Mobile Responsiveness', () => {
 
   test('AC-4.3.13-30: buttons accessible on mobile', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const buttons = adminPage.locator('button, [role="button"]')
@@ -519,7 +519,7 @@ test.describe('Alert Push Notifications - Mobile Responsiveness', () => {
 
   test('AC-4.3.13-31: scrolling works on mobile', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Try vertical scroll
@@ -533,7 +533,7 @@ test.describe('Alert Push Notifications - Mobile Responsiveness', () => {
 
   test('AC-4.3.13-32: touch targets minimum 44x44pt', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const buttons = adminPage.locator('button, [role="button"]')
@@ -547,7 +547,7 @@ test.describe('Alert Push Notifications - Mobile Responsiveness', () => {
 test.describe('Alert Push Notifications - Bilingual Support', () => {
   test('AC-4.3.13-33: English labels present', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const englishLabels = adminPage.locator(
@@ -560,7 +560,7 @@ test.describe('Alert Push Notifications - Bilingual Support', () => {
 
   test('AC-4.3.13-34: Chinese labels present if locale is Chinese', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const chineseLabels = adminPage.locator(
@@ -573,7 +573,7 @@ test.describe('Alert Push Notifications - Bilingual Support', () => {
 
   test('AC-4.3.13-35: alert level options bilingual', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const levelSelect = adminPage.locator(
@@ -590,7 +590,7 @@ test.describe('Alert Push Notifications - Bilingual Support', () => {
 
   test('AC-4.3.13-36: notification settings bilingual', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const settingsLabels = adminPage.locator(
@@ -605,7 +605,7 @@ test.describe('Alert Push Notifications - Bilingual Support', () => {
 test.describe('Alert Push Notifications - Edge Cases', () => {
   test('AC-4.3.13-37: handles empty webhook URL gracefully', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Check for validation on empty webhook
@@ -620,7 +620,7 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
 
   test('AC-4.3.13-38: handles network error during test send', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const testButton = adminPage.locator(
@@ -640,7 +640,7 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
 
   test('AC-4.3.13-39: handles invalid webhook URL', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const webhookInput = adminPage.locator(
@@ -662,7 +662,7 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
 
   test('AC-4.3.13-40: handles webhook timeout', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const testButton = adminPage.locator(
@@ -686,7 +686,7 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
 
   test('AC-4.3.13-41: handles rate limiting gracefully', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Rapid test clicks
@@ -707,7 +707,7 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
 
   test('AC-4.3.13-42: handles duplicate webhook URLs', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const webhookList = adminPage.locator(
@@ -725,7 +725,7 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
 
   test('AC-4.3.13-43: handles missing push service credentials', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Check for missing credentials warning
@@ -740,7 +740,7 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
 
   test('AC-4.3.13-44: handles large number of webhooks', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const webhookList = adminPage.locator(
@@ -760,7 +760,7 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
 test.describe('Alert Push Notifications - Performance', () => {
   test('AC-4.3.13-45: push notification sends within 5 seconds', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const testButton = adminPage.locator(
@@ -789,7 +789,7 @@ test.describe('Alert Push Notifications - Performance', () => {
 
   test('AC-4.3.13-46: push history loads quickly', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const historyTable = adminPage.locator(
@@ -805,7 +805,7 @@ test.describe('Alert Push Notifications - Performance', () => {
 
   test('AC-4.3.13-47: concurrent push notifications work', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const testButton = adminPage.locator(
@@ -839,7 +839,7 @@ test.describe('Alert Push Notifications - Performance', () => {
 
   test('AC-4.3.13-48: memory usage stable during push', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Send multiple test notifications
@@ -861,7 +861,7 @@ test.describe('Alert Push Notifications - Performance', () => {
 
   test('AC-4.3.13-49: quick configuration saves', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const saveButton = adminPage.locator(
@@ -885,7 +885,7 @@ test.describe('Alert Push Notifications - Performance', () => {
 test.describe('Alert Push Notifications - FR-4.3.13 Integration', () => {
   test('integration: push notifications create FR-4.3.13 records', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for notification records
@@ -903,7 +903,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Integration', () => {
 
   test('integration: push notification linked to alert rules', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for alert rule links
@@ -921,7 +921,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Integration', () => {
 
   test('integration: push notification includes FR-4.3.5 MTR data', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for MTR data in notification template
@@ -939,7 +939,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Integration', () => {
 
   test('integration: push notification EN-4.3.12 performance metrics', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for performance data in notifications
@@ -957,7 +957,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Integration', () => {
 
   test('integration: push notification includes FR-4.3.11 report link', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for report link in notification
@@ -975,7 +975,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Integration', () => {
 
   test('integration: push notification webhooks work with external services', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for common webhook integrations
@@ -991,7 +991,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Integration', () => {
 test.describe('Alert Push Notifications - FR-4.3.13 Acceptance Tests', () => {
   test('AC-4.3.13-A1: configure push notification webhook', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for webhook URL input
@@ -1008,7 +1008,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Acceptance Tests', () => {
 
   test('AC-4.3.13-A2: test push notification delivery', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const testButton = adminPage.locator(
@@ -1027,7 +1027,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Acceptance Tests', () => {
 
   test('AC-4.3.13-A3: view push notification history', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const historyTable = adminPage.locator(
@@ -1045,7 +1045,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Acceptance Tests', () => {
 
   test('AC-4.3.13-A4: disable push notifications', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const toggle = adminPage.locator(
@@ -1061,7 +1061,7 @@ test.describe('Alert Push Notifications - FR-4.3.13 Acceptance Tests', () => {
 
   test('AC-4.3.13-A5: schedule push notifications', async ({ adminPage }) => {
     await adminPage.goto('/alerts')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const scheduleControls = adminPage.locator(

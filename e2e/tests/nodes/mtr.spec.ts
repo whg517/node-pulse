@@ -16,7 +16,7 @@ test.describe('MTR Visualization Component', () => {
   test.beforeEach(async ({ adminPage }) => {
     // Navigate to nodes page first
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
   })
 
   test('displays MTR section on node detail', async ({ adminPage }) => {
@@ -27,7 +27,7 @@ test.describe('MTR Visualization Component', () => {
     if (nodeCount > 0) {
       // Click on first node to view details
       await nodeRows.first().click()
-      await adminPage.waitForLoadState('networkidle')
+      await adminPage.waitForLoadState('domcontentloaded')
 
       // Look for MTR section/tab
       const mtrSection = adminPage.locator('[data-testid="mtr-visualization"], [class*="MTRVisualization"], text=/MTR|Traceroute/i').first()
@@ -50,7 +50,7 @@ test.describe('MTR Visualization Component', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for MTR run button
     const runButton = adminPage.locator('button:has-text("Run MTR"), button:has-text("Trace"), [data-testid="run-mtr"]')
@@ -73,7 +73,7 @@ test.describe('MTR Visualization Component', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for hop list/timeline
     const hopList = adminPage.locator('[data-testid="mtr-hops"], [class*="hop-list"], [class*="timeline"]')
@@ -94,7 +94,7 @@ test.describe('MTR Visualization Component', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for RTT values (avg, min, max, std dev)
     const rttStats = adminPage.locator('text=/\\d+\\.?\\d*\\s*ms/i')
@@ -114,7 +114,7 @@ test.describe('MTR Visualization Component', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for loss percentage
     const lossIndicator = adminPage.locator('text=/\\d+\\.?\\d*%\\s*(loss|丢包)/i')
@@ -133,7 +133,7 @@ test.describe('MTR Visualization Component', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Error state would show if MTR fails
     const errorState = adminPage.locator('[data-testid="mtr-error"], [class*="error"], text=/error|failed|failed/i')
@@ -150,7 +150,7 @@ test.describe('MTR Visualization Component', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Empty state might show "No MTR data" or similar
     const emptyState = adminPage.locator('text=/No MTR|No trace|No data available/i')
@@ -163,7 +163,7 @@ test.describe('MTR Visualization Component', () => {
 test.describe('MTR Visualization - Health Status', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
   })
 
   test('displays healthy hops in green', async ({ adminPage }) => {
@@ -174,7 +174,7 @@ test.describe('MTR Visualization - Health Status', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for healthy status (green color, < 5% loss)
     const healthyHops = adminPage.locator('[class*="healthy"], [style*="green"], [style*="#10b981"]')
@@ -190,7 +190,7 @@ test.describe('MTR Visualization - Health Status', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for degraded status (yellow/amber, 5-20% loss)
     const degradedHops = adminPage.locator('[class*="degraded"], [class*="warning"], [style*="amber"], [style*="#f59e0b"]')
@@ -206,7 +206,7 @@ test.describe('MTR Visualization - Health Status', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for problematic status (red, > 20% loss)
     const problematicHops = adminPage.locator('[class*="problematic"], [class*="critical"], [style*="red"], [style*="#ef4444"]')
@@ -222,7 +222,7 @@ test.describe('MTR Visualization - Health Status', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for path health summary badge
     const pathHealth = adminPage.locator('[data-testid="path-health"], [class*="path-health"], text=/Path.*Health|Overall.*Status/i')
@@ -236,7 +236,7 @@ test.describe('MTR Visualization - Health Status', () => {
 test.describe('MTR Visualization - Accessibility', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
   })
 
   test('has proper ARIA attributes', async ({ adminPage }) => {
@@ -247,7 +247,7 @@ test.describe('MTR Visualization - Accessibility', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Check for ARIA region
     const mtrRegion = adminPage.locator('[role="region"][aria-label*="MTR" i], [aria-label*="traceroute" i]')
@@ -266,7 +266,7 @@ test.describe('MTR Visualization - Accessibility', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Check for list structure
     const hopList = adminPage.locator('[role="list"]')
@@ -287,7 +287,7 @@ test.describe('MTR Visualization - Accessibility', () => {
     }
 
     await nodeRows.first().click()
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Tab through interactive elements
     await adminPage.keyboard.press('Tab')

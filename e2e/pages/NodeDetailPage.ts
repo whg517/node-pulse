@@ -20,7 +20,7 @@ export class NodeDetailPage {
 
   async goto(nodeId: string) {
     await this.page.goto(`/nodes/${nodeId}`)
-    await this.page.waitForLoadState('networkidle')
+    await this.page.waitForLoadState('domcontentloaded')
   }
 
   async expectMetricsVisible() {

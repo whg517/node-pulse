@@ -13,7 +13,7 @@ test.describe('Token Refresh', () => {
   test('AC-7: dashboard loads successfully with valid auth', async ({ adminPage }) => {
     // Navigate to dashboard
     await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Should be on dashboard (not redirected to login)
     await expect(adminPage).toHaveURL(/.*dashboard/)
@@ -21,11 +21,11 @@ test.describe('Token Refresh', () => {
 
   test('API calls succeed with valid authentication', async ({ adminPage }) => {
     await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Make an API call via the UI - clicking on nodes or other navigation
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Should stay on nodes page (authenticated)
     const url = adminPage.url()
@@ -49,11 +49,11 @@ test.describe('Token Refresh', () => {
 test.describe('Token Expiry Pre-Check', () => {
   test('authenticated user can access protected pages', async ({ adminPage }) => {
     await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Should be able to navigate between protected pages
     await adminPage.goto('/alerts/rules')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Check current URL - might be on alerts, login, or dashboard
     const url = adminPage.url()
@@ -63,11 +63,11 @@ test.describe('Token Expiry Pre-Check', () => {
   test('user can navigate between pages', async ({ page }) => {
     // Start on login page
     await page.goto('/login')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Navigate to dashboard
     await page.goto('/dashboard')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Check we're on a valid page
     const url = page.url()
@@ -78,17 +78,17 @@ test.describe('Token Expiry Pre-Check', () => {
 test.describe('Refresh Token Rotation', () => {
   test('session persists across multiple API calls', async ({ adminPage }) => {
     await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Make multiple API calls to verify session persists
     await adminPage.goto('/nodes')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     await adminPage.goto('/alerts/rules')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
 
     // Should be on a valid page
     const url = adminPage.url()

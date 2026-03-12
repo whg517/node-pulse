@@ -15,7 +15,7 @@ test.describe('World Map Component', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/dashboard')
     // Wait for page to load
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
   })
 
   test('displays world map container', async ({ adminPage }) => {
@@ -149,7 +149,7 @@ test.describe('World Map Component', () => {
 test.describe('World Map - Node Status', () => {
   test.beforeEach(async ({ adminPage }) => {
     await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
   })
 
   test('displays healthy nodes in green', async ({ adminPage }) => {

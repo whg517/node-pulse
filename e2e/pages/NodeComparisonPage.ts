@@ -22,7 +22,7 @@ export class NodeComparisonPage {
 
   async goto() {
     await this.page.goto('/comparison')
-    await this.page.waitForLoadState('networkidle')
+    await this.page.waitForLoadState('domcontentloaded')
   }
 
   async selectNodes(nodeNames: string[]) {

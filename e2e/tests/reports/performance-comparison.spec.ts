@@ -22,7 +22,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
 
   test('AC-4.3.12-1: page loads and displays comparison section', async ({ adminPage }) => {
     // Wait for page to load
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Check for comparison section/container
@@ -41,7 +41,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   })
 
   test('AC-4.3.12-2: dual time range selector available', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for time range selector
@@ -57,7 +57,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   })
 
   test('AC-4.3.12-3: comparison chart renders', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(2000)
 
     // Look for chart element
@@ -75,7 +75,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   })
 
   test('AC-4.3.12-4: dual-axis chart support', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     // Look for dual-axis indicator
@@ -93,7 +93,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   })
 
   test('AC-4.3.12-5: threshold line visible when configured', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     // Look for threshold/Alert line
@@ -111,7 +111,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   })
 
   test('AC-4.3.12-6: shift-click for dual time range selection', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for time range interactive element
@@ -130,7 +130,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   })
 
   test('AC-4.3.12-7: comparison data table visible', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     // Look for comparison data table
@@ -148,7 +148,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   })
 
   test('AC-4.3.12-8: export comparison data works', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     // Look for export button
@@ -187,7 +187,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
   })
 
   test('AC-4.3.12-10: error state handled gracefully', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Check for error message elements

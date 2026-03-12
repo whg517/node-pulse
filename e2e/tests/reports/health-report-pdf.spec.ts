@@ -21,7 +21,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-1: page loads and displays report form', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Check for report generation form
@@ -39,7 +39,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-2: report type selector available', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const reportTypeSelect = adminPage.locator(
@@ -58,7 +58,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-3: time range selector available', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const timeRangeSelect = adminPage.locator(
@@ -71,7 +71,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-4: node selector available', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const nodeSelect = adminPage.locator(
@@ -84,7 +84,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-5: generate button triggers PDF export', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const generateButton = adminPage.locator(
@@ -100,7 +100,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-6: PDF download functionality', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const downloadButton = adminPage.locator(
@@ -126,7 +126,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-7: report preview displays', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1500)
 
     const previewSection = adminPage.locator(
@@ -143,7 +143,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-8: export history table displays', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const exportHistoryTable = adminPage.locator(
@@ -160,7 +160,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-9: PDF file validates', async ({ adminPage, browser }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const downloadButton = adminPage.locator(
@@ -185,7 +185,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-10: report content includes metrics summary', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const metricsSummary = adminPage.locator(
@@ -202,7 +202,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-11: report content includes health indicators', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const healthIndicators = adminPage.locator(
@@ -219,7 +219,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-12: email sharing functionality', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const emailShare = adminPage.locator(
@@ -289,7 +289,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-15: multiple PDF downloads work', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const downloadButton = adminPage.locator(
@@ -336,7 +336,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-17: PDF file is valid PDF format', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const downloadButton = adminPage.locator(
@@ -357,7 +357,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-18: report regeneration works', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     const generateButton = adminPage.locator(
@@ -408,7 +408,7 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   })
 
   test('AC-4.3.11-20: report format selection (PDF only)', async ({ adminPage }) => {
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
     // Look for format selector - should only allow PDF

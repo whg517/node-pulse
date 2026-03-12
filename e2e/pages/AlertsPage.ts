@@ -44,7 +44,7 @@ export class AlertRulesPage {
 
   async goto() {
     await this.page.goto('/alerts/rules')
-    await this.page.waitForLoadState('networkidle')
+    await this.page.waitForLoadState('domcontentloaded')
   }
 
   async waitForReady() {
@@ -128,7 +128,7 @@ export class AlertRecordsPage {
 
   async goto() {
     await this.page.goto('/alerts/records')
-    await this.page.waitForLoadState('networkidle')
+    await this.page.waitForLoadState('domcontentloaded')
   }
 
   async waitForReady() {
@@ -193,7 +193,7 @@ export class AlertHistoryPage {
 
   async goto() {
     await this.page.goto('/alerts/history')
-    await this.page.waitForLoadState('networkidle')
+    await this.page.waitForLoadState('domcontentloaded')
   }
 
   async waitForReady() {

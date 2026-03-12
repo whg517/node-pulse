@@ -35,7 +35,7 @@ async function createAuthenticatedContext(
 
         // Verify session is valid
         await page.goto('/dashboard')
-        await page.waitForLoadState('networkidle')
+        await page.waitForLoadState('domcontentloaded')
         if (!page.url().includes('login')) {
           return { context, page }
         }
@@ -75,7 +75,7 @@ test.describe('Logout Flow', () => {
   test('AC-5: logout redirects to login page', async ({ adminPage }) => {
     // Navigate to dashboard first
     await adminPage.goto('/dashboard')
-    await adminPage.waitForLoadState('networkidle')
+    await adminPage.waitForLoadState('domcontentloaded')
     await expect(adminPage).toHaveURL(/.*dashboard/)
 
     // Click logout button directly (it's visible in the nav, no dropdown needed)
@@ -88,7 +88,7 @@ test.describe('Logout Flow', () => {
 
   test('login page loads', async ({ page }) => {
     await page.goto('/login')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Verify we're on login page
     expect(page.url()).toContain('login')
@@ -96,7 +96,7 @@ test.describe('Logout Flow', () => {
 
   test('dashboard requires auth', async ({ page }) => {
     await page.goto('/dashboard')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     // Should redirect to login or stay on dashboard if authed
     const url = page.url()
@@ -115,7 +115,7 @@ test.describe('Cross-Tab Logout Sync', () => {
     const page = await context.newPage()
 
     await page.goto('/login')
-    await page.waitForLoadState('networkidle')
+    await page.waitForLoadState('domcontentloaded')
 
     expect(page.url()).toContain('login')
 
