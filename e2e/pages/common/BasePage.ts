@@ -45,10 +45,11 @@ export abstract class BasePage {
 
   /**
    * Navigate to page path
+   * Note: Uses 'domcontentloaded' instead of 'networkidle' because dashboard
+   * has periodic API polling that prevents networkidle from ever completing.
    */
   async goto(path: string): Promise<void> {
-    await this.page.goto(path, { waitUntil: 'networkidle' })
-    await this.page.waitForLoadState('domcontentloaded')
+    await this.page.goto(path, { waitUntil: 'domcontentloaded' })
   }
 
   /**
