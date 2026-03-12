@@ -33,7 +33,13 @@ async function cleanupTestData(pool: Pool): Promise<void> {
 
     // TODO: Remove this cleanup when shard-specific user workaround is removed
     // SECURITY: Only cleans up users with the test-only prefix
-    // Clean up shard-specific admin users (matches e2e_test_shard_%_admin pattern)
+    // First, delete auth_audit_logs for shard-specific admin users (foreign key constraint)
+    await pool.query(`
+      DELETE FROM auth_audit_logs WHERE user_id IN (
+        SELECT user_id FROM users WHERE username LIKE 'e2e_test_shard_%_admin'
+      )
+    `)
+    // Then delete the shard-specific admin users (matches e2e_test_shard_%_admin pattern)
     const shardUserResult = await pool.query(`
       DELETE FROM users WHERE username LIKE 'e2e_test_shard_%_admin'
     `)
