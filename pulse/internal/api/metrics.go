@@ -246,6 +246,20 @@ func NewMetricsHandler(collector *metrics.Collector) *MetricsHandler {
 }
 
 // GetPerformanceMetrics handles GET /api/v1/metrics/performance
+// @Summary		Get performance metrics
+// @Description	Retrieves aggregated API performance metrics with optional filtering by metric type, endpoint, and time range.
+// @Tags			Metrics
+// @Accept			json
+// @Produce		json
+// @Param			metric_type	query		string					false	"Metric type filter: api, dashboard, database"	Enums(api, dashboard, database)
+// @Param			endpoint	query		string					false	"Filter by endpoint path"
+// @Param			start_time	query		string					false	"Start time in ISO 8601 format (default: 1 hour ago)"
+// @Param			end_time	query		string					false	"End time in ISO 8601 format (default: now)"
+// @Param			aggregation	query		string					false	"Aggregation window (e.g. 1m, 5m, 1h)"
+// @Success		200	{object}	map[string]interface{}	"Performance metrics"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Security		BearerAuth
+// @Router			/metrics/performance [get]
 func (h *MetricsHandler) GetPerformanceMetrics(c *gin.Context) {
 	// Parse query parameters
 	filter := h.parseFilterParams(c)
@@ -265,6 +279,15 @@ func (h *MetricsHandler) GetPerformanceMetrics(c *gin.Context) {
 }
 
 // GetCollectorStats handles GET /api/v1/metrics/stats
+// @Summary		Get collector statistics
+// @Description	Retrieves internal statistics from the metrics collector.
+// @Tags			Metrics
+// @Accept			json
+// @Produce		json
+// @Success		200	{object}	map[string]interface{}	"Collector statistics"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Security		BearerAuth
+// @Router			/metrics/stats [get]
 func (h *MetricsHandler) GetCollectorStats(c *gin.Context) {
 	stats := h.collector.GetStats()
 

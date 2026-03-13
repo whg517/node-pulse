@@ -59,6 +59,22 @@ type HistoryResponse struct {
 
 // GetHistoryHandler handles GET /api/v1/data/history
 // Returns historical metrics data with optional aggregation
+// @Summary		Get historical metrics data
+// @Description	Retrieves historical time-series metrics for specified nodes and metrics.
+// @Tags			Data
+// @Accept			json
+// @Produce		json
+// @Param			node_id		query		string	true	"Node UUID(s) to query (repeatable)"
+// @Param			start_time	query		string	true	"Start time in ISO 8601 format"
+// @Param			end_time	query		string	true	"End time in ISO 8601 format"
+// @Param			metric		query		string	true	"Metric(s) to retrieve: latency, packet_loss_rate, jitter (repeatable)"
+// @Param			aggregation	query		string	false	"Aggregation interval: 1m, 5m, 1h"	Enums(1m, 5m, 1h)
+// @Success		200	{object}	HistoryResponse		"Historical data"
+// @Failure		400	{object}	map[string]interface{}	"Invalid query parameters"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		500	{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/data/history [get]
 func (h *DataHandler) GetHistoryHandler(c *gin.Context) {
 	// Parse query parameters
 	var req HistoryRequest
@@ -280,6 +296,18 @@ func (h *DataHandler) calculateBaseline(dataPoints []DataPoint) float64 {
 
 // GetMetricsHandler handles GET /api/v1/data/metrics
 // Returns real-time metrics from memory cache
+// @Summary		Get real-time metrics
+// @Description	Retrieves the most recent metrics for all nodes (or specific nodes) from the last hour.
+// @Tags			Data
+// @Accept			json
+// @Produce		json
+// @Param			node_id	query		string					false	"Filter by node UUID(s) (repeatable)"
+// @Success		200		{object}	map[string]interface{}	"Real-time metrics data"
+// @Failure		401		{object}	map[string]interface{}	"Unauthorized"
+// @Failure		500		{object}	map[string]interface{}	"Internal server error"
+// @Failure		503		{object}	map[string]interface{}	"Service unavailable (database not connected)"
+// @Security		BearerAuth
+// @Router			/data/metrics [get]
 func (h *DataHandler) GetMetricsHandler(c *gin.Context) {
 	// Check if database is available
 	if h.pool == nil {
@@ -442,6 +470,22 @@ type ComparisonResponse struct {
 
 // GetComparisonHandler handles GET /api/v1/data/comparison
 // Returns comparison data for multiple nodes with statistics
+// @Summary		Get node comparison data
+// @Description	Compares metrics across 2-5 nodes over a specified time range with statistical analysis.
+// @Tags			Data
+// @Accept			json
+// @Produce		json
+// @Param			node_ids	query		string					true	"Node UUIDs to compare (2-5, repeatable)"
+// @Param			start_time	query		string					true	"Start time in ISO 8601 format"
+// @Param			end_time	query		string					true	"End time in ISO 8601 format"
+// @Param			metrics		query		string					true	"Metrics to compare: latency, packet_loss_rate, jitter (repeatable)"
+// @Success		200			{object}	ComparisonResponse		"Comparison data"
+// @Failure		400			{object}	map[string]interface{}	"Invalid query parameters"
+// @Failure		401			{object}	map[string]interface{}	"Unauthorized"
+// @Failure		404			{object}	map[string]interface{}	"No data found for specified nodes"
+// @Failure		500			{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/data/comparison [get]
 func (h *DataHandler) GetComparisonHandler(c *gin.Context) {
 	// Parse query parameters
 	var req ComparisonRequest
@@ -857,6 +901,18 @@ type DiagnosisResponse struct {
 
 // GetDiagnosisHandler handles GET /api/v1/data/diagnosis
 // Returns problem type diagnosis based on multi-node comparison (Story 7.4)
+// @Summary		Get problem type diagnosis
+// @Description	Analyzes metrics across nodes to diagnose network problem types (requires at least 3 nodes with data).
+// @Tags			Data
+// @Accept			json
+// @Produce		json
+// @Param			node_ids	query		string					false	"Node UUIDs to diagnose (repeatable; uses all nodes if empty)"
+// @Success		200			{object}	DiagnosisResponse		"Diagnosis result"
+// @Failure		400			{object}	map[string]interface{}	"Insufficient data (need at least 3 nodes)"
+// @Failure		401			{object}	map[string]interface{}	"Unauthorized"
+// @Failure		500			{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/data/diagnosis [get]
 func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 	// Parse query parameters
 	var req DiagnosisRequest

@@ -5,6 +5,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/whg517/node-pulse/pulse/internal/config"
+	_ "github.com/whg517/node-pulse/pulse/internal/models" // imported for swagger type resolution
 )
 
 // GetConfigHandler returns current configuration (admin-only, credentials redacted)
@@ -65,9 +66,9 @@ func GetConfigHandler(c *gin.Context) {
 			"cookie_samesite":  cfg.Session.CookieSameSite,
 		},
 		"jwt": map[string]interface{}{
-			"secret":                            "***REDACTED***",
-			"access_token_expiration_minutes":   cfg.JWT.AccessTokenExpirationMinutes,
-			"refresh_token_expiration_days":     cfg.JWT.RefreshTokenExpirationDays,
+			"secret":                          "***REDACTED***",
+			"access_token_expiration_minutes": cfg.JWT.AccessTokenExpirationMinutes,
+			"refresh_token_expiration_days":   cfg.JWT.RefreshTokenExpirationDays,
 		},
 	}
 

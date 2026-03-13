@@ -1,6 +1,176 @@
 basePath: /api/v1
 definitions:
-  github_com_kevin_node-pulse_pulse-api_internal_models.CreateNodeRequest:
+  github_com_whg517_node-pulse_pulse_internal_diagnostic.ConfidenceLevel:
+    enum:
+    - high
+    - medium
+    - low
+    type: string
+    x-enum-varnames:
+    - ConfidenceHigh
+    - ConfidenceMedium
+    - ConfidenceLow
+  github_com_whg517_node-pulse_pulse_internal_diagnostic.DiagnosisAnalysis:
+    properties:
+      affected_nodes:
+        items:
+          type: string
+        type: array
+      metrics:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.MetricAnalysis'
+      nodes_analyzed:
+        type: integer
+      regional_comparison:
+        additionalProperties:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.RegionalStats'
+        type: object
+      regions_analyzed:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_diagnostic.DiagnosisResult:
+    properties:
+      analysis:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.DiagnosisAnalysis'
+      confidence:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.ConfidenceLevel'
+      problem_type:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.ProblemType'
+      recommendation:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_diagnostic.MetricAnalysis:
+    properties:
+      jitter:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.MetricStats'
+      latency:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.MetricStats'
+      packet_loss_rate:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.MetricStats'
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_diagnostic.MetricStats:
+    properties:
+      avg:
+        type: number
+      baseline:
+        type: number
+      max:
+        type: number
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_diagnostic.ProblemType:
+    enum:
+    - node_local_failure
+    - cross_border_link
+    - isp_routing
+    - unknown
+    type: string
+    x-enum-varnames:
+    - ProblemTypeNodeLocalFailure
+    - ProblemTypeCrossBorderLink
+    - ProblemTypeISPRouting
+    - ProblemTypeUnknown
+  github_com_whg517_node-pulse_pulse_internal_diagnostic.RegionalStats:
+    properties:
+      avg_jitter:
+        type: number
+      avg_latency:
+        type: number
+      avg_packet_loss:
+        type: number
+      status:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.Alert:
+    properties:
+      created_at:
+        type: string
+      enabled:
+        description: true/false
+        type: boolean
+      id:
+        type: string
+      level:
+        description: P0, P1, P2
+        type: string
+      metric:
+        description: latency, packet_loss_rate, jitter
+        type: string
+      node_id:
+        description: NULL for global rules
+        type: string
+      threshold:
+        description: Alert threshold value
+        type: number
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.AlertData:
+    properties:
+      alert:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Alert'
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.AlertsListData:
+    properties:
+      alerts:
+        items:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Alert'
+        type: array
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.ChangePasswordRequest:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.ChangePasswordResponse:
+    properties:
+      message:
+        type: string
+      sessions_revoked:
+        type: boolean
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.CreateAlertRequest:
+    properties:
+      enabled:
+        description: Default to true if not provided
+        type: boolean
+      level:
+        enum:
+        - P0
+        - P1
+        - P2
+        type: string
+      metric:
+        enum:
+        - latency
+        - packet_loss_rate
+        - jitter
+        type: string
+      node_id:
+        description: NULL for global rules
+        type: string
+      threshold:
+        type: number
+    required:
+    - level
+    - metric
+    - threshold
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.CreateAlertResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.AlertData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.CreateNodeRequest:
     properties:
       ip:
         maxLength: 45
@@ -19,7 +189,137 @@ definitions:
     - name
     - region
     type: object
-  github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse:
+  github_com_whg517_node-pulse_pulse_internal_models.CreateProbeRequest:
+    properties:
+      count:
+        maximum: 100
+        minimum: 1
+        type: integer
+      interval_seconds:
+        maximum: 300
+        minimum: 60
+        type: integer
+      node_id:
+        type: string
+      port:
+        maximum: 65535
+        minimum: 1
+        type: integer
+      target:
+        type: string
+      timeout_seconds:
+        maximum: 30
+        minimum: 1
+        type: integer
+      type:
+        type: string
+    required:
+    - count
+    - interval_seconds
+    - node_id
+    - port
+    - target
+    - timeout_seconds
+    - type
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.CreateProbeResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ProbeData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.CreateUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      role:
+        enum:
+        - admin
+        - operator
+        - viewer
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - role
+    - username
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.CreateUserResponse:
+    properties:
+      data:
+        properties:
+          user:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.User'
+        type: object
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.CreateWebhookRequest:
+    properties:
+      enabled:
+        description: Default to true if not provided
+        type: boolean
+      event_format:
+        additionalProperties: {}
+        type: object
+      url:
+        type: string
+    required:
+    - url
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.CreateWebhookResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.WebhookData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.DeleteAlertResponse:
+    properties:
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.DeleteNodeResponse:
+    properties:
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.DeleteProbeResponse:
+    properties:
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.DeleteUserResponse:
+    properties:
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.DeleteWebhookResponse:
+    properties:
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse:
     properties:
       code:
         type: string
@@ -27,17 +327,62 @@ definitions:
       message:
         type: string
     type: object
-  github_com_kevin_node-pulse_pulse-api_internal_models.LoginRequest:
+  github_com_whg517_node-pulse_pulse_internal_models.ExportTask:
     properties:
-      password:
+      completed_at:
         type: string
-      username:
+      created_at:
         type: string
-    required:
-    - password
-    - username
+      end_time:
+        type: string
+      error:
+        type: string
+      file_path:
+        type: string
+      file_size:
+        type: integer
+      format:
+        description: csv, xlsx
+        type: string
+      id:
+        type: string
+      metrics:
+        items:
+          type: string
+        type: array
+      node_ids:
+        items:
+          type: string
+        type: array
+      record_count:
+        type: integer
+      start_time:
+        type: string
+      status:
+        description: pending, processing, completed, failed
+        type: string
+      user_id:
+        type: string
     type: object
-  github_com_kevin_node-pulse_pulse-api_internal_models.LoginResponse:
+  github_com_whg517_node-pulse_pulse_internal_models.GetAlertByIDResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.AlertData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.GetAlertsResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.AlertsListData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.GetMeResponse:
     properties:
       data:
         properties:
@@ -53,7 +398,132 @@ definitions:
       timestamp:
         type: string
     type: object
-  github_com_kevin_node-pulse_pulse-api_internal_models.Node:
+  github_com_whg517_node-pulse_pulse_internal_models.GetNodeStatusResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.NodeStatusData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.GetProbeResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ProbeData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.GetProbesResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ProbesListData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.GetUserResponse:
+    properties:
+      data:
+        properties:
+          user:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.User'
+        type: object
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.GetWebhooksResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.WebhooksListData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.HeartbeatData:
+    properties:
+      node_id:
+        type: string
+      received:
+        type: boolean
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.HeartbeatRequest:
+    properties:
+      jitter_ms:
+        type: number
+      latency_ms:
+        type: number
+      node_id:
+        type: string
+      packet_loss_rate:
+        type: number
+      probe_id:
+        type: string
+      timestamp:
+        type: string
+    required:
+    - jitter_ms
+    - latency_ms
+    - node_id
+    - packet_loss_rate
+    - probe_id
+    - timestamp
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.HeartbeatSuccessResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.HeartbeatData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.ListUsersResponse:
+    properties:
+      data:
+        properties:
+          limit:
+            type: integer
+          offset:
+            type: integer
+          pagination:
+            properties:
+              has_next:
+                type: boolean
+              has_prev:
+                type: boolean
+            type: object
+          total:
+            type: integer
+          users:
+            items:
+              $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.User'
+            type: array
+        type: object
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.Node:
     properties:
       created_at:
         type: string
@@ -78,6 +548,569 @@ definitions:
         description: JSONB stored as string
         type: string
       updated_at:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.NodeStatus:
+    properties:
+      id:
+        type: string
+      last_heartbeat:
+        type: string
+      last_report_time:
+        type: string
+      name:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.NodeStatusData:
+    properties:
+      node:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.NodeStatus'
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.PasswordResetConfirmRequest:
+    properties:
+      new_password:
+        minLength: 8
+        type: string
+      token:
+        type: string
+    required:
+    - new_password
+    - token
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.PasswordResetRequest:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.Probe:
+    properties:
+      count:
+        description: 1-100
+        type: integer
+      created_at:
+        type: string
+      id:
+        type: string
+      interval_seconds:
+        description: 60-300
+        type: integer
+      node_id:
+        type: string
+      port:
+        description: 1-65535
+        type: integer
+      target:
+        description: IP or domain
+        type: string
+      timeout_seconds:
+        description: 1-30
+        type: integer
+      type:
+        description: TCP or UDP
+        type: string
+      updated_at:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.ProbeData:
+    properties:
+      probe:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Probe'
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.ProbesListData:
+    properties:
+      probes:
+        items:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Probe'
+        type: array
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.SessionResponse:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      ip_address:
+        type: string
+      last_used_at:
+        type: string
+      max_valid_until:
+        type: string
+      session_id:
+        type: string
+      user_agent:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.TokenResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        description: 900 (15 minutes)
+        type: integer
+      refresh_expires_in:
+        description: 604800 (7 days)
+        type: integer
+      refresh_token:
+        type: string
+      token_type:
+        description: '"Bearer"'
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateAlertRequest:
+    properties:
+      enabled:
+        type: boolean
+      level:
+        enum:
+        - P0
+        - P1
+        - P2
+        type: string
+      metric:
+        enum:
+        - latency
+        - packet_loss_rate
+        - jitter
+        type: string
+      node_id:
+        type: string
+      threshold:
+        type: number
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateAlertResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.AlertData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateNodeRequest:
+    properties:
+      ip:
+        maxLength: 45
+        type: string
+      name:
+        maxLength: 255
+        type: string
+      region:
+        maxLength: 100
+        type: string
+      tags:
+        additionalProperties: true
+        type: object
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateNodeResponse:
+    properties:
+      data:
+        properties:
+          node:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Node'
+        type: object
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateProbeRequest:
+    properties:
+      count:
+        maximum: 100
+        minimum: 1
+        type: integer
+      interval_seconds:
+        maximum: 300
+        minimum: 60
+        type: integer
+      port:
+        maximum: 65535
+        minimum: 1
+        type: integer
+      target:
+        type: string
+      timeout_seconds:
+        maximum: 30
+        minimum: 1
+        type: integer
+      type:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateProbeResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ProbeData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateUserRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+      role:
+        enum:
+        - admin
+        - operator
+        - viewer
+        type: string
+      username:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateUserResponse:
+    properties:
+      data:
+        properties:
+          user:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.User'
+        type: object
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateWebhookRequest:
+    properties:
+      enabled:
+        type: boolean
+      event_format:
+        additionalProperties: {}
+        type: object
+      url:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.UpdateWebhookResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.WebhookData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.User:
+    properties:
+      created_at:
+        $ref: '#/definitions/pgtype.Timestamp'
+      email:
+        type: string
+      failed_login_attempts:
+        type: integer
+      locked_until:
+        $ref: '#/definitions/pgtype.Timestamp'
+      mfa_enabled:
+        description: For future MFA support
+        type: boolean
+      role:
+        type: string
+      updated_at:
+        $ref: '#/definitions/pgtype.Timestamp'
+      user_id:
+        type: string
+      username:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.Webhook:
+    properties:
+      created_at:
+        type: string
+      enabled:
+        type: boolean
+      event_format:
+        additionalProperties: {}
+        type: object
+      id:
+        type: string
+      url:
+        type: string
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.WebhookData:
+    properties:
+      webhook:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Webhook'
+    type: object
+  github_com_whg517_node-pulse_pulse_internal_models.WebhooksListData:
+    properties:
+      webhooks:
+        items:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Webhook'
+        type: array
+    type: object
+  internal_api.BatchConfigResult:
+    properties:
+      errors:
+        items:
+          type: string
+        type: array
+      failed_count:
+        type: integer
+      failed_ids:
+        items:
+          type: string
+        type: array
+      success_count:
+        type: integer
+    type: object
+  internal_api.BatchConfigUpdateRequest:
+    properties:
+      beacon_ids:
+        items:
+          type: string
+        type: array
+      config:
+        $ref: '#/definitions/internal_api.BeaconConfigUpdateRequest'
+    required:
+    - beacon_ids
+    - config
+    type: object
+  internal_api.BatchConfigUpdateResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_api.BatchConfigResult'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_api.BeaconConfig:
+    properties:
+      interval_seconds:
+        type: integer
+      probes:
+        items:
+          $ref: '#/definitions/internal_api.ProbeConfig'
+        type: array
+      timeout_seconds:
+        type: integer
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  internal_api.BeaconConfigResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_api.BeaconConfig'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_api.BeaconConfigUpdateRequest:
+    properties:
+      interval_seconds:
+        type: integer
+      probes:
+        items:
+          $ref: '#/definitions/internal_api.ProbeConfig'
+        type: array
+      timeout_seconds:
+        type: integer
+    type: object
+  internal_api.ComparisonData:
+    properties:
+      nodes:
+        items:
+          $ref: '#/definitions/internal_api.ComparisonNodeData'
+        type: array
+      statistics:
+        additionalProperties:
+          $ref: '#/definitions/internal_api.ComparisonMetricStats'
+        type: object
+      time_range:
+        properties:
+          end:
+            type: string
+          start:
+            type: string
+        type: object
+    type: object
+  internal_api.ComparisonMetricData:
+    properties:
+      avg:
+        type: number
+      data_points:
+        items:
+          $ref: '#/definitions/internal_api.DataPoint'
+        type: array
+      max:
+        type: number
+      min:
+        type: number
+    type: object
+  internal_api.ComparisonMetricStats:
+    properties:
+      differences:
+        items:
+          $ref: '#/definitions/internal_api.ComparisonNodeDifference'
+        type: array
+      overall_avg:
+        type: number
+      overall_max:
+        type: number
+      overall_min:
+        type: number
+    type: object
+  internal_api.ComparisonNodeData:
+    properties:
+      metrics:
+        additionalProperties:
+          $ref: '#/definitions/internal_api.ComparisonMetricData'
+        type: object
+      name:
+        type: string
+      node_id:
+        type: string
+    type: object
+  internal_api.ComparisonNodeDifference:
+    properties:
+      diff_from_avg:
+        type: number
+      node_id:
+        type: string
+    type: object
+  internal_api.ComparisonResponse:
+    properties:
+      data:
+        $ref: '#/definitions/internal_api.ComparisonData'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_api.CompressedHeartbeatRequest:
+    properties:
+      checksum:
+        description: CRC32 checksum
+        type: integer
+      data:
+        description: Gzip compressed JSON data
+        items:
+          type: integer
+        type: array
+    required:
+    - checksum
+    - data
+    type: object
+  internal_api.ConfigHistoryEntry:
+    properties:
+      changed_at:
+        type: string
+      changed_by:
+        type: string
+      config:
+        $ref: '#/definitions/internal_api.BeaconConfig'
+      version:
+        type: integer
+    type: object
+  internal_api.ConfigHistoryResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/internal_api.ConfigHistoryEntry'
+        type: array
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_api.CreateAPIKeyRequest:
+    properties:
+      name:
+        type: string
+      service_account_id:
+        type: string
+      user_id:
+        type: string
+    required:
+    - name
+    type: object
+  internal_api.CreateExportResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ExportTask'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_api.DataPoint:
+    properties:
+      timestamp:
+        type: string
+      value:
+        type: number
+    type: object
+  internal_api.DiagnosisResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_diagnostic.DiagnosisResult'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_api.GetExportStatusResponse:
+    properties:
+      data:
+        $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ExportTask'
+      message:
+        type: string
+      timestamp:
+        type: string
+    type: object
+  internal_api.HistoryResponse:
+    properties:
+      aggregation:
+        type: string
+      data:
+        items:
+          $ref: '#/definitions/internal_api.HistorySeries'
+        type: array
+    type: object
+  internal_api.HistorySeries:
+    properties:
+      baseline:
+        type: number
+      data_points:
+        items:
+          $ref: '#/definitions/internal_api.DataPoint'
+        type: array
+      metric:
+        type: string
+      node_id:
+        type: string
+    type: object
+  internal_api.ProbeConfig:
+    properties:
+      count:
+        type: integer
+      id:
+        type: string
+      interval_seconds:
+        type: integer
+      port:
+        type: integer
+      target:
+        type: string
+      timeout_seconds:
+        type: integer
+      type:
+        description: TCP or UDP
         type: string
     type: object
   internal_health.AlertEngineStatus:
@@ -159,6 +1192,27 @@ definitions:
       total_count:
         type: integer
     type: object
+  pgtype.InfinityModifier:
+    enum:
+    - 1
+    - 0
+    - -1
+    format: int32
+    type: integer
+    x-enum-varnames:
+    - Infinity
+    - Finite
+    - NegativeInfinity
+  pgtype.Timestamp:
+    properties:
+      infinityModifier:
+        $ref: '#/definitions/pgtype.InfinityModifier'
+      time:
+        description: Time zone will be ignored when encoding to PostgreSQL.
+        type: string
+      valid:
+        type: boolean
+    type: object
 host: localhost:6532
 info:
   contact:
@@ -186,52 +1240,1891 @@ info:
   title: Node Pulse API
   version: "1.0"
 paths:
-  /auth/login:
+  /admin/apikeys:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all API keys. Admin role required.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of API keys
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all API keys
+      tags:
+      - Admin API Keys
     post:
       consumes:
       - application/json
-      description: |-
-        Authenticates a user and returns a session token. Supports username/password authentication.
-
-        **Rate Limiting:** Maximum 5 failed attempts per IP per 15 minutes.
-        **Account Lockout:** 6 failed attempts will lock the account for 10 minutes.
+      description: Creates a new API key. The full key is only shown once on creation.
+        Admin role required.
+      parameters:
+      - description: API key creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.CreateAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: API key created successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Validation failed
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a new API key
+      tags:
+      - Admin API Keys
+  /admin/apikeys/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Revokes (deletes) an API key by its integer ID. Admin role required.
+      parameters:
+      - description: API key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API key revoked successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: API key not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke an API key
+      tags:
+      - Admin API Keys
+    get:
+      consumes:
+      - application/json
+      description: Retrieves an API key by its integer ID. Admin role required.
+      parameters:
+      - description: API key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API key details
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: API key not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get API key by ID
+      tags:
+      - Admin API Keys
+  /admin/apikeys/{id}/rotate:
+    post:
+      consumes:
+      - application/json
+      description: Rotates an API key, generating a new key value. The old key remains
+        valid for 24 hours. Admin role required.
+      parameters:
+      - description: API key ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API key rotated successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Rotate an API key
+      tags:
+      - Admin API Keys
+  /admin/users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a paginated list of users. Admin role required.
+      parameters:
+      - default: 100
+        description: Number of items per page
+        in: query
+        maximum: 100
+        name: limit
+        type: integer
+      - default: 0
+        description: Number of items to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of users
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ListUsersResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all users
+      tags:
+      - admin
+    post:
+      consumes:
+      - application/json
+      description: Creates a new user with the specified role. Admin role required.
+      parameters:
+      - description: User creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: User created successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateUserResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "409":
+          description: Username already exists
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new user
+      tags:
+      - admin
+  /admin/users/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a user. Cannot delete own account or the last admin. Admin
+        role required.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User deleted successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.DeleteUserResponse'
+        "400":
+          description: Invalid request (e.g., deleting self or last admin)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a user
+      tags:
+      - admin
+    get:
+      consumes:
+      - application/json
+      description: Retrieves detailed information about a specific user. Admin role
+        required.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User details
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.GetUserResponse'
+        "400":
+          description: Invalid UUID format
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user by ID
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing user. Admin role required.
+      parameters:
+      - description: User UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: User update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: User updated successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateUserResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a user
+      tags:
+      - admin
+  /alerts/records:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves alert records with optional filtering by node_id, level,
+        status, and time range.
+      parameters:
+      - description: Filter by node UUID
+        in: query
+        name: node_id
+        type: string
+      - description: Filter by level (P0, P1, P2)
+        enum:
+        - P0
+        - P1
+        - P2
+        in: query
+        name: level
+        type: string
+      - description: Filter by status (pending, in_progress, resolved)
+        enum:
+        - pending
+        - in_progress
+        - resolved
+        in: query
+        name: status
+        type: string
+      - description: Filter from this time (ISO 8601)
+        in: query
+        name: start_time
+        type: string
+      - description: Filter until this time (ISO 8601)
+        in: query
+        name: end_time
+        type: string
+      - default: 50
+        description: Maximum records to return (1-100)
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Records to skip
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of alert records
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List alert records
+      tags:
+      - Alert Records
+  /alerts/records/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: 'Updates the status of an alert record. Valid status transitions:
+        pending→in_progress, in_progress→resolved.'
+      parameters:
+      - description: Alert record ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Status update request
+        in: body
+        name: request
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Alert record status updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or status transition
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Alert record not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update alert record status
+      tags:
+      - Alert Records
+  /alerts/rules:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all alert rules. Optionally filtered by node_id.
+      parameters:
+      - description: Filter by node UUID
+        in: query
+        name: node_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of alert rules
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.GetAlertsResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List alert rules
+      tags:
+      - Alerts
+    post:
+      consumes:
+      - application/json
+      description: Creates a new alert rule. Requires admin or operator role.
+      parameters:
+      - description: Alert rule creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateAlertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Alert rule created successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateAlertResponse'
+        "400":
+          description: Validation failed
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create an alert rule
+      tags:
+      - Alerts
+  /alerts/rules/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes an alert rule by its ID. Requires admin or operator role.
+      parameters:
+      - description: Alert rule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Alert rule deleted successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.DeleteAlertResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Alert rule not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete an alert rule
+      tags:
+      - Alerts
+    get:
+      consumes:
+      - application/json
+      description: Retrieves an alert rule by its ID.
+      parameters:
+      - description: Alert rule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Alert rule details
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.GetAlertByIDResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Alert rule not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get alert rule by ID
+      tags:
+      - Alerts
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing alert rule. Requires admin or operator role.
+      parameters:
+      - description: Alert rule ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Alert rule update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateAlertRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Alert rule updated successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateAlertResponse'
+        "400":
+          description: Validation failed
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Alert rule not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update an alert rule
+      tags:
+      - Alerts
+  /api/config:
+    get:
+      consumes:
+      - application/json
+      description: Get current application configuration (admin only, passwords redacted)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get current configuration
+      tags:
+      - config
+  /api/config/validate:
+    get:
+      consumes:
+      - application/json
+      description: Validate current application configuration (admin only)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Validate configuration
+      tags:
+      - config
+  /api/v1/admin/audit/logs:
+    get:
+      description: Query audit logs with filters and pagination
+      parameters:
+      - description: Filter by event type
+        in: query
+        name: event_type
+        type: string
+      - description: Filter by user ID
+        in: query
+        name: user_id
+        type: string
+      - description: Start time (RFC3339)
+        in: query
+        name: start_time
+        type: string
+      - description: End time (RFC3339)
+        in: query
+        name: end_time
+        type: string
+      - description: Page size (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Page offset (default 0)
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get audit logs (Admin)
+      tags:
+      - admin
+  /api/v1/admin/audit/logs/:id:
+    get:
+      description: Get a specific audit log entry
+      parameters:
+      - description: Audit log ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get audit log by ID (Admin)
+      tags:
+      - admin
+  /api/v1/admin/auth/revoke-all/:userId:
+    post:
+      description: Revoke all refresh tokens for a user
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Revoke all sessions (Admin)
+      tags:
+      - auth
+  /api/v1/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with username/password
       parameters:
       - description: Login credentials
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.LoginRequest'
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: Login successful
+          description: OK
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.LoginResponse'
-        "400":
-          description: Invalid request format
-          schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.TokenResponse'
         "401":
-          description: Invalid credentials
+          description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "423":
           description: Account locked
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "429":
           description: Rate limit exceeded
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      summary: Login
+      tags:
+      - auth
+  /api/v1/auth/logout:
+    post:
+      description: Logout user and revoke tokens
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Logout
+      tags:
+      - auth
+  /api/v1/auth/me:
+    get:
+      description: Get information about the currently authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.GetMeResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get current user
+      tags:
+      - auth
+  /api/v1/auth/password/change:
+    post:
+      consumes:
+      - application/json
+      description: Change user password
+      parameters:
+      - description: Password change request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ChangePasswordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ChangePasswordResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      summary: Change password
+      tags:
+      - auth
+  /api/v1/auth/password/reset/confirm:
+    post:
+      consumes:
+      - application/json
+      description: Reset password using token from email
+      parameters:
+      - description: Token and new password
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.PasswordResetConfirmRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Invalid or expired token
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      summary: Confirm password reset
+      tags:
+      - auth
+  /api/v1/auth/password/reset/request:
+    post:
+      consumes:
+      - application/json
+      description: Request a password reset token via email
+      parameters:
+      - description: Email address
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.PasswordResetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "429":
+          description: Rate limit exceeded
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      summary: Request password reset
+      tags:
+      - auth
+  /api/v1/auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh access token using refresh token
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.TokenResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "409":
+          description: Token already used
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "429":
+          description: Rate limit exceeded
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      summary: Refresh token
+      tags:
+      - auth
+  /api/v1/auth/session-info:
+    get:
+      description: Get current session expiration information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get session info
+      tags:
+      - auth
+  /api/v1/auth/sessions:
+    get:
+      description: Get all active refresh tokens for current user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.SessionResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Get sessions
+      tags:
+      - auth
+  /api/v1/auth/sessions/:id:
+    delete:
+      description: Revoke a specific refresh token
+      parameters:
+      - description: Session ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete session
+      tags:
+      - auth
+  /api/v1/auth/sessions/revoke-all:
+    post:
+      description: Revoke all refresh tokens for the current authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Revoke all my sessions
+      tags:
+      - auth
+  /api/v1/beacon/token:
+    post:
+      consumes:
+      - application/json
+      description: Exchange API key for access token (RFC 6750 Bearer token in Authorization
+        header)
+      parameters:
+      - default: Bearer
+        description: Bearer API_KEY
+        in: header
+        name: Authorization
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Access token response
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      summary: Exchange API key
+      tags:
+      - auth
+  /beacon-groups/{gid}/config:
+    post:
+      consumes:
+      - application/json
+      description: Applies a configuration update to all beacons in a group. Requires
+        admin or operator role.
+      parameters:
+      - description: Beacon group ID
+        in: path
+        name: gid
+        required: true
+        type: string
+      - description: Batch configuration update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.BatchConfigUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Batch update completed
+          schema:
+            $ref: '#/definitions/internal_api.BatchConfigUpdateResponse'
+        "400":
+          description: Invalid request or config validation failed
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Batch update beacon group configuration
+      tags:
+      - Beacon
+  /beacon/heartbeat:
+    post:
+      consumes:
+      - application/json
+      description: Receives a heartbeat from a beacon node. Requires JWT authentication
+        with beacon role and mTLS.
+      parameters:
+      - description: Heartbeat data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.HeartbeatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Heartbeat received successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.HeartbeatSuccessResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires beacon role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
-      summary: User login
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Submit beacon heartbeat
       tags:
-      - auth
+      - Beacon
+  /beacon/heartbeat/compressed:
+    post:
+      consumes:
+      - application/json
+      description: Receives a gzip-compressed heartbeat from a beacon node. Requires
+        JWT authentication with beacon role and mTLS.
+      parameters:
+      - description: Compressed heartbeat data with CRC32 checksum
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.CompressedHeartbeatRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Compressed heartbeat received successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.HeartbeatSuccessResponse'
+        "400":
+          description: Invalid or corrupted compressed data
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires beacon role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Submit compressed beacon heartbeat
+      tags:
+      - Beacon
+  /beacons/{id}/config:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current probe configuration for a beacon.
+      parameters:
+      - description: Beacon UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Beacon configuration
+          schema:
+            $ref: '#/definitions/internal_api.BeaconConfigResponse'
+        "400":
+          description: Invalid beacon ID
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get beacon configuration
+      tags:
+      - Beacon
+    post:
+      consumes:
+      - application/json
+      description: Updates the probe configuration for a beacon. Requires admin or
+        operator role.
+      parameters:
+      - description: Beacon UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Configuration update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.BeaconConfigUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Beacon configuration updated
+          schema:
+            $ref: '#/definitions/internal_api.BeaconConfigResponse'
+        "400":
+          description: Invalid request or config validation failed
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update beacon configuration
+      tags:
+      - Beacon
+  /beacons/{id}/config/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the configuration change history for a beacon (last 50
+        entries).
+      parameters:
+      - description: Beacon UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Configuration history
+          schema:
+            $ref: '#/definitions/internal_api.ConfigHistoryResponse'
+        "400":
+          description: Invalid beacon ID
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get beacon configuration history
+      tags:
+      - Beacon
+  /beacons/{id}/config/preview:
+    post:
+      consumes:
+      - application/json
+      description: Validates a configuration update and returns a preview without
+        applying changes.
+      parameters:
+      - description: Beacon UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Configuration to preview
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.BeaconConfigUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Configuration preview result
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Preview beacon configuration changes
+      tags:
+      - Beacon
+  /data/comparison:
+    get:
+      consumes:
+      - application/json
+      description: Compares metrics across 2-5 nodes over a specified time range with
+        statistical analysis.
+      parameters:
+      - description: Node UUIDs to compare (2-5, repeatable)
+        in: query
+        name: node_ids
+        required: true
+        type: string
+      - description: Start time in ISO 8601 format
+        in: query
+        name: start_time
+        required: true
+        type: string
+      - description: End time in ISO 8601 format
+        in: query
+        name: end_time
+        required: true
+        type: string
+      - description: 'Metrics to compare: latency, packet_loss_rate, jitter (repeatable)'
+        in: query
+        name: metrics
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Comparison data
+          schema:
+            $ref: '#/definitions/internal_api.ComparisonResponse'
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: No data found for specified nodes
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get node comparison data
+      tags:
+      - Data
+  /data/diagnosis:
+    get:
+      consumes:
+      - application/json
+      description: Analyzes metrics across nodes to diagnose network problem types
+        (requires at least 3 nodes with data).
+      parameters:
+      - description: Node UUIDs to diagnose (repeatable; uses all nodes if empty)
+        in: query
+        name: node_ids
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Diagnosis result
+          schema:
+            $ref: '#/definitions/internal_api.DiagnosisResponse'
+        "400":
+          description: Insufficient data (need at least 3 nodes)
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get problem type diagnosis
+      tags:
+      - Data
+  /data/export:
+    post:
+      consumes:
+      - application/json
+      description: Creates an asynchronous export task for metrics data. Admin role
+        required.
+      parameters:
+      - description: Node UUIDs to export (1-50, repeatable)
+        in: query
+        name: node_ids
+        required: true
+        type: string
+      - description: Start time in ISO 8601 format
+        in: query
+        name: start_time
+        required: true
+        type: string
+      - description: End time in ISO 8601 format
+        in: query
+        name: end_time
+        required: true
+        type: string
+      - description: 'Metrics to export: latency, packet_loss_rate, jitter (repeatable)'
+        in: query
+        name: metrics
+        required: true
+        type: string
+      - default: csv
+        description: Export format (only csv supported)
+        in: query
+        name: format
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Export task created
+          schema:
+            $ref: '#/definitions/internal_api.CreateExportResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create data export task
+      tags:
+      - Export
+  /data/export/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Returns the current status of an export task. Admin role required.
+      parameters:
+      - description: Export task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Export task status
+          schema:
+            $ref: '#/definitions/internal_api.GetExportStatusResponse'
+        "400":
+          description: Missing export ID
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Export task not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get export task status
+      tags:
+      - Export
+  /data/export/{id}/download:
+    get:
+      description: Downloads the completed export file as CSV. Admin role required.
+      parameters:
+      - description: Export task ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - text/csv
+      responses:
+        "200":
+          description: CSV file download
+          schema:
+            type: file
+        "400":
+          description: Export not ready
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Export task or file not found
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Download export file
+      tags:
+      - Export
+  /data/history:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves historical time-series metrics for specified nodes and
+        metrics.
+      parameters:
+      - description: Node UUID(s) to query (repeatable)
+        in: query
+        name: node_id
+        required: true
+        type: string
+      - description: Start time in ISO 8601 format
+        in: query
+        name: start_time
+        required: true
+        type: string
+      - description: End time in ISO 8601 format
+        in: query
+        name: end_time
+        required: true
+        type: string
+      - description: 'Metric(s) to retrieve: latency, packet_loss_rate, jitter (repeatable)'
+        in: query
+        name: metric
+        required: true
+        type: string
+      - description: 'Aggregation interval: 1m, 5m, 1h'
+        enum:
+        - 1m
+        - 5m
+        - 1h
+        in: query
+        name: aggregation
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Historical data
+          schema:
+            $ref: '#/definitions/internal_api.HistoryResponse'
+        "400":
+          description: Invalid query parameters
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get historical metrics data
+      tags:
+      - Data
+  /data/metrics:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the most recent metrics for all nodes (or specific nodes)
+        from the last hour.
+      parameters:
+      - description: Filter by node UUID(s) (repeatable)
+        in: query
+        name: node_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Real-time metrics data
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+        "503":
+          description: Service unavailable (database not connected)
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get real-time metrics
+      tags:
+      - Data
+  /data/performance:
+    get:
+      consumes:
+      - application/json
+      description: Returns performance metrics with SLA targets, trend data, anomaly
+        detection, and overall system health status.
+      parameters:
+      - default: 24h
+        description: Time range (e.g. 24h, 7d)
+        in: query
+        name: time_range
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Performance data with targets and health status
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid time_range parameter
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get performance data with targets
+      tags:
+      - Metrics
   /health:
     get:
       consumes:
@@ -253,6 +3146,78 @@ paths:
       summary: Health check
       tags:
       - health
+  /metrics/performance:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves aggregated API performance metrics with optional filtering
+        by metric type, endpoint, and time range.
+      parameters:
+      - description: 'Metric type filter: api, dashboard, database'
+        enum:
+        - api
+        - dashboard
+        - database
+        in: query
+        name: metric_type
+        type: string
+      - description: Filter by endpoint path
+        in: query
+        name: endpoint
+        type: string
+      - description: 'Start time in ISO 8601 format (default: 1 hour ago)'
+        in: query
+        name: start_time
+        type: string
+      - description: 'End time in ISO 8601 format (default: now)'
+        in: query
+        name: end_time
+        type: string
+      - description: Aggregation window (e.g. 1m, 5m, 1h)
+        in: query
+        name: aggregation
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Performance metrics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get performance metrics
+      tags:
+      - Metrics
+  /metrics/stats:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves internal statistics from the metrics collector.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Collector statistics
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get collector statistics
+      tags:
+      - Metrics
   /nodes:
     get:
       consumes:
@@ -271,16 +3236,16 @@ paths:
           description: List of nodes
           schema:
             items:
-              $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.Node'
+              $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Node'
             type: array
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
       security:
       - BearerAuth: []
       summary: List all nodes
@@ -297,40 +3262,88 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.CreateNodeRequest'
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateNodeRequest'
       produces:
       - application/json
       responses:
         "200":
           description: Node updated successfully (duplicate found)
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.Node'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Node'
         "201":
           description: Node created successfully
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.Node'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Node'
         "400":
           description: Invalid request parameters
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "403":
           description: Forbidden (requires admin or operator role)
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new node
       tags:
       - nodes
   /nodes/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a node. Requires confirmation query parameter and admin
+        or operator role.
+      parameters:
+      - description: Node UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Must be 'true' to confirm deletion
+        in: query
+        name: confirm
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Node deleted successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.DeleteNodeResponse'
+        "400":
+          description: Invalid request or confirmation required
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Node not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a node
+      tags:
+      - nodes
     get:
       consumes:
       - application/json
@@ -347,28 +3360,545 @@ paths:
         "200":
           description: Node details
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.Node'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.Node'
         "400":
           description: Invalid UUID format
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "404":
           description: Node not found
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/github_com_kevin_node-pulse_pulse-api_internal_models.ErrorResponse'
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get node by ID
       tags:
       - nodes
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing node. Requires admin or operator role.
+      parameters:
+      - description: Node UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Node update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateNodeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Node updated successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateNodeResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Node not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a node
+      tags:
+      - nodes
+  /nodes/{id}/status:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the current operational status of a node including recent
+        metrics.
+      parameters:
+      - description: Node UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Node status
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.GetNodeStatusResponse'
+        "400":
+          description: Invalid UUID format
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Node not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get node status
+      tags:
+      - nodes
+  /probes:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all probe configurations. Optionally filtered by node_id.
+      parameters:
+      - description: Filter by node UUID
+        in: query
+        name: node_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of probes
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.GetProbesResponse'
+        "400":
+          description: Invalid node_id format
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List all probes
+      tags:
+      - Probes
+    post:
+      consumes:
+      - application/json
+      description: Creates a new probe configuration for a node. Requires admin or
+        operator role.
+      parameters:
+      - description: Probe creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateProbeRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Probe created successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateProbeResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Node not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a new probe
+      tags:
+      - Probes
+  /probes/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a probe configuration. Requires confirmation query parameter
+        and admin or operator role.
+      parameters:
+      - description: Probe UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Must be 'true' to confirm deletion
+        in: query
+        name: confirm
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Probe deleted successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.DeleteProbeResponse'
+        "400":
+          description: Invalid request or confirmation required
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Probe not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a probe
+      tags:
+      - Probes
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a probe configuration by its UUID.
+      parameters:
+      - description: Probe UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Probe details
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.GetProbeResponse'
+        "400":
+          description: Invalid UUID format
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Probe not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get probe by ID
+      tags:
+      - Probes
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing probe configuration. Requires admin or operator
+        role.
+      parameters:
+      - description: Probe UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Probe update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateProbeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Probe updated successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateProbeResponse'
+        "400":
+          description: Invalid request parameters
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "403":
+          description: Forbidden (requires admin or operator role)
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "404":
+          description: Probe not found
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a probe
+      tags:
+      - Probes
+  /webhooks:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all webhook configurations. Admin role required.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of webhook configurations
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.GetWebhooksResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List all webhooks
+      tags:
+      - Webhooks
+    post:
+      consumes:
+      - application/json
+      description: Creates a new webhook configuration. URL must use HTTPS. Admin
+        role required.
+      parameters:
+      - description: Webhook creation request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook created successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.CreateWebhookResponse'
+        "400":
+          description: Validation failed or invalid HTTPS URL
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a webhook configuration
+      tags:
+      - Webhooks
+  /webhooks/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Deletes a webhook configuration by its ID. Admin role required.
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook deleted successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.DeleteWebhookResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Delete a webhook
+      tags:
+      - Webhooks
+    get:
+      consumes:
+      - application/json
+      description: Retrieves a webhook configuration by its ID. Admin role required.
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook configuration
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateWebhookResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Get webhook by ID
+      tags:
+      - Webhooks
+    put:
+      consumes:
+      - application/json
+      description: Updates an existing webhook configuration. URL must use HTTPS if
+        provided. Admin role required.
+      parameters:
+      - description: Webhook ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Webhook update request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Webhook updated successfully
+          schema:
+            $ref: '#/definitions/github_com_whg517_node-pulse_pulse_internal_models.UpdateWebhookResponse'
+        "400":
+          description: Validation failed or invalid HTTPS URL
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Forbidden (requires admin role)
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Webhook not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a webhook
+      tags:
+      - Webhooks
 securityDefinitions:
   BearerAuth:
     description: Enter the token with the `Bearer ` prefix, e.g. "Bearer abcde12345"

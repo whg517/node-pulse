@@ -399,6 +399,21 @@ func (h *NodeHandler) GetNodeByIDHandler(c *gin.Context) {
 }
 
 // UpdateNodeHandler handles PUT /api/v1/nodes/:id
+// @Summary		Update a node
+// @Description	Updates an existing node. Requires admin or operator role.
+// @Tags			nodes
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string						true	"Node UUID"
+// @Param			request	body		models.UpdateNodeRequest	true	"Node update request"
+// @Success		200		{object}	models.UpdateNodeResponse	"Node updated successfully"
+// @Failure		400		{object}	models.ErrorResponse		"Invalid request parameters"
+// @Failure		401		{object}	models.ErrorResponse		"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse		"Forbidden (requires admin or operator role)"
+// @Failure		404		{object}	models.ErrorResponse		"Node not found"
+// @Failure		500		{object}	models.ErrorResponse		"Internal server error"
+// @Security		BearerAuth
+// @Router			/nodes/{id} [put]
 func (h *NodeHandler) UpdateNodeHandler(c *gin.Context) {
 	// RBAC is handled by middleware - only admin/operator can reach this handler
 
@@ -532,6 +547,21 @@ func (h *NodeHandler) UpdateNodeHandler(c *gin.Context) {
 }
 
 // DeleteNodeHandler handles DELETE /api/v1/nodes/:id
+// @Summary		Delete a node
+// @Description	Deletes a node. Requires confirmation query parameter and admin or operator role.
+// @Tags			nodes
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string					true	"Node UUID"
+// @Param			confirm	query		string					true	"Must be 'true' to confirm deletion"
+// @Success		200		{object}	models.DeleteNodeResponse	"Node deleted successfully"
+// @Failure		400		{object}	models.ErrorResponse		"Invalid request or confirmation required"
+// @Failure		401		{object}	models.ErrorResponse		"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse		"Forbidden (requires admin or operator role)"
+// @Failure		404		{object}	models.ErrorResponse		"Node not found"
+// @Failure		500		{object}	models.ErrorResponse		"Internal server error"
+// @Security		BearerAuth
+// @Router			/nodes/{id} [delete]
 func (h *NodeHandler) DeleteNodeHandler(c *gin.Context) {
 	// RBAC is handled by middleware - only admin/operator can reach this handler
 
@@ -626,6 +656,19 @@ func isValidIPv6(ip string) bool {
 }
 
 // GetNodeStatusHandler handles GET /api/v1/nodes/:id/status
+// @Summary		Get node status
+// @Description	Retrieves the current operational status of a node including recent metrics.
+// @Tags			nodes
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string						true	"Node UUID"
+// @Success		200	{object}	models.GetNodeStatusResponse	"Node status"
+// @Failure		400	{object}	models.ErrorResponse			"Invalid UUID format"
+// @Failure		401	{object}	models.ErrorResponse			"Unauthorized"
+// @Failure		404	{object}	models.ErrorResponse			"Node not found"
+// @Failure		500	{object}	models.ErrorResponse			"Internal server error"
+// @Security		BearerAuth
+// @Router			/nodes/{id}/status [get]
 func (h *NodeHandler) GetNodeStatusHandler(c *gin.Context) {
 	// All roles can view node status (admin, operator, viewer) - auth is handled by middleware
 

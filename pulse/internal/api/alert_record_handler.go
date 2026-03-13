@@ -25,6 +25,24 @@ func NewAlertRecordHandler(pool *pgxpool.Pool) *AlertRecordHandler {
 }
 
 // GetAlertRecordsHandler retrieves alert records with optional filtering
+// @Summary		List alert records
+// @Description	Retrieves alert records with optional filtering by node_id, level, status, and time range.
+// @Tags			Alert Records
+// @Accept			json
+// @Produce		json
+// @Param			node_id		query		string	false	"Filter by node UUID"
+// @Param			level		query		string	false	"Filter by level (P0, P1, P2)"					Enums(P0, P1, P2)
+// @Param			status		query		string	false	"Filter by status (pending, in_progress, resolved)"	Enums(pending, in_progress, resolved)
+// @Param			start_time	query		string	false	"Filter from this time (ISO 8601)"
+// @Param			end_time	query		string	false	"Filter until this time (ISO 8601)"
+// @Param			limit		query		int		false	"Maximum records to return (1-100)"		default(50)
+// @Param			offset		query		int		false	"Records to skip"						default(0)
+// @Success		200	{object}	map[string]interface{}	"List of alert records"
+// @Failure		400	{object}	map[string]interface{}	"Invalid query parameters"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		500	{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/records [get]
 func (h *AlertRecordHandler) GetAlertRecordsHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	pool := h.pool
@@ -138,6 +156,20 @@ func (h *AlertRecordHandler) GetAlertRecordsHandler(c *gin.Context) {
 }
 
 // UpdateAlertRecordStatusHandler updates the status of an alert record
+// @Summary		Update alert record status
+// @Description	Updates the status of an alert record. Valid status transitions: pending→in_progress, in_progress→resolved.
+// @Tags			Alert Records
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string					true	"Alert record ID"
+// @Param			request	body		object					true	"Status update request"
+// @Success		200		{object}	map[string]interface{}	"Alert record status updated"
+// @Failure		400		{object}	map[string]interface{}	"Invalid request or status transition"
+// @Failure		401		{object}	map[string]interface{}	"Unauthorized"
+// @Failure		404		{object}	map[string]interface{}	"Alert record not found"
+// @Failure		500		{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/records/{id}/status [put]
 func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	pool := h.pool

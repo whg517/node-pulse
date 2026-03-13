@@ -56,6 +56,19 @@ func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCach
 }
 
 // HandleHeartbeat handles POST /api/v1/beacon/heartbeat
+// @Summary		Submit beacon heartbeat
+// @Description	Receives a heartbeat from a beacon node. Requires JWT authentication with beacon role and mTLS.
+// @Tags			Beacon
+// @Accept			json
+// @Produce		json
+// @Param			request	body		models.HeartbeatRequest			true	"Heartbeat data"
+// @Success		200		{object}	models.HeartbeatSuccessResponse	"Heartbeat received successfully"
+// @Failure		400		{object}	models.ErrorResponse			"Invalid request parameters"
+// @Failure		401		{object}	models.ErrorResponse			"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse			"Forbidden (requires beacon role)"
+// @Failure		500		{object}	models.ErrorResponse			"Internal server error"
+// @Security		BearerAuth
+// @Router			/beacon/heartbeat [post]
 func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 	// Get user info from context (set by JWTAuthMiddleware)
 	userID, err := middleware.GetUserID(c)
@@ -302,6 +315,19 @@ type CompressedHeartbeatRequest struct {
 
 // HandleCompressedHeartbeat handles POST /api/v1/beacon/heartbeat/compressed
 // Supports gzip-compressed heartbeat data (FR-4.1.5)
+// @Summary		Submit compressed beacon heartbeat
+// @Description	Receives a gzip-compressed heartbeat from a beacon node. Requires JWT authentication with beacon role and mTLS.
+// @Tags			Beacon
+// @Accept			json
+// @Produce		json
+// @Param			request	body		CompressedHeartbeatRequest		true	"Compressed heartbeat data with CRC32 checksum"
+// @Success		200		{object}	models.HeartbeatSuccessResponse	"Compressed heartbeat received successfully"
+// @Failure		400		{object}	models.ErrorResponse			"Invalid or corrupted compressed data"
+// @Failure		401		{object}	models.ErrorResponse			"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse			"Forbidden (requires beacon role)"
+// @Failure		500		{object}	models.ErrorResponse			"Internal server error"
+// @Security		BearerAuth
+// @Router			/beacon/heartbeat/compressed [post]
 func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 	// Get user info from context (set by JWTAuthMiddleware)
 	userID, err := middleware.GetUserID(c)
@@ -562,6 +588,17 @@ var (
 )
 
 // GetBeaconConfig handles GET /api/v1/beacons/:id/config
+// @Summary		Get beacon configuration
+// @Description	Retrieves the current probe configuration for a beacon.
+// @Tags			Beacon
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string				true	"Beacon UUID"
+// @Success		200	{object}	BeaconConfigResponse	"Beacon configuration"
+// @Failure		400	{object}	models.ErrorResponse	"Invalid beacon ID"
+// @Failure		401	{object}	models.ErrorResponse	"Unauthorized"
+// @Security		BearerAuth
+// @Router			/beacons/{id}/config [get]
 func (h *BeaconHandler) GetBeaconConfig(c *gin.Context) {
 	beaconID := c.Param("id")
 
@@ -598,6 +635,19 @@ func (h *BeaconHandler) GetBeaconConfig(c *gin.Context) {
 }
 
 // UpdateBeaconConfig handles POST /api/v1/beacons/:id/config
+// @Summary		Update beacon configuration
+// @Description	Updates the probe configuration for a beacon. Requires admin or operator role.
+// @Tags			Beacon
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string						true	"Beacon UUID"
+// @Param			request	body		BeaconConfigUpdateRequest	true	"Configuration update request"
+// @Success		200		{object}	BeaconConfigResponse		"Beacon configuration updated"
+// @Failure		400		{object}	models.ErrorResponse		"Invalid request or config validation failed"
+// @Failure		401		{object}	models.ErrorResponse		"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse		"Forbidden (requires admin or operator role)"
+// @Security		BearerAuth
+// @Router			/beacons/{id}/config [post]
 func (h *BeaconHandler) UpdateBeaconConfig(c *gin.Context) {
 	beaconID := c.Param("id")
 
@@ -678,6 +728,17 @@ func (h *BeaconHandler) UpdateBeaconConfig(c *gin.Context) {
 }
 
 // GetBeaconConfigHistory handles GET /api/v1/beacons/:id/config/history
+// @Summary		Get beacon configuration history
+// @Description	Retrieves the configuration change history for a beacon (last 50 entries).
+// @Tags			Beacon
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string					true	"Beacon UUID"
+// @Success		200	{object}	ConfigHistoryResponse	"Configuration history"
+// @Failure		400	{object}	models.ErrorResponse	"Invalid beacon ID"
+// @Failure		401	{object}	models.ErrorResponse	"Unauthorized"
+// @Security		BearerAuth
+// @Router			/beacons/{id}/config/history [get]
 func (h *BeaconHandler) GetBeaconConfigHistory(c *gin.Context) {
 	beaconID := c.Param("id")
 
@@ -729,6 +790,19 @@ type BatchConfigResult struct {
 }
 
 // BatchUpdateBeaconGroupConfig handles POST /api/v1/beacon-groups/:gid/config
+// @Summary		Batch update beacon group configuration
+// @Description	Applies a configuration update to all beacons in a group. Requires admin or operator role.
+// @Tags			Beacon
+// @Accept			json
+// @Produce		json
+// @Param			gid		path		string						true	"Beacon group ID"
+// @Param			request	body		BatchConfigUpdateRequest	true	"Batch configuration update request"
+// @Success		200		{object}	BatchConfigUpdateResponse	"Batch update completed"
+// @Failure		400		{object}	models.ErrorResponse		"Invalid request or config validation failed"
+// @Failure		401		{object}	models.ErrorResponse		"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse		"Forbidden (requires admin or operator role)"
+// @Security		BearerAuth
+// @Router			/beacon-groups/{gid}/config [post]
 func (h *BeaconHandler) BatchUpdateBeaconGroupConfig(c *gin.Context) {
 	groupID := c.Param("gid")
 
@@ -857,6 +931,18 @@ func validateBeaconConfig(req *BeaconConfigUpdateRequest) error {
 
 // GetConfigPreview handles POST /api/v1/beacons/:id/config/preview
 // Returns validation result without applying changes
+// @Summary		Preview beacon configuration changes
+// @Description	Validates a configuration update and returns a preview without applying changes.
+// @Tags			Beacon
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string						true	"Beacon UUID"
+// @Param			request	body		BeaconConfigUpdateRequest	true	"Configuration to preview"
+// @Success		200		{object}	map[string]interface{}		"Configuration preview result"
+// @Failure		400		{object}	models.ErrorResponse		"Invalid request"
+// @Failure		401		{object}	models.ErrorResponse		"Unauthorized"
+// @Security		BearerAuth
+// @Router			/beacons/{id}/config/preview [post]
 func (h *BeaconHandler) GetConfigPreview(c *gin.Context) {
 	beaconID := c.Param("id")
 

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/whg517/node-pulse/pulse/internal/auth"
+	_ "github.com/whg517/node-pulse/pulse/internal/models" // imported for swagger type resolution
 )
 
 // AdminAuditHandler handles audit log query endpoints for admins
