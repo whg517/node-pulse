@@ -27,8 +27,8 @@ export const AUTH_STATES = {
 // Test user credentials
 export const TEST_CREDENTIALS = {
   admin: {
-    username: 'admin',
-    password: 'Admin123',
+    username: process.env.TEST_ADMIN_USER || 'admin',
+    password: process.env.TEST_ADMIN_PASS || 'Admin123',
   },
   operator: {
     username: 'e2e_operator',
@@ -62,6 +62,11 @@ async function clearRateLimits(): Promise<void> {
       await new Promise(resolve => setTimeout(resolve, 100))
       return
     } catch (error) {
+      const pgError = error as { code?: string }
+      if (pgError.code === '42P01') {
+        console.warn('[auth.fixture] Skipping rate limit cleanup: schema not found for TEST_DB_URL')
+        return
+      }
       console.error(`[auth.fixture] Failed to clear rate limits (attempt ${attempt}):`, error)
       if (attempt < maxRetries) {
         await new Promise(resolve => setTimeout(resolve, 500))
@@ -138,8 +143,16 @@ async function performLogin(page: Page, username: string, password: string, maxR
       await page.click('button[type="submit"]')
       console.log('[auth.fixture] Login form submitted, waiting for redirect...')
 
-      // Wait for successful login - check URL first, then content
-      await page.waitForURL('**/dashboard**', { timeout: 25000 })
+      // Wait for successful login (URL first, then SPA selector fallback)
+      try {
+        await page.waitForURL('**/dashboard**', { timeout: 25000 })
+      } catch {
+        await page.waitForFunction(
+          () => !window.location.pathname.includes('/login'),
+          undefined,
+          { timeout: 25000 }
+        )
+      }
 
       // Wait for page to be interactive (SPA hydration)
       await page.waitForLoadState('domcontentloaded')

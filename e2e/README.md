@@ -234,4 +234,6 @@ Rate-limit behavior is still verified separately in CI by a dedicated backend in
 | TEST_DB_URL | postgresql://testuser:testpass123@localhost:5432/nodepulse_test | Test database URL |
 | API_BASE_URL | http://localhost:6532 | Backend API URL |
 | FRONTEND_BASE_URL | http://localhost:5173 | Frontend URL |
+| TEST_ADMIN_USER | admin | Admin username used by E2E login flows |
+| TEST_ADMIN_PASS | Admin123 | Admin password used by E2E login flows |
 | PULSE_RATE_LIMIT_ENABLED | false (in `docker-compose.e2e.yml`) | Enable/disable backend rate limiting for test stack |

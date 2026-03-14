@@ -11,6 +11,9 @@
 import { test, expect } from '../../fixtures/auth.fixture'
 import { LoginPage } from '../../pages/LoginPage'
 
+const ADMIN_USERNAME = process.env.TEST_ADMIN_USER || 'admin'
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASS || 'Admin123'
+
 test.describe('Login Flow', () => {
   let loginPage: LoginPage
 
@@ -21,7 +24,7 @@ test.describe('Login Flow', () => {
 
   test('AC-1: valid credentials login successfully', async ({ page }) => {
     // Use default admin credentials
-    await loginPage.login('admin', 'Admin123')
+    await loginPage.login(ADMIN_USERNAME, ADMIN_PASSWORD)
 
     // Wait for response (either redirect to dashboard or error)
     await page.waitForTimeout(3000)
@@ -61,7 +64,7 @@ test.describe('Login Flow', () => {
   })
 
   test('login form submission works', async ({ page }) => {
-    await loginPage.login('admin', 'Admin123')
+    await loginPage.login(ADMIN_USERNAME, ADMIN_PASSWORD)
 
     // Wait for form submission to complete
     await page.waitForTimeout(3000)
@@ -183,8 +186,8 @@ test.describe('Login Form', () => {
 
   test('submit button click works', async () => {
     // Fill form and submit
-    await loginPage.usernameInput.fill('admin')
-    await loginPage.passwordInput.fill('Admin123')
+    await loginPage.usernameInput.fill(ADMIN_USERNAME)
+    await loginPage.passwordInput.fill(ADMIN_PASSWORD)
 
     // Click submit - this will navigate away
     await loginPage.submitButton.click()
