@@ -155,6 +155,7 @@ secrets/
 e2e/screenshots/
 
 # ai coding
+.playwright-mcp/
 _bmad*
 _bmad-output/
 .claude/skills/bmad-*
