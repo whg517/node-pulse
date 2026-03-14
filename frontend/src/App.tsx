@@ -20,6 +20,7 @@ const ReportsPage = lazy(() => import('./pages/Reports'))
 const PreferencesPage = lazy(() => import('./pages/PreferencesPage'))
 const UsersPage = lazy(() => import('./pages/UsersPage'))
 const SystemHealthPage = lazy(() => import('./pages/SystemHealthPage'))
+const PerformanceDashboard = lazy(() => import('./pages/PerformanceDashboard'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 /**
@@ -84,6 +85,9 @@ function App() {
           <Route path="/alerts/records" element={<AlertRecordsPage />} />
           <Route path="/alerts/history" element={<AlertHistoryPage />} />
 
+          {/* Performance */}
+          <Route path="/performance" element={<PerformanceDashboard />} />
+
           {/* Reports */}
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/reports/history" element={<DataExportPage />} />
@@ -98,6 +102,11 @@ function App() {
           <Route path="/settings/preferences" element={<PreferencesPage />} />
           <Route path="/settings/sessions" element={<SessionsPage />} />
           <Route path="/settings/users" element={<UsersPage />} />
+
+          {/* Short aliases for E2E and legacy navigation */}
+          <Route path="/webhooks" element={<Navigate to="/integrations/webhooks" replace />} />
+          <Route path="/sessions" element={<Navigate to="/settings/sessions" replace />} />
+          <Route path="/comparison" element={<Navigate to="/nodes/comparison" replace />} />
         </Route>
 
         {/* 404 - Not Found */}

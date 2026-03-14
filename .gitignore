@@ -145,3 +145,8 @@ trace.zip
 secrets/
 .secrets/
 e2e/screenshots/
+
+# ai coding
+_bmad*
+.claude/skills/bmad-*
+.windsurf/skills/
