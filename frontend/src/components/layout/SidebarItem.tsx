@@ -37,7 +37,7 @@ export function SidebarItem({ icon, label, path, badge, isCollapsed }: SidebarIt
         className={({ isActive }) =>
           `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200
           ${isActive
-            ? 'bg-blue-600 text-white dark:bg-blue-500'
+            ? 'bg-blue-600 text-white dark:bg-blue-900/50 dark:text-blue-300'
             : 'text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800'
           }
           ${isCollapsed ? 'justify-center px-2' : ''}`

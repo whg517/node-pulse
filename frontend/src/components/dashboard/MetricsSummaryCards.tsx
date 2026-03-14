@@ -55,22 +55,22 @@ function getMetricColor(value: number, threshold: number): {
 } {
   if (value >= threshold) {
     return {
-      bg: 'bg-red-50',
-      text: 'text-red-700',
-      icon: 'text-red-500',
+      bg: 'bg-red-50 dark:bg-red-900/20',
+      text: 'text-red-700 dark:text-red-300',
+      icon: 'text-red-500 dark:text-red-400',
     }
   }
   if (value >= threshold * 0.8) {
     return {
-      bg: 'bg-yellow-50',
-      text: 'text-yellow-700',
-      icon: 'text-yellow-500',
+      bg: 'bg-yellow-50 dark:bg-yellow-900/20',
+      text: 'text-yellow-700 dark:text-yellow-300',
+      icon: 'text-yellow-500 dark:text-yellow-400',
     }
   }
   return {
-    bg: 'bg-green-50',
-    text: 'text-green-700',
-    icon: 'text-green-500',
+    bg: 'bg-green-50 dark:bg-green-900/20',
+    text: 'text-green-700 dark:text-green-300',
+    icon: 'text-green-500 dark:text-green-400',
   }
 }
 
@@ -105,10 +105,10 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
     return (
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-white shadow rounded-lg p-6">
+          <div key={i} className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
             <div className="animate-pulse">
-              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-              <div className="h-8 bg-gray-200 rounded w-3/4"></div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
             </div>
           </div>
         ))}
@@ -119,7 +119,7 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {/* Average Latency Card */}
-      <div className={`${latencyColor.bg} rounded-lg shadow overflow-hidden`}>
+      <div className={`${latencyColor.bg} rounded-lg shadow overflow-hidden dark:shadow-gray-900`}>
         <div className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -158,14 +158,14 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
           </div>
         </div>
         <div className={`${latencyColor.bg} px-6 py-3`}>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             Across {summary.totalNodes} {summary.totalNodes === 1 ? 'node' : 'nodes'}
           </div>
         </div>
       </div>
 
       {/* Average Packet Loss Card */}
-      <div className={`${packetLossColor.bg} rounded-lg shadow overflow-hidden`}>
+      <div className={`${packetLossColor.bg} rounded-lg shadow overflow-hidden dark:shadow-gray-900`}>
         <div className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -204,14 +204,14 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
           </div>
         </div>
         <div className={`${packetLossColor.bg} px-6 py-3`}>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             Across {summary.totalNodes} {summary.totalNodes === 1 ? 'node' : 'nodes'}
           </div>
         </div>
       </div>
 
       {/* Average Jitter Card */}
-      <div className={`${jitterColor.bg} rounded-lg shadow overflow-hidden`}>
+      <div className={`${jitterColor.bg} rounded-lg shadow overflow-hidden dark:shadow-gray-900`}>
         <div className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -250,7 +250,7 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
           </div>
         </div>
         <div className={`${jitterColor.bg} px-6 py-3`}>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             Across {summary.totalNodes} {summary.totalNodes === 1 ? 'node' : 'nodes'}
           </div>
         </div>

@@ -33,7 +33,7 @@ export default function PreferencesPage() {
         showBreadcrumb
       />
 
-      <div className="max-w-2xl">
+      <div>
         <div className="rounded-lg border shadow-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
           {/* Timezone Setting */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-700">
