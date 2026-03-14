@@ -172,10 +172,12 @@ func (s *SessionService) CreateSession(ctx context.Context, userID string, ipAdd
 	}
 	maxValidUntil := now.Add(DefaultMaxValidity)
 
-	// Handle empty IP address
-	var ipAddressPtr *string
+	// Handle empty IP address - sessions.ip_address is INET type, use netip.Addr
+	var ipAddressPtr *netip.Addr
 	if ipAddress != "" {
-		ipAddressPtr = &ipAddress
+		if addr, err := netip.ParseAddr(ipAddress); err == nil {
+			ipAddressPtr = &addr
+		}
 	}
 
 	// Handle empty user agent

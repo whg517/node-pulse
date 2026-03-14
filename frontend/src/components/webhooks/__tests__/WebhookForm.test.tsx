@@ -14,8 +14,8 @@ describe('WebhookForm', () => {
       />
     )
 
-    expect(screen.getByLabelText( /webhooks.webhookUrl/i )).toBeInTheDocument()
-    expect(screen.getByLabelText( /webhooks.eventFormat/i )).toBeInTheDocument()
+    expect(screen.getByLabelText( /webhooks\.webhookUrl/i )).toBeInTheDocument()
+    expect(screen.getByLabelText( /webhooks\.eventFormat/i )).toBeInTheDocument()
     expect(screen.getByLabelText('status.enabled')).toBeInTheDocument()
   })
 
@@ -29,13 +29,13 @@ describe('WebhookForm', () => {
       />
     )
 
-    const urlInput = screen.getByLabelText( /webhooks.webhookUrl/i )
+    const urlInput = screen.getByLabelText( /webhooks\.webhookUrl/i )
     fireEvent.change(urlInput, { target: { value: 'http://example.com/webhook' } })
 
     const submitButton = screen.getByText('webhooks.addWebhook')
     fireEvent.click(submitButton)
 
-    expect(await screen.findByText(/webhooks.errorUrlHttps/i)).toBeInTheDocument()
+    expect(await screen.findByText(/webhooks\.errorUrlHttps/i)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
@@ -49,13 +49,13 @@ describe('WebhookForm', () => {
       />
     )
 
-    const eventFormatTextarea = screen.getByLabelText( /webhooks.eventFormat/i )
+    const eventFormatTextarea = screen.getByLabelText( /webhooks\.eventFormat/i )
     fireEvent.change(eventFormatTextarea, { target: { value: '{ invalid json' } })
 
     const submitButton = screen.getByText('webhooks.addWebhook')
     fireEvent.click(submitButton)
 
-    expect(await screen.findByText(/webhooks.errorFormatInvalid/i)).toBeInTheDocument()
+    expect(await screen.findByText(/webhooks\.errorFormatInvalid/i)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
@@ -69,7 +69,7 @@ describe('WebhookForm', () => {
       />
     )
 
-    const urlInput = screen.getByLabelText( /webhooks.webhookUrl/i )
+    const urlInput = screen.getByLabelText( /webhooks\.webhookUrl/i )
     fireEvent.change(urlInput, { target: { value: 'https://example.com/webhook' } })
 
     const submitButton = screen.getByText('webhooks.addWebhook')
@@ -101,7 +101,7 @@ describe('WebhookForm', () => {
       />
     )
 
-    const urlInput = screen.getByLabelText( /webhooks.webhookUrl/i ) as HTMLInputElement
+    const urlInput = screen.getByLabelText( /webhooks\.webhookUrl/i ) as HTMLInputElement
     const enabledCheckbox = screen.getByLabelText('status.enabled') as HTMLInputElement
 
     expect(urlInput.value).toBe('https://example.com/webhook')
@@ -136,7 +136,7 @@ describe('WebhookForm', () => {
     const resetButton = screen.getByText('webhooks.resetToDefault')
     fireEvent.click(resetButton)
 
-    const eventFormatTextarea = screen.getByLabelText( /webhooks.eventFormat/i )
+    const eventFormatTextarea = screen.getByLabelText( /webhooks\.eventFormat/i ) as HTMLTextAreaElement
     const value = eventFormatTextarea.value
     expect(value).toContain('"version"')
     expect(value).toContain('"1.0"')

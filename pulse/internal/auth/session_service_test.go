@@ -176,25 +176,49 @@ func TestRefreshTokenRotation_Success(t *testing.T) {
 
 // TestConcurrentUseDetection tests that concurrent token use is detected
 func TestConcurrentUseDetection(t *testing.T) {
-	pool := setupTestDB(t)
-	refreshTokenService := NewRefreshTokenService(pool)
-	sessionService := NewSessionService(pool, refreshTokenService)
+	t.Run("DifferentIPReplay", func(t *testing.T) {
+		pool := setupTestDB(t)
+		refreshTokenService := NewRefreshTokenService(pool)
+		sessionService := NewSessionService(pool, refreshTokenService)
 
-	ctx := context.Background()
-	userID := createTestUser(t, pool)
+		ctx := context.Background()
+		userID := createTestUser(t, pool)
 
-	// Create initial session
-	_, oldRefreshToken, _, err := sessionService.CreateSession(ctx, userID, "192.168.1.1", "Test Browser", false)
-	require.NoError(t, err)
+		// Create initial session
+		_, oldRefreshToken, _, err := sessionService.CreateSession(ctx, userID, "192.168.1.1", "Test Browser", false)
+		require.NoError(t, err)
 
-	// First refresh should succeed
-	_, _, err = sessionService.RefreshSession(ctx, oldRefreshToken, "192.168.1.1", "Test Browser")
-	require.NoError(t, err)
+		// First refresh should succeed
+		_, _, err = sessionService.RefreshSession(ctx, oldRefreshToken, "192.168.1.1", "Test Browser")
+		require.NoError(t, err)
 
-	// Second refresh with same token from different IP should fail (token already used)
-	_, _, err = sessionService.RefreshSession(ctx, oldRefreshToken, "10.0.0.99", "Test Browser")
-	require.Error(t, err, "Should reject reused token from different IP")
-	assert.Contains(t, err.Error(), "already used")
+		// Second refresh with same token from different IP should fail (token already used)
+		_, _, err = sessionService.RefreshSession(ctx, oldRefreshToken, "10.0.0.99", "Test Browser")
+		require.Error(t, err, "Should reject reused token from different IP")
+		assert.Contains(t, err.Error(), "already used")
+	})
+
+	t.Run("SameIPReplay", func(t *testing.T) {
+		pool := setupTestDB(t)
+		refreshTokenService := NewRefreshTokenService(pool)
+		sessionService := NewSessionService(pool, refreshTokenService)
+
+		ctx := context.Background()
+		userID := createTestUser(t, pool)
+
+		// Create initial session
+		_, oldRefreshToken, _, err := sessionService.CreateSession(ctx, userID, "192.168.1.1", "Test Browser", false)
+		require.NoError(t, err)
+
+		// First refresh rotates the token
+		_, _, err = sessionService.RefreshSession(ctx, oldRefreshToken, "192.168.1.1", "Test Browser")
+		require.NoError(t, err)
+
+		// Second refresh with same (now-revoked) token from same IP within grace period is allowed
+		// (grace period protects against concurrent-tab race conditions)
+		_, _, err = sessionService.RefreshSession(ctx, oldRefreshToken, "192.168.1.1", "Test Browser")
+		assert.NoError(t, err, "Same-IP replay within grace period should be allowed (concurrent tab protection)")
+	})
 }
 
 // TestGracePeriodHandling tests grace period for concurrent refresh attempts
