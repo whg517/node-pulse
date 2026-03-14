@@ -31,7 +31,7 @@ log_level: "INFO"
 	}
 
 	// Run beacon start command using go run
-	cmd := exec.Command("go", "run", "../main.go", "start", "--config", tmpFile)
+	cmd := exec.Command("go", "run", "../cmd", "start", "--config", tmpFile)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to run beacon start: %v, output: %s", err, string(output))
@@ -76,7 +76,7 @@ log_level: "INFO"
 	}
 
 	// Run beacon stop command using go run
-	cmd := exec.Command("go", "run", "../main.go", "stop", "--config", tmpFile)
+	cmd := exec.Command("go", "run", "../cmd", "stop", "--config", tmpFile)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to run beacon stop: %v, output: %s", err, string(output))
@@ -113,7 +113,7 @@ log_level: "INFO"
 	}
 
 	// Run beacon status command using go run
-	cmd := exec.Command("go", "run", "../main.go", "status", "--config", tmpFile)
+	cmd := exec.Command("go", "run", "../cmd", "status", "--config", tmpFile)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to run beacon status: %v, output: %s", err, string(output))
@@ -173,7 +173,7 @@ probes:
 	}
 
 	// Run beacon debug command using go run
-	cmd := exec.Command("go", "run", "../main.go", "debug", "--config", tmpFile)
+	cmd := exec.Command("go", "run", "../cmd", "debug", "--config", tmpFile)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to run beacon debug: %v, output: %s", err, string(output))
@@ -311,7 +311,7 @@ probes:
 	}
 
 	// Run beacon debug command with --pretty flag
-	cmd := exec.Command("go", "run", "../main.go", "debug", "--pretty", "--config", tmpFile)
+	cmd := exec.Command("go", "run", "../cmd", "debug", "--pretty", "--config", tmpFile)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to run beacon debug --pretty: %v, output: %s", err, string(output))
@@ -363,7 +363,7 @@ debug_mode: true
 	}
 
 	// Run beacon debug command
-	cmd := exec.Command("go", "run", "../main.go", "debug", "--config", tmpFile)
+	cmd := exec.Command("go", "run", "../cmd", "debug", "--config", tmpFile)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Failed to run beacon debug: %v, output: %s", err, string(output))
@@ -387,7 +387,7 @@ func TestIntegration_InvalidCommandError(t *testing.T) {
 	}
 
 	// Run beacon with invalid command using go run
-	cmd := exec.Command("go", "run", "../main.go", "invalid-command")
+	cmd := exec.Command("go", "run", "../cmd", "invalid-command")
 	var stderr bytes.Buffer
 	cmd.Stderr = &stderr
 	err := cmd.Run()

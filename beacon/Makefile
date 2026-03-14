@@ -13,14 +13,14 @@ build:
 	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) \
 		go build -ldflags "-extldflags '-static'" \
 		-o $(BUILD_DIR)/$(BINARY_NAME) \
-		.
+		./cmd
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Build for current platform
 build-local:
 	@echo "Building $(BINARY_NAME) for current platform..."
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) .
+	go build -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd
 	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 # Run tests
@@ -61,4 +61,4 @@ install: build
 # Run the beacon
 run:
 	@echo "Running $(BINARY_NAME)..."
-	go run .
+	go run ./cmd
