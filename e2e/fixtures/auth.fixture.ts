@@ -56,6 +56,16 @@ async function clearRateLimits(): Promise<void> {
       const { Pool } = await import('pg')
       const pool = new Pool({ connectionString: TEST_DB_URL })
       await pool.query('DELETE FROM rate_limits')
+      await pool.query(
+        `UPDATE users
+         SET failed_login_attempts = 0, locked_until = NULL
+         WHERE username = ANY($1::text[])`,
+        [[
+          TEST_CREDENTIALS.admin.username,
+          TEST_CREDENTIALS.operator.username,
+          TEST_CREDENTIALS.viewer.username,
+        ]]
+      )
       await pool.end()
       console.log('[auth.fixture] Rate limits cleared')
       // Small delay to ensure DB propagation
@@ -145,13 +155,17 @@ async function performLogin(page: Page, username: string, password: string, maxR
 
       // Wait for successful login (URL first, then SPA selector fallback)
       try {
-        await page.waitForURL('**/dashboard**', { timeout: 25000 })
+        await page.waitForURL('**/dashboard**', { timeout: 12000 })
       } catch {
-        await page.waitForFunction(
-          () => !window.location.pathname.includes('/login'),
-          undefined,
-          { timeout: 25000 }
-        )
+        if (page.url().includes('/dashboard')) {
+          // URL already updated but waitForURL missed SPA transition
+        } else {
+          await page.waitForFunction(
+            () => !window.location.pathname.includes('/login'),
+            undefined,
+            { timeout: 12000 }
+          )
+        }
       }
 
       // Wait for page to be interactive (SPA hydration)
@@ -217,47 +231,10 @@ async function createAuthenticatedContext(
   role: Role
 ): Promise<{ context: BrowserContext; page: Page }> {
   const credentials = TEST_CREDENTIALS[role]
-  const statePath = AUTH_STATES[role]
-
-  // Try to copy from global auth state first
-  copyGlobalAuthState(role)
-
-  let context: BrowserContext
-  let page: Page
-
-  // Try to use saved storage state first
-  if (hasValidStorageState(role)) {
-    console.log(`[auth.fixture] Using saved storage state for ${role}`)
-    context = await browser.newContext({ storageState: statePath })
-    page = await context.newPage()
-
-    // Verify the session is still valid
-    const isValid = await verifyAuthState(page, role)
-
-    if (!isValid) {
-      console.log(`[auth.fixture] Saved state expired for ${role}, performing fresh login`)
-      await context.close()
-      await clearRateLimits()
-
-      context = await browser.newContext()
-      page = await context.newPage()
-      await performLogin(page, credentials.username, credentials.password)
-
-      // Save the new state
-      await context.storageState({ path: statePath })
-    }
-  } else {
-    // No saved state, perform fresh login
-    console.log(`[auth.fixture] No saved state for ${role}, performing fresh login`)
-    await clearRateLimits()
-
-    context = await browser.newContext()
-    page = await context.newPage()
-    await performLogin(page, credentials.username, credentials.password)
-
-    // Save the state for future tests
-    await context.storageState({ path: statePath })
-  }
+  const context = await browser.newContext()
+  const page = await context.newPage()
+  await clearRateLimits()
+  await performLogin(page, credentials.username, credentials.password)
 
   return { context, page }
 }
@@ -270,25 +247,25 @@ export const test = base.extend<{
   loginAs: (page: Page, role: Role) => Promise<void>
 }>({
   // Admin authenticated page
-  adminPage: async ({ browser }, use) => {
+  adminPage: [async ({ browser }, use) => {
     const { context, page } = await createAuthenticatedContext(browser, 'admin')
     await use(page)
     await context.close()
-  },
+  }, { scope: 'worker' }],
 
   // Operator authenticated page
-  operatorPage: async ({ browser }, use) => {
+  operatorPage: [async ({ browser }, use) => {
     const { context, page } = await createAuthenticatedContext(browser, 'operator')
     await use(page)
     await context.close()
-  },
+  }, { scope: 'worker' }],
 
   // Viewer authenticated page
-  viewerPage: async ({ browser }, use) => {
+  viewerPage: [async ({ browser }, use) => {
     const { context, page } = await createAuthenticatedContext(browser, 'viewer')
     await use(page)
     await context.close()
-  },
+  }, { scope: 'worker' }],
 
   // Login helper for dynamic authentication
   loginAs: async ({ page: _page }, use) => {

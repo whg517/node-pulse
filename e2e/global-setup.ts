@@ -95,9 +95,9 @@ async function seedTestNodes(pool: Pool): Promise<void> {
   await pool.query(`
     INSERT INTO nodes (id, name, ip, region, status, created_at, updated_at)
     VALUES
-      (gen_random_uuid(), 'e2e_test_node_1', '192.168.1.101', 'us-east-1', 'online', NOW(), NOW()),
-      (gen_random_uuid(), 'e2e_test_node_2', '192.168.1.102', 'us-west-2', 'online', NOW(), NOW()),
-      (gen_random_uuid(), 'e2e_test_node_3', '192.168.1.103', 'eu-west-1', 'offline', NOW(), NOW())
+      ('11111111-1111-4111-8111-111111111111', 'e2e_test_node_1', '192.168.1.101', 'us-east-1', 'online', NOW(), NOW()),
+      ('22222222-2222-4222-8222-222222222222', 'e2e_test_node_2', '192.168.1.102', 'us-west-2', 'online', NOW(), NOW()),
+      ('33333333-3333-4333-8333-333333333333', 'e2e_test_node_3', '192.168.1.103', 'eu-west-1', 'offline', NOW(), NOW())
     ON CONFLICT DO NOTHING
   `)
 }

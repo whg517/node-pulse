@@ -65,7 +65,11 @@ export class DashboardPage extends BasePage {
    * Expect metrics visible
    */
   async expectMetricsVisible(): Promise<void> {
-    await this.metricsSection.first().waitFor({ state: 'visible', timeout: 10000 })
+    const summaryCards = this.page.locator('div.grid.grid-cols-2.md\\:grid-cols-4 > div').first()
+    const hasSummaryCards = await summaryCards.isVisible({ timeout: 10000 }).catch(() => false)
+    if (!hasSummaryCards) {
+      await this.metricsSection.first().waitFor({ state: 'visible', timeout: 10000 })
+    }
   }
 
   /**

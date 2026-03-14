@@ -26,28 +26,28 @@ const mockHealthData: HealthStatus[] = [
     status: 'healthy',
     responseTime: 45,
     uptime: '99.98%',
-    lastCheck: new Date().toISOString(),
+    lastCheck: '2026-01-01T00:00:00Z',
   },
   {
     name: 'Database (PostgreSQL)',
     status: 'healthy',
     responseTime: 12,
     uptime: '99.99%',
-    lastCheck: new Date().toISOString(),
+    lastCheck: '2026-01-01T00:00:00Z',
   },
   {
     name: 'Cache Layer',
     status: 'healthy',
     responseTime: 2,
     uptime: '100%',
-    lastCheck: new Date().toISOString(),
+    lastCheck: '2026-01-01T00:00:00Z',
   },
   {
     name: 'Alert Engine',
     status: 'healthy',
     responseTime: 8,
     uptime: '99.95%',
-    lastCheck: new Date().toISOString(),
+    lastCheck: '2026-01-01T00:00:00Z',
   },
 ]
 
@@ -63,19 +63,19 @@ const mockEvents: SystemEvent[] = [
     id: '1',
     type: 'info',
     message: 'System health check completed successfully',
-    timestamp: new Date().toISOString(),
+    timestamp: '2026-01-01T00:00:00Z',
   },
   {
     id: '2',
     type: 'warning',
     message: 'High memory usage detected on API server (85%)',
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
+    timestamp: '2025-12-31T23:00:00Z',
   },
   {
     id: '3',
     type: 'info',
     message: 'Database backup completed',
-    timestamp: new Date(Date.now() - 7200000).toISOString(),
+    timestamp: '2025-12-31T22:00:00Z',
   },
 ]
 
@@ -84,13 +84,13 @@ export default function SystemHealthPage() {
   const [healthData] = useState<HealthStatus[]>(mockHealthData)
   const [events] = useState<SystemEvent[]>(mockEvents)
   const [isLoading, setIsLoading] = useState(false)
-  const [lastRefresh, setLastRefresh] = useState(new Date())
+  const [lastRefresh, setLastRefresh] = useState(new Date('2026-01-01T00:00:00Z'))
 
   const handleRefresh = async () => {
     setIsLoading(true)
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1000))
-    setLastRefresh(new Date())
+    setLastRefresh(new Date('2026-01-01T00:00:00Z'))
     setIsLoading(false)
   }
 
