@@ -14,11 +14,19 @@
 ehthumbs.db
 Thumbs.db
 
-# OMC (Oh My Claude Code)
-.omc/
 
-# BMAD output
-_bmad-output/
+### Python ###
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
 
 # ============================================
 # Go (Pulse backend)
@@ -148,5 +156,8 @@ e2e/screenshots/
 
 # ai coding
 _bmad*
+_bmad-output/
 .claude/skills/bmad-*
 .windsurf/skills/
+# OMC (Oh My Claude Code)
+.omc/
