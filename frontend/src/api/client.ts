@@ -235,6 +235,7 @@ async function makeRequest<T>(
  */
 async function performRefresh(): Promise<string> {
   const authStore = useAuthStore.getState()
+  const { csrfToken } = authStore
 
   // Create AbortController for timeout
   const abortController = new AbortController()
@@ -245,6 +246,7 @@ async function performRefresh(): Promise<string> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(csrfToken && { 'X-CSRF-Token': csrfToken }),
       },
       credentials: 'include', // Send HttpOnly cookies
       signal: abortController.signal,

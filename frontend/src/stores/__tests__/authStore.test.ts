@@ -18,6 +18,8 @@ vi.mock('../../api/client', () => ({
 
 describe('useAuthStore', () => {
   beforeEach(() => {
+    sessionStorage.clear()
+    localStorage.clear()
     // Reset store state before each test
     useAuthStore.setState({
       user: null,
@@ -432,6 +434,8 @@ describe('visibility handler', () => {
 
 describe('csrfToken state management', () => {
   beforeEach(() => {
+    sessionStorage.clear()
+    localStorage.clear()
     useAuthStore.setState({
       user: null,
       isAuthenticated: false,
@@ -462,6 +466,7 @@ describe('csrfToken state management', () => {
     await useAuthStore.getState().login('testuser', 'password123')
 
     expect(useAuthStore.getState().csrfToken).toBe('test-csrf-token-xyz')
+    expect(localStorage.getItem('auth:csrf-token')).toBe('test-csrf-token-xyz')
   })
 
   it('should set csrfToken to null when login response lacks csrf_token', async () => {
@@ -502,6 +507,7 @@ describe('csrfToken state management', () => {
     await useAuthStore.getState().logout()
 
     expect(useAuthStore.getState().csrfToken).toBeNull()
+    expect(localStorage.getItem('auth:csrf-token')).toBeNull()
   })
 
   it('should clear csrfToken via clearAuth', () => {
@@ -518,11 +524,30 @@ describe('csrfToken state management', () => {
     useAuthStore.getState().clearAuth()
 
     expect(useAuthStore.getState().csrfToken).toBeNull()
+    expect(localStorage.getItem('auth:csrf-token')).toBeNull()
   })
 
   it('should set csrfToken via setCsrfToken action', () => {
     useAuthStore.getState().setCsrfToken('manually-set-csrf-token')
 
     expect(useAuthStore.getState().csrfToken).toBe('manually-set-csrf-token')
+    expect(localStorage.getItem('auth:csrf-token')).toBe('manually-set-csrf-token')
+  })
+
+  it('should restore csrfToken from localStorage before restoring session', async () => {
+    localStorage.setItem('auth:csrf-token', 'persisted-csrf-token')
+    vi.mocked(authApi.getMe).mockResolvedValue({
+      data: {
+        user_id: 'user-789',
+        username: 'restoreduser',
+        role: 'viewer' as const,
+      },
+      message: 'Success',
+      timestamp: '2024-01-01T00:00:00Z',
+    })
+
+    await useAuthStore.getState().restoreSession()
+
+    expect(useAuthStore.getState().csrfToken).toBe('persisted-csrf-token')
   })
 })

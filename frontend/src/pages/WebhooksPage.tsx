@@ -121,7 +121,7 @@ export default function WebhooksPage() {
 
       {/* Access Warning for Non-Admin Users */}
       {!canEdit && (
-        <div className="mb-6 rounded-md border-l-4 border-amber-400 bg-amber-50 p-4 dark:bg-amber-900/20">
+        <div data-testid="access-warning" className="mb-6 rounded-md border-l-4 border-amber-400 bg-amber-50 p-4 dark:bg-amber-900/20">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-amber-400" fill="currentColor" viewBox="0 0 20 20">

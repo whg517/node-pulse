@@ -44,7 +44,7 @@ export class SessionsPage extends TablePage {
    * Navigate to sessions page
    */
   async goto(): Promise<void> {
-    await super.goto('/sessions')
+    await super.goto('/settings/sessions')
     await this.waitForReady()
   }
 

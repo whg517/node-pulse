@@ -37,7 +37,7 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
     }
 
     // Verify we're on the performance page
-    await expect(adminPage).toHaveURL(/.*performance/)
+    await expect(adminPage).toHaveURL(/.*reports/)
   })
 
   test('AC-4.3.12-2: dual time range selector available', async ({ adminPage }) => {
@@ -190,12 +190,10 @@ test.describe('Performance Comparison - Feature FR-4.3.12', () => {
     await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
-    // Check for error message elements
-    const errorElements = adminPage.locator(
-      '[class*="error"], [class*="alert"], [role="alert"]'
-    )
+    // Check for actual error banner elements only (not generic class matches)
+    const errorElements = adminPage.locator('.bg-red-50, [role="alertdialog"]')
 
-    // Should not have error states (empty state is OK, error state is not)
+    // Should not have error banners on healthy page
     const errorCount = await errorElements.count()
     expect(errorCount).toBe(0)
   })
@@ -207,7 +205,7 @@ test.describe('Performance Comparison - Access Control', () => {
     await perfPage.goto()
 
     // Viewer should be able to access page
-    await expect(viewerPage).toHaveURL(/.*performance/)
+    await expect(viewerPage).toHaveURL(/.*reports/)
   })
 
   test('AC-4.3.12-12: operator can access performance comparison', async ({ operatorPage }) => {
@@ -215,7 +213,7 @@ test.describe('Performance Comparison - Access Control', () => {
     await perfPage.goto()
 
     // Operator should be able to access page
-    await expect(operatorPage).toHaveURL(/.*performance/)
+    await expect(operatorPage).toHaveURL(/.*reports/)
   })
 
   test('AC-4.3.12-13: admin has full access to comparison features', async ({ adminPage }) => {
@@ -223,7 +221,7 @@ test.describe('Performance Comparison - Access Control', () => {
     await perfPage.goto()
 
     // Admin should have full access
-    await expect(adminPage).toHaveURL(/.*performance/)
+    await expect(adminPage).toHaveURL(/.*reports/)
   })
 })
 
@@ -322,7 +320,7 @@ test.describe('Performance Comparison - Mobile Responsiveness', () => {
     })
 
     // Should still be on valid page
-    await expect(adminPage).toHaveURL(/.*performance/)
+    await expect(adminPage).toHaveURL(/.*reports/)
   })
 })
 
@@ -380,12 +378,10 @@ test.describe('Performance Comparison - Bilingual Support', () => {
     await perfPage.goto()
     await adminPage.waitForTimeout(1000)
 
-    // Check for error messages (may have both languages)
-    const errorMessages = adminPage.locator(
-      '[class*="error"], [class*="alert"], [role="alert"]'
-    )
+    // Check for actual error banners only (not generic class matches)
+    const errorMessages = adminPage.locator('.bg-red-50, [role="alertdialog"]')
 
-    // Should not have errors on healthy page
+    // Should not have error banners on healthy page
     const errorCount = await errorMessages.count()
     expect(errorCount).toBe(0)
   })

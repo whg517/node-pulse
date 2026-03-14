@@ -12,7 +12,7 @@ import { test, expect } from '../../fixtures/auth.fixture'
 
 test.describe('Session Management', () => {
   test('AC-22: session page loads', async ({ adminPage }) => {
-    await adminPage.goto('/sessions')
+    await adminPage.goto('/settings/sessions')
     await adminPage.waitForLoadState('domcontentloaded')
 
     // Check if the page loads (might show error if no sessions API)
@@ -23,7 +23,7 @@ test.describe('Session Management', () => {
   })
 
   test('session table is visible when sessions exist', async ({ adminPage }) => {
-    await adminPage.goto('/sessions')
+    await adminPage.goto('/settings/sessions')
     await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for table or loading state
@@ -41,7 +41,7 @@ test.describe('Session Management', () => {
   })
 
   test('session shows device/browser info if table visible', async ({ adminPage }) => {
-    await adminPage.goto('/sessions')
+    await adminPage.goto('/settings/sessions')
     await adminPage.waitForLoadState('domcontentloaded')
 
     const table = adminPage.locator('table')
@@ -57,7 +57,7 @@ test.describe('Session Management', () => {
 
 test.describe('Session Expiry', () => {
   test('session page shows content', async ({ adminPage }) => {
-    await adminPage.goto('/sessions')
+    await adminPage.goto('/settings/sessions')
     await adminPage.waitForLoadState('domcontentloaded')
 
     // Look for page title

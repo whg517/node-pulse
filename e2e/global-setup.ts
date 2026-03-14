@@ -270,6 +270,15 @@ async function authenticateAndSaveState(
         page.waitForSelector('nav, [data-testid="sidebar"], .sidebar', { timeout: 25000 }),
       ])
 
+      // Wait for CSRF token to be persisted to localStorage (best-effort, non-blocking)
+      await page.waitForFunction(
+        () => window.localStorage.getItem('auth:csrf-token') !== null,
+        undefined,
+        { timeout: 5000 }
+      ).catch(() => {
+        console.log(`[Global Setup] CSRF token not yet in localStorage for ${username}, continuing anyway`)
+      })
+
       // Save storage state
       await context.storageState({ path: statePath })
       console.log(`[Global Setup] Saved auth state for ${username} to ${statePath}`)

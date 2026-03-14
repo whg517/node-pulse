@@ -46,6 +46,23 @@ type AuthStore = AuthState & AuthActions
 
 const LOGOUT_EVENT_KEY = 'auth:logout'
 const LOGOUT_EVENT_VALUE = 'logout'
+const CSRF_TOKEN_STORAGE_KEY = 'auth:csrf-token'
+
+function persistCsrfToken(token: string | null): void {
+  if (typeof window === 'undefined') return
+
+  if (token) {
+    localStorage.setItem(CSRF_TOKEN_STORAGE_KEY, token)
+    return
+  }
+
+  localStorage.removeItem(CSRF_TOKEN_STORAGE_KEY)
+}
+
+function readPersistedCsrfToken(): string | null {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem(CSRF_TOKEN_STORAGE_KEY)
+}
 
 // ============== Store ==============
 
@@ -64,6 +81,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
   login: async (username: string, password: string) => {
     const response = await apiLogin({ username, password })
     const expiry = Date.now() + ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000
+    const csrfToken = response.data.csrf_token || null
 
     const user: User = {
       id: response.data.user_id,
@@ -77,9 +95,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
       role: response.data.role,
       accessToken: response.data.access_token,
       tokenExpiresAt: expiry,
-      csrfToken: response.data.csrf_token || null,
+      csrfToken,
       refreshFailureCount: 0,
     })
+
+    persistCsrfToken(csrfToken)
   },
 
   logout: async () => {
@@ -104,6 +124,7 @@ export const useAuthStore = create<AuthStore>((set) => ({
         csrfToken: null,
         refreshFailureCount: 0,
       })
+      persistCsrfToken(null)
     }
   },
 
@@ -131,10 +152,12 @@ export const useAuthStore = create<AuthStore>((set) => ({
       csrfToken: null,
       refreshFailureCount: 0,
     })
+    persistCsrfToken(null)
   },
 
   setCsrfToken: (token: string) => {
     set({ csrfToken: token })
+    persistCsrfToken(token)
   },
 
   setAccessToken: (token: string, expiresIn: number) => {
@@ -147,7 +170,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   restoreSession: async () => {
-    set({ isLoading: true })
+    set({
+      isLoading: true,
+      csrfToken: readPersistedCsrfToken(),
+    })
     try {
       const response = await apiGetMe()
       const user: User = {
@@ -171,9 +197,11 @@ export const useAuthStore = create<AuthStore>((set) => ({
         role: null,
         accessToken: null,
         tokenExpiresAt: null,
+        csrfToken: null,
         isLoading: false,
         refreshFailureCount: 0,
       })
+      persistCsrfToken(null)
     }
   },
 }))

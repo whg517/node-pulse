@@ -48,7 +48,7 @@ export class PerformancePage extends BasePage {
    * Navigate to performance page
    */
   async goto(): Promise<void> {
-    await super.goto('/performance')
+    await super.goto('/reports')
     await this.waitForReady()
   }
 

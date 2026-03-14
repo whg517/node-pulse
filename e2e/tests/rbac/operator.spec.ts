@@ -38,17 +38,17 @@ test.describe('Operator RBAC', () => {
     })
 
     test('can access comparison page', async ({ operatorPage }) => {
-      await operatorPage.goto('/comparison')
+      await operatorPage.goto('/nodes/comparison')
       await expect(operatorPage).toHaveURL(/.*comparison/)
     })
 
     test('can access performance page', async ({ operatorPage }) => {
-      await operatorPage.goto('/performance')
-      await expect(operatorPage).toHaveURL(/.*performance/)
+      await operatorPage.goto('/reports')
+      await expect(operatorPage).toHaveURL(/.*reports/)
     })
 
     test('can access sessions page', async ({ operatorPage }) => {
-      await operatorPage.goto('/sessions')
+      await operatorPage.goto('/settings/sessions')
       await expect(operatorPage).toHaveURL(/.*sessions/)
     })
   })

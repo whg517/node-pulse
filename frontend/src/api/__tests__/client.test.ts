@@ -374,4 +374,37 @@ describe('X-CSRF-Token header injection', () => {
     const headers = options.headers as Record<string, string>
     expect(headers['X-CSRF-Token']).toBeUndefined()
   })
+
+  it('should include X-CSRF-Token when refreshing after a 401', async () => {
+    useAuthStore.setState({ csrfToken: 'refresh-csrf-token' })
+
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'UNAUTHORIZED', message: 'Unauthorized' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          data: {
+            access_token: 'new-access-token',
+            expires_in: 900,
+          },
+        }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ data: 'ok' }),
+      } as Response)
+
+    vi.stubGlobal('fetch', mockFetch)
+
+    await apiClient('/api/v1/protected')
+
+    const refreshCall = mockFetch.mock.calls[1] as [string, RequestInit]
+    const headers = refreshCall[1].headers as Record<string, string>
+    expect(refreshCall[0]).toContain('/api/v1/auth/refresh')
+    expect(headers['X-CSRF-Token']).toBe('refresh-csrf-token')
+  })
 })

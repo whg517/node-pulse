@@ -183,6 +183,14 @@ async function performLogin(page: Page, username: string, password: string, maxR
       // Wait for page to be interactive (SPA hydration)
       await page.waitForLoadState('domcontentloaded')
       await page.waitForTimeout(1000)
+      // Wait for CSRF token to be persisted (best-effort, non-blocking)
+      await page.waitForFunction(
+        () => window.localStorage.getItem('auth:csrf-token') !== null,
+        undefined,
+        { timeout: 5000 }
+      ).catch(() => {
+        console.log('[auth.fixture] CSRF token not yet in localStorage, continuing anyway')
+      })
 
       console.log('[auth.fixture] Login successful, redirected to dashboard')
       return

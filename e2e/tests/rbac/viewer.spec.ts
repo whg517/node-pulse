@@ -33,13 +33,13 @@ test.describe('Viewer RBAC', () => {
     })
 
     test('can access comparison page', async ({ viewerPage }) => {
-      await viewerPage.goto('/comparison')
+      await viewerPage.goto('/nodes/comparison')
       await expect(viewerPage).toHaveURL(/.*comparison/)
     })
 
     test('can access performance page', async ({ viewerPage }) => {
-      await viewerPage.goto('/performance')
-      await expect(viewerPage).toHaveURL(/.*performance/)
+      await viewerPage.goto('/reports')
+      await expect(viewerPage).toHaveURL(/.*reports/)
     })
   })
 

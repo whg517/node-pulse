@@ -20,7 +20,7 @@ test.describe('Performance Dashboard Page', () => {
   })
 
   test('page loads correctly', async ({ adminPage }) => {
-    await expect(adminPage).toHaveURL(/.*performance/)
+    await expect(adminPage).toHaveURL(/.*reports/)
   })
 
   test('shows metric cards', async ({ adminPage }) => {
@@ -102,13 +102,13 @@ test.describe('Performance Dashboard - All Roles', () => {
     const perfPage = new PerformancePage(viewerPage)
     await perfPage.goto()
 
-    await expect(viewerPage).toHaveURL(/.*performance/)
+    await expect(viewerPage).toHaveURL(/.*reports/)
   })
 
   test('operator can access performance page', async ({ operatorPage }) => {
     const perfPage = new PerformancePage(operatorPage)
     await perfPage.goto()
 
-    await expect(operatorPage).toHaveURL(/.*performance/)
+    await expect(operatorPage).toHaveURL(/.*reports/)
   })
 })

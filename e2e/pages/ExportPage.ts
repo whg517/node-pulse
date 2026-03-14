@@ -26,7 +26,7 @@ export class ExportPage {
   }
 
   async goto() {
-    await this.page.goto('/export')
+    await this.page.goto('/reports/history')
     await this.page.waitForLoadState('domcontentloaded')
   }
 

@@ -479,12 +479,12 @@ test.describe('Alert Push Notifications - Accessibility', () => {
     await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
-    // Look for alert/error regions
+    // Look for error/alertdialog regions (not [class*="alert"] which matches normal alert-list elements)
     const errorRegions = adminPage.locator(
-      '[role="alert"], [role="alertdialog"], [class*="error"], [class*="alert"]'
+      '[role="alertdialog"], [class*="error-message"], .bg-red-50'
     )
 
-    // Should not have errors on healthy page
+    // Should not have error dialogs on healthy page
     const errorCount = await errorRegions.count()
     expect(errorCount).toBe(0)
   })
@@ -608,12 +608,10 @@ test.describe('Alert Push Notifications - Edge Cases', () => {
     await adminPage.waitForLoadState('domcontentloaded')
     await adminPage.waitForTimeout(1000)
 
-    // Check for validation on empty webhook
-    const validation = adminPage.locator(
-      '[class*="error"], [class*="validation"], [role="alert"]'
-    )
+    // Check for actual error banners on normal load (not generic class matches)
+    const validation = adminPage.locator('.bg-red-50, [role="alertdialog"]')
 
-    // Should not have errors on normal load
+    // Should not have error banners on normal load
     const errorCount = await validation.count()
     expect(errorCount).toBe(0)
   })

@@ -26,7 +26,7 @@ export class ComparisonPage {
   }
 
   async goto() {
-    await this.page.goto('/comparison')
+    await this.page.goto('/nodes/comparison')
     await this.page.waitForLoadState('domcontentloaded')
   }
 

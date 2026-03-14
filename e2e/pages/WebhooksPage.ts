@@ -31,7 +31,7 @@ export const DEFAULT_WEBHOOKS_SELECTORS: WebhooksSelectors = {
   eventsSelect: '[data-testid="webhook-events-select"], select[name="events"], select[name="eventTypes"]',
   checkboxToggle: '[data-testid="webhook-toggle"], input[type="checkbox"]',
   confirmDeleteButton: '[data-testid="confirm-delete-button"], .fixed button:has-text("Delete")',
-  accessWarning: '[data-testid="access-warning"], .bg-yellow-50:has-text("Admin"), .access-warning',
+  accessWarning: '[data-testid="access-warning"], .bg-amber-50:has-text("Admin"), .access-warning',
 }
 
 export class WebhooksPage extends TablePage {
@@ -82,7 +82,7 @@ export class WebhooksPage extends TablePage {
    * Navigate to webhooks page
    */
   async goto(): Promise<void> {
-    await super.goto('/webhooks')
+    await super.goto('/integrations/webhooks')
     await this.waitForReady()
   }
 

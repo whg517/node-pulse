@@ -7,6 +7,7 @@ import * as alertsApi from '../../api/alerts'
 vi.mock('../../api/alerts', () => ({
   fetchAlertRules: vi.fn(),
   fetchAlertRecords: vi.fn(),
+  createAlertRule: vi.fn(),
 }))
 
 describe('useAlertsStore', () => {
@@ -80,24 +81,37 @@ describe('useAlertsStore', () => {
     expect(result.current.alertRecords).toEqual(mockRecords)
   })
 
-  it('should add alert rule', () => {
+  it('should add alert rule', async () => {
     const { result } = renderHook(() => useAlertsStore())
 
-    const mockRule = {
-      id: 'rule-1',
+    const mockRequest = {
       metric: 'latency' as const,
       threshold: 100,
       level: 'P1' as const,
-      nodeId: 'node-1',
+      node_id: 'node-1',
       enabled: true,
     }
 
-    act(() => {
-      result.current.addAlertRule(mockRule)
+    vi.mocked(alertsApi.createAlertRule).mockResolvedValueOnce({
+      data: {
+        id: 'rule-1',
+        metric: 'latency' as const,
+        threshold: 100,
+        level: 'P1' as const,
+        node_id: 'node-1',
+        enabled: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    })
+
+    await act(async () => {
+      await result.current.addAlertRule(mockRequest)
     })
 
     expect(result.current.alertRules).toHaveLength(1)
-    expect(result.current.alertRules[0]).toEqual(mockRule)
+    expect(result.current.alertRules[0].id).toBe('rule-1')
+    expect(result.current.alertRules[0].metric).toBe('latency')
+    expect(alertsApi.createAlertRule).toHaveBeenCalledWith(mockRequest)
   })
 
   it('should update alert rule', () => {
@@ -187,10 +201,11 @@ describe('useAlertsStore', () => {
         level: 'P1' as const,
         node_id: 'node-1',
         enabled: true,
+        created_at: '2024-01-01T00:00:00Z',
       },
     ]
 
-    vi.mocked(alertsApi.fetchAlertRules).mockResolvedValueOnce({ data: mockRulesData })
+    vi.mocked(alertsApi.fetchAlertRules).mockResolvedValueOnce({ data: { alerts: mockRulesData } })
 
     const { result } = renderHook(() => useAlertsStore())
 
@@ -212,7 +227,8 @@ describe('useAlertsStore', () => {
         metric: 'latency',
         level: 'P1',
         status: 'pending' as const,
-        timestamp: '2024-01-01T00:00:00Z',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
       },
     ]
 

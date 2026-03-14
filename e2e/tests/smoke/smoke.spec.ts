@@ -122,12 +122,12 @@ test.describe('Smoke Tests - Core Pages', () => {
   })
 
   test('SMOKE-011: webhooks page loads', async ({ adminPage }) => {
-    await adminPage.goto('/webhooks', { waitUntil: 'domcontentloaded' })
+    await adminPage.goto('/integrations/webhooks', { waitUntil: 'domcontentloaded' })
     await expect(adminPage).toHaveURL(/.*webhooks/)
   })
 
   test('SMOKE-012: sessions page loads', async ({ adminPage }) => {
-    await adminPage.goto('/sessions', { waitUntil: 'domcontentloaded' })
+    await adminPage.goto('/settings/sessions', { waitUntil: 'domcontentloaded' })
 
     // Should have a table or empty state
     const table = adminPage.locator('table')

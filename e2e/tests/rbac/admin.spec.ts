@@ -19,14 +19,14 @@ test.describe('Admin RBAC', () => {
       const pages = [
         '/dashboard',
         '/nodes',
-        '/comparison',
+        '/nodes/comparison',
         '/alerts/rules',
         '/alerts/records',
         '/alerts/history',
-        '/webhooks',
-        '/export',
-        '/performance',
-        '/sessions',
+        '/integrations/webhooks',
+        '/reports/history',
+        '/reports',
+        '/settings/sessions',
       ]
 
       for (const pagePath of pages) {

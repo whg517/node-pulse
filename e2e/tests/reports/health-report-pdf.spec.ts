@@ -179,8 +179,8 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
       expect(downloadPath).toBeDefined()
 
       // Download should have PDF content type
-      const downloadUrl = await download.url()
-      expect(downloadUrl).toContain('.pdf')
+      const filename = download.suggestedFilename()
+      expect(filename).toMatch(/\.pdf$/i)
     }
   })
 
@@ -349,10 +349,10 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
         downloadButton.first().click(),
       ])
 
-      const contentType = download.type()
+      const filename = download.suggestedFilename()
 
-      // PDF should have application/pdf or application/octet-stream content type
-      expect(contentType).toMatch(/pdf|octet-stream/i)
+      // PDF filename should end with .pdf
+      expect(filename).toMatch(/\.pdf$/i)
     }
   })
 
@@ -737,7 +737,7 @@ test.describe('Health Report PDF - Edge Cases', () => {
       // Try downloading multiple PDFs simultaneously
       const promises = []
       for (let i = 0; i < 2; i++) {
-        const btn = downloadButton.nth(i).catch(() => downloadButton.first())
+        const btn = i < await downloadButton.count() ? downloadButton.nth(i) : downloadButton.first()
         promises.push(
           adminPage.waitForEvent('download').then((dl) => {
             btn.click().catch(() => {})
