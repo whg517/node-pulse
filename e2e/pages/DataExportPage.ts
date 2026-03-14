@@ -56,7 +56,7 @@ export class DataExportPage extends FormPage {
    * Navigate to export page
    */
   async goto(): Promise<void> {
-    await super.goto('/export')
+    await super.goto('/reports/history')
     await this.waitForReady()
   }
 

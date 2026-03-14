@@ -1031,26 +1031,29 @@ export default function ComparisonChart({
       )}
 
       {/* Chart Container */}
-      <div
-        ref={chartRef}
-        className="relative"
-        style={{ height }}
-        role="img"
-        aria-label={`${config.label} comparison chart showing ${localMode === 'timeRange' ? 'baseline vs current' : `${nodes?.length || 0} nodes`}`}
-      >
+      <div className="relative" style={{ height }}>
         {/* Loading Overlay */}
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+          <div
+            className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10"
+            role="status"
+            aria-label="Loading chart data"
+          >
             <div className="flex flex-col items-center">
               <div
                 className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
-                role="status"
-                aria-label="Loading chart data"
               />
               <p className="mt-2 text-gray-600">Loading chart data...</p>
             </div>
           </div>
         )}
+
+        <div
+          ref={chartRef}
+          className="relative w-full h-full"
+          role="img"
+          aria-label={`${config.label} comparison chart showing ${localMode === 'timeRange' ? 'baseline vs current' : `${nodes?.length || 0} nodes`}`}
+        />
 
         {/* Empty State */}
         {!isLoading && (!nodes || nodes.length === 0) && (

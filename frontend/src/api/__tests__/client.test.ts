@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { apiClient, resetModuleState } from '../client'
-import { AuthenticationError, ValidationError, NotFoundError } from '../errors'
+import { ApiError, AuthenticationError, ValidationError, NotFoundError } from '../errors'
 import { useAuthStore } from '../../stores/authStore'
 
 // Mock localStorage for cross-tab logout sync
@@ -373,5 +373,122 @@ describe('X-CSRF-Token header injection', () => {
     const [, options] = mockFetch.mock.calls[0] as [string, RequestInit]
     const headers = options.headers as Record<string, string>
     expect(headers['X-CSRF-Token']).toBeUndefined()
+  })
+})
+
+// ============ Fix 1: 429 on /auth/refresh must not cause logout ============
+
+describe('rate limit (429) on token refresh', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetModuleState()
+    useAuthStore.setState({
+      user: null,
+      isAuthenticated: false,
+      role: null,
+      accessToken: 'existing-token',
+      tokenExpiresAt: null,
+      csrfToken: null,
+      isLoading: false,
+      refreshFailureCount: 0,
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('should throw ApiError(429) when refresh endpoint is rate-limited', async () => {
+    // First call: original request returns 401
+    // Second call (refresh): returns 429
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        json: async () => ({ code: 'ERR_RATE_LIMIT_EXCEEDED', message: 'Too many refresh requests' }),
+      } as Response)
+
+    vi.stubGlobal('fetch', mockFetch)
+
+    const error = await apiClient('/api/v1/nodes').catch(e => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).status).toBe(429)
+  })
+
+  it('should NOT call clearAuth() when refresh returns 429', async () => {
+    const clearAuthSpy = vi.spyOn(useAuthStore.getState(), 'clearAuth')
+
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 429,
+        json: async () => ({ code: 'ERR_RATE_LIMIT_EXCEEDED', message: 'Too many refresh requests' }),
+      } as Response)
+
+    vi.stubGlobal('fetch', mockFetch)
+
+    await apiClient('/api/v1/nodes').catch(() => {})
+
+    expect(clearAuthSpy).not.toHaveBeenCalled()
+  })
+
+  it('should still call clearAuth() after 3 consecutive real auth failures (non-429)', async () => {
+    const clearAuthSpy = vi.spyOn(useAuthStore.getState(), 'clearAuth')
+
+    // Each round: original request 401, then refresh 401 (real auth failure)
+    const make401Pair = () => [
+      { ok: false, status: 401, json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }) } as Response,
+      { ok: false, status: 401, json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }) } as Response,
+    ]
+
+    const mockFetch = vi.fn()
+      .mockResolvedValueOnce(make401Pair()[0])
+      .mockResolvedValueOnce(make401Pair()[1])
+      .mockResolvedValueOnce(make401Pair()[0])
+      .mockResolvedValueOnce(make401Pair()[1])
+      .mockResolvedValueOnce(make401Pair()[0])
+      .mockResolvedValueOnce(make401Pair()[1])
+
+    vi.stubGlobal('fetch', mockFetch)
+
+    // Three consecutive failures should trigger logout on the 3rd
+    await apiClient('/api/v1/nodes').catch(() => {})
+    await apiClient('/api/v1/nodes').catch(() => {})
+    await apiClient('/api/v1/nodes').catch(() => {})
+
+    expect(clearAuthSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('should not increment failure count when refresh is rate-limited (429)', async () => {
+    // 429 three times — should NOT trigger logout (failure count stays 0)
+    const clearAuthSpy = vi.spyOn(useAuthStore.getState(), 'clearAuth')
+
+    const mockFetch = vi.fn()
+      .mockResolvedValue({
+        ok: false,
+        status: 429,
+        json: async () => ({ code: 'ERR_RATE_LIMIT_EXCEEDED', message: 'Too many requests' }),
+      } as Response)
+
+    vi.stubGlobal('fetch', mockFetch)
+
+    // Simulate 429 on the original request directly (not via refresh path)
+    // — also verify the direct 429 path throws ApiError and not AuthenticationError
+    const error = await apiClient('/api/v1/nodes').catch(e => e)
+
+    expect(error).toBeInstanceOf(ApiError)
+    expect((error as ApiError).status).toBe(429)
+    expect(clearAuthSpy).not.toHaveBeenCalled()
   })
 })

@@ -195,7 +195,11 @@ async function makeRequest<T>(
         await refreshPromise
         // Retry original request with new token
         return makeRequest<T>(endpoint, options, true)
-    } catch {
+    } catch (refreshError) {
+        // 429 rate-limit on refresh: don't force logout, propagate as-is
+        if (refreshError instanceof ApiError && refreshError.status === 429) {
+          throw refreshError
+        }
         // Refresh failed - check if we should force logout
         if (consecutiveRefreshFailures >= MAX_CONSECUTIVE_FAILURES) {
           console.error('[apiClient] Too many consecutive refresh failures, forcing logout')
@@ -257,6 +261,12 @@ async function performRefresh(): Promise<string> {
       if (response.status >= 500) {
         console.error('[apiClient] Refresh failed with server error:', response.status)
         throw new ApiError('Server error during refresh', 'ERR_SERVER_ERROR', undefined, response.status)
+      }
+
+      // 429 is a transient rate-limit, not an auth failure - don't count or logout
+      if (response.status === 429) {
+        console.warn('[apiClient] Token refresh rate-limited (429), will retry later')
+        throw new ApiError('Too many refresh requests, please wait a moment', 'ERR_RATE_LIMIT_EXCEEDED', undefined, 429)
       }
 
       consecutiveRefreshFailures++

@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
@@ -9,17 +10,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	// unauthLimit is the per-IP limit for unauthenticated requests (anti-abuse).
+	unauthLimit = 100
+	// authLimit is the per-user limit for authenticated requests.
+	// Dashboard + node detail + alerts can easily generate 10+ requests/page-load;
+	// 600/min gives ~10 req/s headroom for normal multi-tab usage.
+	authLimit     = 600
+	rateLimitWindow = time.Minute
+)
+
 var (
-	defaultLimit = 100
-	defaultWindow = time.Minute
-	rateLimiter   *RateLimiter
+	rateLimiter       *RateLimiter
 	rateLimiterCancel context.CancelFunc
 )
 
 type RateLimiter struct {
 	mu       sync.RWMutex
 	visitors map[string]*visitor
-	limit    int
 	window   time.Duration
 }
 
@@ -31,8 +39,7 @@ type visitor struct {
 func InitRateLimiter() {
 	rateLimiter = &RateLimiter{
 		visitors: make(map[string]*visitor),
-		limit:    defaultLimit,
-		window:   defaultWindow,
+		window:   rateLimitWindow,
 	}
 
 	// Start cleanup goroutine with cancel support
@@ -48,9 +55,9 @@ func cleanupStaleVisitors(ctx context.Context) {
 			return // Exit gracefully when context is cancelled
 		case <-time.After(time.Minute):
 			rateLimiter.mu.Lock()
-			for ip, v := range rateLimiter.visitors {
+			for key, v := range rateLimiter.visitors {
 				if time.Since(v.timer) > rateLimiter.window {
-					delete(rateLimiter.visitors, ip)
+					delete(rateLimiter.visitors, key)
 				}
 			}
 			rateLimiter.mu.Unlock()
@@ -66,18 +73,29 @@ func ShutdownRateLimiter() {
 
 func RateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
+		// Prefer user_id set by JWTAuthMiddleware; fall back to IP for unauthed requests.
+		userID := c.GetString("user_id")
+
+		var key string
+		var limit int
+		if userID != "" {
+			key = fmt.Sprintf("user:%s", userID)
+			limit = authLimit
+		} else {
+			key = fmt.Sprintf("ip:%s", c.ClientIP())
+			limit = unauthLimit
+		}
 
 		rateLimiter.mu.Lock()
 		defer rateLimiter.mu.Unlock()
 
-		v, exists := rateLimiter.visitors[ip]
+		v, exists := rateLimiter.visitors[key]
 		if !exists {
 			v = &visitor{
 				requests: 1,
 				timer:    time.Now(),
 			}
-			rateLimiter.visitors[ip] = v
+			rateLimiter.visitors[key] = v
 		} else {
 			if time.Since(v.timer) > rateLimiter.window {
 				v.requests = 1
@@ -86,12 +104,12 @@ func RateLimitMiddleware() gin.HandlerFunc {
 				v.requests++
 			}
 
-			if v.requests > rateLimiter.limit {
+			if v.requests > limit {
 				c.JSON(http.StatusTooManyRequests, gin.H{
 					"code":    "ERR_RATE_LIMIT_EXCEEDED",
 					"message": "请求过于频繁，请稍后再试",
 					"details": map[string]interface{}{
-						"limit":    rateLimiter.limit,
+						"limit":    limit,
 						"window":   rateLimiter.window.String(),
 						"requests": v.requests,
 					},

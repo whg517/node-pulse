@@ -2,16 +2,18 @@ import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import WorldMap, { NodeLocation } from './WorldMap'
 
-// Mock ECharts
-vi.mock('echarts', () => ({
-  init: vi.fn(() => ({
-    setOption: vi.fn(),
-    on: vi.fn(),
-    resize: vi.fn(),
-    dispose: vi.fn(),
-  })),
-  getMap: vi.fn(() => null),
-  registerMap: vi.fn(),
+// Mock ECharts (WorldMap imports from ../../lib/echarts-core, not echarts directly)
+vi.mock('../../lib/echarts-core', () => ({
+  default: {
+    init: vi.fn(() => ({
+      setOption: vi.fn(),
+      on: vi.fn(),
+      resize: vi.fn(),
+      dispose: vi.fn(),
+    })),
+    getMap: vi.fn(() => null),
+    registerMap: vi.fn(),
+  },
 }))
 
 // Mock react-i18next
