@@ -1,0 +1,41 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: false
+  skip-dirs:
+    - vendor
+
+linters:
+  default: none
+  enable:
+    - govet
+    - ineffassign
+    - unused
+  exclusions:
+    rules:
+      - path: internal/auth/test_helper\.go
+        linters:
+          - unused
+      - linters:
+          - unused
+        text: "func generateJWTSecret is unused"
+      - linters:
+          - unused
+        text: "func createBeaconTokensTable is unused"
+      - linters:
+          - unused
+        text: "func \\(\\*DiagnosticEngine\\)\\.calculateStandardDeviation is unused"
+      - linters:
+          - unused
+        text: "func getEnvBool is unused"
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+output:
+  formats:
+    text:
+      print-issued-lines: true
+      print-linter-name: true

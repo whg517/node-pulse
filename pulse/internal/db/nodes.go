@@ -284,7 +284,6 @@ func UpdateNode(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUID, updat
 		}
 		setParts = append(setParts, fmt.Sprintf("tags = $%d", argIndex))
 		args = append(args, string(tagsBytes))
-		argIndex++
 	}
 
 	if len(setParts) == 0 {

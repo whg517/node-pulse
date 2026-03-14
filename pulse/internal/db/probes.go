@@ -194,7 +194,6 @@ func UpdateProbe(ctx context.Context, pool *pgxpool.Pool, probeID uuid.UUID, upd
 	if timeoutSeconds, ok := updates["timeout_seconds"]; ok && timeoutSeconds != nil {
 		setParts = append(setParts, fmt.Sprintf("timeout_seconds = $%d", argIndex))
 		args = append(args, timeoutSeconds)
-		argIndex++
 	}
 
 	// Always update updated_at

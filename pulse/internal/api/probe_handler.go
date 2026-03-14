@@ -209,8 +209,8 @@ func (h *ProbeHandler) GetProbesHandler(c *gin.Context) {
 
 	if nodeIDParam != "" {
 		// Filter by node
-		nodeID, err := uuid.Parse(nodeIDParam)
-		if err != nil {
+		nodeID, parseErr := uuid.Parse(nodeIDParam)
+		if parseErr != nil {
 			c.JSON(http.StatusBadRequest, models.ErrorResponse{
 				Code:    ErrProbeNodeIDInvalid,
 				Message: "节点 ID 格式无效",
