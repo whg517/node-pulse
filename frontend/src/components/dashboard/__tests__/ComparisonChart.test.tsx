@@ -8,13 +8,19 @@ import ComparisonChart, {
   type GroupByType,
 } from '../ComparisonChart'
 
-// Mock ECharts
-vi.mock('echarts', () => ({
-  init: vi.fn(() => ({
-    setOption: vi.fn(),
-    dispose: vi.fn(),
-    resize: vi.fn(),
-  })),
+// Mock ECharts (ComparisonChart imports from ../../../lib/echarts-core, not echarts directly)
+vi.mock('../../../lib/echarts-core', () => ({
+  default: {
+    init: vi.fn(() => ({
+      setOption: vi.fn(),
+      dispose: vi.fn(),
+      resize: vi.fn(),
+      on: vi.fn(),
+      off: vi.fn(),
+    })),
+    getMap: vi.fn(() => null),
+    registerMap: vi.fn(),
+  },
   graphic: {
     LinearGradient: vi.fn(),
   },

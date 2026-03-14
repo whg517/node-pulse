@@ -7,6 +7,7 @@ import { useNodeDetail } from '../hooks/useNodeDetail'
 
 // Mock react-i18next
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: vi.fn() },
   useTranslation: () => ({
     t: (key: string, options?: any) => {
       const translations: Record<string, string> = {
