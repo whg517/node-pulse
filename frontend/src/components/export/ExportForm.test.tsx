@@ -27,19 +27,19 @@ describe('ExportForm', () => {
     it('renders all form fields', () => {
       render(<ExportForm {...defaultProps} />)
 
-      expect(screen.getAllByText(/nodes/i)[0]).toBeInTheDocument()
-      expect(screen.getByText(/time range/i)).toBeInTheDocument()
-      expect(screen.getAllByText(/latency/i)[0]).toBeInTheDocument()
-      expect(screen.getByText(/packet loss/i)).toBeInTheDocument()
-      expect(screen.getByText(/jitter/i)).toBeInTheDocument()
-      expect(screen.getByText(/format/i)).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /export/i })).toBeInTheDocument()
+      expect(screen.getByText('dataExport.nodes', { exact: false })).toBeInTheDocument()
+      expect(screen.getByText('dataExport.timeRange', { exact: false })).toBeInTheDocument()
+      expect(screen.getByText('dataExport.metricLatency')).toBeInTheDocument()
+      expect(screen.getByText('dataExport.metricPacketLoss')).toBeInTheDocument()
+      expect(screen.getByText('dataExport.metricJitter')).toBeInTheDocument()
+      expect(screen.getByText('dataExport.format', { exact: false })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'dataExport.export' })).toBeInTheDocument()
     })
 
     it('shows loading state on submit button', () => {
       render(<ExportForm {...defaultProps} loading={true} />)
 
-      const submitButton = screen.getByRole('button', { name: /exporting/i })
+      const submitButton = screen.getByRole('button', { name: 'dataExport.exporting' })
       expect(submitButton).toBeDisabled()
     })
 
@@ -68,7 +68,7 @@ describe('ExportForm', () => {
       render(<ExportForm {...defaultProps} />)
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
-      await user.click(screen.getByRole('button', { name: /export/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       expect(defaultProps.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -83,7 +83,7 @@ describe('ExportForm', () => {
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
       await user.click(screen.getByLabelText('Node 2 (192.168.1.2)'))
-      await user.click(screen.getByRole('button', { name: /export/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       expect(defaultProps.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -97,10 +97,10 @@ describe('ExportForm', () => {
       const mockOnSubmit = vi.fn()
       render(<ExportForm {...defaultProps} onSubmit={mockOnSubmit} />)
 
-      await user.click(screen.getByRole('button', { name: /^export$/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       await waitFor(() => {
-        expect(screen.getByText(/select at least one node/i)).toBeInTheDocument()
+        expect(screen.getByText('dataExport.errorSelectNode')).toBeInTheDocument()
       })
       expect(mockOnSubmit).not.toHaveBeenCalled()
     })
@@ -124,10 +124,10 @@ describe('ExportForm', () => {
       // Select 51st node (should fail)
       await user.click(screen.getByLabelText(`Node 50 (192.168.1.50)`))
 
-      await user.click(screen.getByRole('button', { name: /^export$/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       await waitFor(() => {
-        expect(screen.getByText(/maximum 50 nodes allowed/i)).toBeInTheDocument()
+        expect(screen.getByText('dataExport.errorMaxNodes')).toBeInTheDocument()
       })
       expect(mockOnSubmit).not.toHaveBeenCalled()
     })
@@ -137,7 +137,7 @@ describe('ExportForm', () => {
     it('has 7 days selected by default', () => {
       render(<ExportForm {...defaultProps} />)
 
-      const sevenDaysRadio = screen.getByLabelText(/7 days/i)
+      const sevenDaysRadio = screen.getByLabelText('dataExport.last7Days')
       expect(sevenDaysRadio).toBeChecked()
     })
 
@@ -146,9 +146,9 @@ describe('ExportForm', () => {
       const mockOnSubmit = vi.fn()
       render(<ExportForm {...defaultProps} onSubmit={mockOnSubmit} />)
 
-      await user.click(screen.getByLabelText(/30 days/i))
+      await user.click(screen.getByLabelText('dataExport.last30Days'))
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
-      await user.click(screen.getByRole('button', { name: /^export$/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       await waitFor(() => {
         expect(mockOnSubmit).toHaveBeenCalled()
@@ -167,10 +167,10 @@ describe('ExportForm', () => {
       const user = userEvent.setup()
       render(<ExportForm {...defaultProps} />)
 
-      await user.click(screen.getByLabelText(/custom/i))
+      await user.click(screen.getByLabelText('dataExport.customRange'))
 
-      const startDateInput = screen.getByLabelText(/start date/i)
-      const endDateInput = screen.getByLabelText(/end date/i)
+      const startDateInput = screen.getByLabelText('dataExport.startDate')
+      const endDateInput = screen.getByLabelText('dataExport.endDate')
 
       await user.clear(startDateInput)
       await user.type(startDateInput, '2024-01-01')
@@ -179,7 +179,7 @@ describe('ExportForm', () => {
       await user.type(endDateInput, '2024-01-07')
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
-      await user.click(screen.getByRole('button', { name: /^export$/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       expect(defaultProps.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -202,10 +202,10 @@ describe('ExportForm', () => {
       const user = userEvent.setup()
       render(<ExportForm {...defaultProps} />)
 
-      await user.click(screen.getByLabelText(/packet loss/i))
-      await user.click(screen.getByLabelText(/jitter/i))
+      await user.click(screen.getByLabelText('dataExport.metricPacketLoss'))
+      await user.click(screen.getByLabelText('dataExport.metricJitter'))
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
-      await user.click(screen.getByRole('button', { name: /export/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       expect(defaultProps.onSubmit).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -230,7 +230,7 @@ describe('ExportForm', () => {
       // This test verifies the validation message would appear if no metrics are selected
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
-      await user.click(screen.getByRole('button', { name: /^export$/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       // Should succeed because latency is selected by default
       await waitFor(() => {
@@ -272,7 +272,7 @@ describe('ExportForm', () => {
       render(<ExportForm {...defaultProps} />)
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
-      await user.click(screen.getByRole('button', { name: /export/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       expect(defaultProps.onSubmit).toHaveBeenCalledWith({
         node_ids: ['node-1'],
@@ -288,10 +288,10 @@ describe('ExportForm', () => {
       const mockOnSubmit = vi.fn()
       render(<ExportForm {...defaultProps} onSubmit={mockOnSubmit} />)
 
-      await user.click(screen.getByRole('button', { name: /^export$/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       await waitFor(() => {
-        expect(screen.getByText(/select at least one node/i)).toBeInTheDocument()
+        expect(screen.getByText('dataExport.errorSelectNode')).toBeInTheDocument()
       })
       expect(mockOnSubmit).not.toHaveBeenCalled()
     })
@@ -301,15 +301,15 @@ describe('ExportForm', () => {
       render(<ExportForm {...defaultProps} />)
 
       // Trigger validation error
-      await user.click(screen.getByRole('button', { name: /export/i }))
-      expect(screen.getByText(/select at least one node/i)).toBeInTheDocument()
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
+      expect(screen.getByText('dataExport.errorSelectNode')).toBeInTheDocument()
 
       // Fix error
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
-      await user.click(screen.getByRole('button', { name: /export/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       // Error should be gone
-      expect(screen.queryByText(/select at least one node/i)).not.toBeInTheDocument()
+      expect(screen.queryByText('dataExport.errorSelectNode')).not.toBeInTheDocument()
       expect(defaultProps.onSubmit).toHaveBeenCalled()
     })
 
@@ -320,7 +320,7 @@ describe('ExportForm', () => {
       render(<ExportForm {...defaultProps} onSubmit={defaultProps.onSubmit} />)
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
-      await user.click(screen.getByRole('button', { name: /^export$/i }))
+      await user.click(screen.getByRole('button', { name: 'dataExport.export' }))
 
       // Verify the submit was called with correct data
       await waitFor(() => {

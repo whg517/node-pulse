@@ -33,8 +33,8 @@ describe('WebhooksTable', () => {
 
     const webhookUrls = screen.getAllByText('https://example.com/webhook')
     expect(webhookUrls.length).toBeGreaterThan(0)
-    expect(screen.getByText('Enabled')).toBeInTheDocument()
-    expect(screen.getByText('Disabled')).toBeInTheDocument()
+    expect(screen.getByText('status.enabled')).toBeInTheDocument()
+    expect(screen.getByText('status.disabled')).toBeInTheDocument()
   })
 
   it('renders empty state when no webhooks', () => {
@@ -48,8 +48,8 @@ describe('WebhooksTable', () => {
       />
     )
 
-    expect(screen.getByText('No webhooks configured')).toBeInTheDocument()
-    expect(screen.getByText(/get started by adding a webhook/i)).toBeInTheDocument()
+    expect(screen.getByText('webhooks.noWebhooks')).toBeInTheDocument()
+    expect(screen.getByText('webhooks.noWebhooksHint')).toBeInTheDocument()
   })
 
   it('hides action buttons when user cannot edit', () => {
@@ -63,8 +63,8 @@ describe('WebhooksTable', () => {
       />
     )
 
-    expect(screen.queryByText('Edit')).not.toBeInTheDocument()
-    expect(screen.queryByText('Delete')).not.toBeInTheDocument()
+    expect(screen.queryByText('common.edit')).not.toBeInTheDocument()
+    expect(screen.queryByText('common.delete')).not.toBeInTheDocument()
   })
 
   it('calls onEdit when edit button clicked', () => {
@@ -79,7 +79,7 @@ describe('WebhooksTable', () => {
       />
     )
 
-    const editButtons = screen.getAllByText('Edit')
+    const editButtons = screen.getAllByText('common.edit')
     fireEvent.click(editButtons[0])
 
     expect(onEdit).toHaveBeenCalledWith('webhook-1')
@@ -97,7 +97,7 @@ describe('WebhooksTable', () => {
       />
     )
 
-    const deleteButtons = screen.getAllByText('Delete')
+    const deleteButtons = screen.getAllByText('common.delete')
     fireEvent.click(deleteButtons[0])
 
     expect(onDelete).toHaveBeenCalledWith('webhook-1')

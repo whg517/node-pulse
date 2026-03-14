@@ -70,8 +70,8 @@ describe('AlertRecordsTable', () => {
     const props = { ...defaultProps, records: [], totalCount: 0 }
     render(<AlertRecordsTable {...props} />)
 
-    expect(screen.getByText('No alert records')).toBeInTheDocument()
-    expect(screen.getByText(/no alert records found matching the current filters/i)).toBeInTheDocument()
+    expect(screen.getByText('alertHistory.noRecords')).toBeInTheDocument()
+    expect(screen.getByText('alertHistory.noRecordsHint')).toBeInTheDocument()
   })
 
   it('displays correct status badges', () => {

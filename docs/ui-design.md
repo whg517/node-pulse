@@ -147,9 +147,13 @@ interface SidebarItem {
 
 ```css
 :root {
-  /* Primary Brand */
-  --color-primary-500: #2563eb;    /* Blue - Primary actions */
-  --color-primary-600: #1d4ed8;    /* Blue - Hover state */
+  /* Primary Brand - Light Mode */
+  --color-primary-500: #2563eb;    /* Blue-600 - Primary actions */
+  --color-primary-600: #1d4ed8;    /* Blue-700 - Hover state */
+
+  /* Primary Brand - Dark Mode (Softer to reduce eye strain) */
+  --color-primary-dark: #3b82f6;       /* Blue-500 */
+  --color-primary-dark-hover: #60a5fa; /* Blue-400 */
 
   /* Health State Colors */
   --color-healthy-500: #059669;    /* Emerald - Good health */
@@ -214,26 +218,28 @@ interface SidebarItem {
 ### 3.3 Dark/Light Mode
 
 ```css
-/* Dark Mode (Default for monitoring systems) */
+/* Dark Mode (Deep OLED style for monitoring systems) */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg-primary: #0f172a;      /* Slate-900 */
-    --bg-secondary: #1e293b;    /* Slate-800 */
-    --bg-tertiary: #334155;     /* Slate-700 */
-    --text-primary: #f1f5f9;    /* Slate-100 */
+    --bg-primary: #020617;      /* Slate-950 (Deeper black for contrast) */
+    --bg-secondary: #0f172a;    /* Slate-900 (Card backgrounds) */
+    --bg-tertiary: #1e293b;     /* Slate-800 (Hover/Elevated) */
+    --text-primary: #f8fafc;    /* Slate-50 */
     --text-secondary: #94a3b8;  /* Slate-400 */
-    --border-color: #334155;    /* Slate-700 */
+    --border-color: #1e293b;    /* Slate-800 */
+    --grid-line: #1e293b;       /* Subtle chart grids */
   }
 }
 
 @media (prefers-color-scheme: light) {
   :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f8fafc;    /* Slate-50 */
+    --bg-primary: #f8fafc;      /* Slate-50 (Softer than pure white) */
+    --bg-secondary: #ffffff;    /* Pure White (Cards) */
     --bg-tertiary: #f1f5f9;     /* Slate-100 */
-    --text-primary: #0f172a;
+    --text-primary: #0f172a;    /* Slate-900 */
     --text-secondary: #64748b;  /* Slate-500 */
     --border-color: #e2e8f0;    /* Slate-200 */
+    --grid-line: #f1f5f9;       /* Light chart grids */
   }
 }
 ```
@@ -258,10 +264,13 @@ const nodePulseTheme = {
   grid: {
     left: 60, right: 40, top: 60, bottom: 60,
   },
+  splitLine: {
+    lineStyle: { color: 'var(--grid-line)' } // Adaptive grid lines
+  },
   tooltip: {
-    backgroundColor: 'rgba(17, 24, 39, 0.95)',
-    borderColor: '#374151',
-    textStyle: { color: '#f9fafb' },
+    backgroundColor: 'rgba(2, 6, 23, 0.95)', // Deep slate
+    borderColor: '#1e293b',
+    textStyle: { color: '#f8fafc' },
   },
 }
 ```
@@ -400,6 +409,35 @@ Source                                              Destination
 - Baseline comparison (shaded area, not just line)
 - Export chart as PNG (ECharts toolbox)
 - Annotation markers for alert events
+
+### 4.6 Empty States (Zero Data Experience)
+
+**Design Principles:**
+- **Visual Anchor:** Use a soft, monochromatic SVG illustration or a high-quality Lucide icon inside a circular container.
+- **Clear Messaging:** Headline should state the situation clearly (e.g., "No Nodes Found"). Subtitle should explain how to resolve it.
+- **Prominent CTA:** The primary action button (e.g., "Add Node", "Create Alert") must be highly visible and centered, acting as the primary focal point of the card.
+- **Example Layout:**
+  ```
+  +--------------------------------------------------+
+  |                                                  |
+  |                  [ 🖥️ ]                          |
+  |             No Nodes Configured                  |
+  |    Start monitoring your network by adding       |
+  |          your first beacon node.                 |
+  |                                                  |
+  |              [ + Add Node ]                      |
+  |                                                  |
+  +--------------------------------------------------+
+  ```
+
+### 4.7 Loading States (Skeletons over Spinners)
+
+**Implementation Strategy:**
+- Avoid full-page blocking spinners which cause perceived slowness.
+- Use **Skeleton Screens** that mimic the layout of the loaded content.
+- Skeletons should pulse gently (`animate-pulse`) using the theme's tertiary background color (`dark:bg-slate-800`, `bg-slate-200`).
+- For data tables, show 5-10 rows of skeleton bars.
+- For dashboard cards, show skeleton shapes for numbers and sparklines.
 
 ---
 
@@ -590,7 +628,8 @@ frontend/src/components/common/
 ├── ProtectedRoute.tsx      # ✓ Auth route guard
 ├── LoadingSpinner.tsx      # Loading indicator
 ├── ErrorBoundary.tsx       # Error handling
-├── EmptyState.tsx          # Empty data display
+├── EmptyState.tsx          # Empty data display (with prominent CTA)
+├── Skeleton.tsx            # NEW: Loading skeleton components
 └── ConfirmDialog.tsx       # Confirmation modal
 ```
 

@@ -35,12 +35,12 @@ describe('NodeDialog', () => {
         />
       )
 
-      expect(screen.getByText('Name')).toBeInTheDocument()
-      expect(screen.getByText('IP Address')).toBeInTheDocument()
-      expect(screen.getByText('Region')).toBeInTheDocument()
-      expect(screen.getByText('Tags')).toBeInTheDocument()
-      expect(screen.getByText('Add New Node')).toBeInTheDocument()
-      expect(screen.getByText('Create Node')).toBeInTheDocument()
+      expect(screen.getByText('nodes.nodeName', { exact: false })).toBeInTheDocument()
+      expect(screen.getByText('nodes.ipAddress', { exact: false })).toBeInTheDocument()
+      expect(screen.getByText('nodes.region', { exact: false })).toBeInTheDocument()
+      expect(screen.getByText('nodes.tags')).toBeInTheDocument()
+      expect(screen.getByText('nodes.addNode')).toBeInTheDocument()
+      expect(screen.getByText('nodes.createNode')).toBeInTheDocument()
     })
 
     it('validates required fields', async () => {
@@ -53,13 +53,13 @@ describe('NodeDialog', () => {
         />
       )
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Name is required')).toBeInTheDocument()
-        expect(screen.getByText('IP address is required')).toBeInTheDocument()
-        expect(screen.getByText('Region is required')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorNameRequired')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorIpRequired')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorRegionRequired')).toBeInTheDocument()
       })
       expect(onSubmit).not.toHaveBeenCalled()
     })
@@ -74,20 +74,20 @@ describe('NodeDialog', () => {
         />
       )
 
-      const nameInput = getInputByLabel(container, 'Name')
-      const ipInput = getInputByLabel(container, 'IP Address')
-      const regionInput = getInputByLabel(container, 'Region')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName')
+      const ipInput = getInputByLabel(container, 'nodes.ipAddress')
+      const regionInput = getInputByLabel(container, 'nodes.region')
 
       // Test too short
       fireEvent.change(nameInput, { target: { value: 'A' } })
       fireEvent.change(ipInput, { target: { value: '192.168.1.1' } })
       fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Name must be at least 2 characters')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorNameMin')).toBeInTheDocument()
       })
 
       // Test too long
@@ -96,7 +96,7 @@ describe('NodeDialog', () => {
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Name must be less than 100 characters')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorNameMax')).toBeInTheDocument()
       })
     })
 
@@ -110,19 +110,19 @@ describe('NodeDialog', () => {
         />
       )
 
-      const ipInput = getInputByLabel(container, 'IP Address')
-      const nameInput = getInputByLabel(container, 'Name')
-      const regionInput = getInputByLabel(container, 'Region')
+      const ipInput = getInputByLabel(container, 'nodes.ipAddress')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName')
+      const regionInput = getInputByLabel(container, 'nodes.region')
 
       fireEvent.change(nameInput, { target: { value: 'Test Node' } })
       fireEvent.change(ipInput, { target: { value: 'invalid-ip' } })
       fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Invalid IP address format')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorIpInvalid')).toBeInTheDocument()
       })
     })
 
@@ -136,19 +136,19 @@ describe('NodeDialog', () => {
         />
       )
 
-      const ipInput = getInputByLabel(container, 'IP Address')
-      const nameInput = getInputByLabel(container, 'Name')
-      const regionInput = getInputByLabel(container, 'Region')
+      const ipInput = getInputByLabel(container, 'nodes.ipAddress')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName')
+      const regionInput = getInputByLabel(container, 'nodes.region')
 
       fireEvent.change(nameInput, { target: { value: 'Test Node' } })
       fireEvent.change(ipInput, { target: { value: '192.168.1.100' } })
       fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.queryByText('Invalid IP address format')).not.toBeInTheDocument()
+        expect(screen.queryByText('nodes.errorIpInvalid')).not.toBeInTheDocument()
       })
     })
 
@@ -162,19 +162,19 @@ describe('NodeDialog', () => {
         />
       )
 
-      const ipInput = getInputByLabel(container, 'IP Address')
-      const nameInput = getInputByLabel(container, 'Name')
-      const regionInput = getInputByLabel(container, 'Region')
+      const ipInput = getInputByLabel(container, 'nodes.ipAddress')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName')
+      const regionInput = getInputByLabel(container, 'nodes.region')
 
       fireEvent.change(nameInput, { target: { value: 'Test Node' } })
       fireEvent.change(ipInput, { target: { value: '2001:0db8:85a3:0000:0000:8a2e:0370:7334' } })
       fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.queryByText('Invalid IP address format')).not.toBeInTheDocument()
+        expect(screen.queryByText('nodes.errorIpInvalid')).not.toBeInTheDocument()
       })
     })
 
@@ -188,20 +188,20 @@ describe('NodeDialog', () => {
         />
       )
 
-      const regionInput = getInputByLabel(container, 'Region')
-      const nameInput = getInputByLabel(container, 'Name')
-      const ipInput = getInputByLabel(container, 'IP Address')
+      const regionInput = getInputByLabel(container, 'nodes.region')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName')
+      const ipInput = getInputByLabel(container, 'nodes.ipAddress')
 
       // Test too short
       fireEvent.change(nameInput, { target: { value: 'Test Node' } })
       fireEvent.change(ipInput, { target: { value: '192.168.1.1' } })
       fireEvent.change(regionInput, { target: { value: 'A' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Region must be at least 2 characters')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorRegionMin')).toBeInTheDocument()
       })
 
       // Test too long
@@ -210,7 +210,7 @@ describe('NodeDialog', () => {
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Region must be less than 50 characters')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorRegionMax')).toBeInTheDocument()
       })
     })
 
@@ -224,10 +224,10 @@ describe('NodeDialog', () => {
         />
       )
 
-      const tagsInput = getTextareaByLabel(container, 'Tags')
-      const nameInput = getInputByLabel(container, 'Name')
-      const ipInput = getInputByLabel(container, 'IP Address')
-      const regionInput = getInputByLabel(container, 'Region')
+      const tagsInput = getTextareaByLabel(container, 'nodes.tags')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName')
+      const ipInput = getInputByLabel(container, 'nodes.ipAddress')
+      const regionInput = getInputByLabel(container, 'nodes.region')
 
       const elevenTags = Array.from({ length: 11 }, (_, i) => `tag${i}`).join(', ')
 
@@ -236,11 +236,11 @@ describe('NodeDialog', () => {
       fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
       fireEvent.change(tagsInput, { target: { value: elevenTags } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Maximum 10 tags allowed')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorTagsMax')).toBeInTheDocument()
       })
     })
 
@@ -254,10 +254,10 @@ describe('NodeDialog', () => {
         />
       )
 
-      const tagsInput = getTextareaByLabel(container, 'Tags')
-      const nameInput = getInputByLabel(container, 'Name')
-      const ipInput = getInputByLabel(container, 'IP Address')
-      const regionInput = getInputByLabel(container, 'Region')
+      const tagsInput = getTextareaByLabel(container, 'nodes.tags')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName')
+      const ipInput = getInputByLabel(container, 'nodes.ipAddress')
+      const regionInput = getInputByLabel(container, 'nodes.region')
 
       const longTag = 'A'.repeat(31)
 
@@ -266,11 +266,11 @@ describe('NodeDialog', () => {
       fireEvent.change(regionInput, { target: { value: 'us-east-1' } })
       fireEvent.change(tagsInput, { target: { value: longTag } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Each tag must be less than 30 characters')).toBeInTheDocument()
+        expect(screen.getByText('nodes.errorTagLength')).toBeInTheDocument()
       })
     })
 
@@ -284,12 +284,12 @@ describe('NodeDialog', () => {
         />
       )
 
-      fireEvent.change(getInputByLabel(container, 'Name'), { target: { value: 'Test Node' } })
-      fireEvent.change(getInputByLabel(container, 'IP Address'), { target: { value: '192.168.1.100' } })
-      fireEvent.change(getInputByLabel(container, 'Region'), { target: { value: 'us-east-1' } })
-      fireEvent.change(getTextareaByLabel(container, 'Tags'), { target: { value: 'production, critical' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.nodeName'), { target: { value: 'Test Node' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.ipAddress'), { target: { value: '192.168.1.100' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.region'), { target: { value: 'us-east-1' } })
+      fireEvent.change(getTextareaByLabel(container, 'nodes.tags'), { target: { value: 'production, critical' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
@@ -312,7 +312,7 @@ describe('NodeDialog', () => {
         />
       )
 
-      const cancelButton = screen.getByText('Cancel')
+      const cancelButton = screen.getByText('common.cancel')
       fireEvent.click(cancelButton)
 
       expect(onCancel).toHaveBeenCalled()
@@ -328,15 +328,15 @@ describe('NodeDialog', () => {
         />
       )
 
-      fireEvent.change(getInputByLabel(container, 'Name'), { target: { value: 'Test Node' } })
-      fireEvent.change(getInputByLabel(container, 'IP Address'), { target: { value: '192.168.1.100' } })
-      fireEvent.change(getInputByLabel(container, 'Region'), { target: { value: 'us-east-1' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.nodeName'), { target: { value: 'Test Node' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.ipAddress'), { target: { value: '192.168.1.100' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.region'), { target: { value: 'us-east-1' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(screen.getByText('Creating...')).toBeInTheDocument()
+        expect(screen.getByText('nodes.creating')).toBeInTheDocument()
         expect(submitButton).toBeDisabled()
       })
     })
@@ -353,16 +353,16 @@ describe('NodeDialog', () => {
         />
       )
 
-      const nameInput = getInputByLabel(container, 'Name')
-      const ipInput = getInputByLabel(container, 'IP Address')
-      const regionInput = getInputByLabel(container, 'Region')
-      const tagsInput = getTextareaByLabel(container, 'Tags')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName') as HTMLInputElement
+      const ipInput = getInputByLabel(container, 'nodes.ipAddress') as HTMLInputElement
+      const regionInput = getInputByLabel(container, 'nodes.region') as HTMLInputElement
+      const tagsInput = getTextareaByLabel(container, 'nodes.tags') as HTMLInputElement
 
       expect(nameInput.value).toBe('Test Node')
       expect(ipInput.value).toBe('192.168.1.100')
       expect(regionInput.value).toBe('us-east-1')
       expect(tagsInput.value).toBe('production, critical')
-      expect(screen.getByText('Edit Node')).toBeInTheDocument()
+      expect(screen.getByText('nodes.editNode')).toBeInTheDocument()
     })
 
     it('displays save button in edit mode', () => {
@@ -375,8 +375,8 @@ describe('NodeDialog', () => {
         />
       )
 
-      expect(screen.getByText('Save Changes')).toBeInTheDocument()
-      expect(screen.queryByText('Create Node')).not.toBeInTheDocument()
+      expect(screen.getByText('common.saveChanges')).toBeInTheDocument()
+      expect(screen.queryByText('nodes.createNode')).not.toBeInTheDocument()
     })
 
     it('submits updated data', async () => {
@@ -390,10 +390,10 @@ describe('NodeDialog', () => {
         />
       )
 
-      const nameInput = getInputByLabel(container, 'Name')
+      const nameInput = getInputByLabel(container, 'nodes.nodeName')
       fireEvent.change(nameInput, { target: { value: 'Updated Node' } })
 
-      const submitButton = screen.getByText('Save Changes')
+      const submitButton = screen.getByText('common.saveChanges')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
@@ -418,12 +418,12 @@ describe('NodeDialog', () => {
         />
       )
 
-      fireEvent.change(getInputByLabel(container, 'Name'), { target: { value: 'Test Node' } })
-      fireEvent.change(getInputByLabel(container, 'IP Address'), { target: { value: '192.168.1.100' } })
-      fireEvent.change(getInputByLabel(container, 'Region'), { target: { value: 'us-east-1' } })
-      fireEvent.change(getTextareaByLabel(container, 'Tags'), { target: { value: '  production ,  critical  ' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.nodeName'), { target: { value: 'Test Node' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.ipAddress'), { target: { value: '192.168.1.100' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.region'), { target: { value: 'us-east-1' } })
+      fireEvent.change(getTextareaByLabel(container, 'nodes.tags'), { target: { value: '  production ,  critical  ' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
@@ -446,11 +446,11 @@ describe('NodeDialog', () => {
         />
       )
 
-      fireEvent.change(getInputByLabel(container, 'Name'), { target: { value: 'Test Node' } })
-      fireEvent.change(getInputByLabel(container, 'IP Address'), { target: { value: '192.168.1.100' } })
-      fireEvent.change(getInputByLabel(container, 'Region'), { target: { value: 'us-east-1' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.nodeName'), { target: { value: 'Test Node' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.ipAddress'), { target: { value: '192.168.1.100' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.region'), { target: { value: 'us-east-1' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
@@ -474,11 +474,11 @@ describe('NodeDialog', () => {
         />
       )
 
-      fireEvent.change(getInputByLabel(container, 'Name'), { target: { value: 'Test Node' } })
-      fireEvent.change(getInputByLabel(container, 'IP Address'), { target: { value: '192.168.1.100' } })
-      fireEvent.change(getInputByLabel(container, 'Region'), { target: { value: 'us-east-1' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.nodeName'), { target: { value: 'Test Node' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.ipAddress'), { target: { value: '192.168.1.100' } })
+      fireEvent.change(getInputByLabel(container, 'nodes.region'), { target: { value: 'us-east-1' } })
 
-      const submitButton = screen.getByText('Create Node')
+      const submitButton = screen.getByText('nodes.createNode')
       fireEvent.click(submitButton)
 
       await waitFor(() => {

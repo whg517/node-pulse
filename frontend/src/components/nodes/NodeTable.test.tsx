@@ -68,8 +68,8 @@ describe('NodeTable', () => {
         />
       )
 
-      expect(screen.getByText('No nodes')).toBeInTheDocument()
-      expect(screen.getByText('No nodes are currently configured.')).toBeInTheDocument()
+      expect(screen.getByText('nodes.noNodes')).toBeInTheDocument()
+      expect(screen.getByText('nodes.noNodesConfigured')).toBeInTheDocument()
     })
 
     it('shows different empty state message for editable users', () => {
@@ -81,8 +81,8 @@ describe('NodeTable', () => {
         />
       )
 
-      expect(screen.getByText('No nodes')).toBeInTheDocument()
-      expect(screen.getByText('Get started by adding a new node to monitor.')).toBeInTheDocument()
+      expect(screen.getByText('nodes.noNodes')).toBeInTheDocument()
+      expect(screen.getByText('nodes.noNodesHint')).toBeInTheDocument()
     })
 
     it('does not show action buttons in empty state when canEdit is false', () => {
@@ -108,12 +108,12 @@ describe('NodeTable', () => {
         />
       )
 
-      expect(screen.getByText('Node')).toBeInTheDocument()
-      expect(screen.getByText('Status')).toBeInTheDocument()
-      expect(screen.getByText('Region')).toBeInTheDocument()
-      expect(screen.getByText('Tags')).toBeInTheDocument()
-      expect(screen.getByText('Created')).toBeInTheDocument()
-      expect(screen.getByText('Actions')).toBeInTheDocument()
+      expect(screen.getByText('nodes.nodeName')).toBeInTheDocument()
+      expect(screen.getByText('common.status')).toBeInTheDocument()
+      expect(screen.getByText('nodes.region')).toBeInTheDocument()
+      expect(screen.getByText('nodes.tags')).toBeInTheDocument()
+      expect(screen.getByText('nodes.createdAt')).toBeInTheDocument()
+      expect(screen.getByText('common.actions')).toBeInTheDocument()
     })
 
     it('renders all nodes', () => {
@@ -269,9 +269,9 @@ describe('NodeTable', () => {
         />
       )
 
-      expect(screen.getByText('Actions')).toBeInTheDocument()
-      expect(screen.getAllByText('Edit')).toHaveLength(3)
-      expect(screen.getAllByText('Delete')).toHaveLength(3)
+      expect(screen.getByText('common.actions')).toBeInTheDocument()
+      expect(screen.getAllByText('common.edit')).toHaveLength(3)
+      expect(screen.getAllByText('common.delete')).toHaveLength(3)
     })
 
     it('does not show actions column when canEdit is false', () => {
@@ -300,7 +300,7 @@ describe('NodeTable', () => {
         />
       )
 
-      const editButtons = screen.getAllByText('Edit')
+      const editButtons = screen.getAllByText('common.edit')
       editButtons[0].click()
 
       expect(onEdit).toHaveBeenCalledWith('node-1')
@@ -318,7 +318,7 @@ describe('NodeTable', () => {
         />
       )
 
-      const deleteButtons = screen.getAllByText('Delete')
+      const deleteButtons = screen.getAllByText('common.delete')
       deleteButtons[1].click()
 
       expect(onDelete).toHaveBeenCalledWith('node-2')
@@ -334,7 +334,7 @@ describe('NodeTable', () => {
         />
       )
 
-      const editButtons = screen.getAllByText('Edit')
+      const editButtons = screen.getAllByText('common.edit')
       expect(() => editButtons[0].click()).not.toThrow()
     })
 
@@ -348,7 +348,7 @@ describe('NodeTable', () => {
         />
       )
 
-      const deleteButtons = screen.getAllByText('Delete')
+      const deleteButtons = screen.getAllByText('common.delete')
       expect(() => deleteButtons[0].click()).not.toThrow()
     })
   })

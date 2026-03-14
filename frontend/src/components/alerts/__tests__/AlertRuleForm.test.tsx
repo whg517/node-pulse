@@ -21,11 +21,11 @@ describe('AlertRuleForm', () => {
       />
     )
 
-    expect(screen.getByLabelText('Metric Type')).toBeInTheDocument()
-    expect(screen.getByLabelText('Threshold')).toBeInTheDocument()
-    expect(screen.getByLabelText('Alert Level')).toBeInTheDocument()
-    expect(screen.getByLabelText('Scope')).toBeInTheDocument()
-    expect(screen.getByLabelText('Enabled')).toBeInTheDocument()
+    expect(screen.getByLabelText('alerts.alertType')).toBeInTheDocument()
+    expect(screen.getByLabelText('alerts.threshold')).toBeInTheDocument()
+    expect(screen.getByLabelText('alerts.severity')).toBeInTheDocument()
+    expect(screen.getByLabelText('alerts.scope')).toBeInTheDocument()
+    expect(screen.getByLabelText('status.enabled')).toBeInTheDocument()
   })
 
   it('pre-fills form with initial data in edit mode', () => {
@@ -48,10 +48,10 @@ describe('AlertRuleForm', () => {
       />
     )
 
-    const metricSelect = screen.getByLabelText('Metric Type') as HTMLSelectElement
-    const thresholdInput = screen.getByLabelText('Threshold') as HTMLInputElement
-    const levelSelect = screen.getByLabelText('Alert Level') as HTMLSelectElement
-    const enabledCheckbox = screen.getByLabelText('Enabled') as HTMLInputElement
+    const metricSelect = screen.getByLabelText('alerts.alertType') as HTMLSelectElement
+    const thresholdInput = screen.getByLabelText('alerts.threshold') as HTMLInputElement
+    const levelSelect = screen.getByLabelText('alerts.severity') as HTMLSelectElement
+    const enabledCheckbox = screen.getByLabelText('status.enabled') as HTMLInputElement
 
     expect(metricSelect.value).toBe('latency')
     expect(thresholdInput.value).toBe('150')
@@ -70,11 +70,11 @@ describe('AlertRuleForm', () => {
       />
     )
 
-    const submitButton = screen.getByText('Create Rule')
+    const submitButton = screen.getByText('alerts.createRule')
     fireEvent.click(submitButton)
 
     await waitFor(() => {
-      expect(screen.getByText('Threshold must be greater than 0')).toBeInTheDocument()
+      expect(screen.getByText('alerts.errorThresholdPositive')).toBeInTheDocument()
     })
     expect(onSubmit).not.toHaveBeenCalled()
   })
@@ -90,10 +90,10 @@ describe('AlertRuleForm', () => {
       />
     )
 
-    const thresholdInput = screen.getByLabelText('Threshold')
+    const thresholdInput = screen.getByLabelText('alerts.threshold')
     fireEvent.change(thresholdInput, { target: { value: '100' } })
 
-    const submitButton = screen.getByText('Create Rule')
+    const submitButton = screen.getByText('alerts.createRule')
     fireEvent.click(submitButton)
 
     await waitFor(() => {
@@ -118,7 +118,7 @@ describe('AlertRuleForm', () => {
       />
     )
 
-    const cancelButton = screen.getByText('Cancel')
+    const cancelButton = screen.getByText('common.cancel')
     fireEvent.click(cancelButton)
 
     expect(onCancel).toHaveBeenCalled()
