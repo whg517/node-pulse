@@ -49,7 +49,8 @@ export interface UseDashboardResult {
 export function useDashboard(nodes: NodeDTO[], metrics: MetricsDTO[]): UseDashboardResult {
   // Create metrics map for quick lookup
   const metricsMap = useMemo(() => {
-    return new Map(metrics.map(m => [m.node_id, m]))
+    const safeMetrics = Array.isArray(metrics) ? metrics : []
+    return new Map(safeMetrics.map(m => [m.node_id, m]))
   }, [metrics])
 
   // Compute health status for each node

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { Webhook } from '../../stores/webhooksStore'
 
 interface WebhooksTableProps {
@@ -15,6 +16,7 @@ export function WebhooksTable({
   onToggleEnabled,
   canEdit,
 }: WebhooksTableProps) {
+  const { t } = useTranslation()
   // Helper to truncate URL with tooltip
   const truncateUrl = (url: string, maxLength: number = 50) => {
     if (url.length <= maxLength) return url
@@ -39,9 +41,9 @@ export function WebhooksTable({
             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No webhooks configured</h3>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">{t('webhooks.noWebhooks')}</h3>
         <p className="mt-1 text-sm text-gray-500">
-          Get started by adding a webhook endpoint for alert notifications.
+          {t('webhooks.noWebhooksHint')}
         </p>
         {canEdit && (
           <div className="mt-6">
@@ -50,7 +52,7 @@ export function WebhooksTable({
               onClick={() => onEdit('')}
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              Add Webhook
+              {t('webhooks.addWebhook')}
             </button>
           </div>
         )}
@@ -65,17 +67,17 @@ export function WebhooksTable({
           <thead className="bg-gray-50">
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                URL
+                {t('webhooks.webhookUrl')}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Event Format
+                {t('webhooks.eventFormat')}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                {t('common.status')}
               </th>
               {canEdit && (
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               )}
             </tr>
@@ -112,7 +114,7 @@ export function WebhooksTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                   <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                    {Object.keys(webhook.eventFormat || {}).length} fields
+                    {Object.keys(webhook.eventFormat || {}).length} {t('webhooks.fields')}
                   </code>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -121,7 +123,7 @@ export function WebhooksTable({
                       webhook.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                     }`}
                   >
-                    {webhook.enabled ? 'Enabled' : 'Disabled'}
+                    {webhook.enabled ? t('status.enabled') : t('status.disabled')}
                   </span>
                 </td>
                 {canEdit && (
@@ -130,23 +132,23 @@ export function WebhooksTable({
                       type="button"
                       onClick={() => onToggleEnabled(webhook.id, !webhook.enabled)}
                       className="text-blue-600 hover:text-blue-900 mr-4"
-                      title={webhook.enabled ? 'Disable' : 'Enable'}
+                      title={webhook.enabled ? t('settings.disable') : t('settings.enable')}
                     >
-                      {webhook.enabled ? 'Disable' : 'Enable'}
+                      {webhook.enabled ? t('settings.disable') : t('settings.enable')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onEdit(webhook.id)}
                       className="text-indigo-600 hover:text-indigo-900 mr-4"
                     >
-                      Edit
+                      {t('common.edit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete(webhook.id)}
                       className="text-red-600 hover:text-red-900"
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </td>
                 )}

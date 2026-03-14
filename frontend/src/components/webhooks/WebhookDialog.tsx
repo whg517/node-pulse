@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { WebhookForm } from './WebhookForm'
 import type { Webhook } from '../../stores/webhooksStore'
 
@@ -9,13 +10,14 @@ interface WebhookDialogProps {
 }
 
 export function WebhookDialog({ mode, initialData, onSubmit, onCancel }: WebhookDialogProps) {
+  const { t } = useTranslation()
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto p-5 border shadow-lg rounded-md bg-white max-w-3xl w-full">
         {/* Dialog Header */}
         <div className="flex justify-between items-center pb-4 border-b border-gray-200">
           <h3 className="text-lg leading-6 font-medium text-gray-900">
-            {mode === 'create' ? 'Add Webhook' : 'Edit Webhook'}
+            {mode === 'create' ? t('webhooks.addWebhook') : t('webhooks.editWebhook')}
           </h3>
           <button
             type="button"

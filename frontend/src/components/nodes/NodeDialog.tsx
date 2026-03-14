@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { NodeDTO, CreateNodeRequest, UpdateNodeRequest } from '../../api/types'
 
 interface NodeDialogProps {
@@ -30,6 +31,7 @@ interface FormErrors {
 }
 
 export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) {
+  const { t } = useTranslation()
   const [formData, setFormData] = useState<FormData>({
     name: '',
     ip: '',
@@ -56,16 +58,16 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
 
     // Name validation
     if (!formData.name.trim()) {
-      newErrors.name = 'Name is required'
+      newErrors.name = t('nodes.errorNameRequired')
     } else if (formData.name.length < 2) {
-      newErrors.name = 'Name must be at least 2 characters'
+      newErrors.name = t('nodes.errorNameMin')
     } else if (formData.name.length > 100) {
-      newErrors.name = 'Name must be less than 100 characters'
+      newErrors.name = t('nodes.errorNameMax')
     }
 
     // IP validation
     if (!formData.ip.trim()) {
-      newErrors.ip = 'IP address is required'
+      newErrors.ip = t('nodes.errorIpRequired')
     } else {
       // Simple IPv4 validation
       const ipv4Regex =
@@ -74,17 +76,17 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
       const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/
 
       if (!ipv4Regex.test(formData.ip) && !ipv6Regex.test(formData.ip)) {
-        newErrors.ip = 'Invalid IP address format'
+        newErrors.ip = t('nodes.errorIpInvalid')
       }
     }
 
     // Region validation
     if (!formData.region.trim()) {
-      newErrors.region = 'Region is required'
+      newErrors.region = t('nodes.errorRegionRequired')
     } else if (formData.region.length < 2) {
-      newErrors.region = 'Region must be at least 2 characters'
+      newErrors.region = t('nodes.errorRegionMin')
     } else if (formData.region.length > 50) {
-      newErrors.region = 'Region must be less than 50 characters'
+      newErrors.region = t('nodes.errorRegionMax')
     }
 
     // Tags validation
@@ -94,12 +96,12 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
       .filter((t) => t.length > 0)
 
     if (tagArray.length > 10) {
-      newErrors.tags = 'Maximum 10 tags allowed'
+      newErrors.tags = t('nodes.errorTagsMax')
     }
 
     tagArray.forEach((tag) => {
       if (tag.length > 30) {
-        newErrors.tags = 'Each tag must be less than 30 characters'
+        newErrors.tags = t('nodes.errorTagLength')
       }
     })
 
@@ -160,7 +162,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900">
-            {mode === 'create' ? 'Add New Node' : 'Edit Node'}
+            {mode === 'create' ? t('nodes.addNode') : t('nodes.editNode')}
           </h3>
         </div>
 
@@ -171,7 +173,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               htmlFor="name"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Name <span className="text-red-500">*</span>
+              {t('nodes.nodeName')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -194,7 +196,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               htmlFor="ip"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              IP Address <span className="text-red-500">*</span>
+              {t('nodes.ipAddress')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -217,7 +219,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               htmlFor="region"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Region <span className="text-red-500">*</span>
+              {t('nodes.region')} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -240,7 +242,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               htmlFor="tags"
               className="block text-sm font-medium text-gray-700 mb-1"
             >
-              Tags
+              {t('nodes.tags')}
             </label>
             <textarea
               id="tags"
@@ -253,7 +255,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               placeholder="e.g., production, critical, backend (comma-separated)"
             />
             <p className="mt-1 text-xs text-gray-500">
-              Separate multiple tags with commas (max 10 tags)
+              {t('nodes.tagsHint')}
             </p>
             {errors.tags && (
               <p className="mt-1 text-sm text-red-600">{errors.tags}</p>
@@ -268,7 +270,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               disabled={isSubmitting}
               className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -277,11 +279,11 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
             >
               {isSubmitting
                 ? mode === 'create'
-                  ? 'Creating...'
-                  : 'Saving...'
+                  ? t('nodes.creating')
+                  : t('common.saving')
                 : mode === 'create'
-                ? 'Create Node'
-                : 'Save Changes'}
+                ? t('nodes.createNode')
+                : t('common.saveChanges')}
             </button>
           </div>
         </form>

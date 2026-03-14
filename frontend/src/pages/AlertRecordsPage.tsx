@@ -102,7 +102,7 @@ export default function AlertRecordsPage() {
     try {
       // Fetch alert records and nodes
       const [recordsResponse] = await Promise.all([
-        getAlertRecords({ ...filters, limit: 1000, offset: 0 }), // Fetch all for client-side sorting
+        getAlertRecords({ ...filters, limit: 100, offset: page * pageSize }), // Backend max limit is 100
         loadNodes(),
       ])
 

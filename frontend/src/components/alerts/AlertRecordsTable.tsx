@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { AlertRecordDTO } from '../../api/alertRecords'
 import type { NodeDTO } from '../../api/types'
 
@@ -29,6 +30,7 @@ export function AlertRecordsTable({
   sortOrder,
   onSort,
 }: AlertRecordsTableProps) {
+  const { t } = useTranslation()
   // Helper to get node name by ID
   const getNodeName = (nodeId: string) => {
     const node = nodes.find((n) => n.id === nodeId)
@@ -125,9 +127,9 @@ export function AlertRecordsTable({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No alert records</h3>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">{t('alertHistory.noRecords')}</h3>
         <p className="mt-1 text-sm text-gray-500">
-          No alert records found matching the current filters.
+          {t('alertHistory.noRecordsHint')}
         </p>
       </div>
     )

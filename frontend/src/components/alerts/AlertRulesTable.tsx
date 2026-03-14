@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import type { AlertRule } from '../../stores/types'
 import type { NodeDTO } from '../../api/types'
 
@@ -18,9 +19,10 @@ export function AlertRulesTable({
   onToggleEnabled,
   canEdit,
 }: AlertRulesTableProps) {
+  const { t } = useTranslation()
   // Helper to get node name by ID
   const getNodeName = (nodeId: string | null) => {
-    if (!nodeId) return 'Global'
+    if (!nodeId) return t('alerts.global')
     const node = nodes.find((n) => n.id === nodeId)
     return node?.name || nodeId
   }
@@ -43,11 +45,11 @@ export function AlertRulesTable({
   const getMetricDisplayName = (metric: string) => {
     switch (metric) {
       case 'latency':
-        return 'Latency'
+        return t('metrics.latency')
       case 'packet_loss_rate':
-        return 'Packet Loss Rate'
+        return t('metrics.packetLoss')
       case 'jitter':
-        return 'Jitter'
+        return t('metrics.jitter')
       default:
         return metric
     }
@@ -71,9 +73,9 @@ export function AlertRulesTable({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900">No alert rules</h3>
+        <h3 className="mt-2 text-sm font-medium text-gray-900">{t('alerts.noRules')}</h3>
         <p className="mt-1 text-sm text-gray-500">
-          Get started by creating a new alert rule.
+          {t('alerts.noRulesHint')}
         </p>
         {canEdit && (
           <div className="mt-6">
@@ -82,7 +84,7 @@ export function AlertRulesTable({
               onClick={() => onEdit('')}
               className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
             >
-              Create Alert Rule
+              {t('alerts.createRule')}
             </button>
           </div>
         )}
@@ -97,23 +99,23 @@ export function AlertRulesTable({
           <thead className="bg-gray-50">
             <tr>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Metric
+                {t('alerts.alertType')}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Threshold
+                {t('alerts.threshold')}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Level
+                {t('alerts.severity')}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Node
+                {t('nodes.title')}
               </th>
               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
+                {t('common.status')}
               </th>
               {canEdit && (
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               )}
             </tr>
@@ -139,7 +141,7 @@ export function AlertRulesTable({
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${rule.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {rule.enabled ? 'Enabled' : 'Disabled'}
+                    {rule.enabled ? t('status.enabled') : t('status.disabled')}
                   </span>
                 </td>
                 {canEdit && (
@@ -148,23 +150,23 @@ export function AlertRulesTable({
                       type="button"
                       onClick={() => onToggleEnabled(rule.id, !rule.enabled)}
                       className="text-blue-600 hover:text-blue-900 mr-4"
-                      title={rule.enabled ? 'Disable' : 'Enable'}
+                      title={rule.enabled ? t('settings.disable') : t('settings.enable')}
                     >
-                      {rule.enabled ? 'Disable' : 'Enable'}
+                      {rule.enabled ? t('settings.disable') : t('settings.enable')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onEdit(rule.id)}
                       className="text-indigo-600 hover:text-indigo-900 mr-4"
                     >
-                      Edit
+                      {t('common.edit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete(rule.id)}
                       className="text-red-600 hover:text-red-900"
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </td>
                 )}

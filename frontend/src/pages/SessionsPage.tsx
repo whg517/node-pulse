@@ -41,8 +41,8 @@ export default function SessionsPage() {
         getSessionInfo().catch(() => null),
       ])
 
-      setSessions(sessionsResponse.data.sessions)
-      setCurrentSessionId(infoResponse?.data?.current_session_id || null)
+      setSessions(Array.isArray(sessionsResponse) ? sessionsResponse : [])
+      setCurrentSessionId(infoResponse?.session_id || null)
     } catch (err) {
       const error = err as { message?: string }
       setError(error.message || t('errors.failedToLoad'))

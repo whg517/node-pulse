@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Session } from '../../types/auth'
 
 interface SessionListProps {
@@ -24,6 +25,7 @@ export default function SessionList({
   onRefresh,
   onRevoke,
 }: SessionListProps) {
+  const { t } = useTranslation()
   const [revokingId, setRevokingId] = useState<string | null>(null)
   const [confirmRevoke, setConfirmRevoke] = useState<string | null>(null)
 
@@ -46,20 +48,6 @@ export default function SessionList({
 
   const formatDateTime = (dateString: string) => {
     return new Date(dateString).toLocaleString()
-  }
-
-  const formatRelativeTime = (dateString: string) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / 60000)
-    const diffHours = Math.floor(diffMs / 3600000)
-    const diffDays = Math.floor(diffMs / 86400000)
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} minute${diffMins !== 1 ? 's' : ''} ago`
-    if (diffHours < 24) return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`
-    return `${diffDays} day${diffDays !== 1 ? 's' : ''} ago`
   }
 
   // Extract browser/device info from user agent
@@ -106,7 +94,7 @@ export default function SessionList({
   return (
     <div className="bg-white shadow rounded-lg overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">Active Sessions</h3>
+        <h3 className="text-lg font-medium text-gray-900">{t('sessions.activeSessions')}</h3>
         <button
           onClick={onRefresh}
           disabled={isLoading}
@@ -125,13 +113,13 @@ export default function SessionList({
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          Refresh
+          {t('common.refresh')}
         </button>
       </div>
 
       {sessions.length === 0 ? (
         <div className="px-6 py-8 text-center text-gray-500">
-          No active sessions found.
+          {t('sessions.noSessions')}
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -139,31 +127,31 @@ export default function SessionList({
             <thead className="bg-gray-50">
               <tr>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Device / Browser
+                  {t('sessions.device')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  IP Address
+                  {t('sessions.ipAddress')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
+                  {t('sessions.created')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Last Used
+                  {t('sessions.expires')}
                 </th>
                 <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sessions.map((session) => {
-                const isCurrent = session.id === currentSessionId || session.is_current
-                const isRevoking = revokingId === session.id
-                const isConfirming = confirmRevoke === session.id
+                const isCurrent = session.session_id === currentSessionId
+                const isRevoking = revokingId === session.session_id
+                const isConfirming = confirmRevoke === session.session_id
                 const { browser, device } = parseUserAgent(session.user_agent || '')
 
                 return (
-                  <tr key={session.id} className="hover:bg-gray-50">
+                  <tr key={session.session_id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
@@ -188,7 +176,7 @@ export default function SessionList({
                             </span>
                             {isCurrent && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" data-testid="current-session">
-                                Current Session
+                                {t('sessions.currentSession')}
                               </span>
                             )}
                           </div>
@@ -203,32 +191,32 @@ export default function SessionList({
                       {formatDateTime(session.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatRelativeTime(session.last_used_at)}
+                      {formatDateTime(session.expires_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {isConfirming ? (
                         <div className="flex items-center justify-end space-x-2">
                           <span className="text-sm text-red-600">
-                            {isCurrent ? 'This will log you out. ' : ''}Confirm?
+                            {isCurrent ? t('sessions.logoutWarning') + ' ' : ''}{t('sessions.confirmRevoke')}
                           </span>
                           <button
-                            onClick={() => handleRevoke(session.id, isCurrent)}
+                            onClick={() => handleRevoke(session.session_id, isCurrent)}
                             disabled={isRevoking}
                             className="inline-flex items-center px-2 py-1 border border-red-300 rounded text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none disabled:opacity-50"
                           >
-                            {isRevoking ? 'Revoking...' : 'Yes, Revoke'}
+                            {isRevoking ? t('sessions.revoking') : t('sessions.yesRevoke')}
                           </button>
                           <button
                             onClick={() => setConfirmRevoke(null)}
                             disabled={isRevoking}
                             className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none disabled:opacity-50"
                           >
-                            Cancel
+                            {t('common.cancel')}
                           </button>
                         </div>
                       ) : (
                         <button
-                          onClick={() => handleRevoke(session.id, isCurrent)}
+                          onClick={() => handleRevoke(session.session_id, isCurrent)}
                           disabled={isRevoking || isLoading}
                           className={`inline-flex items-center px-3 py-1.5 border rounded text-xs font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
                             isCurrent
@@ -236,7 +224,7 @@ export default function SessionList({
                               : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-blue-500'
                           }`}
                         >
-                          Revoke
+                          {t('sessions.revoke')}
                         </button>
                       )}
                     </td>

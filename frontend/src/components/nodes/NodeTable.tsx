@@ -5,6 +5,7 @@
  * Provides inline viewing and links to edit/delete actions.
  */
 
+import { useTranslation } from 'react-i18next'
 import type { NodeDTO } from '../../api/types'
 import { Link } from 'react-router-dom'
 
@@ -23,6 +24,7 @@ export function NodeTable({
   onEdit,
   onDelete,
 }: NodeTableProps) {
+  const { t } = useTranslation()
   if (isLoading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -54,11 +56,11 @@ export function NodeTable({
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">No nodes</h3>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">{t('nodes.noNodes')}</h3>
           <p className="mt-1 text-sm text-gray-500">
             {canEdit
-              ? 'Get started by adding a new node to monitor.'
-              : 'No nodes are currently configured.'}
+              ? t('nodes.noNodesHint')
+              : t('nodes.noNodesConfigured')}
           </p>
         </div>
       </div>
@@ -75,38 +77,38 @@ export function NodeTable({
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Node
+                {t('nodes.nodeName')}
               </th>
               <th
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Status
+                {t('common.status')}
               </th>
               <th
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Region
+                {t('nodes.region')}
               </th>
               <th
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Tags
+                {t('nodes.tags')}
               </th>
               <th
                 scope="col"
                 className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
               >
-                Created
+                {t('nodes.createdAt')}
               </th>
               {canEdit && (
                 <th
                   scope="col"
                   className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
                 >
-                  Actions
+                  {t('common.actions')}
                 </th>
               )}
             </tr>
@@ -157,14 +159,14 @@ export function NodeTable({
                       onClick={() => onEdit?.(node.id)}
                       className="text-blue-600 hover:text-blue-900 mr-4"
                     >
-                      Edit
+                      {t('common.edit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete?.(node.id)}
                       className="text-red-600 hover:text-red-900"
                     >
-                      Delete
+                      {t('common.delete')}
                     </button>
                   </td>
                 )}

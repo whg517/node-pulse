@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Webhook } from '../../stores/webhooksStore'
 
 interface WebhookFormProps {
@@ -28,6 +29,7 @@ const DEFAULT_EVENT_FORMAT = {
 }
 
 export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFormProps) {
+  const { t } = useTranslation()
   const [url, setUrl] = useState(initialData?.url || '')
   const [eventFormat, setEventFormat] = useState(
     initialData?.eventFormat
@@ -44,25 +46,25 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
 
     // Validate URL
     if (!url) {
-      newErrors.url = 'URL is required'
+      newErrors.url = t('webhooks.errorUrlRequired')
     } else if (!url.startsWith('https://')) {
-      newErrors.url = 'URL must use HTTPS protocol for security (NFR-SEC-003)'
+      newErrors.url = t('webhooks.errorUrlHttps')
     } else {
       try {
         new URL(url)
       } catch (e) {
-        newErrors.url = 'Invalid URL format'
+        newErrors.url = t('webhooks.errorUrlInvalid')
       }
     }
 
     // Validate JSON
     if (!eventFormat.trim()) {
-      newErrors.eventFormat = 'Event format is required'
+      newErrors.eventFormat = t('webhooks.errorFormatRequired')
     } else {
       try {
         JSON.parse(eventFormat)
       } catch (e) {
-        newErrors.eventFormat = 'Invalid JSON format'
+        newErrors.eventFormat = t('webhooks.errorFormatInvalid')
       }
     }
 
@@ -102,7 +104,7 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
       {/* URL Input */}
       <div>
         <label htmlFor="url" className="block text-sm font-medium text-gray-700">
-          Webhook URL <span className="text-red-500">*</span>
+          {t('webhooks.webhookUrl')} <span className="text-red-500">*</span>
         </label>
         <input
           type="url"
@@ -118,7 +120,7 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
           <p className="mt-2 text-sm text-red-600">{errors.url}</p>
         )}
         <p className="mt-1 text-sm text-gray-500">
-          Must be a valid HTTPS URL. Webhooks will send POST requests to this endpoint when alerts are triggered.
+          {t('webhooks.urlHint')}
         </p>
       </div>
 
@@ -126,14 +128,14 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
       <div>
         <div className="flex justify-between items-center">
           <label htmlFor="eventFormat" className="block text-sm font-medium text-gray-700">
-            Event Format (JSON) <span className="text-red-500">*</span>
+            {t('webhooks.eventFormat')} (JSON) <span className="text-red-500">*</span>
           </label>
           <button
             type="button"
             onClick={resetToDefault}
             className="text-sm text-blue-600 hover:text-blue-800"
           >
-            Reset to Default
+            {t('webhooks.resetToDefault')}
           </button>
         </div>
         <textarea
@@ -150,11 +152,11 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
           <p className="mt-2 text-sm text-red-600">{errors.eventFormat}</p>
         )}
         <p className="mt-1 text-sm text-gray-500">
-          Customize the JSON payload sent to this webhook. Use template variables like {'{{.AlertID}}'} for dynamic values.
+          {t('webhooks.formatHint')}
         </p>
         <details className="mt-2">
           <summary className="text-sm text-gray-600 cursor-pointer hover:text-gray-800">
-            Available template variables
+            {t('webhooks.templateVars')}
           </summary>
           <ul className="mt-2 text-xs text-gray-500 list-disc list-inside space-y-1">
             <li>{'{{.AlertID}}'} - Unique alert identifier</li>
@@ -183,10 +185,10 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
         </div>
         <div className="ml-3 text-sm">
           <label htmlFor="enabled" className="font-medium text-gray-700">
-            Enabled
+            {t('status.enabled')}
           </label>
           <p className="text-gray-500">
-            Uncheck to disable webhook without deleting it. Disabled webhooks won't receive alert notifications.
+            {t('webhooks.enabledHint')}
           </p>
         </div>
       </div>
@@ -199,14 +201,14 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
           disabled={isSubmitting}
           className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Saving...' : mode === 'create' ? 'Add Webhook' : 'Update Webhook'}
+          {isSubmitting ? t('common.saving') : mode === 'create' ? t('webhooks.addWebhook') : t('webhooks.updateWebhook')}
         </button>
       </div>
     </form>

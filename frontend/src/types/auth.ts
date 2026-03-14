@@ -66,32 +66,20 @@ export interface LogoutResponse {
 // ============== Session Management Types ==============
 
 export interface Session {
-  id: string
-  user_id: string
+  session_id: string
   created_at: string
-  last_used_at: string
   expires_at: string
+  max_valid_until: string
   ip_address: string
   user_agent: string
-  is_current: boolean
 }
 
-export interface SessionListResponse {
-  data: {
-    sessions: Session[]
-    total: number
-  }
-  message: string
-  timestamp: string
-}
+export type SessionListResponse = Session[]
 
 export interface SessionInfoResponse {
-  data: {
-    current_session_id: string
-    active_sessions_count: number
-  }
-  message: string
-  timestamp: string
+  session_id: string
+  expires_at: string
+  max_valid_until: string
 }
 
 // ============== Error Types ==============

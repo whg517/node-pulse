@@ -97,13 +97,18 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	// Initialize memory cache and batch writer (Story 3.2)
 	memoryCache := cache.NewMemoryCache()
 	batchWriter := cache.NewBatchWriter(pool, 1000, 100) // Buffer size 1000, batch size 100
-	batchWriter.Start()
+	if pool != nil {
+		batchWriter.Start()
+	}
 
 	// Initialize alert engine (Story 5.5)
+	var alertEngine *alert.AlertEngine
 	alertQuerier := db.NewAlertQuerier(pool)
-	alertEngineConfig := alert.DefaultEngineConfig()
-	alertEngine := alert.NewAlertEngine(pool, alertQuerier, alertEngineConfig)
-	alertEngine.Start()
+	if pool != nil {
+		alertEngineConfig := alert.DefaultEngineConfig()
+		alertEngine = alert.NewAlertEngine(pool, alertQuerier, alertEngineConfig)
+		alertEngine.Start()
+	}
 
 	// Initialize export service (Story 8.1)
 	exportService := export.NewExportService(pool)

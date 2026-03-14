@@ -18,90 +18,90 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	Server    ServerConfig
-	DB        DatabaseConfig
-	Cleanup   CleanupConfig
-	Log       LogConfig
-	CORS      CORSConfig
-	Admin     AdminConfig
-	Session   SessionConfig
-	JWT       JWTConfig
-	RateLimit RateLimitConfig
+	Server    ServerConfig    `yaml:"server"`
+	DB        DatabaseConfig  `yaml:"database"`
+	Cleanup   CleanupConfig   `yaml:"cleanup"`
+	Log       LogConfig       `yaml:"log"`
+	CORS      CORSConfig      `yaml:"cors"`
+	Admin     AdminConfig     `yaml:"admin"`
+	Session   SessionConfig   `yaml:"session"`
+	JWT       JWTConfig       `yaml:"jwt"`
+	RateLimit RateLimitConfig `yaml:"ratelimit"`
 }
 
 // ServerConfig holds server configuration
 type ServerConfig struct {
-	Port         string
-	ReadTimeout  int    // seconds
-	WriteTimeout int    // seconds
-	IdleTimeout  int    // seconds
-	Mode         string // debug, release, test
+	Port         string `yaml:"port"`
+	ReadTimeout  int    `yaml:"read_timeout"`
+	WriteTimeout int    `yaml:"write_timeout"`
+	IdleTimeout  int    `yaml:"idle_timeout"`
+	Mode         string `yaml:"mode"`
 }
 
 // DatabaseConfig holds database configuration
 type DatabaseConfig struct {
-	URL             string
-	MaxConnections  int
-	MinConnections  int
-	ConnMaxLifetime int // seconds
-	ConnMaxIdleTime int // seconds
+	URL             string `yaml:"url"`
+	MaxConnections  int    `yaml:"max_connections"`
+	MinConnections  int    `yaml:"min_connections"`
+	ConnMaxLifetime int    `yaml:"conn_max_lifetime"`
+	ConnMaxIdleTime int    `yaml:"conn_max_idle_time"`
 }
 
 // CleanupConfig holds cleanup task configuration
 type CleanupConfig struct {
-	Enabled         bool
-	IntervalSeconds int
-	RetentionDays   int
-	SlowThresholdMs int64
+	Enabled         bool  `yaml:"enabled"`
+	IntervalSeconds int   `yaml:"interval_seconds"`
+	RetentionDays   int   `yaml:"retention_days"`
+	SlowThresholdMs int64 `yaml:"slow_threshold_ms"`
 }
 
 // LogConfig holds logging configuration
 type LogConfig struct {
-	Level  string // debug, info, warn, error
-	Format string // json, text
-	Output string // stdout, stderr, file path
+	Level  string `yaml:"level"`
+	Format string `yaml:"format"`
+	Output string `yaml:"output"`
 }
 
 // CORSConfig holds CORS configuration
 type CORSConfig struct {
-	AllowedOrigins string
-	AllowedMethods string
-	AllowedHeaders string
-	MaxAge         int // seconds
+	AllowedOrigins string `yaml:"allowed_origins"`
+	AllowedMethods string `yaml:"allowed_methods"`
+	AllowedHeaders string `yaml:"allowed_headers"`
+	MaxAge         int    `yaml:"max_age"`
 }
 
 // AdminConfig holds admin user configuration
 type AdminConfig struct {
-	Username string
-	Password string
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
 }
 
 // SessionConfig holds session configuration
 type SessionConfig struct {
-	Secret          string
-	ExpirationHours int
-	CookieSecure    bool
-	CookieSameSite  string // Strict, Lax, None
+	Secret          string `yaml:"secret"`
+	ExpirationHours int    `yaml:"expiration_hours"`
+	CookieSecure    bool   `yaml:"cookie_secure"`
+	CookieSameSite  string `yaml:"cookie_samesite"`
 }
 
 // JWTConfig holds JWT configuration
 type JWTConfig struct {
-	Secret                       string // Deprecated: Use PrivateKey/PublicKey for RS256
-	PrivateKey                   string // RSA private key in PEM format for RS256 signing
-	PublicKey                    string // RSA public key in PEM format for RS256 verification
-	AccessTokenExpirationMinutes int
-	RefreshTokenExpirationDays   int
-	RefreshTokenMaxValidityDays  int // Absolute cap for refresh tokens (sliding window)
-	KeyID                        string // Key identifier for key rotation (kid header)
+	Secret                       string `yaml:"secret"`
+	PrivateKey                   string `yaml:"private_key"`
+	PublicKey                    string `yaml:"public_key"`
+	AccessTokenExpirationMinutes int    `yaml:"access_token_expiration_minutes"`
+	RefreshTokenExpirationDays   int    `yaml:"refresh_token_expiration_days"`
+	RefreshTokenMaxValidityDays  int    `yaml:"refresh_token_max_validity_days"`
+	KeyID                        string `yaml:"key_id"`
 }
 
 // RateLimitConfig holds rate limiting configuration for auth endpoints
 type RateLimitConfig struct {
-	LoginMaxPerMinute   int // Maximum login attempts per minute per IP
-	LoginMaxPerDay      int // Maximum login attempts per day per IP
-	RefreshMaxPerMinute int // Maximum refresh attempts per minute per token
-	RefreshMaxPerDay    int // Maximum refresh attempts per day per token
-	APIKeyMaxPerMinute  int // Maximum API key exchanges per minute per key
+	LoginMaxPerMinute   int `yaml:"login_max_per_minute"`
+	LoginMaxPerDay      int `yaml:"login_max_per_day"`
+	RefreshMaxPerMinute int `yaml:"refresh_max_per_minute"`
+	RefreshMaxPerDay    int `yaml:"refresh_max_per_day"`
+	APIKeyMaxPerMinute  int `yaml:"apikey_max_per_minute"`
 }
 
 var (

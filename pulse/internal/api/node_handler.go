@@ -271,7 +271,7 @@ func (h *NodeHandler) GetNodesHandler(c *gin.Context) {
 
 	// Execute query
 	ctx := context.Background()
-	var nodes []*models.Node
+	nodes := make([]*models.Node, 0)
 	var err error
 
 	if region != "" {
@@ -289,6 +289,11 @@ func (h *NodeHandler) GetNodesHandler(c *gin.Context) {
 			Details: err.Error(),
 		})
 		return
+	}
+
+	// Ensure nodes is never nil (serializes as [] not null)
+	if nodes == nil {
+		nodes = make([]*models.Node, 0)
 	}
 
 	// Parse and validate pagination parameters

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next'
 import { AlertRuleForm } from './AlertRuleForm'
 import type { AlertRule } from '../../stores/types'
 import type { NodeDTO, CreateAlertRuleRequest } from '../../api/types'
@@ -11,13 +12,14 @@ interface AlertRuleDialogProps {
 }
 
 export function AlertRuleDialog({ mode, initialData, nodes, onSubmit, onCancel }: AlertRuleDialogProps) {
+  const { t } = useTranslation()
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
       <div className="relative top-20 mx-auto p-5 border shadow-lg rounded-md bg-white max-w-lg w-full">
         {/* Dialog Header */}
         <div className="flex justify-between items-center pb-4 border-b border-gray-200">
           <h3 className="text-lg leading-6 font-medium text-gray-900">
-            {mode === 'create' ? 'Create Alert Rule' : 'Edit Alert Rule'}
+            {mode === 'create' ? t('alerts.createRule') : t('alerts.editRule')}
           </h3>
           <button
             type="button"

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { AlertRule } from '../../stores/types'
 import type { NodeDTO, CreateAlertRuleRequest } from '../../api/types'
 
@@ -11,6 +12,7 @@ interface AlertRuleFormProps {
 }
 
 export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: AlertRuleFormProps) {
+  const { t } = useTranslation()
   const [metric, setMetric] = useState<'latency' | 'packet_loss_rate' | 'jitter'>(initialData?.metric || 'latency')
   const [threshold, setThreshold] = useState<number>(initialData?.threshold || 0)
   const [level, setLevel] = useState<'P0' | 'P1' | 'P2'>(initialData?.level || 'P1')
@@ -24,7 +26,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
     const newErrors: Record<string, string> = {}
 
     if (!threshold || threshold <= 0) {
-      newErrors.threshold = 'Threshold must be greater than 0'
+      newErrors.threshold = t('alerts.errorThresholdPositive')
     }
 
     setErrors(newErrors)
@@ -60,7 +62,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
       {/* Metric Type Select */}
       <div>
         <label htmlFor="metric" className="block text-sm font-medium text-gray-700">
-          Metric Type
+          {t('alerts.alertType')}
         </label>
         <select
           id="metric"
@@ -68,16 +70,16 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           onChange={(e) => setMetric(e.target.value as 'latency' | 'packet_loss_rate' | 'jitter')}
           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
         >
-          <option value="latency">Latency (ms)</option>
-          <option value="packet_loss_rate">Packet Loss Rate (%)</option>
-          <option value="jitter">Jitter (ms)</option>
+          <option value="latency">{t('metrics.latency')} (ms)</option>
+          <option value="packet_loss_rate">{t('metrics.packetLoss')} (%)</option>
+          <option value="jitter">{t('metrics.jitter')} (ms)</option>
         </select>
       </div>
 
       {/* Threshold Input */}
       <div>
         <label htmlFor="threshold" className="block text-sm font-medium text-gray-700">
-          Threshold
+          {t('alerts.threshold')}
         </label>
         <input
           type="number"
@@ -96,7 +98,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
       {/* Alert Level Select */}
       <div>
         <label htmlFor="level" className="block text-sm font-medium text-gray-700">
-          Alert Level
+          {t('alerts.severity')}
         </label>
         <select
           id="level"
@@ -104,16 +106,16 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           onChange={(e) => setLevel(e.target.value as 'P0' | 'P1' | 'P2')}
           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
         >
-          <option value="P0">P0 - Critical</option>
-          <option value="P1">P1 - Warning</option>
-          <option value="P2">P2 - Info</option>
+          <option value="P0">P0 - {t('alerts.critical')}</option>
+          <option value="P1">P1 - {t('alerts.warning')}</option>
+          <option value="P2">P2 - {t('alerts.info')}</option>
         </select>
       </div>
 
       {/* Node Selection */}
       <div>
         <label htmlFor="node" className="block text-sm font-medium text-gray-700">
-          Scope
+          {t('alerts.scope')}
         </label>
         <select
           id="node"
@@ -121,7 +123,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           onChange={(e) => setNodeId(e.target.value || null)}
           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
         >
-          <option value="">Global Rule (All Nodes)</option>
+          <option value="">{t('alerts.globalRule')}</option>
           {nodes.map((node) => (
             <option key={node.id} value={node.id}>
               {node.name} ({node.ip})
@@ -129,7 +131,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           ))}
         </select>
         <p className="mt-2 text-sm text-gray-500">
-          Select "Global Rule" to apply to all nodes, or select a specific node.
+          {t('alerts.scopeHint')}
         </p>
       </div>
 
@@ -146,9 +148,9 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
         </div>
         <div className="ml-3 text-sm">
           <label htmlFor="enabled" className="font-medium text-gray-700">
-            Enabled
+            {t('status.enabled')}
           </label>
-          <p className="text-gray-500">Uncheck to disable this rule without deleting it</p>
+          <p className="text-gray-500">{t('alerts.enabledHint')}</p>
         </div>
       </div>
 
@@ -160,14 +162,14 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           disabled={isSubmitting}
           className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Cancel
+          {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
           className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {isSubmitting ? 'Saving...' : mode === 'create' ? 'Create Rule' : 'Update Rule'}
+          {isSubmitting ? t('common.saving') : mode === 'create' ? t('alerts.createRule') : t('alerts.updateRule')}
         </button>
       </div>
     </form>

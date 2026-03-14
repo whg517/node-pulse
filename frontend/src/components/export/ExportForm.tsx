@@ -6,6 +6,7 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { NodeDTO } from '../../api/types'
 import type { CreateExportRequest, ExportMetric } from '../../types/export'
 
@@ -22,6 +23,7 @@ interface FormErrors {
 }
 
 export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps) {
+  const { t } = useTranslation()
   // Form state
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'custom'>('7d')
@@ -62,27 +64,27 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
 
     // Validate nodes
     if (selectedNodeIds.length === 0) {
-      newErrors.nodeIds = 'Select at least one node'
+      newErrors.nodeIds = t('dataExport.errorSelectNode')
     } else if (selectedNodeIds.length > 50) {
-      newErrors.nodeIds = 'Maximum 50 nodes allowed'
+      newErrors.nodeIds = t('dataExport.errorMaxNodes')
     }
 
     // Validate time range
     if (timeRange === 'custom') {
       if (!customStartDate || !customEndDate) {
-        newErrors.timeRange = 'Select both start and end dates'
+        newErrors.timeRange = t('dataExport.errorSelectDates')
       } else {
         const start = new Date(customStartDate)
         const end = new Date(customEndDate)
         if (start >= end) {
-          newErrors.timeRange = 'End date must be after start date'
+          newErrors.timeRange = t('dataExport.errorEndAfterStart')
         }
       }
     }
 
     // Validate metrics
     if (selectedMetrics.length === 0) {
-      newErrors.metrics = 'Select at least one metric'
+      newErrors.metrics = t('dataExport.errorSelectMetric')
     }
 
     setErrors(newErrors)
@@ -142,10 +144,10 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
       {/* Node Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Nodes <span className="text-red-500">*</span>
+          {t('dataExport.nodes')} <span className="text-red-500">*</span>
         </label>
         <div className="text-xs text-gray-500 mb-2">
-          Selected: {selectedNodeIds.length} / 50 nodes
+          {t('dataExport.selectedNodes', { count: selectedNodeIds.length })}
         </div>
         <div className="max-h-48 overflow-y-auto border border-gray-300 rounded-md p-3 space-y-2">
           {nodes.map((node) => (
@@ -176,7 +178,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
       {/* Time Range Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Time Range <span className="text-red-500">*</span>
+          {t('dataExport.timeRange')} <span className="text-red-500">*</span>
         </label>
         <div className="space-y-2">
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -189,7 +191,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               disabled={loading}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
             />
-            <span className="text-sm text-gray-900">Last 7 days</span>
+            <span className="text-sm text-gray-900">{t('dataExport.last7Days')}</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -201,7 +203,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               disabled={loading}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
             />
-            <span className="text-sm text-gray-900">Last 30 days</span>
+            <span className="text-sm text-gray-900">{t('dataExport.last30Days')}</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -213,7 +215,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               disabled={loading}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
             />
-            <span className="text-sm text-gray-900">Custom Range</span>
+            <span className="text-sm text-gray-900">{t('dataExport.customRange')}</span>
           </label>
         </div>
 
@@ -222,7 +224,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
           <div className="mt-3 grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
-                Start Date
+                {t('dataExport.startDate')}
               </label>
               <input
                 id="startDate"
@@ -236,7 +238,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
             </div>
             <div>
               <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
-                End Date
+                {t('dataExport.endDate')}
               </label>
               <input
                 id="endDate"
@@ -259,7 +261,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
       {/* Metric Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Metrics <span className="text-red-500">*</span>
+          {t('dataExport.metrics')} <span className="text-red-500">*</span>
         </label>
         <div className="space-y-2">
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -270,7 +272,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               disabled={loading}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <span className="text-sm text-gray-900">Latency (时延)</span>
+            <span className="text-sm text-gray-900">{t('dataExport.metricLatency')}</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -280,7 +282,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               disabled={loading}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <span className="text-sm text-gray-900">Packet Loss Rate (丢包率)</span>
+            <span className="text-sm text-gray-900">{t('dataExport.metricPacketLoss')}</span>
           </label>
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
@@ -290,7 +292,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               disabled={loading}
               className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
-            <span className="text-sm text-gray-900">Jitter (抖动)</span>
+            <span className="text-sm text-gray-900">{t('dataExport.metricJitter')}</span>
           </label>
         </div>
         {errors.metrics && (
@@ -301,7 +303,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
       {/* Format Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Format <span className="text-red-500">*</span>
+          {t('dataExport.format')} <span className="text-red-500">*</span>
         </label>
         <div className="space-y-2">
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -338,7 +340,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
           disabled={loading}
           className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-6 rounded-md transition-colors duration-150"
         >
-          {loading ? 'Exporting...' : 'Export'}
+          {loading ? t('dataExport.exporting') : t('dataExport.export')}
         </button>
       </div>
     </form>
