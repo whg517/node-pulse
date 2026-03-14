@@ -111,7 +111,6 @@ describe('ExportHistoryTable', () => {
     })
 
     it('shows all exports when "All" filter selected', async () => {
-      const user = userEvent.setup()
       render(<ExportHistoryTable {...defaultProps} />)
 
       // Make sure all is selected

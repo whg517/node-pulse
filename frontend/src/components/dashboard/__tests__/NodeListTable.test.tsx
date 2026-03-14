@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { BrowserRouter } from 'react-router-dom'
 import { NodeListTable } from '../NodeListTable'
-import { determineHealthStatus } from '../../../utils/healthStatus'
 import type { NodeDTO } from '../../../api/types'
 import type { MetricsDTO } from '../../../api/types'
 

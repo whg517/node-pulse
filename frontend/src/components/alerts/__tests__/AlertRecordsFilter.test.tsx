@@ -36,7 +36,7 @@ describe('AlertRecordsFilter', () => {
   it('renders node options in dropdown', () => {
     render(<AlertRecordsFilter {...defaultProps} />)
 
-    const nodeSelect = screen.getByLabelText(/节点/i)
+    screen.getByLabelText(/节点/i)
     expect(screen.getByText('全部节点')).toBeInTheDocument()
     expect(screen.getByText('Node 1 (192.168.1.1)')).toBeInTheDocument()
     expect(screen.getByText('Node 2 (192.168.1.2)')).toBeInTheDocument()

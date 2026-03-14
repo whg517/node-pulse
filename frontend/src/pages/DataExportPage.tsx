@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useExportStore } from '../stores/exportStore'
@@ -24,17 +24,7 @@ export default function DataExportPage() {
   const [error, setError] = useState<Error | null>(null)
   const [nodes, setNodes] = useState<NodeDTO[]>([])
 
-  useEffect(() => {
-    loadNodes()
-    fetchExportHistory()
-
-    // Cleanup function - stop all polling when component unmounts
-    return () => {
-      useExportStore.getState().stopAllPolling()
-    }
-  }, [])
-
-  const loadNodes = async () => {
+  const loadNodes = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -46,7 +36,16 @@ export default function DataExportPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void loadNodes()
+    void fetchExportHistory()
+
+    return () => {
+      useExportStore.getState().stopAllPolling()
+    }
+  }, [fetchExportHistory, loadNodes])
 
   const handleExportSubmit = async (request: CreateExportRequest) => {
     try {

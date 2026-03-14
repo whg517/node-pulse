@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { fetchNode, fetchNodeStatus, fetchMetrics } from '../api'
 import type { NodeDTO, MetricsDTO } from '../api/types'
 import { deepEqual } from '../utils/deepEqual'
@@ -50,7 +50,7 @@ export function useNodeDetail(
     metrics: MetricsDTO | null
   } | null>(null)
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!isMountedRef.current || !nodeId) return
 
     setData(prev => ({ ...prev, isLoading: prev.node === null, error: null }))
@@ -103,7 +103,7 @@ export function useNodeDetail(
         isPolling: false,
       }))
     }
-  }
+  }, [nodeId])
 
   useEffect(() => {
     isMountedRef.current = true
@@ -126,7 +126,7 @@ export function useNodeDetail(
         pollingIntervalRef.current = null
       }
     }
-  }, [nodeId, pollingInterval])
+  }, [nodeId, pollingInterval, fetchData])
 
   return {
     ...data,

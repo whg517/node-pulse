@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Webhook } from '../../stores/webhooksStore'
+import type { CreateWebhookRequest, WebhookEventFormat } from '../../api/webhooks'
 
 interface WebhookFormProps {
   mode: 'create' | 'edit'
   initialData?: Webhook
-  onSubmit: (data: any) => Promise<void>
+  onSubmit: (data: CreateWebhookRequest) => Promise<void>
   onCancel: () => void
 }
 
@@ -52,7 +53,7 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
     } else {
       try {
         new URL(url)
-      } catch (e) {
+      } catch {
         newErrors.url = t('webhooks.errorUrlInvalid')
       }
     }
@@ -63,7 +64,7 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
     } else {
       try {
         JSON.parse(eventFormat)
-      } catch (e) {
+      } catch {
         newErrors.eventFormat = t('webhooks.errorFormatInvalid')
       }
     }
@@ -79,9 +80,9 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
 
     setIsSubmitting(true)
     try {
-      const data: any = {
+      const data: CreateWebhookRequest = {
         url,
-        event_format: JSON.parse(eventFormat),
+        event_format: JSON.parse(eventFormat) as WebhookEventFormat,
         enabled,
       }
 

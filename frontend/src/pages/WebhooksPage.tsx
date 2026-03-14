@@ -5,8 +5,10 @@
  * Uses standardized layout components for consistent UI.
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { createWebhook, deleteWebhook, updateWebhook } from '../api/webhooks'
+import type { CreateWebhookRequest } from '../api/webhooks'
 import { useWebhooksStore } from '../stores/webhooksStore'
 import { useAuthStore } from '../stores/authStore'
 import { PageContainer, ErrorBanner, ConfirmDialog, ActionButton, LoadingSpinner } from '../components/common'
@@ -31,11 +33,7 @@ export default function WebhooksPage() {
   // Check if user can edit (admin only)
   const canEdit = user?.role === 'admin'
 
-  useEffect(() => {
-    loadWebhooks()
-  }, [])
-
-  const loadWebhooks = async () => {
+  const loadWebhooks = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -46,7 +44,11 @@ export default function WebhooksPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [webhooksStore])
+
+  useEffect(() => {
+    void loadWebhooks()
+  }, [loadWebhooks])
 
   const handleCreate = () => {
     setDialogMode('create')
@@ -72,7 +74,7 @@ export default function WebhooksPage() {
     if (!webhookToDelete) return
 
     try {
-      webhooksStore.removeWebhook(webhookToDelete)
+      await deleteWebhook(webhookToDelete)
       setDeleteConfirmOpen(false)
       setWebhookToDelete(undefined)
       await webhooksStore.fetchWebhooks()
@@ -82,20 +84,28 @@ export default function WebhooksPage() {
   }
 
   const handleToggleEnabled = (id: string, enabled: boolean) => {
-    try {
-      webhooksStore.updateWebhook(id, { enabled })
-    } catch (error) {
-      console.error('Failed to toggle webhook:', error)
+    const submitToggle = async () => {
+      try {
+        await updateWebhook(id, { enabled })
+        await webhooksStore.fetchWebhooks()
+      } catch (error) {
+        console.error('Failed to toggle webhook:', error)
+      }
     }
+
+    void submitToggle()
   }
 
-  const handleSubmit = async (data: any) => {
+  const handleSubmit = async (data: CreateWebhookRequest) => {
     try {
       if (dialogMode === 'create') {
-        webhooksStore.addWebhook(data as any)
+        await createWebhook(data)
+      } else if (selectedWebhook) {
+        await updateWebhook(selectedWebhook.id, data)
       } else {
-        webhooksStore.updateWebhook(selectedWebhook!.id, data as any)
+        throw new Error('No webhook selected for update')
       }
+
       setDialogOpen(false)
       await webhooksStore.fetchWebhooks()
     } catch (error) {

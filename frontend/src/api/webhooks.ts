@@ -6,23 +6,25 @@
 
 import { apiClient } from './client'
 
+export type WebhookEventFormat = Record<string, unknown>
+
 export interface WebhookDTO {
   id: string
   url: string
-  event_format: Record<string, any>
+  event_format: WebhookEventFormat
   enabled: boolean
   created_at: string
 }
 
 export interface CreateWebhookRequest {
   url: string
-  event_format?: Record<string, any>
+  event_format?: WebhookEventFormat
   enabled?: boolean
 }
 
 export interface UpdateWebhookRequest {
   url?: string
-  event_format?: Record<string, any>
+  event_format?: WebhookEventFormat
   enabled?: boolean
 }
 

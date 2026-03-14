@@ -1,11 +1,12 @@
 import { useTranslation } from 'react-i18next'
 import { WebhookForm } from './WebhookForm'
 import type { Webhook } from '../../stores/webhooksStore'
+import type { CreateWebhookRequest } from '../../api/webhooks'
 
 interface WebhookDialogProps {
   mode: 'create' | 'edit'
   initialData?: Webhook
-  onSubmit: (data: any) => Promise<void>
+  onSubmit: (data: CreateWebhookRequest) => Promise<void>
   onCancel: () => void
 }
 

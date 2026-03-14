@@ -3,7 +3,6 @@ import {
   determineHealthStatus,
   isNodeOffline,
   DEFAULT_THRESHOLDS,
-  type HealthStatus,
   type HealthThresholds,
   type NodeMetrics,
 } from '../healthStatus'

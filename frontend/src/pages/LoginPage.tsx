@@ -4,13 +4,19 @@ import { useAuth } from '../hooks/useAuth'
 import type { ValidationError } from '../types/auth'
 import { ToastNotification, type ToastProps } from '../components/ToastNotification'
 
+interface LocationState {
+  from?: {
+    pathname?: string
+  }
+}
+
 export default function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const { isAuthenticated, isLoading: authLoading, login } = useAuth()
 
   // Get the location from router state (where user was trying to go)
-  const from = (location.state as any)?.from?.pathname || '/dashboard'
+  const from = (location.state as LocationState | null)?.from?.pathname || '/dashboard'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

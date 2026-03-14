@@ -1,6 +1,64 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption } from '../../lib/echarts-core'
+
+const NODE_COLORS = [
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+]
+
+const calculatePercentile = (sortedValues: number[], percentile: number): number => {
+  if (sortedValues.length === 0) return 0
+  const index = (percentile / 100) * (sortedValues.length - 1)
+  const lower = Math.floor(index)
+  const upper = Math.ceil(index)
+  if (lower === upper) return sortedValues[lower]
+  const weight = index - lower
+  return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight
+}
+
+const calculateStatisticalSummary = (data: ComparisonDataPoint[]): StatisticalSummary | null => {
+  if (!data || data.length === 0) return null
+
+  const values = data.map((d) => d.value).sort((a, b) => a - b)
+  const n = values.length
+
+  const avg = values.reduce((sum, v) => sum + v, 0) / n
+  const min = values[0]
+  const max = values[n - 1]
+  const median = calculatePercentile(values, 50)
+  const p95 = calculatePercentile(values, 95)
+  const p99 = calculatePercentile(values, 99)
+  const variance = values.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / n
+  const stdDev = Math.sqrt(variance)
+
+  return { avg, median, p95, p99, min, max, stdDev }
+}
+
+const calculatePercentageChange = (baseline: number, current: number): number => {
+  if (baseline === 0) return current > 0 ? 100 : 0
+  return ((current - baseline) / Math.abs(baseline)) * 100
+}
+
+interface TooltipParam {
+  name: string
+  value: number
+  seriesName: string
+  marker: string
+}
+
+function normalizeTooltipParams(params: unknown): TooltipParam[] {
+  if (!Array.isArray(params)) {
+    return []
+  }
+
+  return params.filter((param): param is TooltipParam => {
+    return typeof param === 'object' && param !== null && 'name' in param && 'value' in param && 'seriesName' in param && 'marker' in param
+  })
+}
 
 export type TimeRange = '24h' | '7d' | '30d' | 'custom'
 export type MetricType = 'latency_ms' | 'packet_loss_rate' | 'jitter_ms'
@@ -173,55 +231,8 @@ export default function ComparisonChart({
 
   const config = metricConfig[metric]
 
-  // Color palette for multiple nodes
-  const nodeColors = [
-    '#3b82f6', // blue-500
-    '#10b981', // green-500
-    '#f59e0b', // amber-500
-    '#ef4444', // red-500
-    '#8b5cf6', // purple-500
-  ]
-
-  // Calculate percentile value from sorted array
-  const calculatePercentile = (sortedValues: number[], percentile: number): number => {
-    if (sortedValues.length === 0) return 0
-    const index = (percentile / 100) * (sortedValues.length - 1)
-    const lower = Math.floor(index)
-    const upper = Math.ceil(index)
-    if (lower === upper) return sortedValues[lower]
-    const weight = index - lower
-    return sortedValues[lower] * (1 - weight) + sortedValues[upper] * weight
-  }
-
-  // Calculate statistical summary with percentiles
-  const calculateStatisticalSummary = (data: ComparisonDataPoint[]): StatisticalSummary | null => {
-    if (!data || data.length === 0) return null
-
-    const values = data.map((d) => d.value).sort((a, b) => a - b)
-    const n = values.length
-
-    const avg = values.reduce((sum, v) => sum + v, 0) / n
-    const min = values[0]
-    const max = values[n - 1]
-    const median = calculatePercentile(values, 50)
-    const p95 = calculatePercentile(values, 95)
-    const p99 = calculatePercentile(values, 99)
-
-    // Calculate standard deviation
-    const variance = values.reduce((sum, v) => sum + Math.pow(v - avg, 2), 0) / n
-    const stdDev = Math.sqrt(variance)
-
-    return { avg, median, p95, p99, min, max, stdDev }
-  }
-
-  // Calculate percentage change between baseline and current
-  const calculatePercentageChange = (baseline: number, current: number): number => {
-    if (baseline === 0) return current > 0 ? 100 : 0
-    return ((current - baseline) / Math.abs(baseline)) * 100
-  }
-
   // Get time range dates based on selection
-  const getTimeRangeDates = (range: TimeRange): { start: string; end: string } => {
+  const getTimeRangeDates = useCallback((range: TimeRange): { start: string; end: string } => {
     const now = new Date()
     const end = now.toISOString()
     let start: Date
@@ -247,7 +258,7 @@ export default function ComparisonChart({
       start: start.toISOString(),
       end: range === 'custom' ? (baselineEnd || end) : end,
     }
-  }
+  }, [baselineEnd, baselineStart])
 
 
   // Time range options
@@ -304,7 +315,7 @@ export default function ComparisonChart({
   }
 
   // Format X-axis labels based on time range
-  const getXAxisFormatter = (): string => {
+  const getXAxisFormatter = useCallback((): string => {
     switch (localTimeRange) {
       case '24h':
         return '{HH}:{mm}'
@@ -315,7 +326,7 @@ export default function ComparisonChart({
       default:
         return '{HH}:{mm}'
     }
-  }
+  }, [localTimeRange])
 
   // Pre-calculate all statistics for all timestamps (performance optimization)
   const allStatistics = useMemo(() => {
@@ -388,9 +399,9 @@ export default function ComparisonChart({
   }, [localMode, timeRangeData])
 
   // Calculate statistics for a specific timestamp (used in tooltip)
-  const calculateStatistics = (timestamp: string): StatisticsResult | null => {
+  const calculateStatistics = useCallback((timestamp: string): StatisticsResult | null => {
     return allStatistics[timestamp] || null
-  }
+  }, [allStatistics])
 
   // Detect outlier data points for markPoint highlighting
   const outlierDataPoints = useMemo(() => {
@@ -472,11 +483,11 @@ export default function ComparisonChart({
         }),
         smooth: true,
         lineStyle: {
-          color: nodeColors[index],
+          color: NODE_COLORS[index],
           width: 2,
         },
         itemStyle: {
-          color: nodeColors[index],
+          color: NODE_COLORS[index],
         },
         // Add markPoints for outlier highlighting when enabled
         ...(highlightDifferences && nodeOutliers.length > 0
@@ -528,16 +539,18 @@ export default function ComparisonChart({
       },
       tooltip: {
         trigger: 'axis',
-        formatter: (params: any) => {
-          if (!params || params.length === 0) return ''
-          const timestamp = params[0].name
+        formatter: (params: unknown) => {
+          const tooltipParams = normalizeTooltipParams(params)
+          if (tooltipParams.length === 0) return ''
+
+          const timestamp = tooltipParams[0].name
           const date = new Date(timestamp)
           const formattedDate = date.toLocaleString()
 
           let tooltip = `${formattedDate}<br/><br/>`
 
           // Add all node values
-          params.forEach((param: any) => {
+          tooltipParams.forEach((param) => {
             tooltip += `${param.marker}${param.seriesName}: ${param.value} ${config.unit}<br/>`
           })
 
@@ -613,7 +626,7 @@ export default function ComparisonChart({
     }
 
     chartInstance.current.setOption(option, true)
-  }, [nodes, localTimeRange, config, showStatistics, groupBy, highlightDifferences, localMode, timeRangeData, timeRangeStatistics])
+  }, [nodes, localTimeRange, config, showStatistics, groupBy, highlightDifferences, outlierDataPoints, getXAxisFormatter, calculateStatistics])
 
   // Handle window resize with debounce for performance
   useEffect(() => {
@@ -1089,7 +1102,7 @@ export default function ComparisonChart({
             <div key={node.node_id} className="flex items-center space-x-2">
               <div
                 className="w-4 h-1"
-                style={{ backgroundColor: nodeColors[index] }}
+                style={{ backgroundColor: NODE_COLORS[index] }}
                 aria-hidden="true"
               />
               <span className="text-gray-700">

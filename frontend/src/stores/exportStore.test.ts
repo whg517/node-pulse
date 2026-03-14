@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { useExportStore } from './exportStore'
 import { createExport, getExportStatus } from '../api/export'
 import type { ExportTask, CreateExportRequest } from '../types/export'
@@ -171,7 +171,7 @@ describe('useExportStore', () => {
 
         try {
           await result.current.createExport(request)
-        } catch (error) {
+        } catch {
           // Expected to throw
         }
       })

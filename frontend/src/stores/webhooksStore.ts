@@ -1,10 +1,11 @@
 import { create } from 'zustand'
 import * as webhooksAPI from '../api/webhooks'
+import type { WebhookEventFormat } from '../api/webhooks'
 
 export interface Webhook {
   id: string
   url: string
-  eventFormat: Record<string, any>
+  eventFormat: WebhookEventFormat
   enabled: boolean
 }
 

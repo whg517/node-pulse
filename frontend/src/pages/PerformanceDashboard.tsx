@@ -64,26 +64,38 @@ export default function PerformanceDashboard() {
 
   // Show toast when anomalies are detected
   useEffect(() => {
+    let timeoutId: number | undefined
+
     if (data && data.anomalies && data.anomalies.length > 0) {
       // Find P0 (critical) anomalies first
       const criticalAnomalies = data.anomalies.filter((a) => a.severity === 'P0')
       const warningAnomalies = data.anomalies.filter((a) => a.severity === 'P1')
 
       if (criticalAnomalies.length > 0) {
-        showToast(
-          'error',
-          t('performance.criticalAnomalies', { count: criticalAnomalies.length }),
-          criticalAnomalies[0].message
-        )
+        timeoutId = window.setTimeout(() => {
+          showToast(
+            'error',
+            t('performance.criticalAnomalies', { count: criticalAnomalies.length }),
+            criticalAnomalies[0].message
+          )
+        }, 0)
       } else if (warningAnomalies.length > 0) {
-        showToast(
-          'warning',
-          t('performance.warningAnomalies', { count: warningAnomalies.length }),
-          warningAnomalies[0].message
-        )
+        timeoutId = window.setTimeout(() => {
+          showToast(
+            'warning',
+            t('performance.warningAnomalies', { count: warningAnomalies.length }),
+            warningAnomalies[0].message
+          )
+        }, 0)
       }
     }
-  }, [data])
+
+    return () => {
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId)
+      }
+    }
+  }, [data, t])
 
   return (
     <PageContainer>

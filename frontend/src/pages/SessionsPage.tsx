@@ -22,14 +22,14 @@ export default function SessionsPage() {
   const [error, setError] = useState<string | null>(null)
   const [toasts, setToasts] = useState<ToastProps[]>([])
 
-  const showToast = (type: ToastProps['type'], title: string, message?: string) => {
+  const handleToastClose = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id))
+  }, [])
+
+  const showToast = useCallback((type: ToastProps['type'], title: string, message?: string) => {
     const id = Date.now().toString()
     setToasts((prev) => [...prev, { id, type, title, message, onClose: handleToastClose }])
-  }
-
-  const handleToastClose = (id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id))
-  }
+  }, [handleToastClose])
 
   const loadSessions = useCallback(async () => {
     setIsLoading(true)
@@ -50,7 +50,7 @@ export default function SessionsPage() {
     } finally {
       setIsLoading(false)
     }
-  }, [t])
+  }, [showToast, t])
 
   useEffect(() => {
     loadSessions()

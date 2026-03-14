@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useCallback, useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import { useTheme } from '../hooks/useTheme'
@@ -61,42 +61,32 @@ export default function AlertRecordsPage() {
   const canEdit = user?.role === 'admin' || user?.role === 'operator'
 
   // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e: KeyboardEvent) => {
-      // Close modal with Escape
-      if (e.key === 'Escape' && selectedRecord) {
-        setSelectedRecord(null)
-      }
-      // Refresh with R key
-      if (e.key === 'r' || e.key === 'R') {
-        if (!selectedRecord) {
-          loadData()
-          showToast('success', 'Refreshed', 'Alert records have been refreshed')
-        }
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [selectedRecord])
-
-  useEffect(() => {
-    loadData()
-    return () => {
-      isMounted.current = false
-    }
-  }, [filters, page, pageSize])
-
-  const showToast = (type: ToastType, title: string, message?: string) => {
+  const showToast = useCallback((type: ToastType, title: string, message?: string) => {
     const id = Date.now().toString()
     setToasts((prev) => [...prev, { id, type, title, message }])
-  }
+  }, [])
 
-  const removeToast = (id: string) => {
+  const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
-  }
+  }, [])
 
-  const loadData = async () => {
+  const loadNodes = useCallback(async () => {
+    if (nodes.length > 0) return nodes
+
+    try {
+      const response = await fetchNodes()
+      if (isMounted.current) {
+        setNodes(response.data.nodes)
+        return response.data.nodes
+      }
+      return []
+    } catch (err) {
+      console.error('Failed to load nodes:', err)
+      throw err
+    }
+  }, [nodes])
+
+  const loadData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -130,17 +120,20 @@ export default function AlertRecordsPage() {
         processedRecords.sort((a, b) => {
           let comparison = 0
           switch (sortField) {
-            case 'timestamp':
+            case 'timestamp': {
               comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
               break
-            case 'level':
+            }
+            case 'level': {
               const levelOrder = { P0: 3, P1: 2, P2: 1 }
               comparison = levelOrder[a.level] - levelOrder[b.level]
               break
-            case 'status':
+            }
+            case 'status': {
               const statusOrder = { pending: 1, in_progress: 2, resolved: 3 }
               comparison = statusOrder[a.status] - statusOrder[b.status]
               break
+            }
           }
           return sortOrder === 'asc' ? comparison : -comparison
         })
@@ -163,23 +156,29 @@ export default function AlertRecordsPage() {
         setIsLoading(false)
       }
     }
-  }
+  }, [filters, loadNodes, nodes, page, pageSize, searchQuery, sortField, sortOrder])
 
-  const loadNodes = async () => {
-    if (nodes.length > 0) return nodes // Cache nodes
-
-    try {
-      const response = await fetchNodes()
-      if (isMounted.current) {
-        setNodes(response.data.nodes)
-        return response.data.nodes
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && selectedRecord) {
+        setSelectedRecord(null)
       }
-      return []
-    } catch (err) {
-      console.error('Failed to load nodes:', err)
-      throw err
+      if ((e.key === 'r' || e.key === 'R') && !selectedRecord) {
+        void loadData()
+        showToast('success', 'Refreshed', 'Alert records have been refreshed')
+      }
     }
-  }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [loadData, selectedRecord, showToast])
+
+  useEffect(() => {
+    void loadData()
+    return () => {
+      isMounted.current = false
+    }
+  }, [loadData])
 
   const handleFilterChange = (newFilters: AlertRecordFilters) => {
     setFilters(newFilters)

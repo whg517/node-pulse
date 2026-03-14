@@ -6,7 +6,7 @@
  * Deeply compares two objects or arrays for equality
  * Handles nested objects, arrays, and primitive values
  */
-export function deepEqual(a: any, b: any): boolean {
+export function deepEqual(a: unknown, b: unknown): boolean {
   // Primitive values or same reference
   if (a === b) return true
 
@@ -24,12 +24,14 @@ export function deepEqual(a: any, b: any): boolean {
 
   // Objects
   if (typeof a === 'object' && typeof b === 'object') {
-    const keysA = Object.keys(a)
-    const keysB = Object.keys(b)
+    const recordA = a as Record<string, unknown>
+    const recordB = b as Record<string, unknown>
+    const keysA = Object.keys(recordA)
+    const keysB = Object.keys(recordB)
 
     if (keysA.length !== keysB.length) return false
 
-    return keysA.every(key => deepEqual(a[key], b[key]))
+    return keysA.every(key => deepEqual(recordA[key], recordB[key]))
   }
 
   return false
@@ -39,7 +41,7 @@ export function deepEqual(a: any, b: any): boolean {
  * Custom comparison function for React.memo that deeply compares props
  * Use this for complex props (objects/arrays) instead of shallow comparison
  */
-export function memoCompare<T extends Record<string, any>>(
+export function memoCompare<T extends Record<string, unknown>>(
   prevProps: T,
   nextProps: T
 ): boolean {

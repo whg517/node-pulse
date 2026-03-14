@@ -8,7 +8,7 @@
  * - Export options (CSV, PDF, Excel)
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../hooks/useTheme'
 import { useExportStore } from '../stores/exportStore'
@@ -38,16 +38,7 @@ export default function ReportsPage() {
   const [nodes, setNodes] = useState<NodeDTO[]>([])
   const [comparisonData, setComparisonData] = useState<NodeComparisonData[]>([])
 
-  useEffect(() => {
-    loadNodes()
-    fetchExportHistory()
-
-    return () => {
-      useExportStore.getState().stopAllPolling()
-    }
-  }, [])
-
-  const loadNodes = async () => {
+  const loadNodes = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -72,7 +63,16 @@ export default function ReportsPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void loadNodes()
+    void fetchExportHistory()
+
+    return () => {
+      useExportStore.getState().stopAllPolling()
+    }
+  }, [fetchExportHistory, loadNodes])
 
   const handleReportSubmit = async (config: ReportConfig) => {
     try {

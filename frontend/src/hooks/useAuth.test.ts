@@ -10,7 +10,6 @@ const mockClearAuth = vi.fn()
 const mockSetAccessToken = vi.fn()
 const mockRestoreSession = vi.fn().mockResolvedValue(undefined)
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const createMockState = (overrides: Record<string, any> = {}) => ({
   user: null,
   isAuthenticated: false,

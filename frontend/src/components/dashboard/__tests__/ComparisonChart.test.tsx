@@ -1,11 +1,9 @@
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import ComparisonChart, {
-  ComparisonDataPoint,
   NodeComparisonData,
   type TimeRange,
   type MetricType,
-  type GroupByType,
 } from '../ComparisonChart'
 
 // Mock ECharts (ComparisonChart imports from ../../../lib/echarts-core, not echarts directly)

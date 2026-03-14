@@ -3,6 +3,22 @@ import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
 import type { MetricTrendData } from '../../api/performance'
 
+interface TooltipParam {
+  name: string
+  value: number
+  seriesName: string
+}
+
+function normalizeTooltipParams(params: unknown): TooltipParam[] {
+  if (!Array.isArray(params)) {
+    return []
+  }
+
+  return params.filter((param): param is TooltipParam => {
+    return typeof param === 'object' && param !== null && 'name' in param && 'value' in param && 'seriesName' in param
+  })
+}
+
 interface PerformanceTrendChartProps {
   trendData: MetricTrendData[]
   targetP99?: number
@@ -183,15 +199,17 @@ export function PerformanceTrendChart({
       },
       tooltip: {
         trigger: 'axis',
-        formatter: (params: any) => {
-          if (!params || params.length === 0) return ''
-          const date = new Date(params[0].name)
+        formatter: (params: unknown) => {
+          const tooltipParams = normalizeTooltipParams(params)
+          if (tooltipParams.length === 0) return ''
+
+          const date = new Date(tooltipParams[0].name)
 
           let tooltip = `<div style="font-weight: bold; margin-bottom: 8px;">
             ${date.toLocaleString('zh-CN')}
           </div>`
 
-          params.forEach((param: any) => {
+          tooltipParams.forEach((param) => {
             tooltip += `<div style="display: flex; justify-content: space-between; gap: 16px;">
               <span>${param.seriesName}:</span>
               <span style="font-weight: bold;">${param.value.toFixed(2)} ms</span>

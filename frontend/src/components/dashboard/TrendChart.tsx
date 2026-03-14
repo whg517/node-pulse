@@ -1,6 +1,21 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import echarts from '../../lib/echarts-core'
-import type { ECharts, EChartsOption } from '../../lib/echarts-core'
+import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
+
+interface TooltipParam {
+  name: string
+  value: number
+}
+
+function normalizeTooltipParams(params: unknown): TooltipParam[] {
+  if (!Array.isArray(params)) {
+    return []
+  }
+
+  return params.filter((param): param is TooltipParam => {
+    return typeof param === 'object' && param !== null && 'name' in param && 'value' in param
+  })
+}
 
 export type TimeRange = '24h' | '7d' | '30d'
 export type MetricType = 'latency_ms' | 'packet_loss_rate' | 'jitter_ms'
@@ -100,7 +115,7 @@ export default function TrendChart({
   }
 
   // Format X-axis labels based on time range
-  const getXAxisFormatter = (): string => {
+  const getXAxisFormatter = useCallback((): string => {
     switch (localTimeRange) {
       case '24h':
         return '{HH}:{mm}'
@@ -111,7 +126,7 @@ export default function TrendChart({
       default:
         return '{HH}:{mm}'
     }
-  }
+  }, [localTimeRange])
 
   // Initialize chart only when data exists, not loading, and ref is available
   useEffect(() => {
@@ -145,6 +160,28 @@ export default function TrendChart({
   useEffect(() => {
     if (!chartInstance.current || !data || data.length === 0) return
 
+    const series: SeriesOption[] = [
+      {
+        name: config.label,
+        type: 'line',
+        data: data.map((point) => point.value),
+        smooth: true,
+        lineStyle: {
+          color: config.color,
+          width: 2,
+        },
+        itemStyle: {
+          color: config.color,
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: `${config.color}80` },
+            { offset: 1, color: `${config.color}10` },
+          ]),
+        },
+      },
+    ]
+
     const option: EChartsOption = {
       title: {
         text: `${config.label} Trend`,
@@ -156,9 +193,11 @@ export default function TrendChart({
       },
       tooltip: {
         trigger: 'axis',
-        formatter: (params: any) => {
-          if (!params || params.length === 0) return ''
-          const param = params[0]
+        formatter: (params: unknown) => {
+          const tooltipParams = normalizeTooltipParams(params)
+          if (tooltipParams.length === 0) return ''
+
+          const param = tooltipParams[0]
           const date = new Date(param.name)
           const formattedDate = date.toLocaleString()
           return `${formattedDate}<br/>${config.label}: ${param.value} ${config.unit}`
@@ -212,52 +251,29 @@ export default function TrendChart({
           bottom: 10,
         },
       ],
-      series: [
-        {
-          name: config.label,
-          type: 'line',
-          data: data.map((point) => point.value),
-          smooth: true,
-          lineStyle: {
-            color: config.color,
-            width: 2,
-          },
-          itemStyle: {
-            color: config.color,
-          },
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: `${config.color}80` },
-              { offset: 1, color: `${config.color}10` },
-            ]),
-          },
-        },
-      ],
+      series,
     }
 
     // Add baseline if enabled
     if (showBaseline && baselineValue !== undefined) {
-      option.series = [
-        ...(option.series as any[]),
-        {
-          name: 'Baseline',
-          type: 'line',
-          data: Array(data.length).fill(baselineValue),
-          lineStyle: {
-            color: '#10b981', // green-500
-            width: 2,
-            type: 'dashed',
-          },
-          itemStyle: {
-            color: '#10b981',
-          },
-          symbol: 'none',
+      series.push({
+        name: 'Baseline',
+        type: 'line',
+        data: Array(data.length).fill(baselineValue),
+        lineStyle: {
+          color: '#10b981',
+          width: 2,
+          type: 'dashed',
         },
-      ]
+        itemStyle: {
+          color: '#10b981',
+        },
+        symbol: 'none',
+      })
     }
 
     chartInstance.current.setOption(option, true)
-  }, [data, localTimeRange, config, showBaseline, baselineValue])
+  }, [data, localTimeRange, config, showBaseline, baselineValue, getXAxisFormatter])
 
   // Handle window resize
   useEffect(() => {

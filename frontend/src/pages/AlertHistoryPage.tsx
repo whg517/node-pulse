@@ -5,7 +5,7 @@
  * search, and status management capabilities.
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
 import {
@@ -42,12 +42,7 @@ export default function AlertHistoryPage() {
   // Check if user can edit (admin only)
   const canEdit = user?.role === 'admin'
 
-  useEffect(() => {
-    loadRecords()
-    loadNodes()
-  }, [filters])
-
-  const loadRecords = async () => {
+  const loadRecords = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -63,16 +58,21 @@ export default function AlertHistoryPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [filters, page, pageSize])
 
-  const loadNodes = async () => {
+  const loadNodes = useCallback(async () => {
     try {
       const response = await fetchNodes()
       setNodes(response.data.nodes)
     } catch (err) {
       console.error('Failed to load nodes:', err)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    void loadRecords()
+    void loadNodes()
+  }, [loadRecords, loadNodes])
 
   const handleFilterChange = (
     key: keyof AlertRecordFilters,

@@ -5,7 +5,7 @@
  * Uses standardized layout components for consistent UI.
  */
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAlertsStore } from '../stores/alertsStore'
 import { useAuthStore } from '../stores/authStore'
@@ -35,11 +35,17 @@ export default function AlertRulesPage() {
   // Check if user can edit (admin or operator)
   const canEdit = user?.role === 'admin' || user?.role === 'operator'
 
-  useEffect(() => {
-    loadData()
+  const loadNodes = useCallback(async () => {
+    try {
+      const response = await fetchNodes()
+      setNodes(response.data.nodes || [])
+    } catch (err) {
+      console.error('Failed to load nodes:', err)
+      throw err
+    }
   }, [])
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -50,17 +56,11 @@ export default function AlertRulesPage() {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [fetchAlertRules, loadNodes])
 
-  const loadNodes = async () => {
-    try {
-      const response = await fetchNodes()
-      setNodes(response.data.nodes || [])
-    } catch (err) {
-      console.error('Failed to load nodes:', err)
-      throw err
-    }
-  }
+  useEffect(() => {
+    void loadData()
+  }, [loadData])
 
   const handleCreate = () => {
     setDialogMode('create')
