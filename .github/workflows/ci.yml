@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    paths:
+      - .github/workflows/**
+      - beacon/**
+      - frontend/**
+      - pulse/**
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - beacon/**
+      - frontend/**
+      - pulse/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      beacon: ${{ steps.filter.outputs.beacon }}
+      pulse: ${{ steps.filter.outputs.pulse }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Detect changed areas
+        id: filter
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            beacon:
+              - '.github/workflows/**'
+              - 'beacon/**'
+            pulse:
+              - '.github/workflows/**'
+              - 'pulse/**'
+            frontend:
+              - '.github/workflows/**'
+              - 'frontend/**'
+
+  beacon:
+    name: Beacon Build And Test
+    needs: changes
+    if: needs.changes.outputs.beacon == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: beacon
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: beacon/go.mod
+          cache-dependency-path: beacon/go.sum
+
+      - name: Run beacon tests
+        run: make test
+
+      - name: Build beacon
+        run: make build-local
+
+  pulse:
+    name: Pulse Build And Unit Test
+    needs: changes
+    if: needs.changes.outputs.pulse == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pulse
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: pulse/go.mod
+          cache-dependency-path: pulse/go.sum
+
+      - name: Run pulse unit tests
+        run: make test-unit
+
+      - name: Build pulse API
+        run: make build
+
+  frontend:
+    name: Frontend Lint Build And Test
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run frontend tests
+        run: npm run test -- --run

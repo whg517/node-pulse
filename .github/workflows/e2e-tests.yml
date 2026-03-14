@@ -2,115 +2,92 @@ name: E2E Tests
 
 on:
   push:
-    branches: [main, develop]
+    paths:
+      - .github/workflows/**
+      - e2e/**
+      - frontend/**
+      - pulse/**
   pull_request:
-    branches: [main, develop]
+    paths:
+      - .github/workflows/**
+      - e2e/**
+      - frontend/**
+      - pulse/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  PULSE_DATABASE_URL: postgresql://testuser:testpass123@localhost:5432/nodepulse_test
+  TEST_DB_URL: postgresql://testuser:testpass123@localhost:5432/nodepulse_test
+  API_BASE_URL: http://localhost:6532
+  FRONTEND_BASE_URL: http://localhost:5173
   PULSE_SERVER_PORT: 6532
   PULSE_JWT_SECRET: test-jwt-secret-for-ci
   PULSE_SESSION_SECRET: test-session-secret-for-ci
   PULSE_ADMIN_USERNAME: admin
   PULSE_ADMIN_PASSWORD: Admin123
+  TEST_ADMIN_USER: admin
+  TEST_ADMIN_PASS: Admin123
 
 jobs:
-  setup:
-    name: Setup Test Environment
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpass123
-          POSTGRES_DB: nodepulse_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: e2e/package-lock.json
-
-      - name: Install E2E dependencies
-        run: cd e2e && npm ci
-
-      - name: Install Playwright browsers
-        run: cd e2e && npx playwright install --with-deps chromium
-
-      - name: Setup Pulse backend
-        run: |
-          cd pulse
-          go mod download
-          go build -o bin/pulse ./cmd/pulse
-
-      - name: Start Pulse server
-        run: |
-          cd pulse
-          ./bin/pulse &
-          sleep 5
-        env:
-          PULSE_DATABASE_URL: ${{ env.PULSE_DATABASE_URL }}
-          PULSE_SERVER_PORT: ${{ env.PULSE_SERVER_PORT }}
-          PULSE_JWT_SECRET: ${{ env.PULSE_JWT_SECRET }}
-          PULSE_SESSION_SECRET: ${{ env.PULSE_SESSION_SECRET }}
-          PULSE_ADMIN_USERNAME: ${{ env.PULSE_ADMIN_USERNAME }}
-          PULSE_ADMIN_PASSWORD: ${{ env.PULSE_ADMIN_PASSWORD }}
-          PULSE_LOG_LEVEL: error
-
-      - name: Setup Frontend
-        run: |
-          cd frontend
-          npm ci
-          npm run build
-
-      - name: Start Frontend
-        run: |
-          cd frontend
-          npm run preview &
-          sleep 3
-
-      - name: Health check
-        run: |
-          sleep 5
-          curl -f http://localhost:6532/api/v1/health || exit 1
-          curl -f http://localhost:4173 || exit 1
-
   smoke-tests:
     name: Smoke Tests
-    needs: setup
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
           cache-dependency-path: e2e/package-lock.json
 
       - name: Install E2E dependencies
-        run: cd e2e && npm ci
+        working-directory: e2e
+        run: npm ci
 
       - name: Install Playwright browsers
-        run: cd e2e && npx playwright install --with-deps chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Start full E2E stack
+        run: |
+          docker compose -f e2e/docker-compose.e2e.yml up -d --build
+
+      - name: Wait for backend and frontend
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:6532/api/v1/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:5173 >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://localhost:6532/api/v1/health >/dev/null
+          curl -fsS http://localhost:5173 >/dev/null
 
       - name: Run smoke tests
-        run: cd e2e && npm run test:smoke:fast
+        working-directory: e2e
+        run: npm run test:smoke:fast
+
+      - name: Capture stack logs
+        if: always()
+        run: docker compose -f e2e/docker-compose.e2e.yml logs --no-color > e2e/docker-compose-smoke.log
 
       - name: Upload smoke test results
         uses: actions/upload-artifact@v4
@@ -118,102 +95,87 @@ jobs:
         with:
           name: smoke-test-results
           path: |
+            e2e/.auth
             e2e/playwright-report
             e2e/test-results
+            e2e/docker-compose-smoke.log
           retention-days: 7
 
+      - name: Stop full E2E stack
+        if: always()
+        run: docker compose -f e2e/docker-compose.e2e.yml down -v
+
   e2e-tests:
-    name: E2E Tests
-    needs: setup
+    name: E2E ${{ matrix.project }}
+    needs: smoke-tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1/3, 2/3, 3/3]
+        project: [chromium, firefox, webkit]
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
+          node-version: 20
+          cache: npm
           cache-dependency-path: e2e/package-lock.json
 
       - name: Install E2E dependencies
-        run: cd e2e && npm ci
+        working-directory: e2e
+        run: npm ci
 
       - name: Install Playwright browsers
-        run: cd e2e && npx playwright install --with-deps chromium
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium firefox webkit
 
-      - name: Run E2E tests (sharded)
-        run: cd e2e && npx playwright test --shard=${{ matrix.shard }}
+      - name: Start full E2E stack
+        run: docker compose -f e2e/docker-compose.e2e.yml up -d --build
+
+      - name: Wait for backend and frontend
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:6532/api/v1/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:5173 >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://localhost:6532/api/v1/health >/dev/null
+          curl -fsS http://localhost:5173 >/dev/null
+
+      - name: Run E2E tests
+        working-directory: e2e
+        run: npx playwright test --project=${{ matrix.project }}
+
+      - name: Capture stack logs
+        if: always()
+        run: docker compose -f e2e/docker-compose.e2e.yml logs --no-color > e2e/docker-compose-${{ matrix.project }}.log
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-test-results-shard-${{ matrix.shard }}
+          name: e2e-test-results-${{ matrix.project }}
           path: |
+            e2e/.auth
             e2e/playwright-report
             e2e/test-results
+            e2e/docker-compose-${{ matrix.project }}.log
           retention-days: 7
 
-  visual-tests:
-    name: Visual Regression Tests
-    needs: setup
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: e2e/package-lock.json
-
-      - name: Install E2E dependencies
-        run: cd e2e && npm ci
-
-      - name: Install Playwright browsers
-        run: cd e2e && npx playwright install --with-deps chromium
-
-      - name: Run visual tests (update snapshots on PR)
-        run: cd e2e && npm run test:visual -- --update-snapshots
-
-      - name: Upload visual test results
-        uses: actions/upload-artifact@v4
+      - name: Stop full E2E stack
         if: always()
-        with:
-          name: visual-test-results
-          path: |
-            e2e/playwright-report
-            e2e/tests/visual/__screenshots__
-          retention-days: 7
-
-  report:
-    name: Generate Test Report
-    needs: [smoke-tests, e2e-tests]
-    runs-on: ubuntu-latest
-    if: always()
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all test results
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Upload combined report
-        uses: actions/upload-artifact@v4
-        with:
-          name: combined-test-report
-          path: artifacts/
-          retention-days: 14
+        run: docker compose -f e2e/docker-compose.e2e.yml down -v

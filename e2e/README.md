@@ -78,6 +78,14 @@ npm run test:webhooks
 npm run test:export
 ```
 
+### Generate Visual Baselines
+
+Visual regression baselines are handled by a dedicated GitHub Actions workflow.
+
+- Run the Visual Snapshot Baselines workflow manually from GitHub Actions.
+- Download the artifact and commit the generated snapshot directories under `e2e/tests/visual`.
+- After the baselines are committed, the Visual Regression workflow will validate them on PRs and on pushes to `main`.
+
 ### Run with UI Mode
 
 ```bash

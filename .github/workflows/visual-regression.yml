@@ -1,0 +1,123 @@
+name: Visual Regression
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - e2e/**
+      - frontend/**
+      - pulse/**
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/**
+      - e2e/**
+      - frontend/**
+      - pulse/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-regression-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TEST_DB_URL: postgresql://testuser:testpass123@localhost:5432/nodepulse_test
+  API_BASE_URL: http://localhost:6532
+  FRONTEND_BASE_URL: http://localhost:5173
+  PULSE_SERVER_PORT: 6532
+  PULSE_JWT_SECRET: test-jwt-secret-for-ci
+  PULSE_SESSION_SECRET: test-session-secret-for-ci
+  PULSE_ADMIN_USERNAME: admin
+  PULSE_ADMIN_PASSWORD: Admin123
+  TEST_ADMIN_USER: admin
+  TEST_ADMIN_PASS: Admin123
+
+jobs:
+  verify-baselines:
+    name: Verify Snapshot Baselines
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Ensure visual baselines exist
+        run: |
+          if ! find e2e/tests/visual -type d -name '*-snapshots' | grep -q .; then
+            echo 'No visual snapshot baselines found under e2e/tests/visual.'
+            echo 'Run the Visual Snapshot Baselines workflow to generate baselines, then commit the snapshot directories.'
+            exit 1
+          fi
+
+  visual-tests:
+    name: Run Visual Regression Tests
+    needs: verify-baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install E2E dependencies
+        working-directory: e2e
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: e2e
+        run: npx playwright install --with-deps chromium
+
+      - name: Start visual test stack
+        run: docker compose -f e2e/docker-compose.e2e.yml up -d --build
+
+      - name: Wait for backend and frontend
+        run: |
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:6532/api/v1/health >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          for attempt in {1..60}; do
+            if curl -fsS http://localhost:5173 >/dev/null; then
+              break
+            fi
+            sleep 2
+          done
+
+          curl -fsS http://localhost:6532/api/v1/health >/dev/null
+          curl -fsS http://localhost:5173 >/dev/null
+
+      - name: Run visual regression tests
+        working-directory: e2e
+        run: npx playwright test --project=chromium-visual
+
+      - name: Capture stack logs
+        if: always()
+        run: docker compose -f e2e/docker-compose.e2e.yml logs --no-color > e2e/docker-compose-visual-regression.log
+
+      - name: Upload visual regression artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: visual-regression-results
+          path: |
+            e2e/.auth
+            e2e/playwright-report
+            e2e/test-results
+            e2e/docker-compose-visual-regression.log
+          retention-days: 7
+
+      - name: Stop visual test stack
+        if: always()
+        run: docker compose -f e2e/docker-compose.e2e.yml down -v

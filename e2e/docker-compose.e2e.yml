@@ -18,8 +18,8 @@ services:
       POSTGRES_DB: nodepulse_test
       POSTGRES_USER: testuser
       POSTGRES_PASSWORD: testpass123
-    # Only expose ports necessary for E2E testing
-    # Database port not needed externally since communication happens via Docker network
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_e2e_data:/var/lib/postgresql/data
     healthcheck:
