@@ -18,6 +18,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/alert"
 	"github.com/whg517/node-pulse/pulse/internal/auth"
 	"github.com/whg517/node-pulse/pulse/internal/cache"
+	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/csrf"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/export"
@@ -66,6 +67,17 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	// Get cookie secure setting from environment (default false for development)
 	cookieSecure := getEnvOrDefault("PULSE_SESSION_COOKIE_SECURE", "false") == "true"
 
+	// Load rate limit configuration (falls back to defaults if config unavailable)
+	var rateLimitOpts auth.RateLimitOptions
+	if cfg, err := config.Load(); err == nil {
+		rateLimitOpts = auth.RateLimitOptions{
+			LoginPerMinute:   cfg.RateLimit.LoginMaxPerMinute,
+			RefreshPerMinute: cfg.RateLimit.RefreshMaxPerMinute,
+			LogoutPerMinute:  cfg.RateLimit.RefreshMaxPerMinute, // reuse refresh limit for logout
+			APIKeyPerMinute:  cfg.RateLimit.APIKeyMaxPerMinute,
+		}
+	}
+
 	// Initialize JWT service with RS256
 	jwtService := auth.NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, 15, pool)
 
@@ -79,6 +91,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		7,  // 7 days refresh token
 		30, // 30 days max validity
 		cookieSecure,
+		rateLimitOpts,
 	)
 
 	// Initialize memory cache and batch writer (Story 3.2)

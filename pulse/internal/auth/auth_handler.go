@@ -41,6 +41,20 @@ type AuthHandler struct {
 	refreshExpirationDays   int
 	maxValidityDays         int
 	cookieSecure            bool
+	// Configurable per-minute rate limits (defaults to package constants)
+	loginLimitPerMinute   int
+	refreshLimitPerMinute int
+	logoutLimitPerMinute  int
+	apikeyLimitPerMinute  int
+}
+
+// RateLimitOptions holds per-minute limits for auth endpoints.
+// Zero values fall back to the package-level defaults.
+type RateLimitOptions struct {
+	LoginPerMinute   int
+	RefreshPerMinute int
+	LogoutPerMinute  int
+	APIKeyPerMinute  int
 }
 
 // NewAuthHandler creates a new auth handler
@@ -53,6 +67,7 @@ func NewAuthHandler(
 	refreshExpirationDays int,
 	maxValidityDays int,
 	cookieSecure bool,
+	rateLimitOpts RateLimitOptions,
 ) *AuthHandler {
 	jwtService := NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, accessExpirationMinutes, pool)
 	refreshTokenService := NewRefreshTokenService(pool)
@@ -60,6 +75,20 @@ func NewAuthHandler(
 	rateLimiter := NewRateLimiter(pool)
 	auditLogger := NewAuditLogger(pool)
 	passwordResetService := NewPasswordResetService(pool)
+
+	// Apply defaults for any zero values
+	if rateLimitOpts.LoginPerMinute <= 0 {
+		rateLimitOpts.LoginPerMinute = MaxLoginAttemptsPerMinute
+	}
+	if rateLimitOpts.RefreshPerMinute <= 0 {
+		rateLimitOpts.RefreshPerMinute = MaxRefreshAttemptsPerMinute
+	}
+	if rateLimitOpts.LogoutPerMinute <= 0 {
+		rateLimitOpts.LogoutPerMinute = MaxLogoutAttemptsPerMinute
+	}
+	if rateLimitOpts.APIKeyPerMinute <= 0 {
+		rateLimitOpts.APIKeyPerMinute = MaxAPIKeyAttemptsPerMinute
+	}
 
 	return &AuthHandler{
 		pool:                    pool,
@@ -73,6 +102,10 @@ func NewAuthHandler(
 		refreshExpirationDays:   refreshExpirationDays,
 		maxValidityDays:         maxValidityDays,
 		cookieSecure:            cookieSecure,
+		loginLimitPerMinute:     rateLimitOpts.LoginPerMinute,
+		refreshLimitPerMinute:   rateLimitOpts.RefreshPerMinute,
+		logoutLimitPerMinute:    rateLimitOpts.LogoutPerMinute,
+		apikeyLimitPerMinute:    rateLimitOpts.APIKeyPerMinute,
 	}
 }
 
@@ -114,8 +147,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	ipAddress := c.ClientIP()
 	rateLimitKey := fmt.Sprintf("ip:%s", ipAddress)
 
-	// Check rate limit (uses MaxLoginAttemptsPerMinute constant)
-	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, MaxLoginAttemptsPerMinute)
+	// Check rate limit (configurable via RateLimitOptions)
+	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, h.loginLimitPerMinute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "RATE_LIMIT_ERROR",
@@ -323,8 +356,8 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 	tokenHash := hex.EncodeToString(hash[:])
 	rateLimitKey := fmt.Sprintf("token:%s", tokenHash)
 
-	// Check rate limit (uses MaxRefreshAttemptsPerMinute constant)
-	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, MaxRefreshAttemptsPerMinute)
+	// Check rate limit (configurable via RateLimitOptions)
+	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, h.refreshLimitPerMinute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "RATE_LIMIT_ERROR",
@@ -448,8 +481,8 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	}
 
 	rateLimitKey := fmt.Sprintf("logout:%s", userID)
-	// Rate limit logout requests (uses MaxLogoutAttemptsPerMinute constant)
-	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, MaxLogoutAttemptsPerMinute)
+	// Rate limit logout requests (configurable via RateLimitOptions)
+	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, h.logoutLimitPerMinute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "RATE_LIMIT_ERROR",
@@ -848,8 +881,8 @@ func (h *AuthHandler) ExchangeAPIKey(c *gin.Context) {
 	ipAddress := c.ClientIP()
 	rateLimitKey := fmt.Sprintf("apikey:%s", ipAddress)
 
-	// Check rate limit (11 requests per minute)
-	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, 11)
+	// Check rate limit (configurable via RateLimitOptions)
+	allowed, _, resetTime, err := h.rateLimiter.CheckRateLimit(ctx, rateLimitKey, WindowPerMinute, h.apikeyLimitPerMinute)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "RATE_LIMIT_ERROR",

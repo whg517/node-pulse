@@ -51,10 +51,10 @@ func setupAuthHandlerTest(t *testing.T) (*pgxpool.Pool, *AuthHandler, *config.Co
 	// Create test config
 	cfg := &config.Config{
 		JWT: config.JWTConfig{
-			Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-			AccessTokenExpirationMinutes:   15,
-			RefreshTokenExpirationDays:     7,
-			RefreshTokenMaxValidityDays:    30,
+			Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+			AccessTokenExpirationMinutes: 15,
+			RefreshTokenExpirationDays:   7,
+			RefreshTokenMaxValidityDays:  30,
 		},
 		RateLimit: config.RateLimitConfig{
 			LoginMaxPerMinute:   5,
@@ -76,6 +76,12 @@ func setupAuthHandlerTest(t *testing.T) (*pgxpool.Pool, *AuthHandler, *config.Co
 		cfg.JWT.RefreshTokenExpirationDays,
 		cfg.JWT.RefreshTokenMaxValidityDays,
 		false, // cookieSecure false for tests
+		RateLimitOptions{
+			LoginPerMinute:   cfg.RateLimit.LoginMaxPerMinute,
+			RefreshPerMinute: cfg.RateLimit.RefreshMaxPerMinute,
+			LogoutPerMinute:  cfg.RateLimit.RefreshMaxPerMinute,
+			APIKeyPerMinute:  cfg.RateLimit.APIKeyMaxPerMinute,
+		},
 	)
 
 	cleanup := func() {
@@ -226,7 +232,7 @@ func TestAuthHandler_ExchangeAPIKey_InvalidKey(t *testing.T) {
 
 	pool := setupTestDB(t)
 	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
-	handler := auth.NewAuthHandler(pool, privateKeyPEM, publicKeyPEM, "test-key-id", 15, 7, 30, false)
+	handler := auth.NewAuthHandler(pool, privateKeyPEM, publicKeyPEM, "test-key-id", 15, 7, 30, false, auth.RateLimitOptions{})
 	router.POST("/api/v1/beacon/token", handler.ExchangeAPIKey)
 
 	reqBody := map[string]string{"api_key": "invalid-key-123"}

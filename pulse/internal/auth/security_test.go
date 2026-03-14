@@ -157,18 +157,18 @@ func TestSecurity_AccountEnumerationPrevention(t *testing.T) {
 	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
 
 	cfg := &config.JWTConfig{
-		Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-		PrivateKey:                     privateKeyPEM,
-		PublicKey:                      publicKeyPEM,
-		KeyID:                          "test-key-id",
-		AccessTokenExpirationMinutes:   15,
-		RefreshTokenExpirationDays:     7,
-		RefreshTokenMaxValidityDays:    30,
+		Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		PrivateKey:                   privateKeyPEM,
+		PublicKey:                    publicKeyPEM,
+		KeyID:                        "test-key-id",
+		AccessTokenExpirationMinutes: 15,
+		RefreshTokenExpirationDays:   7,
+		RefreshTokenMaxValidityDays:  30,
 	}
 
 	jwtService := NewJWTService(cfg.PrivateKey, cfg.PublicKey, cfg.KeyID, cfg.AccessTokenExpirationMinutes, pool)
 	handler := NewAuthHandler(pool, cfg.PrivateKey, cfg.PublicKey, cfg.KeyID,
-		cfg.AccessTokenExpirationMinutes, cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false)
+		cfg.AccessTokenExpirationMinutes, cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false, RateLimitOptions{})
 	handler.jwtService = jwtService
 
 	router := gin.New()
@@ -425,18 +425,18 @@ func TestSecurity_BruteForceProtection(t *testing.T) {
 	privateKeyPEM, publicKeyPEM := GenerateTestRSAKeyPair(t)
 
 	cfg := &config.JWTConfig{
-		Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-		PrivateKey:                     privateKeyPEM,
-		PublicKey:                      publicKeyPEM,
-		KeyID:                          "test-key-id",
-		AccessTokenExpirationMinutes:   15,
-		RefreshTokenExpirationDays:     7,
-		RefreshTokenMaxValidityDays:    30,
+		Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+		PrivateKey:                   privateKeyPEM,
+		PublicKey:                    publicKeyPEM,
+		KeyID:                        "test-key-id",
+		AccessTokenExpirationMinutes: 15,
+		RefreshTokenExpirationDays:   7,
+		RefreshTokenMaxValidityDays:  30,
 	}
 
 	jwtService := NewJWTService(cfg.PrivateKey, cfg.PublicKey, cfg.KeyID, cfg.AccessTokenExpirationMinutes, pool)
 	handler := NewAuthHandler(pool, cfg.PrivateKey, cfg.PublicKey, cfg.KeyID,
-		cfg.AccessTokenExpirationMinutes, cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false)
+		cfg.AccessTokenExpirationMinutes, cfg.RefreshTokenExpirationDays, cfg.RefreshTokenMaxValidityDays, false, RateLimitOptions{})
 	handler.jwtService = jwtService
 
 	router := gin.New()
