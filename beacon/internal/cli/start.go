@@ -1,4 +1,4 @@
-package beacon
+package cli
 
 import (
 	"context"
@@ -15,8 +15,8 @@ import (
 	"beacon/internal/logger"
 	"beacon/internal/metrics"
 	"beacon/internal/monitor"
-	"beacon/internal/process"
 	"beacon/internal/probe"
+	"beacon/internal/process"
 	"beacon/internal/reporter"
 )
 
