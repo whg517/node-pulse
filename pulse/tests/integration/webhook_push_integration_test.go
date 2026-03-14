@@ -135,6 +135,7 @@ func TestWebhookPush_Integration(t *testing.T) {
 	config.WorkerPoolSize = 2
 	config.MetricChannelBufferSize = 100
 	alertEngine := alert.NewAlertEngine(pool, alertQuerier, config)
+	alertEngine.WithWebhookURLValidator(nil)
 	alertEngine.Start()
 	defer alertEngine.Stop()
 
@@ -417,7 +418,7 @@ func TestWebhookPush_RetryLogic(t *testing.T) {
 
 	// Initialize push service
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
-	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:6532")
+	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:6532").WithURLValidator(nil)
 
 	// Create alert event in database (required for foreign key constraint)
 	alertEventsQuerier := db.NewAlertEventsQuerier(pool)
@@ -529,7 +530,7 @@ func TestWebhookPush_ConcurrentDelivery(t *testing.T) {
 
 	// Initialize push service
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
-	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:6532")
+	pushService := webhook.NewPushService(webhooksQuerier, webhookLogsQuerier, "http://localhost:6532").WithURLValidator(nil)
 
 	// Create alert event in database (required for foreign key constraint)
 	alertEventsQuerier := db.NewAlertEventsQuerier(pool)

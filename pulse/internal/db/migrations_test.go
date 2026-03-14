@@ -142,8 +142,8 @@ func TestSessionsTableCreation(t *testing.T) {
 	defer rows.Close()
 
 	columns := make(map[string]bool)
-	expectedColumns := []string{"session_id", "user_id", "role",
-		"expired_at", "created_at"}
+	expectedColumns := []string{"session_id", "user_id",
+		"expires_at", "created_at"}
 
 	for rows.Next() {
 		var columnName string
@@ -190,7 +190,7 @@ func TestSessionsTableCreation(t *testing.T) {
 
 	indexes := make(map[string]bool)
 	expectedIndexes := []string{"sessions_pkey", "idx_sessions_user_id",
-		"idx_sessions_expired_at", "idx_sessions_user_expired"}
+		"idx_sessions_expires_at", "idx_sessions_user_expired"}
 
 	for indexRows.Next() {
 		var indexName string
@@ -297,9 +297,9 @@ func TestCompositeIndexPerformance(t *testing.T) {
 	defer pool.Exec(ctx, "DELETE FROM users WHERE user_id = $1", userID)
 
 	_, err = pool.Exec(ctx, `
-		INSERT INTO sessions (session_id, user_id, role, expired_at, created_at)
+		INSERT INTO sessions (session_id, user_id, expires_at, max_valid_until, created_at)
 		VALUES ($1, $2, $3, $4, NOW())
-	`, sessionID, userID, "viewer", expiredAt)
+	`, sessionID, userID, expiredAt, expiredAt)
 	if err != nil {
 		t.Fatalf("Failed to create test session: %v", err)
 	}
@@ -307,17 +307,17 @@ func TestCompositeIndexPerformance(t *testing.T) {
 
 	// Act - Query using composite index
 	query := `
-		SELECT session_id, user_id, role, expired_at
+		SELECT session_id, user_id, expires_at
 		FROM sessions
-		WHERE user_id = $1 AND expired_at > $2
-		ORDER BY expired_at DESC
+		WHERE user_id = $1 AND expires_at > $2
+		ORDER BY expires_at DESC
 		LIMIT 1
 	`
 
-	var resultSessionID, resultUserID, resultRole string
-	var resultExpiredAt time.Time
+	var resultSessionID, resultUserID string
+	var resultExpiresAt time.Time
 	err = pool.QueryRow(ctx, query, userID, time.Now()).Scan(
-		&resultSessionID, &resultUserID, &resultRole, &resultExpiredAt,
+		&resultSessionID, &resultUserID, &resultExpiresAt,
 	)
 
 	if err != nil {
@@ -327,6 +327,5 @@ func TestCompositeIndexPerformance(t *testing.T) {
 	// Assert - Query returned correct results
 	assert.Equal(t, sessionID.String(), resultSessionID, "Should return the test session")
 	assert.Equal(t, userID.String(), resultUserID, "Should return the test user")
-	assert.Equal(t, "viewer", resultRole, "Role should be viewer")
-	assert.True(t, resultExpiredAt.After(time.Now().Add(23*time.Hour)), "Session should not be expired")
+	assert.True(t, resultExpiresAt.After(time.Now().Add(23*time.Hour)), "Session should not be expired")
 }

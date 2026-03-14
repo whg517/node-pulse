@@ -138,10 +138,16 @@ func TestIntegration_Login_ValidCredentials(t *testing.T) {
 
 	// Assert - Refresh token cookie set
 	cookies := w.Result().Cookies()
-	assert.Len(t, cookies, 1, "Expected 1 cookie, got %d", len(cookies))
-	assert.Equal(t, "refresh_token", cookies[0].Name)
-	assert.NotEmpty(t, cookies[0].Value)
-	assert.Equal(t, 7*86400, cookies[0].MaxAge) // 7 days
+	var refreshCookie *http.Cookie
+	for _, c := range cookies {
+		if c.Name == "refresh_token" {
+			refreshCookie = c
+			break
+		}
+	}
+	require.NotNil(t, refreshCookie, "refresh_token cookie should be set")
+	assert.NotEmpty(t, refreshCookie.Value)
+	assert.Equal(t, 7*86400, refreshCookie.MaxAge) // 7 days
 	// Note: httptest.ResponseRecorder does not preserve HttpOnly flag in test environment
 	// The actual production code sets HttpOnly=true correctly
 	// See: https://github.com/gin-gonic/gin/issues/2612
@@ -272,11 +278,14 @@ func TestIntegration_Logout_WithValidToken(t *testing.T) {
 	accessToken := loginResp.Data.AccessToken
 
 	// Get refresh token from cookie
-	cookies := wLogin.Result().Cookies()
-	require.Len(t, cookies, 1, "Should have refresh_token cookie")
-	refreshToken := cookies[0].Value
-	assert.Equal(t, "refresh_token", cookies[0].Name)
-	assert.NotEmpty(t, refreshToken, "Refresh token should not be empty")
+	var refreshToken string
+	for _, c := range wLogin.Result().Cookies() {
+		if c.Name == "refresh_token" {
+			refreshToken = c.Value
+			break
+		}
+	}
+	require.NotEmpty(t, refreshToken, "Should have refresh_token cookie")
 	t.Logf("Got refresh token from cookie (length: %d, prefix: %s)", len(refreshToken), refreshToken[:20])
 
 	// Verify refresh token exists in database before concurrent test
@@ -602,10 +611,14 @@ func TestIntegration_ConcurrentRefresh(t *testing.T) {
 	require.NoError(t, err)
 
 	// Get refresh token from cookie
-	cookies := wLogin.Result().Cookies()
-	require.Len(t, cookies, 1, "Should have refresh_token cookie")
-	refreshToken := cookies[0].Value
-	assert.NotEmpty(t, refreshToken, "Refresh token should not be empty")
+	var refreshToken string
+	for _, c := range wLogin.Result().Cookies() {
+		if c.Name == "refresh_token" {
+			refreshToken = c.Value
+			break
+		}
+	}
+	require.NotEmpty(t, refreshToken, "Should have refresh_token cookie")
 
 	// Verify refresh token exists in database
 	var tokenCount int

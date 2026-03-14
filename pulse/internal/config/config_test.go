@@ -18,31 +18,31 @@ func TestConfig_ValidateJWTConfig(t *testing.T) {
 		{
 			name: "valid JWT config",
 			config: JWTConfig{
-				Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // 64 bytes
-				AccessTokenExpirationMinutes:   15,
-				RefreshTokenExpirationDays:     7,
-				RefreshTokenMaxValidityDays:    30,
+				Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", // 64 bytes
+				AccessTokenExpirationMinutes: 15,
+				RefreshTokenExpirationDays:   7,
+				RefreshTokenMaxValidityDays:  30,
 			},
 			wantErr: false,
 		},
 		{
 			name: "empty secret",
 			config: JWTConfig{
-				Secret:                         "",
-				AccessTokenExpirationMinutes:   15,
-				RefreshTokenExpirationDays:     7,
-				RefreshTokenMaxValidityDays:    30,
+				Secret:                       "",
+				AccessTokenExpirationMinutes: 15,
+				RefreshTokenExpirationDays:   7,
+				RefreshTokenMaxValidityDays:  30,
 			},
 			wantErr:     true,
-			errContains: "jwt secret cannot be empty",
+			errContains: "jwt secret or rsa key pair (private_key/public_key) must be provided",
 		},
 		{
 			name: "secret too short (less than 64 bytes)",
 			config: JWTConfig{
-				Secret:                         "short", // 5 bytes
-				AccessTokenExpirationMinutes:   15,
-				RefreshTokenExpirationDays:     7,
-				RefreshTokenMaxValidityDays:    30,
+				Secret:                       "short", // 5 bytes
+				AccessTokenExpirationMinutes: 15,
+				RefreshTokenExpirationDays:   7,
+				RefreshTokenMaxValidityDays:  30,
 			},
 			wantErr:     true,
 			errContains: "jwt secret must be at least 64 bytes",
@@ -50,20 +50,20 @@ func TestConfig_ValidateJWTConfig(t *testing.T) {
 		{
 			name: "secret exactly 64 bytes",
 			config: JWTConfig{
-				Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				AccessTokenExpirationMinutes:   15,
-				RefreshTokenExpirationDays:     7,
-				RefreshTokenMaxValidityDays:    30,
+				Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				AccessTokenExpirationMinutes: 15,
+				RefreshTokenExpirationDays:   7,
+				RefreshTokenMaxValidityDays:  30,
 			},
 			wantErr: false,
 		},
 		{
 			name: "negative access token expiration",
 			config: JWTConfig{
-				Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				AccessTokenExpirationMinutes:   -1,
-				RefreshTokenExpirationDays:     7,
-				RefreshTokenMaxValidityDays:    30,
+				Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				AccessTokenExpirationMinutes: -1,
+				RefreshTokenExpirationDays:   7,
+				RefreshTokenMaxValidityDays:  30,
 			},
 			wantErr:     true,
 			errContains: "jwt access_token_expiration_minutes must be positive",
@@ -71,10 +71,10 @@ func TestConfig_ValidateJWTConfig(t *testing.T) {
 		{
 			name: "zero access token expiration",
 			config: JWTConfig{
-				Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				AccessTokenExpirationMinutes:   0,
-				RefreshTokenExpirationDays:     7,
-				RefreshTokenMaxValidityDays:    30,
+				Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				AccessTokenExpirationMinutes: 0,
+				RefreshTokenExpirationDays:   7,
+				RefreshTokenMaxValidityDays:  30,
 			},
 			wantErr:     true,
 			errContains: "jwt access_token_expiration_minutes must be positive",
@@ -82,10 +82,10 @@ func TestConfig_ValidateJWTConfig(t *testing.T) {
 		{
 			name: "negative refresh token expiration",
 			config: JWTConfig{
-				Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				AccessTokenExpirationMinutes:   15,
-				RefreshTokenExpirationDays:     -1,
-				RefreshTokenMaxValidityDays:    30,
+				Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				AccessTokenExpirationMinutes: 15,
+				RefreshTokenExpirationDays:   -1,
+				RefreshTokenMaxValidityDays:  30,
 			},
 			wantErr:     true,
 			errContains: "jwt refresh_token_expiration_days must be positive",
@@ -93,10 +93,10 @@ func TestConfig_ValidateJWTConfig(t *testing.T) {
 		{
 			name: "negative refresh token max validity",
 			config: JWTConfig{
-				Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				AccessTokenExpirationMinutes:   15,
-				RefreshTokenExpirationDays:     7,
-				RefreshTokenMaxValidityDays:    -1,
+				Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				AccessTokenExpirationMinutes: 15,
+				RefreshTokenExpirationDays:   7,
+				RefreshTokenMaxValidityDays:  -1,
 			},
 			wantErr:     true,
 			errContains: "jwt refresh_token_max_validity_days must be positive",
@@ -104,10 +104,10 @@ func TestConfig_ValidateJWTConfig(t *testing.T) {
 		{
 			name: "max validity less than expiration (invalid)",
 			config: JWTConfig{
-				Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				AccessTokenExpirationMinutes:   15,
-				RefreshTokenExpirationDays:     30,
-				RefreshTokenMaxValidityDays:    7, // Less than expiration
+				Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				AccessTokenExpirationMinutes: 15,
+				RefreshTokenExpirationDays:   30,
+				RefreshTokenMaxValidityDays:  7, // Less than expiration
 			},
 			wantErr:     true,
 			errContains: "jwt refresh_token_max_validity_days (7) must be >= refresh_token_expiration_days (30)",
@@ -115,10 +115,10 @@ func TestConfig_ValidateJWTConfig(t *testing.T) {
 		{
 			name: "max validity equal to expiration (valid)",
 			config: JWTConfig{
-				Secret:                         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-				AccessTokenExpirationMinutes:   15,
-				RefreshTokenExpirationDays:     7,
-				RefreshTokenMaxValidityDays:    7, // Equal to expiration
+				Secret:                       "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+				AccessTokenExpirationMinutes: 15,
+				RefreshTokenExpirationDays:   7,
+				RefreshTokenMaxValidityDays:  7, // Equal to expiration
 			},
 			wantErr: false,
 		},

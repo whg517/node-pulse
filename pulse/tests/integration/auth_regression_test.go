@@ -111,6 +111,15 @@ func TestRegression_NodeEndpointsWithNewAuth(t *testing.T) {
 
 	accessToken := loginResp.Data.AccessToken
 
+	// Extract CSRF token from login cookies (needed for mutation requests)
+	var csrfToken string
+	for _, c := range wLogin.Result().Cookies() {
+		if c.Name == "csrf_token" {
+			csrfToken = c.Value
+			break
+		}
+	}
+
 	// Test 1: GET /api/v1/nodes - List nodes (should work with JWT)
 	t.Run("ListNodes", func(t *testing.T) {
 		req, _ := http.NewRequest("GET", "/api/v1/nodes", nil)
@@ -134,12 +143,14 @@ func TestRegression_NodeEndpointsWithNewAuth(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/nodes", bytes.NewBuffer(nodeBody))
 		req.Header.Set("Authorization", "Bearer "+accessToken)
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-CSRF-Token", csrfToken)
+		req.AddCookie(&http.Cookie{Name: "csrf_token", Value: csrfToken})
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		// Should return 201 Created or 200 OK
 		assert.True(t, w.Code == http.StatusCreated || w.Code == http.StatusOK,
-			"POST /api/v1/nodes should work with JWT, got %d", w.Code)
+			"POST /api/v1/nodes should work with JWT, got %d: %s", w.Code, w.Body.String())
 	})
 }
 
@@ -288,7 +299,16 @@ func TestRegression_RBACWithNewJWT(t *testing.T) {
 		err = json.Unmarshal(wLogin.Body.Bytes(), &loginResp)
 		require.NoError(t, err)
 
-		// Try to create node (should be forbidden)
+		// Extract CSRF token from login cookies
+		var viewerCSRF string
+		for _, c := range wLogin.Result().Cookies() {
+			if c.Name == "csrf_token" {
+				viewerCSRF = c.Value
+				break
+			}
+		}
+
+		// Try to create node (should be forbidden by RBAC)
 		newNode := models.CreateNodeRequest{
 			Name:   "unauthorized-node",
 			IP:     "10.0.0.1",
@@ -298,6 +318,8 @@ func TestRegression_RBACWithNewJWT(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/nodes", bytes.NewBuffer(nodeBody))
 		req.Header.Set("Authorization", "Bearer "+loginResp.Data.AccessToken)
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-CSRF-Token", viewerCSRF)
+		req.AddCookie(&http.Cookie{Name: "csrf_token", Value: viewerCSRF})
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -337,6 +359,15 @@ func TestRegression_RBACWithNewJWT(t *testing.T) {
 		err = json.Unmarshal(wLogin.Body.Bytes(), &loginResp)
 		require.NoError(t, err)
 
+		// Extract CSRF token from login cookies
+		var adminCSRF string
+		for _, c := range wLogin.Result().Cookies() {
+			if c.Name == "csrf_token" {
+				adminCSRF = c.Value
+				break
+			}
+		}
+
 		// Try to create node (should succeed)
 		newNode := models.CreateNodeRequest{
 			Name:   "authorized-admin-node",
@@ -347,12 +378,14 @@ func TestRegression_RBACWithNewJWT(t *testing.T) {
 		req, _ := http.NewRequest("POST", "/api/v1/nodes", bytes.NewBuffer(nodeBody))
 		req.Header.Set("Authorization", "Bearer "+loginResp.Data.AccessToken)
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-CSRF-Token", adminCSRF)
+		req.AddCookie(&http.Cookie{Name: "csrf_token", Value: adminCSRF})
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
 		// Should succeed
 		assert.True(t, w.Code == http.StatusCreated || w.Code == http.StatusOK,
-			"Admin should be able to create nodes, got %d", w.Code)
+			"Admin should be able to create nodes, got %d: %s", w.Code, w.Body.String())
 	})
 }
 

@@ -87,6 +87,7 @@ func TestPushService_SendWebhook_Success(t *testing.T) {
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
 		baseURL:            "http://localhost:6532",
+		urlValidator:       func(string) error { return nil },
 	}
 
 	ctx := context.Background()
@@ -136,6 +137,7 @@ func TestPushService_SendWebhook_RetrySuccess(t *testing.T) {
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
 		baseURL:            "http://localhost:6532",
+		urlValidator:       func(string) error { return nil },
 	}
 
 	ctx := context.Background()
@@ -181,6 +183,7 @@ func TestPushService_SendWebhook_MaxRetriesExceeded(t *testing.T) {
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
 		baseURL:            "http://localhost:6532",
+		urlValidator:       func(string) error { return nil },
 	}
 
 	ctx := context.Background()
@@ -230,6 +233,7 @@ func TestPushService_SendWebhook_ContextCancellation(t *testing.T) {
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
 		baseURL:            "http://localhost:6532",
+		urlValidator:       func(string) error { return nil },
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -263,6 +267,7 @@ func TestPushService_SendAlert_NoWebhooks(t *testing.T) {
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
 		baseURL:            "http://localhost:6532",
+		urlValidator:       func(string) error { return nil },
 	}
 
 	ctx := context.Background()
@@ -302,6 +307,7 @@ func TestPushService_SendAlert_MultipleWebhooks(t *testing.T) {
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
 		baseURL:            "http://localhost:6532",
+		urlValidator:       func(string) error { return nil },
 	}
 
 	ctx := context.Background()
@@ -344,6 +350,7 @@ func TestPushService_SendAlert_OnlyEnabledWebhooks(t *testing.T) {
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
 		baseURL:            "http://localhost:6532",
+		urlValidator:       func(string) error { return nil },
 	}
 
 	ctx := context.Background()
@@ -388,6 +395,7 @@ func TestPushService_SendAlert_PartialFailure(t *testing.T) {
 		webhookLogsQuerier: mockLogs,
 		httpClient:         &http.Client{Timeout: 10 * time.Second},
 		baseURL:            "http://localhost:6532",
+		urlValidator:       func(string) error { return nil },
 	}
 
 	ctx := context.Background()

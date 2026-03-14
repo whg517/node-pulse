@@ -93,6 +93,13 @@ func (e *AlertEngine) getPool() *pgxpool.Pool {
 	return e.pool
 }
 
+// WithWebhookURLValidator overrides the URL validator used by the internal webhook push service.
+// Pass nil to disable URL validation (useful in tests with http:// servers).
+func (e *AlertEngine) WithWebhookURLValidator(fn func(string) error) *AlertEngine {
+	e.webhookPushService.WithURLValidator(fn)
+	return e
+}
+
 // Start starts the alert engine workers
 func (e *AlertEngine) Start() {
 	slog.Info("Starting alert engine", "worker_pool_size", e.workerPoolSize)

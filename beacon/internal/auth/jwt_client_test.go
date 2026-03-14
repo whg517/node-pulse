@@ -128,8 +128,8 @@ func TestGetAccessToken(t *testing.T) {
 			AccessToken:      testToken,
 			RefreshToken:     testRefresh,
 			TokenType:        "Bearer",
-			ExpiresIn:        900,         // 15 minutes
-			RefreshExpiresIn: 604800,      // 7 days
+			ExpiresIn:        900,    // 15 minutes
+			RefreshExpiresIn: 604800, // 7 days
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -558,6 +558,7 @@ func TestGetTokenState(t *testing.T) {
 // TestTokenRefreshUsesRefreshToken tests that refresh token is used when available
 func TestTokenRefreshUsesRefreshToken(t *testing.T) {
 	var receivedRequest TokenRequest
+	var receivedAuthHeader string
 
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewDecoder(r.Body).Decode(&receivedRequest)
@@ -568,7 +569,9 @@ func TestTokenRefreshUsesRefreshToken(t *testing.T) {
 				t.Error("Expected refresh token in request")
 			}
 		} else if r.URL.Path == "/api/v1/beacon/token" {
-			if receivedRequest.APIKey == "" {
+			// API key is sent in Authorization header, not request body
+			receivedAuthHeader = r.Header.Get("Authorization")
+			if receivedAuthHeader == "" {
 				t.Error("Expected API key in request")
 			}
 		}
@@ -648,10 +651,10 @@ func TestGetAccessToken_APIKeyInAuthorizationHeader(t *testing.T) {
 			receivedBodyBytes, _ = io.ReadAll(r.Body)
 		}
 		resp := TokenResponse{
-			AccessToken:      testToken,
-			TokenType:        "Bearer",
-			ExpiresIn:        900,
-			NodeID:           testNodeID,
+			AccessToken: testToken,
+			TokenType:   "Bearer",
+			ExpiresIn:   900,
+			NodeID:      testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)

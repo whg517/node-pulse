@@ -22,6 +22,7 @@ type PushService struct {
 	webhookLogsQuerier db.WebhookLogsQuerier
 	httpClient         *http.Client
 	baseURL            string
+	urlValidator       func(string) error
 }
 
 // NewPushService creates a new PushService
@@ -36,8 +37,23 @@ func NewPushService(
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
-		baseURL: baseURL,
+		baseURL:      baseURL,
+		urlValidator: security.ValidateWebhookURL,
 	}
+}
+
+// noopURLValidator is a validator that always passes (used in tests).
+var noopURLValidator = func(string) error { return nil }
+
+// WithURLValidator returns a new PushService with a custom URL validator.
+// Pass nil to disable URL validation (useful in tests with http:// servers).
+func (s *PushService) WithURLValidator(fn func(string) error) *PushService {
+	if fn == nil {
+		s.urlValidator = noopURLValidator
+	} else {
+		s.urlValidator = fn
+	}
+	return s
 }
 
 // SendWebhook sends an alert to a single webhook with retry logic
@@ -147,7 +163,8 @@ func (s *PushService) SendAlert(ctx context.Context, alertEvent *models.AlertEve
 // sendHTTP sends a single HTTP POST request to a webhook
 func (s *PushService) sendHTTP(ctx context.Context, alertEvent *models.AlertEvent, webhook *models.Webhook) error {
 	// SSRF Protection: Validate webhook URL before sending
-	if err := security.ValidateWebhookURL(webhook.URL); err != nil {
+	validate := s.urlValidator
+	if err := validate(webhook.URL); err != nil {
 		slog.Warn("Webhook URL failed SSRF validation",
 			"webhook_id", webhook.ID,
 			"url", webhook.URL,

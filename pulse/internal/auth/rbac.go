@@ -11,7 +11,7 @@ import (
 type Role string
 
 const (
-	RoleAdmin   Role = "admin"
+	RoleAdmin    Role = "admin"
 	RoleOperator Role = "operator"
 	RoleViewer   Role = "viewer"
 	RoleBeacon   Role = "beacon"
@@ -21,15 +21,15 @@ const (
 type Resource string
 
 const (
-	ResourceUsers      Resource = "users"
-	ResourceNodes      Resource = "nodes"
-	ResourceProbes     Resource = "probes"
-	ResourceAlerts     Resource = "alerts"
-	ResourceWebhooks   Resource = "webhooks"
-	ResourceExport     Resource = "export"
-	ResourceSystem     Resource = "system"
-	ResourceBeacon     Resource = "beacon"
-	ResourceConfig     Resource = "config"
+	ResourceUsers    Resource = "users"
+	ResourceNodes    Resource = "nodes"
+	ResourceProbes   Resource = "probes"
+	ResourceAlerts   Resource = "alerts"
+	ResourceWebhooks Resource = "webhooks"
+	ResourceExport   Resource = "export"
+	ResourceSystem   Resource = "system"
+	ResourceBeacon   Resource = "beacon"
+	ResourceConfig   Resource = "config"
 )
 
 // Action represents a permission action
@@ -137,8 +137,8 @@ var RolePermissions = map[Role][]Permission{
 	},
 	RoleBeacon: {
 		// Beacon role - limited permissions
-		{ResourceBeacon, ActionWrite},  // heartbeat:write
-		{ResourceConfig, ActionView},    // config:read
+		{ResourceBeacon, ActionWrite}, // heartbeat:write
+		{ResourceConfig, ActionView},  // config:read
 	},
 }
 
@@ -356,8 +356,8 @@ func GetPermissionsForRole(role Role) []Permission {
 // RoleHierarchy defines role precedence (higher index = higher privilege)
 // Used for determining if one role can override another
 var RoleHierarchy = map[Role]int{
-	RoleViewer:   0,
-	RoleBeacon:   1,
+	RoleBeacon:   0,
+	RoleViewer:   1,
 	RoleOperator: 2,
 	RoleAdmin:    3,
 }

@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/netip"
 	"sync"
 	"time"
 
@@ -255,7 +256,7 @@ func (s *SessionService) RefreshSession(ctx context.Context, oldRefreshToken str
 
 	var userID uuid.UUID
 	var sessionID *uuid.UUID
-	var oldIPAddress *string
+	var oldIPAddress *netip.Addr
 	var revokedAt *time.Time
 
 	err := s.pool.QueryRow(ctx, `
@@ -274,7 +275,7 @@ func (s *SessionService) RefreshSession(ctx context.Context, oldRefreshToken str
 		timeSinceRevocation := time.Since(*revokedAt)
 		if timeSinceRevocation <= GracePeriodDuration {
 			// Check if IP addresses match
-			if oldIPAddress != nil && ipAddress != "" && *oldIPAddress == ipAddress {
+			if oldIPAddress != nil && ipAddress != "" && oldIPAddress.String() == ipAddress {
 				// Within grace period and same IP - allow but warn
 				// This is likely a race condition from concurrent tabs
 				// We'll create a new token but log this event
@@ -306,7 +307,7 @@ createNewToken:
 		if timeSinceRevocation > GracePeriodDuration {
 			return "", nil, fmt.Errorf("token already used")
 		}
-		if oldIPAddress != nil && ipAddress != "" && *oldIPAddress != ipAddress {
+		if oldIPAddress != nil && ipAddress != "" && oldIPAddress.String() != ipAddress {
 			// Different IP outside grace period - revoke entire token family
 			_ = s.revokeTokenFamily(ctx, userID, tokenHash)
 			return "", nil, fmt.Errorf("token reuse detected from different IP")

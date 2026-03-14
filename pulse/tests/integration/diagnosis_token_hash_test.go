@@ -55,9 +55,14 @@ func TestDiagnosis_TokenHash(t *testing.T) {
 	require.Equal(t, http.StatusOK, wLogin.Code)
 
 	// Get refresh token from cookie
-	cookies := wLogin.Result().Cookies()
-	require.Len(t, cookies, 1, "Should have refresh_token cookie")
-	refreshToken := cookies[0].Value
+	var refreshToken string
+	for _, c := range wLogin.Result().Cookies() {
+		if c.Name == "refresh_token" {
+			refreshToken = c.Value
+			break
+		}
+	}
+	require.NotEmpty(t, refreshToken, "Should have refresh_token cookie")
 
 	t.Logf("=== TOKEN ANALYSIS ===")
 	t.Logf("Refresh token from cookie: %s", refreshToken)
