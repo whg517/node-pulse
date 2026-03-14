@@ -6,7 +6,8 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../lib/echarts-core'
+import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../hooks/useTheme'
 import type { DataPoint } from '../dashboard/TrendChart'
@@ -48,11 +49,11 @@ export function PacketLossChart({
   criticalThreshold = 5,
 }: PacketLossChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<echarts.ECharts | null>(null)
+  const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
   const { isDark } = useTheme()
 
-  const getChartOptions = useCallback((): echarts.EChartsOption => {
+  const getChartOptions = useCallback((): EChartsOption => {
     const textColor = isDark ? '#e5e7eb' : '#374151'
     const axisLineColor = isDark ? '#4b5563' : '#e5e7eb'
     const splitLineColor = isDark ? '#374151' : '#f3f4f6'

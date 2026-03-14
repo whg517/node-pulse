@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../lib/echarts-core'
+import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
 import type { MetricTrendData } from '../../api/performance'
 
 interface PerformanceTrendChartProps {
@@ -24,7 +25,7 @@ export function PerformanceTrendChart({
   isLoading = false,
 }: PerformanceTrendChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<echarts.ECharts | null>(null)
+  const chartInstance = useRef<ECharts | null>(null)
 
   // Initialize chart
   useEffect(() => {
@@ -47,7 +48,7 @@ export function PerformanceTrendChart({
     if (!chartInstance.current || !trendData || trendData.length === 0) return
 
     // Prepare series data for each metric
-    const series: echarts.SeriesOption[] = []
+    const series: SeriesOption[] = []
 
     // Color palette for different metrics
     const colors = ['#3b82f6', '#10b981', '#f59e0b'] // blue, green, amber
@@ -171,7 +172,7 @@ export function PerformanceTrendChart({
       .map((s) => s.name)
       .filter((name): name is string => name !== undefined)
 
-    const option: echarts.EChartsOption = {
+    const option: EChartsOption = {
       title: {
         text: '性能趋势',
         left: 'center',

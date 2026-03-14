@@ -48,10 +48,6 @@ const i18nInitPromise = i18n.use(initReactI18next).init({
 export default i18n
 export { i18nInitPromise }
 
-// Supported languages
-export const supportedLanguages = [
-  { code: 'en', name: 'English', nativeName: 'English' },
-  { code: 'zh-CN', name: 'Chinese (Simplified)', nativeName: '简体中文' },
-] as const
-
-export type LanguageCode = (typeof supportedLanguages)[number]['code']
+// Supported languages - re-exported from i18n-config to avoid bundling i18next
+// in components that only need the language list
+export { supportedLanguages, type LanguageCode } from './i18n-config'

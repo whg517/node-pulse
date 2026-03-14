@@ -1,25 +1,26 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
-import { useEffect } from 'react'
-import LoginPage from './pages/LoginPage'
-import DashboardPage from './pages/DashboardPage'
-import NodeDetailPage from './pages/NodeDetailPage'
-import NodeComparisonPage from './pages/NodeComparison'
-import NodeManagementPage from './pages/NodeManagementPage'
-import AlertRulesPage from './pages/AlertRulesPage'
-import AlertRecordsPage from './pages/AlertRecordsPage'
-import AlertHistoryPage from './pages/AlertHistoryPage'
-import WebhooksPage from './pages/WebhooksPage'
-import DataExportPage from './pages/DataExportPage'
-import SessionsPage from './pages/SessionsPage'
-import ReportsPage from './pages/Reports'
-import PreferencesPage from './pages/PreferencesPage'
-import UsersPage from './pages/UsersPage'
-import SystemHealthPage from './pages/SystemHealthPage'
-import NotFoundPage from './pages/NotFoundPage'
+import { lazy, useEffect, Suspense } from 'react'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import { AppLayout } from './components/layout'
 import { useAuthStore, setupCrossTabLogoutSync, setupVisibilityHandler } from './stores/authStore'
 import { useAlertsStore } from './stores/alertsStore'
+
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const NodeDetailPage = lazy(() => import('./pages/NodeDetailPage'))
+const NodeComparisonPage = lazy(() => import('./pages/NodeComparison'))
+const NodeManagementPage = lazy(() => import('./pages/NodeManagementPage'))
+const AlertRulesPage = lazy(() => import('./pages/AlertRulesPage'))
+const AlertRecordsPage = lazy(() => import('./pages/AlertRecordsPage'))
+const AlertHistoryPage = lazy(() => import('./pages/AlertHistoryPage'))
+const WebhooksPage = lazy(() => import('./pages/WebhooksPage'))
+const DataExportPage = lazy(() => import('./pages/DataExportPage'))
+const SessionsPage = lazy(() => import('./pages/SessionsPage'))
+const ReportsPage = lazy(() => import('./pages/Reports'))
+const PreferencesPage = lazy(() => import('./pages/PreferencesPage'))
+const UsersPage = lazy(() => import('./pages/UsersPage'))
+const SystemHealthPage = lazy(() => import('./pages/SystemHealthPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 /**
  * Layout wrapper for protected routes
@@ -61,6 +62,7 @@ function App() {
 
   return (
     <BrowserRouter>
+      <Suspense fallback={null}>
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
@@ -101,6 +103,7 @@ function App() {
         {/* 404 - Not Found */}
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

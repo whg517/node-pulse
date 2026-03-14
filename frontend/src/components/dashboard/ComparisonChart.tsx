@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../lib/echarts-core'
+import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 
 export type TimeRange = '24h' | '7d' | '30d' | 'custom'
 export type MetricType = 'latency_ms' | 'packet_loss_rate' | 'jitter_ms'
@@ -130,7 +131,7 @@ export default function ComparisonChart({
   onExportPdf,
 }: ComparisonChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<echarts.ECharts | null>(null)
+  const chartInstance = useRef<ECharts | null>(null)
   const [localTimeRange, setLocalTimeRange] = useState<TimeRange>(timeRange || '24h')
   const [localMode, setLocalMode] = useState<ComparisonMode>(mode)
 
@@ -516,7 +517,7 @@ export default function ComparisonChart({
 
     const legendData = nodes.map((node) => node.node_name + getGroupLabel(node))
 
-    const option: echarts.EChartsOption = {
+    const option: EChartsOption = {
       title: {
         text: `${config.label} Comparison`,
         left: 'center',

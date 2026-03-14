@@ -6,7 +6,8 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react'
-import * as echarts from 'echarts'
+import echarts, { graphic } from '../../lib/echarts-core'
+import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../hooks/useTheme'
 import type { DataPoint } from '../dashboard/TrendChart'
@@ -47,16 +48,16 @@ export function LatencyTrendChart({
   baselineValue,
 }: LatencyTrendChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<echarts.ECharts | null>(null)
+  const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
   const { isDark } = useTheme()
 
-  const getChartOptions = useCallback((): echarts.EChartsOption => {
+  const getChartOptions = useCallback((): EChartsOption => {
     const textColor = isDark ? '#e5e7eb' : '#374151'
     const axisLineColor = isDark ? '#4b5563' : '#e5e7eb'
     const splitLineColor = isDark ? '#374151' : '#f3f4f6'
 
-    const series: echarts.SeriesOption[] = [
+    const series: SeriesOption[] = [
       {
         name: t('metrics.latency'),
         type: 'line',
@@ -72,7 +73,7 @@ export function LatencyTrendChart({
           color: COLORS.latency,
         },
         areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+          color: new graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: COLORS.areaGradientStart },
             { offset: 1, color: COLORS.areaGradientEnd },
           ]),

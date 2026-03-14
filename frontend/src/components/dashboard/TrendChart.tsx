@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../lib/echarts-core'
+import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 
 export type TimeRange = '24h' | '7d' | '30d'
 export type MetricType = 'latency_ms' | 'packet_loss_rate' | 'jitter_ms'
@@ -56,7 +57,7 @@ export default function TrendChart({
   isLoading = false,
 }: TrendChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<echarts.ECharts | null>(null)
+  const chartInstance = useRef<ECharts | null>(null)
   const [localTimeRange, setLocalTimeRange] = useState<TimeRange>(timeRange)
 
   // Metric configuration
@@ -144,7 +145,7 @@ export default function TrendChart({
   useEffect(() => {
     if (!chartInstance.current || !data || data.length === 0) return
 
-    const option: echarts.EChartsOption = {
+    const option: EChartsOption = {
       title: {
         text: `${config.label} Trend`,
         left: 'center',

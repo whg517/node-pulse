@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../lib/echarts-core'
+import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
 
 export type HealthStatus = 'healthy' | 'warning' | 'critical' | 'offline'
@@ -73,7 +74,7 @@ export default function WorldMap({
   isLoading = false,
 }: WorldMapProps) {
   const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<echarts.ECharts | null>(null)
+  const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
 
   // Get status color
@@ -138,7 +139,7 @@ export default function WorldMap({
       region: node.region,
     })
 
-    const option: echarts.EChartsOption = {
+    const option: EChartsOption = {
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',

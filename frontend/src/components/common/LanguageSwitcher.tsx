@@ -7,7 +7,7 @@
 
 import { useTranslation } from 'react-i18next'
 import { useSettingsStore } from '../../stores/settingsStore'
-import { supportedLanguages, type LanguageCode } from '../../i18n'
+import { supportedLanguages, type LanguageCode } from '../../i18n-config'
 
 export interface LanguageSwitcherProps {
   /** Show as dropdown or inline buttons */

@@ -6,7 +6,8 @@
  */
 
 import { useEffect, useRef, useCallback } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../lib/echarts-core'
+import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../../hooks/useTheme'
 
@@ -50,11 +51,11 @@ export function ProbeSuccessGauge({
   isLoading = false,
 }: ProbeSuccessGaugeProps) {
   const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<echarts.ECharts | null>(null)
+  const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
   const { isDark } = useTheme()
 
-  const getChartOptions = useCallback((): echarts.EChartsOption => {
+  const getChartOptions = useCallback((): EChartsOption => {
     const textColor = isDark ? '#e5e7eb' : '#374151'
     const color = getColorForValue(value)
 
