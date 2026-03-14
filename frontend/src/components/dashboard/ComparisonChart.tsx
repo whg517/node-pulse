@@ -830,8 +830,7 @@ export default function ComparisonChart({
 
       {/* Node Comparison Mode - Single Time Range Selector */}
       {localMode === 'node' && (
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{config.label} Comparison</h3>
+        <div className="flex items-center justify-end mb-4">
           <div className="flex space-x-2" role="group" aria-label="Time range selector">
             {timeRangeOptions.filter((opt) => opt.value !== 'custom').map((option) => (
               <button

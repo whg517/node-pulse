@@ -11,9 +11,9 @@ interface AlertRuleFormProps {
 }
 
 export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: AlertRuleFormProps) {
-  const [metric, setMetric] = useState<string>(initialData?.metric || 'latency')
+  const [metric, setMetric] = useState<'latency' | 'packet_loss_rate' | 'jitter'>(initialData?.metric || 'latency')
   const [threshold, setThreshold] = useState<number>(initialData?.threshold || 0)
-  const [level, setLevel] = useState<string>(initialData?.level || 'P1')
+  const [level, setLevel] = useState<'P0' | 'P1' | 'P2'>(initialData?.level || 'P1')
   const [nodeId, setNodeId] = useState<string | null>(initialData?.nodeId || null)
   const [enabled, setEnabled] = useState<boolean>(initialData?.enabled ?? true)
 
@@ -65,7 +65,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
         <select
           id="metric"
           value={metric}
-          onChange={(e) => setMetric(e.target.value)}
+          onChange={(e) => setMetric(e.target.value as 'latency' | 'packet_loss_rate' | 'jitter')}
           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
         >
           <option value="latency">Latency (ms)</option>
@@ -101,7 +101,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
         <select
           id="level"
           value={level}
-          onChange={(e) => setLevel(e.target.value)}
+          onChange={(e) => setLevel(e.target.value as 'P0' | 'P1' | 'P2')}
           className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
         >
           <option value="P0">P0 - Critical</option>

@@ -184,7 +184,7 @@ describe('useNodesStore', () => {
       },
     ]
 
-    vi.mocked(nodesApi.fetchNodes).mockResolvedValueOnce({ data: mockNodesData })
+    vi.mocked(nodesApi.fetchNodes).mockResolvedValueOnce({ data: { nodes: mockNodesData } } as any)
 
     const { result } = renderHook(() => useNodesStore())
 

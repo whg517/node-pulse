@@ -194,6 +194,7 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     // May or may not show destination depending on MTR data
     const hasDestination = await destination.count() > 0
     expect(hasDestination || true).toBe(true)
+  })
 
   test('AC-4.3.5-8: hop count indicator visible', async ({ adminPage }) => {
     const nodeRows = adminPage.locator('table tbody tr')
@@ -498,12 +499,16 @@ test.describe('MTR Visualization - Enhanced FR-4.3.5', () => {
     await nodeRows.first().click()
     await adminPage.waitForLoadState('networkidle')
     await adminPage.waitForTimeout(1000)
+    const refreshButton = adminPage.locator(
+      'button:has-text("Refresh"), button:has-text("Re-run"), [data-testid="refresh-mtr"]'
+    )
     const hasRefresh = await refreshButton.count() > 0
     if (hasRefresh) {
       await expect(refreshButton.first()).toBeVisible()
     }
 
     expect(true).toBe(true)
+  })
 })
 
 test.describe('MTR Visualization - Enhanced Health Status FR-4.3.5', () => {

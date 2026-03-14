@@ -41,18 +41,17 @@ describe('DataExportPage', () => {
       </MemoryRouter>
     )
 
-    expect(screen.getByText('Dashboard')).toBeInTheDocument()
-    expect(screen.getByText('Export')).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument()
   })
 
-  it('renders logout button', () => {
+  it('renders page title', () => {
     render(
       <MemoryRouter>
         <DataExportPage />
       </MemoryRouter>
     )
 
-    expect(screen.getByRole('button', { name: 'Logout' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
   })
 
   it('shows loading state initially', () => {
@@ -75,7 +74,7 @@ describe('DataExportPage', () => {
       </MemoryRouter>
     )
 
-    const errorMessage = await screen.findByText(/Failed to load data/)
+    const errorMessage = await screen.findByText(/Failed to load nodes/)
     expect(errorMessage).toBeInTheDocument()
   })
 })

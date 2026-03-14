@@ -9,7 +9,7 @@
  * - Notification preferences
  */
 
-import { test, expect } from '../../../fixtures/auth.fixture'
+import { test, expect } from '../../fixtures/auth.fixture'
 
 test.describe('Alert Push Notifications - Feature FR-4.3.13', () => {
   test.beforeEach(async ({ adminPage }) => {

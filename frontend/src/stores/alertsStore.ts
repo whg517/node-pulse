@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { fetchAlertRules, fetchAlertRecords } from '../api/alerts'
+import { fetchAlertRules, fetchAlertRecords, createAlertRule, deleteAlertRule, updateAlertRule as apiUpdateAlertRule } from '../api/alerts'
+import type { CreateAlertRuleRequest, UpdateAlertRuleRequest } from '../api/types'
 import type { AlertRule, AlertRecord, AlertFilter } from './types'
 
 // ============== Types ==============
@@ -12,9 +13,9 @@ export interface AlertsState {
 export interface AlertsActions {
   setAlertRules: (rules: AlertRule[]) => void
   setAlertRecords: (records: AlertRecord[]) => void
-  addAlertRule: (rule: AlertRule) => void
-  updateAlertRule: (id: string, updates: Partial<AlertRule>) => void
-  removeAlertRule: (id: string) => void
+  addAlertRule: (request: CreateAlertRuleRequest) => Promise<void>
+  updateAlertRule: (id: string, updates: UpdateAlertRuleRequest) => Promise<void>
+  removeAlertRule: (id: string) => Promise<void>
   setFilter: (filter: AlertFilter) => void
   fetchAlertRules: () => Promise<void>
   fetchAlertRecords: () => Promise<void>
@@ -46,21 +47,40 @@ export const useAlertsStore = create<AlertsStore>((set) => ({
     set({ alertRecords: records })
   },
 
-  addAlertRule: (rule: AlertRule) => {
+  addAlertRule: async (request: CreateAlertRuleRequest) => {
+    const response = await createAlertRule(request)
+    const rule: AlertRule = {
+      id: response.data.id,
+      metric: response.data.metric,
+      threshold: response.data.threshold,
+      level: response.data.level,
+      nodeId: response.data.node_id,
+      enabled: response.data.enabled,
+    }
     set((state) => ({
       alertRules: [...state.alertRules, rule],
     }))
   },
 
-  updateAlertRule: (id: string, updates: Partial<AlertRule>) => {
+  updateAlertRule: async (id: string, updates: UpdateAlertRuleRequest) => {
+    const response = await apiUpdateAlertRule(id, updates)
+    const updated: AlertRule = {
+      id: response.data.id,
+      metric: response.data.metric,
+      threshold: response.data.threshold,
+      level: response.data.level,
+      nodeId: response.data.node_id,
+      enabled: response.data.enabled,
+    }
     set((state) => ({
       alertRules: state.alertRules.map((rule) =>
-        rule.id === id ? { ...rule, ...updates } : rule
+        rule.id === id ? updated : rule
       ),
     }))
   },
 
-  removeAlertRule: (id: string) => {
+  removeAlertRule: async (id: string) => {
+    await deleteAlertRule(id)
     set((state) => ({
       alertRules: state.alertRules.filter((rule) => rule.id !== id),
     }))

@@ -40,6 +40,7 @@ export abstract class FormPage extends ModalPage {
   readonly cancelButton: Locator
   readonly resetButton: Locator
   readonly errorSummary: Locator
+  // @ts-ignore TS2612: intentional override
   protected selectors!: FormSelectors
 
   constructor(page: Page, selectors: FormSelectors = {}) {

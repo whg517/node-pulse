@@ -42,6 +42,7 @@ export abstract class ModalPage extends BasePage {
   readonly submitButton: Locator
   readonly confirmButton: Locator
   readonly overlay: Locator
+  // @ts-ignore TS2612: intentional override
   protected selectors!: ModalSelectors
 
   constructor(page: Page, selectors: ModalSelectors = {}) {

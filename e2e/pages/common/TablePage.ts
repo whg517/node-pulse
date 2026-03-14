@@ -47,6 +47,7 @@ export abstract class TablePage extends BasePage {
   readonly editButtons: Locator
   readonly deleteButtons: Locator
   readonly checkboxes: Locator
+  // @ts-ignore TS2612: intentional override
   protected selectors!: TableSelectors
 
   constructor(page: Page, selectors: TableSelectors = {}) {

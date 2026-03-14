@@ -7,6 +7,9 @@ import * as alertsApi from '../../api/alerts'
 vi.mock('../../api/alerts', () => ({
   fetchAlertRules: vi.fn(),
   fetchAlertRecords: vi.fn(),
+  createAlertRule: vi.fn(),
+  updateAlertRule: vi.fn(),
+  deleteAlertRule: vi.fn(),
 }))
 
 describe('useAlertsStore', () => {
@@ -80,27 +83,41 @@ describe('useAlertsStore', () => {
     expect(result.current.alertRecords).toEqual(mockRecords)
   })
 
-  it('should add alert rule', () => {
+  it('should add alert rule', async () => {
     const { result } = renderHook(() => useAlertsStore())
 
-    const mockRule = {
-      id: 'rule-1',
+    const mockRequest = {
       metric: 'latency' as const,
       threshold: 100,
       level: 'P1' as const,
-      nodeId: 'node-1',
+      node_id: 'node-1',
       enabled: true,
     }
 
-    act(() => {
-      result.current.addAlertRule(mockRule)
+    const mockResponse = {
+      data: {
+        id: 'rule-1',
+        metric: 'latency' as const,
+        threshold: 100,
+        level: 'P1' as const,
+        node_id: 'node-1',
+        enabled: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    }
+
+    vi.mocked(alertsApi.createAlertRule).mockResolvedValueOnce(mockResponse)
+
+    await act(async () => {
+      await result.current.addAlertRule(mockRequest)
     })
 
     expect(result.current.alertRules).toHaveLength(1)
-    expect(result.current.alertRules[0]).toEqual(mockRule)
+    expect(result.current.alertRules[0].id).toBe('rule-1')
+    expect(result.current.alertRules[0].nodeId).toBe('node-1')
   })
 
-  it('should update alert rule', () => {
+  it('should update alert rule', async () => {
     const { result } = renderHook(() => useAlertsStore())
 
     const initialRules = [
@@ -118,8 +135,22 @@ describe('useAlertsStore', () => {
       result.current.setAlertRules(initialRules)
     })
 
-    act(() => {
-      result.current.updateAlertRule('rule-1', { threshold: 200, enabled: false })
+    const mockResponse = {
+      data: {
+        id: 'rule-1',
+        metric: 'latency' as const,
+        threshold: 200,
+        level: 'P1' as const,
+        node_id: 'node-1',
+        enabled: false,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    }
+
+    vi.mocked(alertsApi.updateAlertRule).mockResolvedValueOnce(mockResponse)
+
+    await act(async () => {
+      await result.current.updateAlertRule('rule-1', { threshold: 200, enabled: false })
     })
 
     expect(result.current.alertRules[0].threshold).toBe(200)
@@ -127,7 +158,7 @@ describe('useAlertsStore', () => {
     expect(result.current.alertRules[0].metric).toBe('latency') // Other fields unchanged
   })
 
-  it('should remove alert rule', () => {
+  it('should remove alert rule', async () => {
     const { result } = renderHook(() => useAlertsStore())
 
     const initialRules = [
@@ -153,8 +184,10 @@ describe('useAlertsStore', () => {
       result.current.setAlertRules(initialRules)
     })
 
-    act(() => {
-      result.current.removeAlertRule('rule-1')
+    vi.mocked(alertsApi.deleteAlertRule).mockResolvedValueOnce({ message: 'deleted' })
+
+    await act(async () => {
+      await result.current.removeAlertRule('rule-1')
     })
 
     expect(result.current.alertRules).toHaveLength(1)
@@ -187,10 +220,11 @@ describe('useAlertsStore', () => {
         level: 'P1' as const,
         node_id: 'node-1',
         enabled: true,
+        created_at: '2024-01-01T00:00:00Z',
       },
     ]
 
-    vi.mocked(alertsApi.fetchAlertRules).mockResolvedValueOnce({ data: mockRulesData })
+    vi.mocked(alertsApi.fetchAlertRules).mockResolvedValueOnce({ data: { alerts: mockRulesData } })
 
     const { result } = renderHook(() => useAlertsStore())
 
@@ -212,7 +246,8 @@ describe('useAlertsStore', () => {
         metric: 'latency',
         level: 'P1',
         status: 'pending' as const,
-        timestamp: '2024-01-01T00:00:00Z',
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
       },
     ]
 

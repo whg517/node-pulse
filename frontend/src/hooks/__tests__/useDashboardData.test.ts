@@ -15,11 +15,10 @@ describe('useDashboardData', () => {
   })
 
   it('should fetch initial data on mount', async () => {
-    const mockNodes = {
-      data: [
-        { id: '1', name: 'Node-1', ip: '192.168.1.1', region: '华东' },
-      ],
-    }
+    const mockNodesList = [
+      { id: '1', name: 'Node-1', ip: '192.168.1.1', region: '华东' },
+    ]
+    const mockNodes = { data: { nodes: mockNodesList } }
     const mockMetrics = { data: [] }
 
     vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
@@ -35,11 +34,11 @@ describe('useDashboardData', () => {
 
     expect(api.fetchNodes).toHaveBeenCalledTimes(1)
     expect(api.fetchMetrics).toHaveBeenCalledTimes(1)
-    expect(result.current.nodes).toEqual(mockNodes.data)
+    expect(result.current.nodes).toEqual(mockNodesList)
   })
 
   it('should set polling state after successful fetch', async () => {
-    const mockNodes = { data: [] }
+    const mockNodes = { data: { nodes: [] } }
     const mockMetrics = { data: [] }
 
     vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
@@ -73,7 +72,7 @@ describe('useDashboardData', () => {
     vi.useFakeTimers()
 
     try {
-      const mockNodes = { data: [] }
+      const mockNodes = { data: { nodes: [] } }
       const mockMetrics = { data: [] }
 
       vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
@@ -100,7 +99,7 @@ describe('useDashboardData', () => {
     vi.useFakeTimers()
 
     try {
-      const mockNodes = { data: [] }
+      const mockNodes = { data: { nodes: [] } }
       const mockMetrics = { data: [] }
 
       vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
@@ -126,7 +125,7 @@ describe('useDashboardData', () => {
   })
 
   it('should provide refetch function', async () => {
-    const mockNodes = { data: [] }
+    const mockNodes = { data: { nodes: [] } }
     const mockMetrics = { data: [] }
 
     vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)
@@ -151,7 +150,7 @@ describe('useDashboardData', () => {
     vi.useFakeTimers()
 
     try {
-      const mockNodes = { data: [] }
+      const mockNodes = { data: { nodes: [] } }
       const mockMetrics = { data: [] }
 
       vi.mocked(api.fetchNodes).mockResolvedValue(mockNodes as any)

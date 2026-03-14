@@ -9,8 +9,9 @@
  * - Email sharing
  */
 
-import { test, expect, Download } from '../../../fixtures/auth.fixture'
-import { ReportsPage } from '../../../pages/ReportsPage'
+import { test, expect } from '../../fixtures/auth.fixture'
+import type { Download } from '@playwright/test'
+import { ReportsPage } from '../../pages/ReportsPage'
 
 test.describe('Health Report PDF - Feature FR-4.3.11', () => {
   let reportsPage: ReportsPage
@@ -349,10 +350,10 @@ test.describe('Health Report PDF - Feature FR-4.3.11', () => {
         downloadButton.first().click(),
       ])
 
-      const contentType = download.type()
+      const suggestedFilename = download.suggestedFilename()
 
-      // PDF should have application/pdf or application/octet-stream content type
-      expect(contentType).toMatch(/pdf|octet-stream/i)
+      // PDF should have .pdf extension
+      expect(suggestedFilename).toMatch(/\.pdf$/i)
     }
   })
 
@@ -737,7 +738,8 @@ test.describe('Health Report PDF - Edge Cases', () => {
       // Try downloading multiple PDFs simultaneously
       const promises = []
       for (let i = 0; i < 2; i++) {
-        const btn = downloadButton.nth(i).catch(() => downloadButton.first())
+        const count = await downloadButton.count()
+        const btn = downloadButton.nth(i < count ? i : 0)
         promises.push(
           adminPage.waitForEvent('download').then((dl) => {
             btn.click().catch(() => {})

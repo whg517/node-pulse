@@ -171,7 +171,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('renders page with title and description', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
@@ -189,7 +189,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('loads and displays available nodes', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
@@ -205,7 +205,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('validates node selection (2-5 nodes)', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
@@ -242,7 +242,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('displays time range selector', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
@@ -260,7 +260,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('displays metric selector', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
@@ -277,7 +277,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('displays group by selector', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
@@ -297,7 +297,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('shows compare button with correct disabled state', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
@@ -331,7 +331,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('displays empty state when no comparison data', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
@@ -365,7 +365,7 @@ describe('NodeComparisonPage', () => {
   })
 
   it('shows node status badges', async () => {
-    mockFetchNodes.mockResolvedValue({ data: mockNodes })
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
 
     render(
       <MemoryRouter>
