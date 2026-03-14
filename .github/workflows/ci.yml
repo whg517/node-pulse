@@ -78,6 +78,20 @@ jobs:
     needs: changes
     if: needs.changes.outputs.pulse == 'true'
     runs-on: ubuntu-latest
+    services:
+      postgres-test:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: nodepulse_test
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U testuser -d nodepulse_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     defaults:
       run:
         working-directory: pulse
