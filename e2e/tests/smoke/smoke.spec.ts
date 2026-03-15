@@ -13,13 +13,14 @@
 import { test, expect } from '../../fixtures/auth.fixture'
 import { LoginPage, DashboardPage, NodesPage } from '../../pages'
 
-test.describe.configure({ mode: 'parallel' })
+const ADMIN_USERNAME = process.env.TEST_ADMIN_USER || 'admin'
+const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASS || 'Admin123'
 
 test.describe('Smoke Tests - Authentication', () => {
   test('SMOKE-001: admin can login', async ({ page }) => {
     const loginPage = new LoginPage(page)
     await loginPage.goto()
-    await loginPage.fillForm('admin', 'Admin123')
+    await loginPage.fillForm(ADMIN_USERNAME, ADMIN_PASSWORD)
     await loginPage.submit()
     await loginPage.expectRedirectToDashboard()
   })
@@ -57,7 +58,7 @@ test.describe('Smoke Tests - Dashboard', () => {
     await adminPage.waitForLoadState('networkidle')
     
     // Check for navigation elements
-    const navLocator = adminPage.locator('nav, [role="navigation"], .sidebar')
+    const navLocator = adminPage.locator('aside nav, aside')
     await expect(navLocator.first()).toBeVisible()
   })
 
@@ -81,8 +82,18 @@ test.describe('Smoke Tests - API Health', () => {
     expect(response.status()).toBe(200)
   })
 
-  test('SMOKE-009: authenticated user can access nodes API', async ({ adminPage, request }) => {
-    const response = await request.get('/api/v1/nodes')
+  test('SMOKE-009: authenticated user can access nodes API', async ({ request }) => {
+    const loginResponse = await request.post('/api/v1/auth/login', {
+      data: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD }
+    })
+    expect(loginResponse.ok()).toBeTruthy()
+    const loginData = await loginResponse.json() as { data?: { access_token?: string } }
+    const accessToken = loginData.data?.access_token
+    expect(accessToken).toBeTruthy()
+
+    const response = await request.get('/api/v1/nodes', {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    })
     expect(response.ok()).toBeTruthy()
     expect(response.status()).toBe(200)
   })
@@ -96,13 +107,13 @@ test.describe('Smoke Tests - Core Pages', () => {
   })
 
   test('SMOKE-011: webhooks page loads', async ({ adminPage }) => {
-    await adminPage.goto('/webhooks')
+    await adminPage.goto('/integrations/webhooks')
     await adminPage.waitForLoadState('networkidle')
     await expect(adminPage).toHaveURL(/.*webhooks/)
   })
 
   test('SMOKE-012: sessions page loads', async ({ adminPage }) => {
-    const sessionsPage = await adminPage.goto('/sessions')
+    await adminPage.goto('/settings/sessions')
     await adminPage.waitForLoadState('networkidle')
     
     // Should have a table or empty state
@@ -119,7 +130,7 @@ test.describe('Smoke Tests - Critical User Journey', () => {
     
     // Login
     await loginPage.goto()
-    await loginPage.fillForm('admin', 'Admin123')
+    await loginPage.fillForm(ADMIN_USERNAME, ADMIN_PASSWORD)
     await loginPage.submit()
     await loginPage.expectRedirectToDashboard()
     
@@ -130,16 +141,18 @@ test.describe('Smoke Tests - Critical User Journey', () => {
 
   test('SMOKE-014: can logout successfully', async ({ page }) => {
     const loginPage = new LoginPage(page)
-    const dashboardPage = new DashboardPage(page)
     
     // Login first
     await loginPage.goto()
-    await loginPage.fillForm('admin', 'Admin123')
+    await loginPage.fillForm(ADMIN_USERNAME, ADMIN_PASSWORD)
     await loginPage.submit()
     await loginPage.expectRedirectToDashboard()
     
     // Logout
-    await dashboardPage.clickLogout()
+    await page.goto('/dashboard')
+    await page.waitForLoadState('networkidle')
+    await page.getByRole('button', { name: /admin/i }).click()
+    await page.getByRole('button', { name: /logout/i }).click()
     await page.waitForURL(/.*login/, { timeout: 10000 })
     
     // Verify on login page

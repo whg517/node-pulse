@@ -59,7 +59,12 @@ async function cleanupTestData(pool: Pool): Promise<void> {
 
     console.log('[Global Teardown] Test data cleanup complete!')
   } catch (error) {
-    console.error('[Global Teardown] Error cleaning up test data:', error)
+    const pgError = error as { code?: string }
+    if (pgError.code === '42P01') {
+      console.warn('[Global Teardown] Skipping DB cleanup: schema not found for TEST_DB_URL')
+    } else {
+      console.error('[Global Teardown] Error cleaning up test data:', error)
+    }
     // Don't throw - we want to continue with teardown
   }
 }

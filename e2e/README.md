@@ -17,8 +17,6 @@ npm test
 # Run smoke tests (fast feedback)
 npm run test:smoke
 
-# Run visual regression tests
-npm run test:visual
 ```
 
 ### 2. Start Backend Server
@@ -77,14 +75,6 @@ npm run test:webhooks
 # Export tests
 npm run test:export
 ```
-
-### Generate Visual Baselines
-
-Visual regression baselines are handled by a dedicated GitHub Actions workflow.
-
-- Run the Visual Snapshot Baselines workflow manually from GitHub Actions.
-- Download the artifact and commit the generated snapshot directories under `e2e/tests/visual`.
-- After the baselines are committed, the Visual Regression workflow will validate them on PRs and on pushes to `main`.
 
 ### Run with UI Mode
 
@@ -234,4 +224,6 @@ Rate-limit behavior is still verified separately in CI by a dedicated backend in
 | TEST_DB_URL | postgresql://testuser:testpass123@localhost:5432/nodepulse_test | Test database URL |
 | API_BASE_URL | http://localhost:6532 | Backend API URL |
 | FRONTEND_BASE_URL | http://localhost:5173 | Frontend URL |
+| TEST_ADMIN_USER | admin | Admin username used by E2E login flows |
+| TEST_ADMIN_PASS | Admin123 | Admin password used by E2E login flows |
 | PULSE_RATE_LIMIT_ENABLED | false (in `docker-compose.e2e.yml`) | Enable/disable backend rate limiting for test stack |

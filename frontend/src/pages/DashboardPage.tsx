@@ -32,11 +32,12 @@ const HEALTH_COLORS = {
  * Note: In production, this data would come from the API
  */
 function generateTrendData(baseValue: number, variance: number, points: number = 24): DataPoint[] {
-  const now = new Date()
+  const now = new Date('2026-01-01T00:00:00Z')
   const data: DataPoint[] = []
   for (let i = points - 1; i >= 0; i--) {
     const timestamp = new Date(now.getTime() - i * 3600000) // hourly data
-    const value = baseValue + (Math.random() - 0.5) * variance
+    const phase = (points - i) / points * Math.PI * 2
+    const value = baseValue + Math.sin(phase) * (variance * 0.5)
     data.push({
       timestamp: timestamp.toISOString(),
       value: Math.max(0, value),

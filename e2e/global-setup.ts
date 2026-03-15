@@ -16,7 +16,7 @@ import bcrypt from 'bcryptjs'
 // Test database connection
 const TEST_DB_URL = process.env.TEST_DB_URL || 'postgresql://testuser:testpass123@localhost:5432/nodepulse_test'
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:6532'
-const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173'
+const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://127.0.0.1:5173'
 
 // Test user credentials - use environment variables for security
 // Falls back to defaults only for local development
@@ -27,6 +27,8 @@ const TEST_USERS = {
     role: 'admin' as const,
   },
 }
+
+type PgError = { code?: string }
 
 /**
  * Wait for backend to be healthy
@@ -54,6 +56,31 @@ async function waitForBackend(maxAttempts = 30, intervalMs = 1000): Promise<void
 }
 
 /**
+ * Wait for frontend to be available
+ */
+async function waitForFrontend(maxAttempts = 30, intervalMs = 1000): Promise<void> {
+  console.log('[Global Setup] Waiting for frontend to be available...')
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await fetch(`${FRONTEND_BASE_URL}/login`)
+      if (response.ok) {
+        console.log('[Global Setup] Frontend is available!')
+        return
+      }
+    } catch {
+      // Frontend not ready yet
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, intervalMs))
+    }
+  }
+
+  throw new Error(`[Global Setup] Frontend did not become available in time: ${FRONTEND_BASE_URL}`)
+}
+
+/**
  * Seed test nodes
  */
 async function seedTestNodes(pool: Pool): Promise<void> {
@@ -68,9 +95,9 @@ async function seedTestNodes(pool: Pool): Promise<void> {
   await pool.query(`
     INSERT INTO nodes (id, name, ip, region, status, created_at, updated_at)
     VALUES
-      (gen_random_uuid(), 'e2e_test_node_1', '192.168.1.101', 'us-east-1', 'online', NOW(), NOW()),
-      (gen_random_uuid(), 'e2e_test_node_2', '192.168.1.102', 'us-west-2', 'online', NOW(), NOW()),
-      (gen_random_uuid(), 'e2e_test_node_3', '192.168.1.103', 'eu-west-1', 'offline', NOW(), NOW())
+      ('11111111-1111-4111-8111-111111111111', 'e2e_test_node_1', '192.168.1.101', 'us-east-1', 'online', NOW(), NOW()),
+      ('22222222-2222-4222-8222-222222222222', 'e2e_test_node_2', '192.168.1.102', 'us-west-2', 'online', NOW(), NOW()),
+      ('33333333-3333-4333-8333-333333333333', 'e2e_test_node_3', '192.168.1.103', 'eu-west-1', 'offline', NOW(), NOW())
     ON CONFLICT DO NOTHING
   `)
 }
@@ -117,6 +144,25 @@ async function seedTestUsers(pool: Pool): Promise<void> {
       console.log(`[Global Setup] Test user already exists: ${user.username}`)
     }
   }
+}
+
+/**
+ * Ensure admin test credentials are valid and unlocked
+ */
+async function ensureAdminUser(pool: Pool): Promise<void> {
+  console.log('[Global Setup] Ensuring admin test credentials...')
+  const passwordHash = await bcrypt.hash(TEST_USERS.admin.password, 12)
+
+  await pool.query(`
+    INSERT INTO users (user_id, username, password_hash, role, failed_login_attempts, locked_until, created_at, updated_at)
+    VALUES (gen_random_uuid(), $1, $2, 'admin', 0, NULL, NOW(), NOW())
+    ON CONFLICT (username) DO UPDATE
+    SET password_hash = EXCLUDED.password_hash,
+        role = 'admin',
+        failed_login_attempts = 0,
+        locked_until = NULL,
+        updated_at = NOW()
+  `, [TEST_USERS.admin.username, passwordHash])
 }
 
 /**
@@ -232,20 +278,35 @@ export default async function globalSetup(_config: FullConfig) {
 
   // Wait for backend to be healthy
   await waitForBackend()
+  // Wait for frontend to be reachable before browser auth
+  await waitForFrontend()
 
   // Connect to test database
   const pool = new Pool({ connectionString: TEST_DB_URL })
+  let seededDb = false
 
   try {
-    // Clear rate limits first to allow logins
-    await clearRateLimits(pool)
+    try {
+      // Clear rate limits first to allow logins
+      await clearRateLimits(pool)
 
-    // Seed test users (operator, viewer) for RBAC tests
-    await seedTestUsers(pool)
+      // Seed test users (operator, viewer) for RBAC tests
+      await seedTestUsers(pool)
+      await ensureAdminUser(pool)
 
-    // Seed test data
-    await seedTestNodes(pool)
-    await seedTestAlertRules(pool)
+      // Seed test data
+      await seedTestNodes(pool)
+      await seedTestAlertRules(pool)
+      seededDb = true
+    } catch (error) {
+      const pgError = error as PgError
+      if (pgError.code === '42P01') {
+        console.warn('[Global Setup] Database schema not found for TEST_DB_URL, skipping DB seeding')
+        console.warn(`[Global Setup] Set TEST_DB_URL to the active Pulse DB if you need seeded E2E data`)
+      } else {
+        throw error
+      }
+    }
 
     // Authenticate and save state for all roles
     try {
@@ -255,17 +316,21 @@ export default async function globalSetup(_config: FullConfig) {
         '.auth/admin.json'
       )
 
-      await authenticateAndSaveState(
-        'e2e_operator',
-        'E2eOperator123!',
-        '.auth/operator.json'
-      )
+      if (seededDb) {
+        await authenticateAndSaveState(
+          'e2e_operator',
+          'E2eOperator123!',
+          '.auth/operator.json'
+        )
 
-      await authenticateAndSaveState(
-        'e2e_viewer',
-        'E2eViewer123!',
-        '.auth/viewer.json'
-      )
+        await authenticateAndSaveState(
+          'e2e_viewer',
+          'E2eViewer123!',
+          '.auth/viewer.json'
+        )
+      } else {
+        console.warn('[Global Setup] Skipping operator/viewer auth states because DB seeding was skipped')
+      }
 
       console.log('[Global Setup] Setup complete!')
     } catch (error) {

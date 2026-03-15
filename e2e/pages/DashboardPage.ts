@@ -22,10 +22,10 @@ export interface DashboardSelectors extends PageSelectors {
 
 export const DEFAULT_DASHBOARD_SELECTORS: DashboardSelectors = {
   ...DEFAULT_SELECTORS,
-  metricsSection: '[data-testid="metrics-section"], .grid:has(.metric-card)',
+  metricsSection: 'text=/Online Rate|Anomaly Rate|Avg Latency|在线率|异常率/i',
   nodeList: '[data-testid="node-list"], table',
   alertList: '[data-testid="alert-list"], .alert-list, text=/anomaly/i',
-  logoutButton: '[data-testid="logout-button"], button:has-text("Logout")',
+  logoutButton: '[data-testid="logout-button"], button:has-text("Logout"), button:has-text("退出"), button:has-text("登出"), div.absolute button.w-full.text-red-600',
   title: '[data-testid="dashboard-title"], h1:has-text("Dashboard"), h2:has-text("Dashboard")',
   autoRefreshIndicator: '[data-testid="auto-refresh"], text=/auto.*refresh/i, text=/refreshing/i',
   welcomeMessage: '[data-testid="welcome-message"], text=/welcome/i',
@@ -65,7 +65,11 @@ export class DashboardPage extends BasePage {
    * Expect metrics visible
    */
   async expectMetricsVisible(): Promise<void> {
-    await this.metricsSection.first().waitFor({ state: 'visible', timeout: 10000 })
+    const summaryCards = this.page.locator('div.grid.grid-cols-2.md\\:grid-cols-4 > div').first()
+    const hasSummaryCards = await summaryCards.isVisible({ timeout: 10000 }).catch(() => false)
+    if (!hasSummaryCards) {
+      await this.metricsSection.first().waitFor({ state: 'visible', timeout: 10000 })
+    }
   }
 
   /**
@@ -88,6 +92,10 @@ export class DashboardPage extends BasePage {
    * Click logout button
    */
   async clickLogout(): Promise<void> {
+    const userMenuButton = this.page.locator('header button:has(div.rounded-full)').first()
+    if (await userMenuButton.isVisible().catch(() => false)) {
+      await userMenuButton.click()
+    }
     await this.logoutButton.click()
   }
 

@@ -11,7 +11,10 @@ import { test as base, expect, Page, BrowserContext } from '@playwright/test'
 import * as fs from 'fs'
 
 // Test credentials
-const ADMIN_CREDENTIALS = { username: 'admin', password: 'Admin123' }
+const ADMIN_CREDENTIALS = {
+  username: process.env.TEST_ADMIN_USER || 'admin',
+  password: process.env.TEST_ADMIN_PASS || 'Admin123'
+}
 const AUTH_STATE_PATH = '.auth/admin.json'
 
 /**
