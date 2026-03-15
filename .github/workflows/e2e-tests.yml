@@ -167,3 +167,31 @@ jobs:
       - name: Stop full E2E stack
         if: always()
         run: docker compose -f e2e/docker-compose.e2e.yml down -v
+
+  rate-limit-verification:
+    name: Rate Limit Verification
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: pulse/go.mod
+
+      - name: Start test database
+        working-directory: pulse
+        run: make setup-test-db
+
+      - name: Run rate limit integration test
+        working-directory: pulse
+        env:
+          PULSE_RATE_LIMIT_ENABLED: "true"
+        run: go test -p 1 ./tests/integration -run TestIntegration_RateLimit -count=1
+
+      - name: Stop test database
+        if: always()
+        working-directory: pulse
+        run: make cleanup-test-db

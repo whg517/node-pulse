@@ -218,6 +218,15 @@ If tests are flaky, try:
 2. Running in serial mode: `--workers=1`
 3. Checking network latency
 
+### Rate Limiting in CI / Visual Tests
+
+To avoid false failures in parallel E2E and visual runs, the Docker E2E stack sets:
+
+- `PULSE_RATE_LIMIT_ENABLED=false`
+
+This keeps high-concurrency UI tests stable and avoids shared-IP throttling noise.  
+Rate-limit behavior is still verified separately in CI by a dedicated backend integration job (`Rate Limit Verification`) that runs with `PULSE_RATE_LIMIT_ENABLED=true`.
+
 ## Environment Variables
 
 | Variable | Default | Description |
@@ -225,3 +234,4 @@ If tests are flaky, try:
 | TEST_DB_URL | postgresql://testuser:testpass123@localhost:5432/nodepulse_test | Test database URL |
 | API_BASE_URL | http://localhost:6532 | Backend API URL |
 | FRONTEND_BASE_URL | http://localhost:5173 | Frontend URL |
+| PULSE_RATE_LIMIT_ENABLED | false (in `docker-compose.e2e.yml`) | Enable/disable backend rate limiting for test stack |

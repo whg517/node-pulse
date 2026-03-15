@@ -53,6 +53,8 @@ services:
       # Secrets (at least 64 bytes for JWT, auto-generated if not set)
       PULSE_JWT_SECRET: e2e-test-jwt-secret-do-not-use-in-production-must-be-at-least-64-bytes-long!!!
       PULSE_SESSION_SECRET: e2e-test-session-secret-do-not-use-in-production-must-be-long-enough!!!
+      # Disable rate limiting for parallel E2E/visual stability
+      PULSE_RATE_LIMIT_ENABLED: "false"
     ports:
       - "6532:6532"
     healthcheck:

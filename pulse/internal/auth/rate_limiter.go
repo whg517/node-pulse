@@ -3,6 +3,8 @@ package auth
 import (
 	"context"
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -42,6 +44,9 @@ const (
 // Returns (allowed, remaining, resetTime, error)
 func (r *RateLimiter) CheckRateLimit(ctx context.Context, key string, windowType WindowType, maxCount int) (bool, int, time.Time, error) {
 	now := time.Now()
+	if !isRateLimitEnabled() {
+		return true, maxCount, r.getNextWindowStart(now, windowType), nil
+	}
 	windowStart := r.getWindowStart(now, windowType)
 
 	// Try to increment or create rate limit entry
@@ -151,4 +156,9 @@ func max(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func isRateLimitEnabled() bool {
+	v := strings.TrimSpace(strings.ToLower(os.Getenv("PULSE_RATE_LIMIT_ENABLED")))
+	return v != "false" && v != "0" && v != "off" && v != "no"
 }

@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -23,6 +25,7 @@ const (
 var (
 	rateLimiter       *RateLimiter
 	rateLimiterCancel context.CancelFunc
+	rateLimitEnabled  = true
 )
 
 type RateLimiter struct {
@@ -37,6 +40,11 @@ type visitor struct {
 }
 
 func InitRateLimiter() {
+	rateLimitEnabled = isRateLimitEnabled()
+	if !rateLimitEnabled {
+		return
+	}
+
 	rateLimiter = &RateLimiter{
 		visitors: make(map[string]*visitor),
 		window:   rateLimitWindow,
@@ -73,6 +81,11 @@ func ShutdownRateLimiter() {
 
 func RateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if !rateLimitEnabled || rateLimiter == nil {
+			c.Next()
+			return
+		}
+
 		// Prefer user_id set by JWTAuthMiddleware; fall back to IP for unauthed requests.
 		userID := c.GetString("user_id")
 
@@ -121,4 +134,9 @@ func RateLimitMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
+}
+
+func isRateLimitEnabled() bool {
+	v := strings.TrimSpace(strings.ToLower(os.Getenv("PULSE_RATE_LIMIT_ENABLED")))
+	return v != "false" && v != "0" && v != "off" && v != "no"
 }

@@ -93,11 +93,11 @@ jwt:
 # Rate Limit Configuration
 # ==================================
 rate_limit:
-  login_max_per_minute: 60      # Max login attempts per IP per minute (default: 5)
-  login_max_per_day: 200        # Max login attempts per IP per day (default: 100)
-  refresh_max_per_minute: 120   # Max token refresh attempts per minute (default: 10)
-  refresh_max_per_day: 500      # Max token refresh attempts per day (default: 200)
-  apikey_max_per_minute: 120    # Max API key requests per minute (default: 11)
+  login_max_per_minute: 5       # Max login attempts per IP per minute
+  login_max_per_day: 100        # Max login attempts per IP per day
+  refresh_max_per_minute: 10    # Max token refresh attempts per minute
+  refresh_max_per_day: 200      # Max token refresh attempts per day
+  apikey_max_per_minute: 11     # Max API key requests per minute
 
 # ==================================
 # Production Deployment Notes
