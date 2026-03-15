@@ -67,6 +67,12 @@ jobs:
           go-version-file: beacon/go.mod
           cache-dependency-path: beacon/go.sum
 
+      - name: Lint beacon
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.11.3
+          working-directory: beacon
+
       - name: Run beacon tests
         run: make test
 
@@ -104,6 +110,12 @@ jobs:
         with:
           go-version-file: pulse/go.mod
           cache-dependency-path: pulse/go.sum
+
+      - name: Lint pulse
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v2.11.3
+          working-directory: pulse
 
       - name: Run pulse unit tests
         run: make test-unit
