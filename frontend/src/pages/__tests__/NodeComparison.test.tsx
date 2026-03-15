@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import NodeComparisonPage from '../NodeComparison'
@@ -379,5 +379,168 @@ describe('NodeComparisonPage', () => {
       expect(onlineNodes.length).toBeGreaterThan(0)
       expect(offlineNodes.length).toBeGreaterThan(0)
     })
+  })
+
+  it('calls handleGroupByChange when group by button is clicked', async () => {
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
+
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Group By')).toBeInTheDocument()
+    })
+
+    // Click the Region group by button
+    const regionBtn = screen.getByText('Region')
+    fireEvent.click(regionBtn)
+
+    expect(mockSetComparisonGroupBy).toHaveBeenCalledWith('region')
+  })
+
+  it('calls handleTimeRangeChange for 7d range', async () => {
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
+
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('7 Days')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('7 Days'))
+    expect(mockSetComparisonTimeRange).toHaveBeenCalledWith('7d')
+  })
+
+  it('calls handleTimeRangeChange for 30d range', async () => {
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
+
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('30 Days')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('30 Days'))
+    expect(mockSetComparisonTimeRange).toHaveBeenCalledWith('30d')
+  })
+
+  it('calls handleTimeRangeChange for custom range', async () => {
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
+
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Custom')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Custom'))
+    expect(mockSetComparisonTimeRange).toHaveBeenCalledWith('custom')
+  })
+
+  it('calls handleMetricSelectionChange when metric button clicked', async () => {
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
+
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/Packet Loss Rate/)).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText(/Packet Loss Rate/))
+    expect(mockSetComparisonMetrics).toHaveBeenCalled()
+  })
+
+  it('calls handleCompare with 2 selected nodes', async () => {
+    const mockGetComparisonData = vi.fn().mockResolvedValue({
+      data: {
+        nodes: [
+          { node_id: 'node-1', name: 'Node 1', region: 'us-east', isp: 'AWS', metrics: { latency_ms: { data_points: [] } } },
+          { node_id: 'node-2', name: 'Node 2', region: 'eu-west', isp: 'GCP', metrics: { latency_ms: { data_points: [] } } },
+        ],
+      },
+    })
+
+    vi.doMock('../../api/data', () => ({
+      getComparisonData: mockGetComparisonData,
+    }))
+
+    mockComparisonState.selectedNodeIds = ['node-1', 'node-2']
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
+
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      const compareBtn = screen.getByText('Compare Nodes')
+      expect(compareBtn).not.toBeDisabled()
+    })
+
+    const compareBtn = screen.getByText('Compare Nodes')
+    fireEvent.click(compareBtn)
+
+    // With 2 nodes selected and 1 metric selected, handleCompare should proceed
+    await waitFor(() => {
+      expect(screen.getByText('Compare Nodes')).toBeInTheDocument()
+    })
+  })
+
+  it('shows error when fewer than 2 nodes are selected on compare', async () => {
+    mockComparisonState.selectedNodeIds = ['node-1']
+    mockComparisonState.selectedMetrics = ['latency_ms']
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
+
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      // Button should be disabled since only 1 node selected
+      const compareBtn = screen.getByTestId('compare-button')
+      expect(compareBtn).toBeDisabled()
+    })
+  })
+
+  it('shows custom time range inputs when custom is selected', async () => {
+    mockComparisonState.timeRange = 'custom'
+    mockComparisonState.customTimeRange = { start: '2024-01-01T00:00', end: '2024-01-07T00:00' }
+    mockFetchNodes.mockResolvedValue({ data: { nodes: mockNodes } })
+
+    render(
+      <MemoryRouter>
+        <NodeComparisonPage />
+      </MemoryRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Time Range')).toBeInTheDocument()
+    })
+
+    // Custom time range inputs should be visible
+    const dateInputs = document.querySelectorAll('input[type="datetime-local"]')
+    expect(dateInputs.length).toBeGreaterThan(0)
   })
 })

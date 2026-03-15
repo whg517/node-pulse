@@ -273,5 +273,79 @@ describe('useExportStore', () => {
         expect.stringContaining('export-1')
       )
     })
+
+    it('handles localStorage.getItem throwing error gracefully', () => {
+      vi.spyOn(localStorage, 'getItem').mockImplementationOnce(() => {
+        throw new Error('Storage error')
+      })
+      const { result } = renderHook(() => useExportStore())
+      expect(() => {
+        act(() => {
+          result.current._loadHistoryFromStorage()
+        })
+      }).not.toThrow()
+    })
+
+    it('handles localStorage.setItem throwing error gracefully', () => {
+      vi.spyOn(localStorage, 'setItem').mockImplementationOnce(() => {
+        throw new Error('Storage full')
+      })
+      useExportStore.setState({ exportHistory: [mockCompletedTask] })
+      const { result } = renderHook(() => useExportStore())
+      expect(() => {
+        act(() => {
+          result.current._saveHistoryToStorage()
+        })
+      }).not.toThrow()
+    })
+  })
+
+  describe('downloadExport', () => {
+    it('downloads an export file', async () => {
+      const mockBlob = new Blob(['csv data'], { type: 'text/csv' })
+      vi.mocked(exportApi.downloadExport).mockResolvedValueOnce(mockBlob)
+
+      const { result } = renderHook(() => useExportStore())
+
+      // Mock DOM methods after renderHook to avoid breaking React's container
+      const mockAnchor = {
+        href: '',
+        download: '',
+        click: vi.fn(),
+      }
+      const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValueOnce(mockAnchor as unknown as HTMLAnchorElement)
+      const appendChildSpy = vi.spyOn(document.body, 'appendChild').mockImplementationOnce((el) => el)
+      const removeChildSpy = vi.spyOn(document.body, 'removeChild').mockImplementationOnce((el) => el)
+
+      await act(async () => {
+        await result.current.downloadExport('export-1')
+      })
+
+      expect(mockAnchor.click).toHaveBeenCalled()
+      expect(result.current.isLoading).toBe(false)
+
+      createElementSpy.mockRestore()
+      appendChildSpy.mockRestore()
+      removeChildSpy.mockRestore()
+    })
+
+    it('sets error on download failure', async () => {
+      vi.mocked(exportApi.downloadExport).mockRejectedValueOnce(new Error('Download failed'))
+
+      const { result } = renderHook(() => useExportStore())
+
+      let thrownError: Error | null = null
+      await act(async () => {
+        try {
+          await result.current.downloadExport('export-1')
+        } catch (e) {
+          thrownError = e as Error
+        }
+      })
+
+      expect(result.current.error).toBe('Download failed')
+      expect(result.current.isLoading).toBe(false)
+      expect(thrownError?.message).toBe('Download failed')
+    })
   })
 })

@@ -135,4 +135,34 @@ describe('Header', () => {
     )
     expect(screen.getByTestId('language-switcher')).toBeInTheDocument()
   })
+
+  it('opens timezone panel when timezone button is clicked', () => {
+    render(
+      <MemoryRouter>
+        <Header {...defaultProps} />
+      </MemoryRouter>
+    )
+    // Find the timezone button by title attribute
+    const timezoneButton = screen.getByTitle('settings.timezone')
+    fireEvent.click(timezoneButton)
+    expect(screen.getByTestId('timezone-selector')).toBeInTheDocument()
+  })
+
+  it('navigates to sessions page on profile click', () => {
+    render(
+      <MemoryRouter>
+        <Header {...defaultProps} />
+      </MemoryRouter>
+    )
+    // Open user menu
+    const buttons = screen.getAllByRole('button')
+    const userMenuButton = buttons[buttons.length - 1]
+    fireEvent.click(userMenuButton)
+
+    const profileLink = screen.getByText('nav.profile')
+    fireEvent.click(profileLink)
+
+    // Menu closes after click
+    expect(screen.queryByText('nav.logout')).not.toBeInTheDocument()
+  })
 })

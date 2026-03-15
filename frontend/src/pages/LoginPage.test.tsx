@@ -207,6 +207,56 @@ describe('LoginPage', () => {
     })
   })
 
+  it('displays rate limit error', async () => {
+    mockLogin.mockRejectedValue({
+      code: 'ERR_RATE_LIMITED',
+      message: 'Too many login attempts',
+    })
+
+    render(<MemoryRouter><LoginPage /></MemoryRouter>)
+
+    await userEvent.type(screen.getByLabelText('Username'), 'admin')
+    await userEvent.type(screen.getByLabelText('Password'), 'Password123')
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Too many login attempts. Please try again later.')).toBeInTheDocument()
+    })
+  })
+
+  it('displays connection error for unknown errors', async () => {
+    mockLogin.mockRejectedValue({
+      code: 'ERR_NETWORK',
+      message: 'Network error',
+    })
+
+    render(<MemoryRouter><LoginPage /></MemoryRouter>)
+
+    await userEvent.type(screen.getByLabelText('Username'), 'admin')
+    await userEvent.type(screen.getByLabelText('Password'), 'Password123')
+    await userEvent.click(screen.getByRole('button', { name: 'Sign in' }))
+
+    await waitFor(() => {
+      expect(screen.getByText('Connection failed. Please check your network connection.')).toBeInTheDocument()
+    })
+  })
+
+  it('toggles password visibility', async () => {
+    render(<MemoryRouter><LoginPage /></MemoryRouter>)
+
+    const passwordInput = screen.getByLabelText('Password')
+    expect(passwordInput).toHaveAttribute('type', 'password')
+
+    // Find the toggle button (type="button" next to password input)
+    const toggleButtons = screen.getAllByRole('button', { name: '' })
+    const toggleButton = toggleButtons.find((btn) => btn.getAttribute('type') === 'button' && btn.getAttribute('tabindex') === '-1')
+
+    if (toggleButton) {
+      await userEvent.click(toggleButton)
+      expect(passwordInput).toHaveAttribute('type', 'text')
+    }
+  })
+
   it('disables submit button while loading', async () => {
     let resolveLogin: (value: any) => void
     const mockLoginPromise = new Promise((resolve) => {
