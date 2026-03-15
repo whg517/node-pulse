@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"beacon/cmd/beacon"
+	"beacon/internal/cli"
 )
 
 // createTestConfig creates a minimal valid test config file
@@ -34,8 +34,8 @@ log_level: "INFO"
 // executeWithTimeout executes the beacon command with a timeout
 func executeWithTimeout(timeout time.Duration) (string, error) {
 	var buf bytes.Buffer
-	beacon.GetRootCmd().SetOut(&buf)
-	beacon.GetRootCmd().SetErr(&buf)
+	cli.GetRootCmd().SetOut(&buf)
+	cli.GetRootCmd().SetErr(&buf)
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -51,7 +51,7 @@ func executeWithTimeout(timeout time.Duration) (string, error) {
 				done <- fmt.Errorf("panic: %v", r)
 			}
 		}()
-		err := beacon.GetRootCmd().ExecuteContext(ctx)
+		err := cli.GetRootCmd().ExecuteContext(ctx)
 		output = buf.String()
 		done <- err
 	}()
@@ -75,11 +75,11 @@ func TestRootCommand(t *testing.T) {
 
 	// Capture output
 	var buf bytes.Buffer
-	beacon.GetRootCmd().SetOut(&buf)
-	beacon.GetRootCmd().SetArgs([]string{"--config", tmpFile})
+	cli.GetRootCmd().SetOut(&buf)
+	cli.GetRootCmd().SetArgs([]string{"--config", tmpFile})
 
 	// Execute command
-	err := beacon.GetRootCmd().Execute()
+	err := cli.GetRootCmd().Execute()
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
@@ -101,7 +101,7 @@ func TestStartCommand(t *testing.T) {
 	t.Skip("Skipping TestStartCommand - start command blocks waiting for signals")
 	// Create test config
 	tmpFile := createTestConfig(t)
-	beacon.GetRootCmd().SetArgs([]string{"--config", tmpFile, "start"})
+	cli.GetRootCmd().SetArgs([]string{"--config", tmpFile, "start"})
 
 	// Execute command with timeout - start command waits for interrupt
 	output, _ := executeWithTimeout(2 * time.Second)
@@ -121,11 +121,11 @@ func TestStopCommand(t *testing.T) {
 
 	// Capture output
 	var buf bytes.Buffer
-	beacon.GetRootCmd().SetOut(&buf)
-	beacon.GetRootCmd().SetArgs([]string{"--config", tmpFile, "stop"})
+	cli.GetRootCmd().SetOut(&buf)
+	cli.GetRootCmd().SetArgs([]string{"--config", tmpFile, "stop"})
 
 	// Execute command
-	err := beacon.GetRootCmd().Execute()
+	err := cli.GetRootCmd().Execute()
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
@@ -147,11 +147,11 @@ func TestStatusCommand(t *testing.T) {
 
 	// Capture output
 	var buf bytes.Buffer
-	beacon.GetRootCmd().SetOut(&buf)
-	beacon.GetRootCmd().SetArgs([]string{"--config", tmpFile, "status"})
+	cli.GetRootCmd().SetOut(&buf)
+	cli.GetRootCmd().SetArgs([]string{"--config", tmpFile, "status"})
 
 	// Execute command
-	err := beacon.GetRootCmd().Execute()
+	err := cli.GetRootCmd().Execute()
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
@@ -175,11 +175,11 @@ func TestDebugCommand(t *testing.T) {
 
 	// Capture output
 	var buf bytes.Buffer
-	beacon.GetRootCmd().SetOut(&buf)
-	beacon.GetRootCmd().SetArgs([]string{"--config", tmpFile, "debug"})
+	cli.GetRootCmd().SetOut(&buf)
+	cli.GetRootCmd().SetArgs([]string{"--config", tmpFile, "debug"})
 
 	// Execute command
-	err := beacon.GetRootCmd().Execute()
+	err := cli.GetRootCmd().Execute()
 	if err != nil {
 		t.Errorf("Expected no error, got: %v", err)
 	}
@@ -203,30 +203,30 @@ func TestDebugCommand(t *testing.T) {
 func TestConfigFlag(t *testing.T) {
 	// Capture output
 	var buf bytes.Buffer
-	beacon.GetRootCmd().SetOut(&buf)
-	beacon.GetRootCmd().SetArgs([]string{"--config", "/tmp/test.yaml", "status"})
+	cli.GetRootCmd().SetOut(&buf)
+	cli.GetRootCmd().SetArgs([]string{"--config", "/tmp/test.yaml", "status"})
 
 	// Execute command
 	// Note: status command doesn't error on missing config, it returns offline status
-	_ = beacon.GetRootCmd().Execute()
+	_ = cli.GetRootCmd().Execute()
 
 	// Check that config path was set
-	if beacon.GetConfigFile() != "/tmp/test.yaml" {
-		t.Errorf("Expected config file to be '/tmp/test.yaml', got: %s", beacon.GetConfigFile())
+	if cli.GetConfigFile() != "/tmp/test.yaml" {
+		t.Errorf("Expected config file to be '/tmp/test.yaml', got: %s", cli.GetConfigFile())
 	}
 }
 
 func TestDebugFlag(t *testing.T) {
 	// Capture output
 	var buf bytes.Buffer
-	beacon.GetRootCmd().SetOut(&buf)
-	beacon.GetRootCmd().SetArgs([]string{"--debug", "status"})
+	cli.GetRootCmd().SetOut(&buf)
+	cli.GetRootCmd().SetArgs([]string{"--debug", "status"})
 
 	// Execute command
-	_ = beacon.GetRootCmd().Execute()
+	_ = cli.GetRootCmd().Execute()
 
 	// Check that debug flag is set
-	if !beacon.IsDebug() {
+	if !cli.IsDebug() {
 		t.Error("Expected debug flag to be true when --debug is passed")
 	}
 }
@@ -234,11 +234,11 @@ func TestDebugFlag(t *testing.T) {
 func TestInvalidCommand(t *testing.T) {
 	// Capture error output
 	var buf bytes.Buffer
-	beacon.GetRootCmd().SetErr(&buf)
-	beacon.GetRootCmd().SetArgs([]string{"invalid"})
+	cli.GetRootCmd().SetErr(&buf)
+	cli.GetRootCmd().SetArgs([]string{"invalid"})
 
 	// Execute command
-	err := beacon.GetRootCmd().Execute()
+	err := cli.GetRootCmd().Execute()
 	if err == nil {
 		t.Error("Expected error for invalid command, got nil")
 	}
