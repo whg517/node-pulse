@@ -398,3 +398,91 @@ func isValidUUID(uuid string) bool {
 	}
 	return true
 }
+
+// TestRunStart_ValidConfig tests runStart with a valid config (no api_key, fails at JWT auth)
+func TestRunStart_ValidConfig(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping in short mode")
+	}
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "beacon.yaml")
+	logFile := filepath.Join(tmpDir, "beacon.log")
+
+	configContent := fmt.Sprintf(`
+pulse_server: "http://127.0.0.1:16532"
+node_id: "test-node-full"
+node_name: "Test Node Full"
+metrics_enabled: false
+metrics_port: 2112
+metrics_update_seconds: 10
+log_level: "INFO"
+log_file: "%s"
+log_max_size: 10
+log_max_age: 7
+log_max_backups: 3
+log_compress: false
+log_to_console: false
+`, logFile)
+
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to create test config: %v", err)
+	}
+
+	GetRootCmd().SetArgs([]string{"--config", configPath, "start"})
+
+	// Execute command with timeout - will fail at api_key check
+	output, err := executeWithTimeout(3 * time.Second)
+	t.Logf("Output: %s", output)
+	t.Logf("Error: %v", err)
+
+	// Should reach the api_key validation and fail
+	if strings.Contains(output, "Loading configuration") {
+		t.Log("Config loading started")
+	}
+}
+
+// TestRunStart_ValidConfig_WithAPIKey tests runStart with api_key but no server
+func TestRunStart_ValidConfig_WithAPIKey(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping in short mode")
+	}
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "beacon.yaml")
+	logFile := filepath.Join(tmpDir, "beacon.log")
+
+	configContent := fmt.Sprintf(`
+pulse_server: "http://127.0.0.1:16533"
+node_id: "test-node-full"
+node_name: "Test Node Full"
+api_key: "test-api-key-for-testing"
+metrics_enabled: false
+metrics_port: 2113
+metrics_update_seconds: 10
+log_level: "INFO"
+log_file: "%s"
+log_max_size: 10
+log_max_age: 7
+log_max_backups: 3
+log_compress: false
+log_to_console: false
+`, logFile)
+
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to create test config: %v", err)
+	}
+
+	GetRootCmd().SetArgs([]string{"--config", configPath, "start"})
+
+	// Execute with a short timeout - will fail at JWT auth (no server running)
+	output, err := executeWithTimeout(3 * time.Second)
+	t.Logf("Output: %s", output)
+	t.Logf("Error: %v", err)
+
+	// The command should fail at authentication (no server at 127.0.0.1:16533)
+	// But should have gotten past config loading, scheduler creation, etc.
+	if strings.Contains(output, "Loading configuration") {
+		t.Log("Config loading started - good")
+	}
+}

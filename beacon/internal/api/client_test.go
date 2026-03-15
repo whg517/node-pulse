@@ -451,3 +451,91 @@ func TestPulseClient_isRetryableError(t *testing.T) {
 		})
 	}
 }
+
+// TestPulseClient_extractStatusCode tests extractStatusCode function
+func TestPulseClient_extractStatusCode(t *testing.T) {
+client := &PulseClient{}
+
+tests := []struct {
+name           string
+err            error
+expectedStatus int
+}{
+{
+name:           "APIError with ERR_INVALID_REQUEST",
+err:            &APIError{Code: "ERR_INVALID_REQUEST", Message: "bad request"},
+expectedStatus: http.StatusBadRequest,
+},
+{
+name:           "APIError with ERR_UNAUTHORIZED",
+err:            &APIError{Code: "ERR_UNAUTHORIZED", Message: "unauthorized"},
+expectedStatus: http.StatusUnauthorized,
+},
+{
+name:           "APIError with ERR_NODE_EXISTS",
+err:            &APIError{Code: "ERR_NODE_EXISTS", Message: "exists"},
+expectedStatus: http.StatusConflict,
+},
+{
+name:           "APIError with ERR_NODE_NOT_FOUND",
+err:            &APIError{Code: "ERR_NODE_NOT_FOUND", Message: "not found"},
+expectedStatus: http.StatusNotFound,
+},
+{
+name:           "APIError with ERR_INTERNAL_SERVER",
+err:            &APIError{Code: "ERR_INTERNAL_SERVER", Message: "server error"},
+expectedStatus: http.StatusInternalServerError,
+},
+{
+name:           "APIError with unknown code",
+err:            &APIError{Code: "ERR_UNKNOWN", Message: "unknown"},
+expectedStatus: http.StatusInternalServerError,
+},
+{
+name:           "Network error (no status code)",
+err:            errors.New("connection refused"),
+expectedStatus: 0,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+status, _ := client.extractStatusCode(tt.err)
+assert.Equal(t, tt.expectedStatus, status)
+})
+}
+}
+
+// TestAPIError_Error tests APIError.Error() string method
+func TestAPIError_Error(t *testing.T) {
+// With code
+apiErr := &APIError{Code: "ERR_TEST", Message: "test message"}
+expected := "ERR_TEST: test message"
+if apiErr.Error() != expected {
+t.Errorf("Expected %q, got %q", expected, apiErr.Error())
+}
+
+// Without code (empty code)
+apiErr2 := &APIError{Code: "", Message: "just a message"}
+expected2 := "just a message"
+if apiErr2.Error() != expected2 {
+t.Errorf("Expected %q, got %q", expected2, apiErr2.Error())
+}
+}
+
+// TestNewPulseClient_WithHTTPClient tests NewPulseClient with custom http client
+func TestNewPulseClient_WithHTTPClient(t *testing.T) {
+customClient := &http.Client{Timeout: 5 * time.Second}
+c := NewPulseClient("http://localhost:6532", "test-token", customClient)
+if c == nil {
+t.Fatal("Expected non-nil PulseClient")
+}
+}
+
+// TestNewPulseClient_NilHTTPClient tests NewPulseClient with nil http client (creates default)
+func TestNewPulseClient_NilHTTPClient(t *testing.T) {
+c := NewPulseClient("http://localhost:6532", "test-token", nil)
+if c == nil {
+t.Fatal("Expected non-nil PulseClient")
+}
+}

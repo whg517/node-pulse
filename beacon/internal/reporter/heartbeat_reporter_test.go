@@ -623,3 +623,4 @@ func TestReportWithRetryFailure(t *testing.T) {
 		t.Errorf("Expected 3 heartbeat requests (MaxRetries), got %d", mockServer.GetHeartbeatCount())
 	}
 }
+

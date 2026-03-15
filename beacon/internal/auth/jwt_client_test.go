@@ -717,3 +717,69 @@ func TestRefreshTokenMethod(t *testing.T) {
 		t.Error("Expected token to be valid after refresh")
 	}
 }
+
+// TestRefreshToken_Unauthorized_InvalidatesToken tests that unauthorized refresh invalidates token
+func TestRefreshToken_Unauthorized_InvalidatesToken(t *testing.T) {
+	// Set up server that returns 401 for refresh
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error": "invalid_token"}`))
+	}))
+	defer server.Close()
+
+	client, err := NewJWTClient(server.URL, "test-api-key", nil)
+	if err != nil {
+		t.Fatalf("NewJWTClient failed: %v", err)
+	}
+
+	// Set an existing refresh token so that refresh is attempted
+	client.mu.Lock()
+	client.state.RefreshToken = "old-refresh-token"
+	client.state.AccessToken = "old-access-token"
+	client.state.ExpiresAt = time.Now().Add(-1 * time.Minute) // Expired
+	client.mu.Unlock()
+
+	// Try to get access token - should attempt refresh, get 401, and fail
+	_, err = client.GetAccessToken(context.Background())
+	if err == nil {
+		t.Error("Expected error on 401 unauthorized")
+	}
+
+	// Token should be invalidated after 401 on refresh
+	if client.IsTokenValid() {
+		t.Error("Expected token to be invalidated after 401 on refresh")
+	}
+}
+
+// TestMakeTokenRequest_InvalidURL tests makeTokenRequest with invalid URL
+func TestMakeTokenRequest_InvalidURL(t *testing.T) {
+	// Create client with an invalid URL (contains a null byte which makes URL invalid)
+	client := &JWTClient{
+		serverURL:  "http://invalid\x00host",
+		apiKey:     "test-key",
+		httpClient: &http.Client{},
+	}
+
+	ctx := context.Background()
+	reqBody := TokenRequest{APIKey: "test-key"}
+	_, err := client.makeTokenRequest(ctx, "/api/v1/beacon/token", reqBody)
+	if err == nil {
+		t.Error("Expected error for invalid URL in makeTokenRequest")
+	}
+}
+
+// TestMakeTokenRequest_RefreshToken_InvalidURL tests makeTokenRequest with refresh token and invalid URL
+func TestMakeTokenRequest_RefreshToken_InvalidURL(t *testing.T) {
+	client := &JWTClient{
+		serverURL:  "http://invalid\x00host",
+		apiKey:     "test-key",
+		httpClient: &http.Client{},
+	}
+
+	ctx := context.Background()
+	reqBody := TokenRequest{RefreshToken: "old-refresh-token"}
+	_, err := client.makeTokenRequest(ctx, "/api/v1/auth/refresh", reqBody)
+	if err == nil {
+		t.Error("Expected error for invalid URL in makeTokenRequest with refresh token")
+	}
+}
