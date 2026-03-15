@@ -374,3 +374,111 @@ assert.NotPanics(t, func() {
 engine.Stop()
 })
 }
+
+// newTestAlertEngineWithSuppressionMock creates an AlertEngine with a custom suppression mock
+func newTestAlertEngineWithSuppressionMock(alertQuerier db.AlertQuerier, rules []*models.Alert, suppressedMock *mockSuppressionQuerier, eventsMock *mockAlertEventsQuerier) *AlertEngine {
+ctx, cancel := context.WithCancel(context.Background())
+
+suppressionService := suppression.NewService(suppressedMock)
+
+if rules == nil {
+rules = make([]*models.Alert, 0)
+}
+
+engine := &AlertEngine{
+alertQuerier:             alertQuerier,
+alertEventsQuerier:       eventsMock,
+suppressionService:       suppressionService,
+webhookPushService:       webhook.NewPushService(nil, nil, "http://localhost:6532"),
+metricChannel:            make(chan *MetricData, 1000),
+workerPoolSize:           2,
+ctx:                      ctx,
+cancel:                   cancel,
+ruleCache:                rules,
+ruleCacheLastRefresh:     time.Now(),
+ruleCacheRefreshInterval: 60 * time.Second,
+}
+engine.webhookPushService.WithURLValidator(nil)
+return engine
+}
+
+func TestAlertEngine_evaluateMetric_AlertSuppressed(t *testing.T) {
+rule := &models.Alert{
+ID: "rule-1", Metric: "latency",
+Threshold: 50, Level: "warning", Enabled: true,
+}
+
+suppressedMock := &mockSuppressionQuerier{suppressed: true}
+eventsQuerier := &mockAlertEventsQuerier{}
+engine := newTestAlertEngineWithSuppressionMock(
+&mockAlertQuerier{},
+[]*models.Alert{rule},
+suppressedMock,
+eventsQuerier,
+)
+
+data := &MetricData{NodeID: "node-1", LatencyMs: 200, Timestamp: time.Now()}
+
+assert.NotPanics(t, func() {
+engine.evaluateMetric(data)
+})
+}
+
+func TestAlertEngine_evaluateMetric_AlertEventsError(t *testing.T) {
+rule := &models.Alert{
+ID: "rule-1", Metric: "latency",
+Threshold: 50, Level: "warning", Enabled: true,
+}
+
+suppressedMock := &mockSuppressionQuerier{suppressed: false}
+eventsQuerier := &mockAlertEventsQuerier{err: assert.AnError}
+engine := newTestAlertEngineWithSuppressionMock(
+&mockAlertQuerier{},
+[]*models.Alert{rule},
+suppressedMock,
+eventsQuerier,
+)
+
+data := &MetricData{NodeID: "node-1", LatencyMs: 200, Timestamp: time.Now()}
+
+assert.NotPanics(t, func() {
+engine.evaluateMetric(data)
+})
+}
+
+func TestAlertEngine_evaluateMetric_SuppressionCheckError(t *testing.T) {
+rule := &models.Alert{
+ID: "rule-1", Metric: "latency",
+Threshold: 50, Level: "warning", Enabled: true,
+}
+
+suppressedMock := &mockSuppressionQuerier{suppressed: false, err: assert.AnError}
+eventsQuerier := &mockAlertEventsQuerier{err: assert.AnError}  // fail events to avoid pool nil panic
+engine := newTestAlertEngineWithSuppressionMock(
+&mockAlertQuerier{},
+[]*models.Alert{rule},
+suppressedMock,
+eventsQuerier,
+)
+
+data := &MetricData{NodeID: "node-1", LatencyMs: 200, Timestamp: time.Now()}
+
+assert.NotPanics(t, func() {
+engine.evaluateMetric(data)
+})
+}
+
+func TestAlertEngine_NewAlertEngine(t *testing.T) {
+// NewAlertEngine requires a pool - test that it doesn't panic when pool is nil
+// (since NewAlertEventsQuerier etc. accept nil)
+assert.NotPanics(t, func() {
+engine := NewAlertEngine(nil, &mockAlertQuerier{}, DefaultEngineConfig())
+assert.NotNil(t, engine)
+})
+}
+
+func TestAlertEngine_getPool(t *testing.T) {
+engine := newTestAlertEngine(&mockAlertQuerier{}, nil)
+pool := engine.getPool()
+assert.Nil(t, pool) // test engine has nil pool
+}
