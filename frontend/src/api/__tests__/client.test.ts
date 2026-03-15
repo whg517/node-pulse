@@ -443,28 +443,23 @@ describe('rate limit (429) on token refresh', () => {
     expect(clearAuthSpy).not.toHaveBeenCalled()
   })
 
-  it('should still call clearAuth() after 3 consecutive real auth failures (non-429)', async () => {
+  it('should call clearAuth() on real auth failure (non-429)', async () => {
     const clearAuthSpy = vi.spyOn(useAuthStore.getState(), 'clearAuth')
 
-    // Each round: original request 401, then refresh 401 (real auth failure)
-    const make401Pair = () => [
-      { ok: false, status: 401, json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }) } as Response,
-      { ok: false, status: 401, json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }) } as Response,
-    ]
-
     const mockFetch = vi.fn()
-      .mockResolvedValueOnce(make401Pair()[0])
-      .mockResolvedValueOnce(make401Pair()[1])
-      .mockResolvedValueOnce(make401Pair()[0])
-      .mockResolvedValueOnce(make401Pair()[1])
-      .mockResolvedValueOnce(make401Pair()[0])
-      .mockResolvedValueOnce(make401Pair()[1])
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }),
+      } as Response)
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }),
+      } as Response)
 
     vi.stubGlobal('fetch', mockFetch)
 
-    // Three consecutive failures should trigger logout on the 3rd
-    await apiClient('/api/v1/nodes').catch(() => {})
-    await apiClient('/api/v1/nodes').catch(() => {})
     await apiClient('/api/v1/nodes').catch(() => {})
 
     expect(clearAuthSpy).toHaveBeenCalledTimes(1)

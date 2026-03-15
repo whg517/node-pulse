@@ -53,7 +53,7 @@ describe('useNodeDetail', () => {
     mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
     mockFetchMetrics.mockResolvedValue(mockMetrics as any)
 
-    const { result } = renderHook(() => useNodeDetail('node-1', 0))
+    const { result } = renderHook(() => useNodeDetail('node-1'))
 
     expect(result.current.isLoading).toBe(true)
 
@@ -77,7 +77,7 @@ describe('useNodeDetail', () => {
     mockFetchNodeStatus.mockRejectedValue(error)
     mockFetchMetrics.mockRejectedValue(error)
 
-    const { result } = renderHook(() => useNodeDetail('node-1', 0))
+    const { result } = renderHook(() => useNodeDetail('node-1'))
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -89,7 +89,7 @@ describe('useNodeDetail', () => {
     expect(result.current.metrics).toBeNull()
   })
 
-  it('polls data at specified interval', async () => {
+  it('auto-refetches at polling interval', async () => {
     vi.useFakeTimers()
 
     try {
@@ -129,27 +129,30 @@ describe('useNodeDetail', () => {
       mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
       mockFetchMetrics.mockResolvedValue(mockMetrics as any)
 
-      renderHook(() => useNodeDetail('node-1', 5000))
-
-      // Initial fetch happens synchronously with fake timers
+      renderHook(() => useNodeDetail('node-1'))
+      await act(async () => {
+        await Promise.resolve()
+      })
       expect(mockFetchNode).toHaveBeenCalledTimes(1)
 
-      // Fast-forward time
-      act(() => {
-        vi.advanceTimersByTime(5000)
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(5000)
       })
 
-      // Should have called fetchNode again
       expect(mockFetchNode).toHaveBeenCalledTimes(2)
     } finally {
       vi.useRealTimers()
     }
   })
 
-  it('does not poll when interval is 0', async () => {
+  it('prevents re-entrant polling requests', async () => {
     vi.useFakeTimers()
 
     try {
+      let resolveNode!: (value: any) => void
+      const slowNodePromise = new Promise((resolve) => {
+        resolveNode = resolve
+      })
       const mockNode = {
         data: {
           id: 'node-1',
@@ -182,22 +185,29 @@ describe('useNodeDetail', () => {
         ],
       }
 
-      mockFetchNode.mockResolvedValue(mockNode as any)
+      mockFetchNode.mockImplementation(() => slowNodePromise as any)
       mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
       mockFetchMetrics.mockResolvedValue(mockMetrics as any)
 
-      renderHook(() => useNodeDetail('node-1', 0))
+      renderHook(() => useNodeDetail('node-1'))
+      await act(async () => {
+        await Promise.resolve()
+      })
 
-      // Initial fetch
+      // While first request is in flight, timer ticks should not start another request
       expect(mockFetchNode).toHaveBeenCalledTimes(1)
-
-      // Fast-forward time (should not trigger another fetch)
       act(() => {
         vi.advanceTimersByTime(10000)
       })
-
-      // Should still be 1 (no polling when interval is 0)
+      await act(async () => {
+        await Promise.resolve()
+      })
       expect(mockFetchNode).toHaveBeenCalledTimes(1)
+
+      resolveNode(mockNode)
+      await act(async () => {
+        await Promise.resolve()
+      })
     } finally {
       vi.useRealTimers()
     }
@@ -240,7 +250,7 @@ describe('useNodeDetail', () => {
     mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
     mockFetchMetrics.mockResolvedValue(mockMetrics as any)
 
-    const { result } = renderHook(() => useNodeDetail('node-1', 0))
+    const { result } = renderHook(() => useNodeDetail('node-1'))
 
     await waitFor(() => {
       expect(result.current.isLoading).toBe(false)
@@ -255,8 +265,17 @@ describe('useNodeDetail', () => {
     expect(mockFetchNode).toHaveBeenCalledTimes(2)
   })
 
-  it('cleans up interval on unmount', async () => {
+  it('pauses polling when page is hidden and resumes when visible', async () => {
     vi.useFakeTimers()
+
+    const originalVisibility = document.visibilityState
+    const setVisibility = (state: DocumentVisibilityState) => {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: state,
+      })
+      document.dispatchEvent(new Event('visibilitychange'))
+    }
 
     try {
       const mockNode = {
@@ -295,21 +314,30 @@ describe('useNodeDetail', () => {
       mockFetchNodeStatus.mockResolvedValue(mockStatus as any)
       mockFetchMetrics.mockResolvedValue(mockMetrics as any)
 
-      const { unmount } = renderHook(() => useNodeDetail('node-1', 5000))
-
-      // Initial fetch
-      expect(mockFetchNode).toHaveBeenCalledTimes(1)
-
-      unmount()
-
-      // Fast-forward time (should not trigger another fetch after unmount)
-      act(() => {
-        vi.advanceTimersByTime(5000)
+      renderHook(() => useNodeDetail('node-1'))
+      await act(async () => {
+        await Promise.resolve()
       })
-
-      // Should still be 1 (no additional fetch after unmount)
       expect(mockFetchNode).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        setVisibility('hidden')
+      })
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(10000)
+      })
+      expect(mockFetchNode).toHaveBeenCalledTimes(1)
+
+      await act(async () => {
+        setVisibility('visible')
+        await Promise.resolve()
+      })
+      expect(mockFetchNode).toHaveBeenCalledTimes(2)
     } finally {
+      Object.defineProperty(document, 'visibilityState', {
+        configurable: true,
+        value: originalVisibility,
+      })
       vi.useRealTimers()
     }
   })

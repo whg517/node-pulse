@@ -32,10 +32,7 @@ export default function NodeDetailPage() {
   const { isDark } = useTheme()
   const { formatTime } = useTimezone()
   const { id } = useParams<{ id: string }>()
-  const { node, nodeStatus, metrics, isLoading, error, isPolling } = useNodeDetail(
-    id || '',
-    5000 // 5-second polling
-  )
+  const { node, nodeStatus, metrics, isLoading, error, isPolling } = useNodeDetail(id || '')
 
   // Historical data state
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')

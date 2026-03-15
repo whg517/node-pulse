@@ -6,11 +6,9 @@
  * error parsing, and response formatting consistently.
  *
  * Key Features:
- * - Request coalescing for concurrent 401s (single shared refresh Promise)
  * - 10-second timeout on refresh requests
- * - Token expiry pre-check with mutex (proactive refresh)
  * - Logout endpoint bypass (prevents infinite logout loops)
- * - 5xx error handling (graceful degradation, no logout)
+ * - 5xx error handling
  * - Token redaction in logs for security
  */
 
@@ -34,33 +32,6 @@ export {
 }
 
 // ============== Module-level State ==============
-
-/**
- * Shared refresh Promise for request coalescing
- * All concurrent 401s await the same refresh, preventing race conditions
- */
-let refreshPromise: Promise<string> | null = null
-
-/**
- * Mutex for token expiry pre-check
- * Prevents multiple simultaneous pre-checks from triggering duplicate refreshes
- */
-let preCheckMutex = false
-
-/**
- * Track consecutive refresh failures for graceful degradation
- */
-let consecutiveRefreshFailures = 0
-
-/**
- * Maximum consecutive failures before forcing logout
- */
-const MAX_CONSECUTIVE_FAILURES = 3
-
-/**
- * Pre-check threshold: refresh if token expires within 30 seconds
- */
-const PRE_CHECK_THRESHOLD_MS = 30_000
 
 /**
  * Refresh request timeout in milliseconds
@@ -91,7 +62,6 @@ function shouldBypassRefresh(endpoint: string): boolean {
  * Handles all common API call logic:
  * - Sets Content-Type headers
  * - Includes JWT access token in Authorization header
- * - Token expiry pre-check with proactive refresh
  * - Automatically refreshes token on 401 response
  * - Retries original request after successful refresh
  * - Parses error responses
@@ -128,33 +98,7 @@ async function makeRequest<T>(
   pendingRequests.add(abortController)
 
   // Get current auth state
-  const { accessToken, tokenExpiresAt } = authStore
-
-  // Token expiry pre-check with mutex (proactive refresh)
-  // Skip for logout endpoint to prevent infinite loops
-  if (!shouldBypassRefresh(endpoint) && !isRetry && accessToken && tokenExpiresAt) {
-    const now = Date.now()
-    const timeUntilExpiry = tokenExpiresAt - now
-
-    // If token expires within threshold, proactively refresh
-    if (timeUntilExpiry <= PRE_CHECK_THRESHOLD_MS && timeUntilExpiry > 0 && !preCheckMutex) {
-      preCheckMutex = true
-      try {
-        if (import.meta.env.DEV) {
-        console.log('[apiClient] Token expiring soon, proactive refresh...')
-      }
-        await performRefresh()
-      } catch (error) {
-        // Log but continue - the 401 interceptor will handle it
-        console.warn('[apiClient] Proactive refresh failed:', error)
-      } finally {
-        preCheckMutex = false
-      }
-    }
-  }
-
-  // Get fresh token after potential pre-check refresh
-  const currentToken = useAuthStore.getState().accessToken
+  const { accessToken } = authStore
   const { csrfToken } = useAuthStore.getState()
 
   // Determine if this is a state-changing request that needs CSRF protection
@@ -166,7 +110,7 @@ async function makeRequest<T>(
     signal: abortController.signal,
     headers: {
       'Content-Type': 'application/json',
-      ...(currentToken && { Authorization: `Bearer ${currentToken}` }),
+      ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       ...(isMutation && csrfToken && { 'X-CSRF-Token': csrfToken }),
       ...options.headers,
     },
@@ -183,29 +127,17 @@ async function makeRequest<T>(
 
     // Handle 401 Unauthorized - attempt token refresh
     if (response.status === 401 && !isRetry && !shouldBypassRefresh(endpoint)) {
-      // Request coalescing: all concurrent 401s await the same refresh Promise
-      if (!refreshPromise) {
-        refreshPromise = performRefresh()
-          .finally(() => {
-            refreshPromise = null
-          })
-      }
-
       try {
-        await refreshPromise
+        await performRefresh()
         // Retry original request with new token
         return makeRequest<T>(endpoint, options, true)
-    } catch (refreshError) {
+      } catch (refreshError) {
         // 429 rate-limit on refresh: don't force logout, propagate as-is
         if (refreshError instanceof ApiError && refreshError.status === 429) {
           throw refreshError
         }
-        // Refresh failed - check if we should force logout
-        if (consecutiveRefreshFailures >= MAX_CONSECUTIVE_FAILURES) {
-          console.error('[apiClient] Too many consecutive refresh failures, forcing logout')
-          authStore.clearAuth()
-          cancelPendingRequests()
-        }
+        authStore.clearAuth()
+        cancelPendingRequests()
         throw new AuthenticationError('Session expired. Please login again.')
       }
     }
@@ -257,7 +189,7 @@ async function performRefresh(): Promise<string> {
     clearTimeout(timeoutId)
 
     if (!response.ok) {
-      // Check for 5xx errors - don't count against consecutive failures
+      // Check for 5xx errors
       if (response.status >= 500) {
         console.error('[apiClient] Refresh failed with server error:', response.status)
         throw new ApiError('Server error during refresh', 'ERR_SERVER_ERROR', undefined, response.status)
@@ -269,8 +201,6 @@ async function performRefresh(): Promise<string> {
         throw new ApiError('Too many refresh requests, please wait a moment', 'ERR_RATE_LIMIT_EXCEEDED', undefined, 429)
       }
 
-      consecutiveRefreshFailures++
-      console.error(`[apiClient] Token refresh failed (consecutive: ${consecutiveRefreshFailures})`)
       throw new AuthenticationError('Failed to refresh token')
     }
 
@@ -280,9 +210,6 @@ async function performRefresh(): Promise<string> {
     const expiresIn = data.data.expires_in || 900 // Default 15 minutes
     const expiry = Date.now() + expiresIn * 1000
     authStore.setAccessToken(data.data.access_token, expiresIn * 1000)
-
-    // Reset consecutive failures on success
-    consecutiveRefreshFailures = 0
 
     if (import.meta.env.DEV) {
       console.log(`[apiClient] Token refreshed successfully, expires at ${new Date(expiry).toISOString()}`)
@@ -295,7 +222,6 @@ async function performRefresh(): Promise<string> {
     // Handle timeout specifically
     if (error instanceof Error && error.name === 'AbortError') {
       console.error('[apiClient] Token refresh timed out after 10 seconds')
-      consecutiveRefreshFailures++
       throw new AuthenticationError('Token refresh timed out')
     }
 
@@ -317,19 +243,9 @@ export function cancelPendingRequests(): void {
 }
 
 /**
- * Reset consecutive failure counter (for testing/manual reset)
- */
-export function resetFailureCount(): void {
-  consecutiveRefreshFailures = 0
-}
-
-/**
  * Reset all module state (for testing only)
  */
 export function resetModuleState(): void {
-  consecutiveRefreshFailures = 0
-  refreshPromise = null
-  preCheckMutex = false
   pendingRequests.clear()
 }
 
