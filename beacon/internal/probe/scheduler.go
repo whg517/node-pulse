@@ -304,6 +304,15 @@ func (s *ProbeScheduler) GetLatestResults() ([]*models.TCPProbeResult, []*models
 	return tcpCopy, udpCopy
 }
 
+// SetLatestResultsForTest injects probe results for testing purposes.
+// This method should only be used in tests.
+func (s *ProbeScheduler) SetLatestResultsForTest(tcpResults []*models.TCPProbeResult, udpResults []*models.UDPProbeResult) {
+	s.resultsMu.Lock()
+	defer s.resultsMu.Unlock()
+	s.latestTCPResults = tcpResults
+	s.latestUDPResults = udpResults
+}
+
 // UpdateProbeInterval dynamically updates the probe interval (for Story 3.11 resource monitoring)
 // multiplier: interval multiplier (1=normal, 2=degraded, 3=critical)
 func (s *ProbeScheduler) UpdateProbeInterval(multiplier int) error {
