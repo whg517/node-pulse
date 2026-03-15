@@ -17,8 +17,6 @@ npm test
 # Run smoke tests (fast feedback)
 npm run test:smoke
 
-# Run visual regression tests
-npm run test:visual
 ```
 
 ### 2. Start Backend Server
@@ -77,14 +75,6 @@ npm run test:webhooks
 # Export tests
 npm run test:export
 ```
-
-### Generate Visual Baselines
-
-Visual regression baselines are handled by a dedicated GitHub Actions workflow.
-
-- Run the Visual Snapshot Baselines workflow manually from GitHub Actions.
-- Download the artifact and commit the generated snapshot directories under `e2e/tests/visual`.
-- After the baselines are committed, the Visual Regression workflow will validate them on PRs and on pushes to `main`.
 
 ### Run with UI Mode
 
