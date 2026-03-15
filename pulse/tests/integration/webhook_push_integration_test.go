@@ -41,16 +41,16 @@ func setupWebhookPushTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 
 	// Cleanup function
 	cleanup := func() {
-		pool.Exec(ctx, "DROP TABLE IF EXISTS webhook_logs CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS webhooks CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS alert_suppressions CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS alert_events CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS alerts CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
-		pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS webhook_logs CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS webhooks CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alert_suppressions CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alert_events CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alerts CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
 		pool.Close()
 	}
 
@@ -90,9 +90,9 @@ func TestWebhookPush_Integration(t *testing.T) {
 
 	// Helper function to clean alert data between sub-tests
 	cleanAlertData := func() {
-		pool.Exec(ctx, "DELETE FROM alert_suppressions")
-		pool.Exec(ctx, "DELETE FROM alert_events")
-		pool.Exec(ctx, "DELETE FROM webhook_logs")
+		_, _ = pool.Exec(ctx, "DELETE FROM alert_suppressions")
+		_, _ = pool.Exec(ctx, "DELETE FROM alert_events")
+		_, _ = pool.Exec(ctx, "DELETE FROM webhook_logs")
 		webhookMutex.Lock()
 		webhookDeliveries = nil
 		webhookMutex.Unlock()

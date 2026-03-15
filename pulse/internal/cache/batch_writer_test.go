@@ -96,7 +96,7 @@ func TestBatchWriter_StartStop(t *testing.T) {
 			JitterMs:       5.0,
 			IsAggregated:   false,
 		}
-		bw.Write(record)
+		_ = bw.Write(record)
 	}
 
 	// Stop should flush and exit gracefully
@@ -197,7 +197,7 @@ func TestBatchWriter_ConcurrentWrites(t *testing.T) {
 					JitterMs:       5.0,
 					IsAggregated:   false,
 				}
-				bw.Write(record)
+				_ = bw.Write(record)
 			}
 			done <- true
 		}(i)

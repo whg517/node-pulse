@@ -57,6 +57,7 @@ func (q *beaconTokensQuerier) GetNodeIDByAPIKey(ctx context.Context, apiKeyHash 
 	if expiresAt != nil {
 		// TODO: Implement proper expiration check using pgtype.Timestamp
 		// For now, we rely on the database constraint and is_active flag
+		_ = expiresAt
 	}
 
 	// Update last_used_at timestamp asynchronously (fire and forget)

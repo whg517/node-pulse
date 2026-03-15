@@ -1,6 +1,6 @@
 module github.com/whg517/node-pulse/pulse
 
-go 1.24.11
+go 1.25.8
 
 require (
 	github.com/gin-gonic/gin v1.11.0

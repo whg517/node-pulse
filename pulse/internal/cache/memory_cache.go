@@ -235,12 +235,7 @@ func (mc *MemoryCache) Store(nodeID string, point *MetricPoint) error {
 	buffer := actual.(*RingBuffer)
 
 	// Write to buffer (FIFO eviction after 1 hour)
-	overwritten := buffer.Write(point)
-
-	if overwritten {
-		// Old data was evicted (more than 1 hour)
-		// This is expected behavior per requirements
-	}
+	_ = buffer.Write(point)
 
 	return nil
 }

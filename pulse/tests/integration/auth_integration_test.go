@@ -64,7 +64,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool, *api.CacheManage
 
 // cleanupTestUser removes test user from database
 func cleanupTestUser(pool *pgxpool.Pool, username string) {
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 }
 
 // TestIntegration_Login_ValidCredentials tests full login flow with valid credentials
@@ -337,7 +337,7 @@ func TestIntegration_RateLimit(t *testing.T) {
 	defer pool.Close()
 
 	// Reset rate limit store for clean test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user with unique username
 	testUserID := uuid.New()
@@ -389,7 +389,7 @@ func TestIntegration_JWTExpiration(t *testing.T) {
 	defer pool.Close()
 
 	// Reset rate limit store for clean test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create user and login
 	testUserID := uuid.New()
@@ -441,7 +441,7 @@ func TestIntegration_GetMe_WithValidToken(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store for clean test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user and login
 	testUserID := uuid.New()
@@ -521,7 +521,7 @@ func TestIntegration_GetMe_WithExpiredToken(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store for clean test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create user
 	testUserID := uuid.New()
@@ -578,7 +578,7 @@ func TestIntegration_ConcurrentRefresh(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store for clean test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user and login
 	testUserID := uuid.New()

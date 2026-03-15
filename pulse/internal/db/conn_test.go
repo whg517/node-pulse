@@ -32,7 +32,7 @@ func TestDatabase_NilDatabaseCheck(t *testing.T) {
 		t.Error("Expected panic when calling Check on nil database, but it did not panic")
 	}()
 
-	db.Check(context.Background())
+	_ = db.Check(context.Background())
 }
 
 // TestDatabase_CheckerInterface tests that Database implements Checker interface

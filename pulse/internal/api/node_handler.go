@@ -271,7 +271,7 @@ func (h *NodeHandler) GetNodesHandler(c *gin.Context) {
 
 	// Execute query
 	ctx := context.Background()
-	nodes := make([]*models.Node, 0)
+	var nodes []*models.Node
 	var err error
 
 	if region != "" {

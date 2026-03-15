@@ -28,7 +28,7 @@ func TestDiagnosis_SequentialRefresh(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store for clean test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user and login
 	testUserID := uuid.New()

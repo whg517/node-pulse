@@ -24,7 +24,7 @@ const (
 
 func init() {
 	// Initialize logger for tests
-	logger.InitLogger(&config.Config{
+	_ = logger.InitLogger(&config.Config{
 		LogLevel:      "ERROR", // Reduce noise in tests
 		LogFile:       "/tmp/test-jwt-client.log",
 		LogMaxSize:    10,
@@ -133,7 +133,7 @@ func TestGetAccessToken(t *testing.T) {
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -166,7 +166,7 @@ func TestGetAccessTokenCached(t *testing.T) {
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -207,7 +207,7 @@ func TestGetAccessTokenRefresh(t *testing.T) {
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -250,7 +250,7 @@ func TestInvalidateToken(t *testing.T) {
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -285,7 +285,7 @@ func TestAuthenticationError(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Code:    "INVALID_API_KEY",
 			Message: "Invalid API key",
 		})
@@ -310,7 +310,7 @@ func TestRateLimited(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusTooManyRequests)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Code:    "RATE_LIMITED",
 			Message: "Too many requests",
 		})
@@ -334,7 +334,7 @@ func TestRateLimited(t *testing.T) {
 func TestServerError(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Internal Server Error"))
+		_, _ = w.Write([]byte("Internal Server Error"))
 	}))
 	defer mockServer.Close()
 
@@ -363,7 +363,7 @@ func TestContextCanceled(t *testing.T) {
 			RefreshExpiresIn: 604800,
 			NodeID:           testNodeID,
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -405,7 +405,7 @@ func TestConcurrentTokenRefresh(t *testing.T) {
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -523,7 +523,7 @@ func TestGetTokenState(t *testing.T) {
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -561,7 +561,7 @@ func TestTokenRefreshUsesRefreshToken(t *testing.T) {
 	var receivedAuthHeader string
 
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		json.NewDecoder(r.Body).Decode(&receivedRequest)
+		_ = json.NewDecoder(r.Body).Decode(&receivedRequest)
 
 		// Check which endpoint was called
 		if r.URL.Path == "/api/v1/auth/refresh" {
@@ -585,7 +585,7 @@ func TestTokenRefreshUsesRefreshToken(t *testing.T) {
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -618,7 +618,7 @@ func TestErrorResponse(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(ErrorResponse{
+		_ = json.NewEncoder(w).Encode(ErrorResponse{
 			Code:    "INVALID_REQUEST",
 			Message: "The request was malformed",
 		})
@@ -657,7 +657,7 @@ func TestGetAccessToken_APIKeyInAuthorizationHeader(t *testing.T) {
 			NodeID:      testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 
@@ -698,7 +698,7 @@ func TestRefreshTokenMethod(t *testing.T) {
 			NodeID:           testNodeID,
 		}
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer mockServer.Close()
 

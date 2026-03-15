@@ -294,7 +294,7 @@ func TestCompositeIndexPerformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test user: %v", err)
 	}
-	defer pool.Exec(ctx, "DELETE FROM users WHERE user_id = $1", userID)
+	defer func() { _, _ = pool.Exec(ctx, "DELETE FROM users WHERE user_id = $1", userID) }()
 
 	_, err = pool.Exec(ctx, `
 		INSERT INTO sessions (session_id, user_id, expires_at, max_valid_until, created_at)
@@ -303,7 +303,7 @@ func TestCompositeIndexPerformance(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create test session: %v", err)
 	}
-	defer pool.Exec(ctx, "DELETE FROM sessions WHERE session_id = $1", sessionID)
+	defer func() { _, _ = pool.Exec(ctx, "DELETE FROM sessions WHERE session_id = $1", sessionID) }()
 
 	// Act - Query using composite index
 	query := `

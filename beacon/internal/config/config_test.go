@@ -590,7 +590,7 @@ func TestLoadConfig_CurrentDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	// Change to temp directory
 	tmpDir := t.TempDir()
@@ -628,7 +628,7 @@ func TestLoadConfig_ConfigFileNotFound(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	defer os.Chdir(originalDir)
+	defer func() { _ = os.Chdir(originalDir) }()
 
 	// Change to empty temp directory
 	tmpDir := t.TempDir()

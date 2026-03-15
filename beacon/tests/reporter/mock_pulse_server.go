@@ -10,18 +10,18 @@ import (
 
 // MockPulseServer is a mock Pulse API server for testing
 type MockPulseServer struct {
-	server      *httptest.Server
-	heartbeatCount int
-	mu          sync.Mutex
+	server             *httptest.Server
+	heartbeatCount     int
+	mu                 sync.Mutex
 	responseStatusCode int
-	delay       time.Duration
+	delay              time.Duration
 }
 
 // NewMockPulseServer creates a new mock Pulse API server
 func NewMockPulseServer() *MockPulseServer {
 	mock := &MockPulseServer{
 		responseStatusCode: http.StatusOK,
-		delay:             0,
+		delay:              0,
 	}
 
 	mock.server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -48,7 +48,7 @@ func (m *MockPulseServer) handleRequest(w http.ResponseWriter, r *http.Request) 
 	var data map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&data); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid request body"})
 		return
 	}
 
@@ -56,7 +56,7 @@ func (m *MockPulseServer) handleRequest(w http.ResponseWriter, r *http.Request) 
 	nodeID, ok := data["node_id"].(string)
 	if !ok || nodeID == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid node_id"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid node_id"})
 		return
 	}
 
@@ -64,7 +64,7 @@ func (m *MockPulseServer) handleRequest(w http.ResponseWriter, r *http.Request) 
 	latencyMs, _ := data["latency_ms"].(float64)
 	if latencyMs < 0 || latencyMs > 60000 {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Invalid metrics"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Invalid metrics"})
 		return
 	}
 
@@ -76,12 +76,12 @@ func (m *MockPulseServer) handleRequest(w http.ResponseWriter, r *http.Request) 
 	// Return configured response status
 	w.WriteHeader(m.responseStatusCode)
 	if m.responseStatusCode == http.StatusOK {
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"status":  "success",
 			"message": "Heartbeat received",
 		})
 	} else {
-		json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "Internal server error"})
 	}
 }
 

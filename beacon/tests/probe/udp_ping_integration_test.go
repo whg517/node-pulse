@@ -47,7 +47,7 @@ func TestUDPProbeIntegration(t *testing.T) {
 	t.Run("UDP probe to echo server", func(t *testing.T) {
 		host, port, _ := net.SplitHostPort(serverAddr)
 		portNum := 0
-		fmt.Sscanf(port, "%d", &portNum)
+		_, _ = fmt.Sscanf(port, "%d", &portNum)
 
 		udpConfig := probe.UDPProbeConfig{
 			Type:           "udp_ping",
@@ -130,7 +130,7 @@ func TestUDPProbeIntegration(t *testing.T) {
 // TestSchedulerWithUDPProbes tests the scheduler with UDP probe configuration
 func TestSchedulerWithUDPProbes(t *testing.T) {
 	initTestLoggerUDP(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	probeConfigs := []config.ProbeConfig{
 		{
@@ -179,7 +179,7 @@ func TestSchedulerWithUDPProbes(t *testing.T) {
 // TestMixedProbeScheduler tests scheduler with both TCP and UDP probes
 func TestMixedProbeScheduler(t *testing.T) {
 	initTestLoggerUDP(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	probeConfigs := []config.ProbeConfig{
 		{
@@ -247,7 +247,7 @@ func startUDPEchoServer() (string, <-chan struct{}, error) {
 
 	// Start echo handler in background
 	go func() {
-		defer conn.Close()
+		defer func() { _ = conn.Close() }()
 		buf := make([]byte, 1024)
 
 		// Signal that the server is ready to receive packets
@@ -260,7 +260,7 @@ func startUDPEchoServer() (string, <-chan struct{}, error) {
 			}
 
 			// Echo the data back
-			conn.WriteToUDP(buf[:n], clientAddr)
+			_, _ = conn.WriteToUDP(buf[:n], clientAddr)
 		}
 	}()
 

@@ -102,7 +102,7 @@ func TestPriorityCache_FIFOEviction(t *testing.T) {
 		Priority: CacheP2,
 		Data:     make([]byte, 50),
 	}
-	cache.Add(entry1)
+	_ = cache.Add(entry1)
 
 	// Add second P2 entry
 	entry2 := &CacheEntry{
@@ -110,7 +110,7 @@ func TestPriorityCache_FIFOEviction(t *testing.T) {
 		Priority: CacheP2,
 		Data:     make([]byte, 50),
 	}
-	cache.Add(entry2)
+	_ = cache.Add(entry2)
 
 	// Add a large entry to trigger eviction
 	entry3 := &CacheEntry{
@@ -118,7 +118,7 @@ func TestPriorityCache_FIFOEviction(t *testing.T) {
 		Priority: CacheP2,
 		Data:     make([]byte, 100),
 	}
-	cache.Add(entry3)
+	_ = cache.Add(entry3)
 
 	// First entry should have been evicted
 	_, exists := cache.Get("p2-first")
@@ -148,7 +148,7 @@ func TestPriorityCache_P0NeverEvicted(t *testing.T) {
 		Priority: CacheP0,
 		Data:     make([]byte, 50),
 	}
-	cache.Add(p0Entry)
+	_ = cache.Add(p0Entry)
 
 	// Try to add many P2 entries to force eviction
 	for i := 0; i < 10; i++ {
@@ -157,7 +157,7 @@ func TestPriorityCache_P0NeverEvicted(t *testing.T) {
 			Priority: CacheP2,
 			Data:     make([]byte, 100),
 		}
-		cache.Add(entry)
+		_ = cache.Add(entry)
 	}
 
 	// P0 entry should still exist
@@ -175,7 +175,7 @@ func TestPriorityCache_Remove(t *testing.T) {
 		Priority: CacheP2,
 		Data:     []byte("data"),
 	}
-	cache.Add(entry)
+	_ = cache.Add(entry)
 
 	removed := cache.Remove("to-remove")
 	if !removed {
@@ -197,9 +197,9 @@ func TestPriorityCache_GetAllEntriesForUpload(t *testing.T) {
 	cache := NewPriorityCache(10*1024, "", false) // 10KB
 
 	// Add P0 and P2 entries
-	cache.Add(&CacheEntry{ID: "p2-1", Priority: CacheP2, Data: []byte("data1")})
-	cache.Add(&CacheEntry{ID: "p0-1", Priority: CacheP0, Data: []byte("data2")})
-	cache.Add(&CacheEntry{ID: "p2-2", Priority: CacheP2, Data: []byte("data3")})
+	_ = cache.Add(&CacheEntry{ID: "p2-1", Priority: CacheP2, Data: []byte("data1")})
+	_ = cache.Add(&CacheEntry{ID: "p0-1", Priority: CacheP0, Data: []byte("data2")})
+	_ = cache.Add(&CacheEntry{ID: "p2-2", Priority: CacheP2, Data: []byte("data3")})
 
 	entries := cache.GetAllEntriesForUpload()
 
@@ -216,8 +216,8 @@ func TestPriorityCache_GetAllEntriesForUpload(t *testing.T) {
 func TestPriorityCache_Clear(t *testing.T) {
 	cache := NewPriorityCache(1024, "", false)
 
-	cache.Add(&CacheEntry{ID: "p0-1", Priority: CacheP0, Data: []byte("data")})
-	cache.Add(&CacheEntry{ID: "p2-1", Priority: CacheP2, Data: []byte("data")})
+	_ = cache.Add(&CacheEntry{ID: "p0-1", Priority: CacheP0, Data: []byte("data")})
+	_ = cache.Add(&CacheEntry{ID: "p2-1", Priority: CacheP2, Data: []byte("data")})
 
 	cache.Clear()
 
@@ -238,7 +238,7 @@ func TestPriorityCache_IncrementRetryCount(t *testing.T) {
 		Priority: CacheP2,
 		Data:     []byte("data"),
 	}
-	cache.Add(entry)
+	_ = cache.Add(entry)
 
 	count := cache.IncrementRetryCount("retry-test")
 	if count != 1 {
@@ -255,12 +255,12 @@ func TestPriorityCache_Persist(t *testing.T) {
 	// Create temp file
 	tmpDir := os.TempDir()
 	cachePath := filepath.Join(tmpDir, "test-cache.dat")
-	defer os.Remove(cachePath)
+	defer func() { _ = os.Remove(cachePath) }()
 
 	cache := NewPriorityCache(1024, cachePath, true)
 
 	// Add entries
-	cache.Add(&CacheEntry{
+	_ = cache.Add(&CacheEntry{
 		ID:        "persist-test",
 		Priority:  CacheP0,
 		Data:      []byte("persist data"),
@@ -295,8 +295,8 @@ func TestPriorityCache_Persist(t *testing.T) {
 func TestPriorityCache_GetStats(t *testing.T) {
 	cache := NewPriorityCache(1024, "", false)
 
-	cache.Add(&CacheEntry{ID: "p0-1", Priority: CacheP0, Data: make([]byte, 100)})
-	cache.Add(&CacheEntry{ID: "p2-1", Priority: CacheP2, Data: make([]byte, 100)})
+	_ = cache.Add(&CacheEntry{ID: "p0-1", Priority: CacheP0, Data: make([]byte, 100)})
+	_ = cache.Add(&CacheEntry{ID: "p2-1", Priority: CacheP2, Data: make([]byte, 100)})
 
 	stats := cache.GetStats()
 

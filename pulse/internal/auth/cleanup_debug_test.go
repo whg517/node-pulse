@@ -63,7 +63,7 @@ func TestCleanupJob_Debug(t *testing.T) {
 		var expiresAt time.Time
 		var currentTime time.Time
 		var isExpired bool
-		rows.Scan(&tokenID, &expiresAt, &currentTime, &isExpired)
+		_ = rows.Scan(&tokenID, &expiresAt, &currentTime, &isExpired)
 		t.Logf("Token %s: expires_at=%v, current_time=%v, is_expired=%v", tokenID, expiresAt, currentTime, isExpired)
 	}
 
@@ -88,7 +88,7 @@ func TestCleanupJob_Debug(t *testing.T) {
 			var expiresAt time.Time
 			var currentTime time.Time
 			var isExpired bool
-			rows2.Scan(&tokenID, &expiresAt, &currentTime, &isExpired)
+			_ = rows2.Scan(&tokenID, &expiresAt, &currentTime, &isExpired)
 			t.Logf("Remaining token %s: expires_at=%v, current_time=%v, is_expired=%v", tokenID, expiresAt, currentTime, isExpired)
 		}
 	}

@@ -52,7 +52,7 @@ func TestPulseClient_RegisterNode_Success(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(expectedResponse)
+		_ = json.NewEncoder(w).Encode(expectedResponse)
 	})
 	defer server.Close()
 
@@ -98,7 +98,7 @@ func TestPulseClient_RegisterNode_Duplicate(t *testing.T) {
 	server := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK) // 200 instead of 201 for existing node
-		json.NewEncoder(w).Encode(expectedResponse)
+		_ = json.NewEncoder(w).Encode(expectedResponse)
 	})
 	defer server.Close()
 
@@ -130,7 +130,7 @@ func TestPulseClient_RegisterNode_RetryNetworkError(t *testing.T) {
 		// First two attempts fail with server error
 		if attemptCount <= 2 {
 			w.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(w).Encode(map[string]string{
+			_ = json.NewEncoder(w).Encode(map[string]string{
 				"code":    "ERR_INTERNAL_SERVER",
 				"message": "Internal server error",
 			})
@@ -140,7 +140,7 @@ func TestPulseClient_RegisterNode_RetryNetworkError(t *testing.T) {
 		// Third attempt succeeds
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(RegisterNodeResponse{
+		_ = json.NewEncoder(w).Encode(RegisterNodeResponse{
 			Data: RegisterNodeData{
 				ID:        "test-node-id",
 				Name:      "测试节点",
@@ -181,7 +181,7 @@ func TestPulseClient_RegisterNode_RetryMaxExceeded(t *testing.T) {
 		attemptCount++
 		// Always return server error
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"code":    "ERR_INTERNAL_SERVER",
 			"message": "Internal server error",
 		})
@@ -212,7 +212,7 @@ func TestPulseClient_RegisterNode_ClientErrorNoRetry(t *testing.T) {
 		attemptCount++
 		// Return 400 bad request (client error)
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"code":    "ERR_INVALID_REQUEST",
 			"message": "Invalid request",
 		})
@@ -286,7 +286,7 @@ func TestPulseClient_RegisterNode_InvalidJSONResponse(t *testing.T) {
 	server := createTestServer(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		w.Write([]byte("invalid json"))
+		_, _ = w.Write([]byte("invalid json"))
 	})
 	defer server.Close()
 
@@ -367,7 +367,7 @@ func TestPulseClient_RegisterNode_AuthToken(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
-		json.NewEncoder(w).Encode(RegisterNodeResponse{
+		_ = json.NewEncoder(w).Encode(RegisterNodeResponse{
 			Data: RegisterNodeData{
 				ID:        "test-node-id",
 				Name:      "测试节点",
@@ -451,4 +451,3 @@ func TestPulseClient_isRetryableError(t *testing.T) {
 		})
 	}
 }
-

@@ -48,7 +48,7 @@ func TestInitLogger_Success(t *testing.T) {
 	}
 
 	// Clean up
-	Close()
+	_ = Close()
 }
 
 // TestInitLogger_LogLevels tests different log levels
@@ -86,7 +86,7 @@ func TestInitLogger_LogLevels(t *testing.T) {
 				t.Errorf("Expected log level %s, got %s", expectedLevel, Logger.GetLevel().String())
 			}
 
-			Close()
+			_ = Close()
 		})
 	}
 }
@@ -143,7 +143,7 @@ func TestInitLogger_LogDirectoryCreation(t *testing.T) {
 		t.Fatalf("Log directory was not created: %s", logDir)
 	}
 
-	Close()
+	_ = Close()
 }
 
 // TestJSONFormatter tests JSON log format
@@ -171,7 +171,7 @@ func TestJSONFormatter(t *testing.T) {
 	Info(testMessage)
 
 	// Ensure log is flushed
-	Close()
+	_ = Close()
 
 	// Read log file and verify JSON format
 	data, err := os.ReadFile(logFile)
@@ -233,13 +233,13 @@ func TestWithFields(t *testing.T) {
 
 	// Write log with structured fields
 	testFields := map[string]interface{}{
-		"node_id":   "test-node-123",
-		"component": "probe",
+		"node_id":    "test-node-123",
+		"component":  "probe",
 		"probe_type": "tcp_ping",
 	}
 	WithFields(testFields).Info("Probe execution started")
 
-	Close()
+	_ = Close()
 
 	// Read log file
 	data, err := os.ReadFile(logFile)
@@ -284,12 +284,12 @@ func TestWithField(t *testing.T) {
 	// Write log with single field
 	WithField("node_id", "test-node-456").Info("Test message")
 
-	Close()
+	_ = Close()
 
 	// Read and verify
 	data, _ := os.ReadFile(logFile)
 	var logEntry map[string]interface{}
-	json.Unmarshal(data, &logEntry)
+	_ = json.Unmarshal(data, &logEntry)
 
 	if logEntry["node_id"] != "test-node-456" {
 		t.Errorf("Expected node_id 'test-node-456', got '%v'", logEntry["node_id"])
@@ -320,12 +320,12 @@ func TestWithError(t *testing.T) {
 	testErr := os.ErrNotExist
 	WithError(testErr).Error("File not found")
 
-	Close()
+	_ = Close()
 
 	// Read and verify
 	data, _ := os.ReadFile(logFile)
 	var logEntry map[string]interface{}
-	json.Unmarshal(data, &logEntry)
+	_ = json.Unmarshal(data, &logEntry)
 
 	// Verify error field exists
 	if logEntry["error"] == nil {
@@ -363,7 +363,7 @@ func TestLogLevels(t *testing.T) {
 	Warn("Warning message")
 	Error("Error message")
 
-	Close()
+	_ = Close()
 
 	// Read log file
 	data, err := os.ReadFile(logFile)
@@ -421,5 +421,5 @@ func TestLogToConsole(t *testing.T) {
 		t.Error("Logger output is nil")
 	}
 
-	Close()
+	_ = Close()
 }

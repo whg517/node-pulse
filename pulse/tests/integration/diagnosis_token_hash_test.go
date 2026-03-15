@@ -26,7 +26,7 @@ func TestDiagnosis_TokenHash(t *testing.T) {
 	}
 	defer pool.Close()
 
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	testUserID := uuid.New()

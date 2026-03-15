@@ -58,10 +58,10 @@ func (c *Config) GetSessionConfig() *config.SessionConfig {
 
 // IsProduction returns true if running in production mode
 func (c *Config) IsProduction() bool {
-	return c.IsProduction()
+	return c.Config.IsProduction()
 }
 
 // IsDevelopment returns true if running in development mode
 func (c *Config) IsDevelopment() bool {
-	return c.IsDevelopment()
+	return c.Config.IsDevelopment()
 }

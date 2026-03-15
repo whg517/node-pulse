@@ -11,7 +11,9 @@ func main() {
 	// Prompt for password
 	var password string
 	fmt.Print("Enter password: ")
-	fmt.Scanln(&password)
+	if _, err := fmt.Scanln(&password); err != nil {
+		log.Fatalf("Failed to read password: %v", err)
+	}
 
 	// Generate bcrypt hash (cost factor 12, same as the API)
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)

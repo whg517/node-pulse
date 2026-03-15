@@ -127,7 +127,7 @@ func (p *ICMPPinger) Execute() (*ICMPProbeResult, error) {
 			Timestamp:    time.Now().Format(time.RFC3339),
 		}, nil
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Set deadline
 	deadline := time.Now().Add(time.Duration(timeout) * time.Second)
@@ -228,7 +228,7 @@ func (p *ICMPPinger) ExecuteBatch(count int) (*ICMPProbeResult, error) {
 			Timestamp:    time.Now().Format(time.RFC3339),
 		}, nil
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	for i := 0; i < count; i++ {
 		sentPackets++

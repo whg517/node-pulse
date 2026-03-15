@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -186,7 +185,7 @@ func TestAuthHandler_Login_InvalidCredentials(t *testing.T) {
 	assert.Equal(t, http.StatusUnauthorized, w.Code, "Login should fail with invalid credentials")
 
 	var response map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &response)
+	_ = json.Unmarshal(w.Body.Bytes(), &response)
 
 	assert.Equal(t, "ERR_INVALID_CREDENTIALS", response["code"], "Should return ERR_INVALID_CREDENTIALS error")
 	assert.Contains(t, response["message"], "Invalid", "Should return error message")
@@ -311,21 +310,6 @@ func TestAuthHandler_TimingAttackResistance(t *testing.T) {
 	// 4. Assert no significant timing difference between the two cases
 }
 
-// Helper function to create test context
-func createTestContext() (context.Context, *gin.Context) {
-	ctx := context.Background()
-	ginCtx, _ := gin.CreateTestContext(httptest.NewRecorder())
-	ginCtx.Request = httptest.NewRequest("POST", "/test", nil)
-	return ctx, ginCtx
-}
-
-// Helper function to measure execution time
-func measureTime(fn func()) time.Duration {
-	start := time.Now()
-	fn()
-	return time.Since(start)
-}
-
 // ============ Tests for bug fixes ============
 
 // TestAuthHandler_ExchangeAPIKey_MissingAuthorizationHeader verifies that ExchangeAPIKey
@@ -343,7 +327,7 @@ func TestAuthHandler_ExchangeAPIKey_MissingAuthorizationHeader(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.Equal(t, "MISSING_AUTHORIZATION", resp["code"])
 }
 
@@ -363,7 +347,7 @@ func TestAuthHandler_ExchangeAPIKey_InvalidBearerFormat(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.Equal(t, "INVALID_AUTHORIZATION_FORMAT", resp["code"])
 }
 
@@ -409,7 +393,7 @@ func TestAuthHandler_ExchangeAPIKey_NoAssociation_Returns401(t *testing.T) {
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.Equal(t, "API_KEY_NOT_ASSOCIATED", resp["code"])
 }
 
@@ -511,7 +495,7 @@ func TestAuthHandler_RevokeAllMySessions_Success(t *testing.T) {
 
 	// Confirm 3 active tokens before revoking
 	var beforeCount int
-	pool.QueryRow(ctx, `SELECT COUNT(*) FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL`, userID).Scan(&beforeCount)
+	_ = pool.QueryRow(ctx, `SELECT COUNT(*) FROM refresh_tokens WHERE user_id = $1 AND revoked_at IS NULL`, userID).Scan(&beforeCount)
 	assert.Equal(t, 3, beforeCount)
 
 	// Call RevokeAllMySessions with middleware simulation
@@ -529,7 +513,7 @@ func TestAuthHandler_RevokeAllMySessions_Success(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	var resp map[string]interface{}
-	json.Unmarshal(w.Body.Bytes(), &resp)
+	_ = json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.Contains(t, resp["message"], "revoked")
 
 	// Verify all tokens are now revoked

@@ -80,12 +80,12 @@ func (suite *HealthCheckIntegrationTestSuite) TearDownTest() {
 	}
 
 	// Clean up test data
-	suite.pool.Exec(suite.ctx, "DELETE FROM webhook_logs")
-	suite.pool.Exec(suite.ctx, "DELETE FROM alert_suppressions")
-	suite.pool.Exec(suite.ctx, "DELETE FROM alert_events")
-	suite.pool.Exec(suite.ctx, "DELETE FROM webhooks")
-	suite.pool.Exec(suite.ctx, "DELETE FROM alerts")
-	suite.pool.Exec(suite.ctx, "DELETE FROM nodes")
+	_, _ = suite.pool.Exec(suite.ctx, "DELETE FROM webhook_logs")
+	_, _ = suite.pool.Exec(suite.ctx, "DELETE FROM alert_suppressions")
+	_, _ = suite.pool.Exec(suite.ctx, "DELETE FROM alert_events")
+	_, _ = suite.pool.Exec(suite.ctx, "DELETE FROM webhooks")
+	_, _ = suite.pool.Exec(suite.ctx, "DELETE FROM alerts")
+	_, _ = suite.pool.Exec(suite.ctx, "DELETE FROM nodes")
 }
 
 func (suite *HealthCheckIntegrationTestSuite) TearDownSuite() {

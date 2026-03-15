@@ -3,7 +3,6 @@ package diagnostic
 import (
 	"context"
 	"fmt"
-	"math"
 	"sort"
 	"time"
 )
@@ -598,12 +597,6 @@ func (e *DiagnosticEngine) calculateVariance(values []float64) float64 {
 		return variance / (mean * mean)
 	}
 	return variance
-}
-
-// calculateStandardDeviation calculates standard deviation of a set of values
-func (e *DiagnosticEngine) calculateStandardDeviation(values []float64) float64 {
-	variance := e.calculateVariance(values)
-	return math.Sqrt(variance)
 }
 
 // ============================================================================

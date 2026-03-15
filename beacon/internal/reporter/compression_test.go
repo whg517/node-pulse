@@ -254,7 +254,7 @@ func TestCompressor_GetStats(t *testing.T) {
 	// Perform some operations
 	data := bytes.Repeat([]byte("test"), 100)
 	compressed, _ := compressor.Compress(data)
-	compressor.Decompress(compressed)
+	_, _ = compressor.Decompress(compressed)
 
 	stats := compressor.GetStats()
 

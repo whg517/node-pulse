@@ -87,8 +87,8 @@ func TestRateLimiter_DifferentKeys(t *testing.T) {
 
 	// Exhaust limit for key1
 	key1 := "user-1"
-	limiter.CheckRateLimit(ctx, key1, WindowPerMinute, maxCount)
-	limiter.CheckRateLimit(ctx, key1, WindowPerMinute, maxCount)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key1, WindowPerMinute, maxCount)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key1, WindowPerMinute, maxCount)
 
 	// key1 should be exhausted
 	allowed, _, _, _ := limiter.CheckRateLimit(ctx, key1, WindowPerMinute, maxCount)
@@ -111,8 +111,8 @@ func TestRateLimiter_DifferentWindowTypes(t *testing.T) {
 	key := "test-user-windows"
 
 	// Exhaust per-minute limit
-	limiter.CheckRateLimit(ctx, key, WindowPerMinute, 2)
-	limiter.CheckRateLimit(ctx, key, WindowPerMinute, 2)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key, WindowPerMinute, 2)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key, WindowPerMinute, 2)
 
 	// Per-minute should be exhausted
 	allowed, _, _, _ := limiter.CheckRateLimit(ctx, key, WindowPerMinute, 2)
@@ -138,9 +138,9 @@ func TestRateLimiter_GetCurrentCount(t *testing.T) {
 	assert.Equal(t, 0, count)
 
 	// Make some requests
-	limiter.CheckRateLimit(ctx, key, WindowPerMinute, 10)
-	limiter.CheckRateLimit(ctx, key, WindowPerMinute, 10)
-	limiter.CheckRateLimit(ctx, key, WindowPerMinute, 10)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key, WindowPerMinute, 10)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key, WindowPerMinute, 10)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key, WindowPerMinute, 10)
 
 	// Count should be 3
 	count, err = limiter.GetCurrentCount(ctx, key, WindowPerMinute)
@@ -159,8 +159,8 @@ func TestRateLimiter_ResetRateLimit(t *testing.T) {
 	maxCount := 2
 
 	// Exhaust limit
-	limiter.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
-	limiter.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
 
 	// Should be exhausted
 	allowed, _, _, _ := limiter.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
@@ -185,7 +185,7 @@ func TestRateLimiter_CleanupOldEntries(t *testing.T) {
 	key := "test-user-cleanup"
 
 	// Create some entries
-	limiter.CheckRateLimit(ctx, key, WindowPerMinute, 10)
+	_, _, _, _ = limiter.CheckRateLimit(ctx, key, WindowPerMinute, 10)
 
 	// Cleanup with 0 retention (delete all)
 	err := limiter.CleanupOldEntries(ctx, 0)
@@ -208,8 +208,8 @@ func TestRateLimiter_PersistenceAcrossRestart(t *testing.T) {
 
 	// Simulate "first instance" - create some requests
 	limiter1 := NewRateLimiter(pool)
-	limiter1.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
-	limiter1.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
+	_, _, _, _ = limiter1.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
+	_, _, _, _ = limiter1.CheckRateLimit(ctx, key, WindowPerMinute, maxCount)
 
 	// Simulate "server restart" - create new limiter instance
 	limiter2 := NewRateLimiter(pool)

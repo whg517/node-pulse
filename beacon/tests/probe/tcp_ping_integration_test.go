@@ -105,7 +105,7 @@ func TestIntegration_ProbeSchedulerWithMultipleTargets(t *testing.T) {
 
 	// Initialize logger for this test
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Start multiple test servers
 	server1 := startTestTCPServer(t, "localhost:19002")
@@ -117,20 +117,20 @@ func TestIntegration_ProbeSchedulerWithMultipleTargets(t *testing.T) {
 	// Create probe configs
 	probeConfigs := []config.ProbeConfig{
 		{
-			Type:     "tcp_ping",
-			Target:   "localhost",
-			Port:     19002,
-			TimeoutSeconds:  5,
-			Interval: 60,
-			Count:    10,
+			Type:           "tcp_ping",
+			Target:         "localhost",
+			Port:           19002,
+			TimeoutSeconds: 5,
+			Interval:       60,
+			Count:          10,
 		},
 		{
-			Type:     "tcp_ping",
-			Target:   "localhost",
-			Port:     19003,
-			TimeoutSeconds:  5,
-			Interval: 60,
-			Count:    10,
+			Type:           "tcp_ping",
+			Target:         "localhost",
+			Port:           19003,
+			TimeoutSeconds: 5,
+			Interval:       60,
+			Count:          10,
 		},
 	}
 
@@ -171,12 +171,12 @@ func TestIntegration_ProbeSchedulerWithInvalidConfig(t *testing.T) {
 	// Create invalid probe configs
 	probeConfigs := []config.ProbeConfig{
 		{
-			Type:     "tcp_ping",
-			Target:   "localhost",
-			Port:     99999, // Invalid port
-			TimeoutSeconds:  5,
-			Interval: 60,
-			Count:    10,
+			Type:           "tcp_ping",
+			Target:         "localhost",
+			Port:           99999, // Invalid port
+			TimeoutSeconds: 5,
+			Interval:       60,
+			Count:          10,
 		},
 	}
 
@@ -196,12 +196,12 @@ func TestIntegration_ProbeSchedulerWithInsufficientCount(t *testing.T) {
 	// Create probe configs with count < 10 (should fail core metrics calculation)
 	probeConfigs := []config.ProbeConfig{
 		{
-			Type:     "tcp_ping",
-			Target:   "localhost",
-			Port:     19001,
-			TimeoutSeconds:  5,
-			Interval: 60,
-			Count:    5, // Invalid: must be ≥ 10 for core metrics
+			Type:           "tcp_ping",
+			Target:         "localhost",
+			Port:           19001,
+			TimeoutSeconds: 5,
+			Interval:       60,
+			Count:          5, // Invalid: must be ≥ 10 for core metrics
 		},
 	}
 
@@ -232,20 +232,20 @@ func TestIntegration_ProbeSchedulerWithMixedTargets(t *testing.T) {
 	// Create probe configs with mix of valid and invalid targets
 	probeConfigs := []config.ProbeConfig{
 		{
-			Type:     "tcp_ping",
-			Target:   "localhost",
-			Port:     19004, // Valid
-			TimeoutSeconds:  2,
-			Interval: 60,
-			Count:    10,
+			Type:           "tcp_ping",
+			Target:         "localhost",
+			Port:           19004, // Valid
+			TimeoutSeconds: 2,
+			Interval:       60,
+			Count:          10,
 		},
 		{
-			Type:     "tcp_ping",
-			Target:   "localhost",
-			Port:     19999, // Invalid (port not listening)
-			TimeoutSeconds:  1,
-			Interval: 60,
-			Count:    10,
+			Type:           "tcp_ping",
+			Target:         "localhost",
+			Port:           19999, // Invalid (port not listening)
+			TimeoutSeconds: 1,
+			Interval:       60,
+			Count:          10,
 		},
 	}
 
@@ -285,12 +285,12 @@ func TestIntegration_ProbeGracefulShutdown(t *testing.T) {
 	// Create probe config with minimum valid interval for testing
 	probeConfigs := []config.ProbeConfig{
 		{
-			Type:     "tcp_ping",
-			Target:   "localhost",
-			Port:     19005,
-			TimeoutSeconds:  5,
-			Interval: 60, // Minimum valid interval (60 seconds)
-			Count:    10,
+			Type:           "tcp_ping",
+			Target:         "localhost",
+			Port:           19005,
+			TimeoutSeconds: 5,
+			Interval:       60, // Minimum valid interval (60 seconds)
+			Count:          10,
 		},
 	}
 
@@ -339,12 +339,12 @@ func TestIntegration_ExecuteProbeNow(t *testing.T) {
 	// Create scheduler
 	probeConfigs := []config.ProbeConfig{
 		{
-			Type:     "tcp_ping",
-			Target:   "localhost",
-			Port:     19006,
-			TimeoutSeconds:  5,
-			Interval: 60,
-			Count:    10,
+			Type:           "tcp_ping",
+			Target:         "localhost",
+			Port:           19006,
+			TimeoutSeconds: 5,
+			Interval:       60,
+			Count:          10,
 		},
 	}
 
@@ -399,12 +399,12 @@ func (s *testTCPServer) start() {
 		if err != nil {
 			break
 		}
-		conn.Close()
+		_ = conn.Close()
 	}
 }
 
 func (s *testTCPServer) Close() {
 	if s.lis != nil {
-		s.lis.Close()
+		_ = s.lis.Close()
 	}
 }

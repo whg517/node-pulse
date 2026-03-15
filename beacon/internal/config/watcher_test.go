@@ -128,7 +128,7 @@ probes:
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	go watcher.Start(ctx)
+	go func() { _ = watcher.Start(ctx) }()
 
 	// Wait for watcher to start
 	time.Sleep(500 * time.Millisecond)
@@ -214,7 +214,7 @@ probes:
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	go watcher.Start(ctx)
+	go func() { _ = watcher.Start(ctx) }()
 	time.Sleep(500 * time.Millisecond)
 
 	// Write invalid config (interval_seconds exceeds limit)
@@ -297,7 +297,7 @@ probes:
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	go watcher.Start(ctx)
+	go func() { _ = watcher.Start(ctx) }()
 	time.Sleep(500 * time.Millisecond)
 
 	// Rapidly modify config file 3 times (each with a different pulse_server)
@@ -368,7 +368,7 @@ probes:
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	go watcher.Start(ctx)
+	go func() { _ = watcher.Start(ctx) }()
 	time.Sleep(500 * time.Millisecond)
 
 	// Launch multiple goroutines reading config concurrently
@@ -383,6 +383,7 @@ probes:
 				config := watcher.GetConfig()
 				if config == nil {
 					t.Error("GetConfig returned nil")
+					continue
 				}
 				if config.PulseServer == "" {
 					t.Error("PulseServer is empty")
@@ -441,7 +442,7 @@ probes:
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	go watcher.Start(ctx)
+	go func() { _ = watcher.Start(ctx) }()
 	time.Sleep(500 * time.Millisecond)
 
 	// First successful reload
@@ -456,7 +457,7 @@ probes:
     timeout_seconds: 5
     count: 10
 `
-	os.WriteFile(cfgPath, []byte(newConfig1), 0644)
+	_ = os.WriteFile(cfgPath, []byte(newConfig1), 0644)
 	time.Sleep(2 * time.Second)
 
 	// Second reload that will fail
@@ -471,7 +472,7 @@ probes:
     timeout_seconds: 5
     count: 10
 `
-	os.WriteFile(cfgPath, []byte(newConfig2), 0644)
+	_ = os.WriteFile(cfgPath, []byte(newConfig2), 0644)
 	time.Sleep(2 * time.Second)
 
 	// Verify config rolled back to previous state

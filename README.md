@@ -39,8 +39,8 @@ Beacon (per node)          Pulse Server              PostgreSQL
 
 ### Prerequisites
 
-- Go 1.24+
-- Node.js 20+
+- Go 1.25+
+- Node.js 25+
 - PostgreSQL 15+
 - Docker (for integration/E2E tests)
 
@@ -230,8 +230,8 @@ docker-compose -f e2e/docker-compose.e2e.yml up -d
 
 | Layer | Technology |
 |-------|-----------|
-| Beacon | Go 1.24, static binary |
-| Backend | Go 1.24, Gin, pgx/PostgreSQL |
+| Beacon | Go 1.25, static binary |
+| Backend | Go 1.25, Gin, pgx/PostgreSQL |
 | Frontend | React 19, TypeScript 5, Vite 7 |
 | Styling | Tailwind CSS 4 |
 | State | Zustand 5 |

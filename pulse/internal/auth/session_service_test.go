@@ -55,9 +55,9 @@ func createTestUser(t *testing.T, pool *pgxpool.Pool) string {
 	require.NoError(t, err, "Failed to insert test user")
 
 	t.Cleanup(func() {
-		pool.Exec(ctx, "DELETE FROM refresh_tokens WHERE user_id = $1", userID)
-		pool.Exec(ctx, "DELETE FROM sessions WHERE user_id = $1", userID)
-		pool.Exec(ctx, "DELETE FROM users WHERE user_id = $1", userID)
+		_, _ = pool.Exec(ctx, "DELETE FROM refresh_tokens WHERE user_id = $1", userID)
+		_, _ = pool.Exec(ctx, "DELETE FROM sessions WHERE user_id = $1", userID)
+		_, _ = pool.Exec(ctx, "DELETE FROM users WHERE user_id = $1", userID)
 	})
 
 	return userID.String()

@@ -37,7 +37,7 @@ func BenchmarkJWT_ValidationThroughput(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		jwtService.ValidateAccessToken(accessToken)
+		_, _ = jwtService.ValidateAccessToken(accessToken)
 	}
 }
 
@@ -78,7 +78,7 @@ func BenchmarkRefreshToken_Validation(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		refreshService.ValidateRefreshToken(ctx, tokenPlain)
+		_, _ = refreshService.ValidateRefreshToken(ctx, tokenPlain)
 	}
 }
 
@@ -115,7 +115,7 @@ func BenchmarkConcurrentLoad(b *testing.B) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < b.N/numGoroutines; j++ {
-				jwtService.ValidateAccessToken(accessToken)
+				_, _ = jwtService.ValidateAccessToken(accessToken)
 			}
 		}()
 	}
@@ -155,13 +155,13 @@ func BenchmarkBlacklist_LookupPerformance(b *testing.B) {
 	}
 
 	var count int
-	pool.QueryRow(ctx, "SELECT COUNT(*) FROM token_blacklist").Scan(&count)
+	_ = pool.QueryRow(ctx, "SELECT COUNT(*) FROM token_blacklist").Scan(&count)
 	require.Equal(b, numEntries, count)
 
 	b.StartTimer()
 
 	jti := "bench-jti-A-5000"
 	for i := 0; i < b.N; i++ {
-		jwtService.CheckRevoked(ctx, jti)
+		_, _ = jwtService.CheckRevoked(ctx, jti)
 	}
 }

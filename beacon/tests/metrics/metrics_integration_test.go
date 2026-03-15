@@ -33,13 +33,13 @@ func TestPrometheusScrapingWorkflow(t *testing.T) {
 		LogToConsole:  false,
 	}
 	require.NoError(t, logger.InitLogger(logCfg))
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	cfg := &config.Config{
-		NodeID:         "integration-test-node",
-		NodeName:       "beacon-integration",
-		MetricsEnabled: true,
-		MetricsPort:    29112,
+		NodeID:               "integration-test-node",
+		NodeName:             "beacon-integration",
+		MetricsEnabled:       true,
+		MetricsPort:          29112,
 		MetricsUpdateSeconds: 10,
 		Probes: []config.ProbeConfig{
 			{
@@ -68,7 +68,7 @@ func TestPrometheusScrapingWorkflow(t *testing.T) {
 	// Start metrics server
 	err = metricsServer.Start()
 	require.NoError(t, err)
-	defer metricsServer.Stop()
+	defer func() { _ = metricsServer.Stop() }()
 
 	// Wait for server to start and first metrics collection
 	time.Sleep(500 * time.Millisecond)
@@ -76,7 +76,7 @@ func TestPrometheusScrapingWorkflow(t *testing.T) {
 	// Simulate Prometheus scraping
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", cfg.MetricsPort))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify HTTP response
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -109,10 +109,10 @@ func TestPrometheusScrapingWorkflow(t *testing.T) {
 // TestMetricsUpdateAfterProbeExecution verifies metrics update after probe results
 func TestMetricsUpdateAfterProbeExecution(t *testing.T) {
 	cfg := &config.Config{
-		NodeID:         "update-test-node",
-		NodeName:       "beacon-update",
-		MetricsEnabled: true,
-		MetricsPort:    29113,
+		NodeID:               "update-test-node",
+		NodeName:             "beacon-update",
+		MetricsEnabled:       true,
+		MetricsPort:          29113,
 		MetricsUpdateSeconds: 10,
 		Probes: []config.ProbeConfig{
 			{
@@ -137,7 +137,7 @@ func TestMetricsUpdateAfterProbeExecution(t *testing.T) {
 	metricsServer := metrics.NewMetrics(cfg, scheduler)
 	err = metricsServer.Start()
 	require.NoError(t, err)
-	defer metricsServer.Stop()
+	defer func() { _ = metricsServer.Stop() }()
 
 	// Wait for probes to execute and metrics to update
 	time.Sleep(2 * time.Second)
@@ -145,7 +145,7 @@ func TestMetricsUpdateAfterProbeExecution(t *testing.T) {
 	// Request metrics
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", cfg.MetricsPort))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -163,10 +163,10 @@ func TestMetricsUpdateAfterProbeExecution(t *testing.T) {
 // TestMetricsNoProbeResultsScenario tests metrics when no probe results are available
 func TestMetricsNoProbeResultsScenario(t *testing.T) {
 	cfg := &config.Config{
-		NodeID:         "no-results-node",
-		NodeName:       "beacon-no-results",
-		MetricsEnabled: true,
-		MetricsPort:    29114,
+		NodeID:               "no-results-node",
+		NodeName:             "beacon-no-results",
+		MetricsEnabled:       true,
+		MetricsPort:          29114,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -178,7 +178,7 @@ func TestMetricsNoProbeResultsScenario(t *testing.T) {
 	metricsServer := metrics.NewMetrics(cfg, scheduler)
 	err = metricsServer.Start()
 	require.NoError(t, err)
-	defer metricsServer.Stop()
+	defer func() { _ = metricsServer.Stop() }()
 
 	// Wait for server to start
 	time.Sleep(200 * time.Millisecond)
@@ -186,7 +186,7 @@ func TestMetricsNoProbeResultsScenario(t *testing.T) {
 	// Request metrics
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", cfg.MetricsPort))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -205,10 +205,10 @@ func TestMetricsNoProbeResultsScenario(t *testing.T) {
 // TestMetricsServerStartStop tests server lifecycle
 func TestMetricsServerStartStop(t *testing.T) {
 	cfg := &config.Config{
-		NodeID:         "lifecycle-test-node",
-		NodeName:       "beacon-lifecycle",
-		MetricsEnabled: true,
-		MetricsPort:    29115,
+		NodeID:               "lifecycle-test-node",
+		NodeName:             "beacon-lifecycle",
+		MetricsEnabled:       true,
+		MetricsPort:          29115,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -228,7 +228,7 @@ func TestMetricsServerStartStop(t *testing.T) {
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", cfg.MetricsPort))
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Stop server
 	err = metricsServer.Stop()
@@ -246,10 +246,10 @@ func TestMetricsServerStartStop(t *testing.T) {
 // TestPrometheusExpositionFormatCompliance verifies strict format compliance
 func TestPrometheusExpositionFormatCompliance(t *testing.T) {
 	cfg := &config.Config{
-		NodeID:         "format-test-node",
-		NodeName:       "beacon-format",
-		MetricsEnabled: true,
-		MetricsPort:    29116,
+		NodeID:               "format-test-node",
+		NodeName:             "beacon-format",
+		MetricsEnabled:       true,
+		MetricsPort:          29116,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -259,14 +259,14 @@ func TestPrometheusExpositionFormatCompliance(t *testing.T) {
 	metricsServer := metrics.NewMetrics(cfg, scheduler)
 	err = metricsServer.Start()
 	require.NoError(t, err)
-	defer metricsServer.Stop()
+	defer func() { _ = metricsServer.Stop() }()
 
 	time.Sleep(200 * time.Millisecond)
 
 	// Request metrics
 	resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", cfg.MetricsPort))
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -274,7 +274,7 @@ func TestPrometheusExpositionFormatCompliance(t *testing.T) {
 
 	// Parse and validate Prometheus exposition format
 	lines := strings.Split(bodyStr, "\n")
-	
+
 	helpLines := 0
 	typeLines := 0
 	metricLines := 0
@@ -315,10 +315,10 @@ func TestPrometheusExpositionFormatCompliance(t *testing.T) {
 // TestConfigurationDisabled tests that metrics server doesn't start when disabled
 func TestConfigurationDisabled(t *testing.T) {
 	cfg := &config.Config{
-		NodeID:         "disabled-test-node",
-		NodeName:       "beacon-disabled",
-		MetricsEnabled: false,
-		MetricsPort:    29117,
+		NodeID:               "disabled-test-node",
+		NodeName:             "beacon-disabled",
+		MetricsEnabled:       false,
+		MetricsPort:          29117,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -340,10 +340,10 @@ func TestConfigurationDisabled(t *testing.T) {
 // TestMetricsPerformance tests response time requirements
 func TestMetricsPerformance(t *testing.T) {
 	cfg := &config.Config{
-		NodeID:         "perf-test-node",
-		NodeName:       "beacon-perf",
-		MetricsEnabled: true,
-		MetricsPort:    29118,
+		NodeID:               "perf-test-node",
+		NodeName:             "beacon-perf",
+		MetricsEnabled:       true,
+		MetricsPort:          29118,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -353,7 +353,7 @@ func TestMetricsPerformance(t *testing.T) {
 	metricsServer := metrics.NewMetrics(cfg, scheduler)
 	err = metricsServer.Start()
 	require.NoError(t, err)
-	defer metricsServer.Stop()
+	defer func() { _ = metricsServer.Stop() }()
 
 	time.Sleep(200 * time.Millisecond)
 
@@ -365,13 +365,13 @@ func TestMetricsPerformance(t *testing.T) {
 		start := time.Now()
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/metrics", cfg.MetricsPort))
 		duration := time.Since(start)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusOK, resp.StatusCode)
-		resp.Body.Close()
+		_ = resp.Body.Close()
 
 		totalDuration += duration
-		
+
 		// Individual request should be < 100ms
 		assert.Less(t, duration.Milliseconds(), int64(100), "Individual request should be < 100ms")
 	}
@@ -379,6 +379,6 @@ func TestMetricsPerformance(t *testing.T) {
 	// Average response time should be < 50ms
 	avgDuration := totalDuration / time.Duration(iterations)
 	assert.Less(t, avgDuration.Milliseconds(), int64(50), "Average response time should be < 50ms")
-	
+
 	t.Logf("Average response time: %v", avgDuration)
 }

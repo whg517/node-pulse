@@ -95,7 +95,7 @@ func (p *UDPPinger) Execute() (*models.UDPProbeResult, error) {
 		// Connection failed
 		return models.NewUDPProbeResult(false, 100.0, 0, 1, 0, err.Error()), nil
 	}
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
 	// Set write deadline
 	writeDeadline := time.Now().Add(time.Duration(p.config.TimeoutSeconds) * time.Second)
@@ -185,7 +185,7 @@ func (p *UDPPinger) ExecuteBatch(count int) (*models.UDPProbeResult, error) {
 		writeDeadline := time.Now().Add(time.Duration(p.config.TimeoutSeconds) * time.Second)
 		err = conn.SetWriteDeadline(writeDeadline)
 		if err != nil {
-			conn.Close()
+			_ = conn.Close()
 			errors = append(errors, err.Error())
 			samples = append(samples, SamplePoint{
 				RTTMs:     0,
@@ -199,7 +199,7 @@ func (p *UDPPinger) ExecuteBatch(count int) (*models.UDPProbeResult, error) {
 		testPayload := []byte("PING")
 		_, err = conn.Write(testPayload)
 		if err != nil {
-			conn.Close()
+			_ = conn.Close()
 			errors = append(errors, err.Error())
 			samples = append(samples, SamplePoint{
 				RTTMs:     0,
@@ -213,7 +213,7 @@ func (p *UDPPinger) ExecuteBatch(count int) (*models.UDPProbeResult, error) {
 		readDeadline := time.Now().Add(time.Duration(p.config.TimeoutSeconds) * time.Second)
 		err = conn.SetReadDeadline(readDeadline)
 		if err != nil {
-			conn.Close()
+			_ = conn.Close()
 			errors = append(errors, err.Error())
 			samples = append(samples, SamplePoint{
 				RTTMs:     0,
@@ -226,7 +226,7 @@ func (p *UDPPinger) ExecuteBatch(count int) (*models.UDPProbeResult, error) {
 		// Wait for response
 		buffer := make([]byte, 1024)
 		_, err = conn.Read(buffer)
-		conn.Close()
+		_ = conn.Close()
 
 		totalElapsed := time.Since(startTime)
 

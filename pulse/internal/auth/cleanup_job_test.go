@@ -453,13 +453,13 @@ func BenchmarkCleanupJob_CleanupExpiredTokens(b *testing.B) {
 
 	// Create the user first
 	hashedPassword, _ := HashPassword("testpass")
-	pool.Exec(ctx, `
+	_, _ = pool.Exec(ctx, `
 		INSERT INTO users (user_id, username, password_hash, email, role, is_active)
 		VALUES ($1, $2, $3, $4, $5, true)
 	`, userID, "testuser", hashedPassword, "test@example.com", "admin")
 
 	for i := 0; i < 10000; i++ {
-		pool.Exec(ctx, `
+		_, _ = pool.Exec(ctx, `
 			INSERT INTO refresh_tokens (token_id, token_hash, user_id, expires_at, max_valid_until, created_at)
 			VALUES ($1, $2, $3, NOW() - INTERVAL '1 hour', NOW() - INTERVAL '30 days', NOW())
 		`, uuid.New(), HashTokenSHA256(fmt.Sprintf("bench-token%d", i)), userID)
@@ -469,6 +469,6 @@ func BenchmarkCleanupJob_CleanupExpiredTokens(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		job.cleanupExpiredTokens(ctx)
+		_, _ = job.cleanupExpiredTokens(ctx)
 	}
 }

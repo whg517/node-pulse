@@ -367,7 +367,7 @@ func startTestTCPServer(t *testing.T, addr string) *testTCPServer {
 
 type testTCPServer struct {
 	addr string
-	lis net.Listener
+	lis  net.Listener
 }
 
 func (s *testTCPServer) start() {
@@ -381,13 +381,13 @@ func (s *testTCPServer) start() {
 		if err != nil {
 			break
 		}
-		conn.Close()
+		_ = conn.Close()
 	}
 }
 
 func (s *testTCPServer) Close() {
 	if s.lis != nil {
-		s.lis.Close()
+		_ = s.lis.Close()
 	}
 }
 

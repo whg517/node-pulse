@@ -349,7 +349,7 @@ func (s *SessionService) rotateRefreshTokenWithSession(ctx context.Context, oldT
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Get old token info
 	var oldTokenInfo models.RefreshToken

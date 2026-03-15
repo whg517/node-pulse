@@ -196,8 +196,8 @@ func TestBlacklistService_ConcurrentAccess(t *testing.T) {
 			for j := 0; j < numTokensPerGoroutine; j++ {
 				// Use unique JTI with goroutine ID and iteration
 				jti := "test-jti-concurrent-" + string(rune('A'+(goroutineID%26))) + "-" +
-				       string(rune('A'+(j%26))) + "-" + string(rune('0'+(goroutineID%10))) +
-				       string(rune('0'+(j%10)))
+					string(rune('A'+(j%26))) + "-" + string(rune('0'+(goroutineID%10))) +
+					string(rune('0'+(j%10)))
 
 				// Add to blacklist
 				_, err := pool.Exec(ctx, `
@@ -345,7 +345,7 @@ func BenchmarkBlacklistService_CheckPerformance(b *testing.B) {
 	// Add 10,000 blacklist entries
 	b.StopTimer()
 	for i := 0; i < 10000; i++ {
-		pool.Exec(ctx, `
+		_, _ = pool.Exec(ctx, `
 			INSERT INTO token_blacklist (jti, revoked_at, expires_at)
 			VALUES ($1, NOW(), NOW() + INTERVAL '1 hour')
 		`, "bench-jti-"+string(rune(i)))
@@ -354,6 +354,6 @@ func BenchmarkBlacklistService_CheckPerformance(b *testing.B) {
 
 	// Benchmark lookup performance
 	for i := 0; i < b.N; i++ {
-		jwtService.CheckRevoked(ctx, "bench-jti-5000")
+		_, _ = jwtService.CheckRevoked(ctx, "bench-jti-5000")
 	}
 }

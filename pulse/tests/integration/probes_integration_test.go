@@ -23,14 +23,14 @@ func TestCreateProbe_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store to avoid 429 errors from previous tests
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "probe_test_user"
 	password := "testpass123"
 
 	// Clean up any existing test user
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 
 	// Create test user
 	userID := uuid.New()
@@ -204,15 +204,15 @@ func TestGetProbes_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store to avoid 429 errors from previous tests
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "get_probes_user"
 	password := "testpass123"
 
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 	// Clean up any existing probes from previous tests
-	pool.Exec(context.Background(), "DELETE FROM probes")
+	_, _ = pool.Exec(context.Background(), "DELETE FROM probes")
 
 	userID := uuid.New()
 	hashedPassword, _ := auth.HashPassword(password)
@@ -313,13 +313,13 @@ func TestUpdateDeleteProbe_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store to avoid 429 errors from previous tests
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "update_probe_user"
 	password := "testpass123"
 
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 
 	userID := uuid.New()
 	hashedPassword, _ := auth.HashPassword(password)
@@ -453,13 +453,13 @@ func TestProbeConstraints_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store to avoid 429 errors from previous tests
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "probe_constraints_user"
 	password := "testpass123"
 
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 
 	userID := uuid.New()
 	hashedPassword, _ := auth.HashPassword(password)
@@ -629,7 +629,7 @@ func TestMetricsTableIntegration(t *testing.T) {
 	username := "metrics_test_user"
 	password := "testpass123"
 
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 
 	userID := uuid.New()
 	hashedPassword, _ := auth.HashPassword(password)

@@ -190,7 +190,7 @@ func (s *ExportService) processExport(task *models.ExportTask) {
 
 	// Check file size limit
 	if fileInfo.Size() > MaxFileSize {
-		os.Remove(filePath)
+		_ = os.Remove(filePath)
 		err = fmt.Errorf("export file exceeds maximum size of %d bytes", MaxFileSize)
 		s.updateTaskStatus(task.ID, "failed", "", 0, 0, err.Error())
 		return
@@ -225,7 +225,7 @@ func (s *ExportService) generateExportFile(task *models.ExportTask) (string, int
 	if err != nil {
 		return "", 0, fmt.Errorf("failed to create export file: %w", err)
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	// Write UTF-8 BOM for Excel compatibility
 	if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {

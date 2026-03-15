@@ -733,13 +733,6 @@ func createRolePermissionsTable(ctx context.Context, pool *pgxpool.Pool) error {
 	return err
 }
 
-// createBeaconTokensTable creates beacon_tokens table for API key authentication (JWT auth refactor)
-func createBeaconTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
-	// DEPRECATED: Replaced by api_keys table in JWT auth rewrite
-	// Kept for backward compatibility during migration
-	return nil
-}
-
 // createPasswordResetTokensTable creates password_reset_tokens table with indexes
 func createPasswordResetTokensTable(ctx context.Context, pool *pgxpool.Pool) error {
 	query := `

@@ -65,7 +65,7 @@ func initTestLogger(t *testing.T) {
 func TestIntegration_SendHeartbeatSuccess(t *testing.T) {
 	// Initialize logger for this test
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange - start mock Pulse server
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
@@ -90,7 +90,7 @@ func TestIntegration_SendHeartbeatSuccess(t *testing.T) {
 // TestIntegration_SendHeartbeatInvalidNodeID tests sending heartbeat with invalid node ID
 func TestIntegration_SendHeartbeatInvalidNodeID(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange - start mock Pulse server
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
@@ -111,7 +111,7 @@ func TestIntegration_SendHeartbeatInvalidNodeID(t *testing.T) {
 // TestIntegration_SendHeartbeatInvalidMetrics tests sending heartbeat with invalid metrics
 func TestIntegration_SendHeartbeatInvalidMetrics(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange - start mock Pulse server
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
@@ -132,7 +132,7 @@ func TestIntegration_SendHeartbeatInvalidMetrics(t *testing.T) {
 // TestIntegration_HeartbeatReporterSuccess tests end-to-end heartbeat reporting with retry
 func TestIntegration_HeartbeatReporterSuccess(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange - start mock Pulse server
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
@@ -172,7 +172,7 @@ func (m *mockProbeScheduler) GetLatestResults() ([]*models.TCPProbeResult, []*mo
 // TestIntegration_HeartbeatReporterRetry tests retry mechanism on server errors
 func TestIntegration_HeartbeatReporterRetry(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange - start mock Pulse server configured to fail
 	mockServer := NewMockPulseServer()
 	mockServer.SetResponseStatusCode(http.StatusInternalServerError)
@@ -205,7 +205,7 @@ func TestIntegration_HeartbeatReporterRetry(t *testing.T) {
 // TestIntegration_UploadLatency tests heartbeat upload latency requirement (≤ 5 seconds)
 func TestIntegration_UploadLatency(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange - start mock Pulse server with 500ms delay
 	mockServer := NewMockPulseServer()
 	mockServer.SetDelay(500 * time.Millisecond)
@@ -234,7 +234,7 @@ func TestIntegration_UploadLatency(t *testing.T) {
 // TestIntegration_AggregateMetricsFromProbes tests aggregating metrics from probe results
 func TestIntegration_AggregateMetricsFromProbes(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange
 	mockServer := NewMockPulseServer()
 	defer mockServer.Close()
@@ -276,7 +276,7 @@ func TestIntegration_AggregateMetricsFromProbes(t *testing.T) {
 // TestIntegration_PulseAPIErrorResponse tests handling Pulse API error responses
 func TestIntegration_PulseAPIErrorResponse(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange - start mock Pulse server configured to return 400
 	mockServer := NewMockPulseServer()
 	mockServer.SetResponseStatusCode(http.StatusBadRequest)
@@ -298,7 +298,7 @@ func TestIntegration_PulseAPIErrorResponse(t *testing.T) {
 // TestIntegration_NetworkTimeout tests timeout handling on network delays
 func TestIntegration_NetworkTimeout(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	// Arrange - start mock Pulse server with 10 second delay (exceeds 5s timeout)
 	mockServer := NewMockPulseServer()
 	mockServer.SetDelay(10 * time.Second)

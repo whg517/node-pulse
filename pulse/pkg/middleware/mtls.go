@@ -144,6 +144,7 @@ func loadTrustedCACerts() []string {
 	if certFile := getEnvOrDefault("PULSE_MTLS_CA_CERT_FILE", ""); certFile != "" {
 		// TODO: Load from file in production
 		// For now, we'll rely on inline certs or default development setup
+		_ = certFile
 	}
 
 	// If no CA certs specified in production, use a default
@@ -355,15 +356,6 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return defaultValue
 	}
 	return value
-}
-
-// getEnvBool gets boolean environment variable with default
-func getEnvBool(key string, defaultValue bool) bool {
-	val := getEnvOrDefault(key, "")
-	if val == "" {
-		return defaultValue
-	}
-	return val == "true" || val == "1" || val == "enabled"
 }
 
 // getEnvInt gets integer environment variable with default
