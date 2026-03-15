@@ -1,6 +1,18 @@
 name: E2E Tests
 
 on:
+  push:
+    paths:
+      - .github/workflows/**
+      - e2e/**
+      - frontend/**
+      - pulse/**
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - e2e/**
+      - frontend/**
+      - pulse/**
   workflow_dispatch:
 
 permissions:
