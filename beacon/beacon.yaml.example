@@ -30,14 +30,14 @@ probes:
     port: 80
     interval: 300      # seconds (60-300)
     count: 10          # probe attempts (1-100)
-    timeout: 5         # seconds (1-30)
+    timeout_seconds: 5 # seconds (1-30)
 
   - type: udp_ping
     target: 8.8.8.8
     port: 53
     interval: 300
     count: 10
-    timeout: 5
+    timeout_seconds: 5
 
 # Optional: Reconnect configuration (for Story 2.6)
 reconnect:

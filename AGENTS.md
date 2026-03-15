@@ -84,7 +84,7 @@ make fmt
 make help
 ```
 
-Configuration is via `config.yaml`. Copy `config.example.yaml` and update values.
+Configuration is via `pulse.yaml`. Copy `pulse.yaml.example` and update values.
 Environment variables with `PULSE_` prefix override config file settings.
 
 ### Frontend (React)
@@ -327,8 +327,8 @@ Optional:
 - `metrics_port` - Prometheus metrics port (default: 2112)
 - `metrics_update_seconds` - Metrics update interval (default: 10)
 
-### Pulse Configuration (`config.yaml`)
-Copy `config.example.yaml` to `config.yaml`. All fields can also be set via environment variables with `PULSE_` prefix (e.g. `PULSE_DATABASE_URL`).
+### Pulse Configuration (`pulse.yaml`)
+Copy `pulse.yaml.example` to `pulse.yaml`. All fields can also be set via environment variables with `PULSE_` prefix (e.g. `PULSE_DATABASE_URL`).
 
 Key sections:
 - `server.port` (default: `6532`), `server.mode` (`debug`/`release`)
@@ -340,11 +340,11 @@ Key sections:
 - `session.secret` (auto-generated if empty), `session.expiration_hours` (default: 24)
 - `cleanup.enabled`, `cleanup.retention_days` (default: 7)
 
-Configuration priority: **Environment variables > config.yaml > defaults**
+Configuration priority: **Environment variables > pulse.yaml > defaults**
 
 ## Development Notes
 
-1. Configuration priority: Environment variables > config.yaml > built-in defaults
+1. Configuration priority: Environment variables > pulse.yaml > built-in defaults
 2. Beacon supports config hot-reload (no restart required)
 3. Graceful shutdown: All components handle SIGTERM/SIGINT
 4. Token rotation: Refresh tokens are one-time use; access tokens live in memory only

@@ -7,8 +7,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"unicode/utf8"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/spf13/viper"
 )
@@ -39,13 +39,13 @@ type Config struct {
 	MetricsUpdateSeconds int  `mapstructure:"metrics_update_seconds" yaml:"metrics_update_seconds"`
 
 	// Logging configuration (for Story 3.9)
-	LogLevel      string `mapstructure:"log_level" yaml:"log_level"`                          // DEBUG, INFO, WARN, ERROR
-	LogFile       string `mapstructure:"log_file" yaml:"log_file"`                            // /var/log/beacon/beacon.log
-	LogMaxSize    int    `mapstructure:"log_max_size" yaml:"log_max_size"`                    // MB
-	LogMaxAge     int    `mapstructure:"log_max_age" yaml:"log_max_age"`                      // days
-	LogMaxBackups int    `mapstructure:"log_max_backups" yaml:"log_max_backups"`              // number of backups
-	LogCompress   bool   `mapstructure:"log_compress" yaml:"log_compress"`                    // compress rotated files
-	LogToConsole  bool   `mapstructure:"log_to_console" yaml:"log_to_console"`                // also log to stdout
+	LogLevel      string `mapstructure:"log_level" yaml:"log_level"`             // DEBUG, INFO, WARN, ERROR
+	LogFile       string `mapstructure:"log_file" yaml:"log_file"`               // /var/log/beacon/beacon.log
+	LogMaxSize    int    `mapstructure:"log_max_size" yaml:"log_max_size"`       // MB
+	LogMaxAge     int    `mapstructure:"log_max_age" yaml:"log_max_age"`         // days
+	LogMaxBackups int    `mapstructure:"log_max_backups" yaml:"log_max_backups"` // number of backups
+	LogCompress   bool   `mapstructure:"log_compress" yaml:"log_compress"`       // compress rotated files
+	LogToConsole  bool   `mapstructure:"log_to_console" yaml:"log_to_console"`   // also log to stdout
 
 	// Debug mode configuration (for Story 3.10)
 	DebugMode bool `mapstructure:"debug_mode" yaml:"debug_mode"` // Enable debug mode (auto-sets log_level=DEBUG)
@@ -81,7 +81,7 @@ type ProbeConfig struct {
 type ReconnectConfig struct {
 	MaxRetries    int    `mapstructure:"max_retries" yaml:"max_retries"`
 	RetryInterval int    `mapstructure:"retry_interval" yaml:"retry_interval"`
-	Backoff        string `mapstructure:"backoff" yaml:"backoff"`
+	Backoff       string `mapstructure:"backoff" yaml:"backoff"`
 }
 
 // LoadConfig loads configuration from file with validation
@@ -116,6 +116,9 @@ func LoadConfig(configPath string) (*Config, error) {
 	v := viper.New()
 	v.SetConfigFile(resolvedPath)
 	v.SetConfigType("yaml")
+	v.SetEnvPrefix("BEACON")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
 
 	if err := v.ReadInConfig(); err != nil {
 		// Extract line number from YAML parse error for UX-friendly messages
@@ -127,6 +130,7 @@ func LoadConfig(configPath string) (*Config, error) {
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
 	}
+	applyEnvOverrides(&config, v)
 
 	// Validate required fields
 	if config.PulseServer == "" {
@@ -157,13 +161,13 @@ func LoadConfig(configPath string) (*Config, error) {
 	}
 
 	// Set default values for metrics configuration (Story 3.8)
-	// If metrics_port is not set, use default port and enable metrics
+	// If metrics_port is not set, use default port
 	if config.MetricsPort == 0 {
 		config.MetricsPort = 2112 // Default Prometheus port
 	}
-	// If metrics_enabled is not explicitly set (false), default to true
-	if !config.MetricsEnabled && config.MetricsPort != 0 {
-		config.MetricsEnabled = true // Default to enabled
+	// Preserve explicit false from YAML; only default to true when key is absent
+	if !v.IsSet("metrics_enabled") {
+		config.MetricsEnabled = true
 	}
 	// Fix #4: Set default metrics update interval (10-60 seconds range)
 	if config.MetricsUpdateSeconds == 0 {
@@ -247,9 +251,9 @@ func LoadConfig(configPath string) (*Config, error) {
 	if config.Compression.MinSizeBytes == 0 {
 		config.Compression.MinSizeBytes = 1024 // Default 1KB minimum
 	}
-	// Compression.Enabled defaults to false (bool default), but we want true
-	if !config.Compression.Enabled && config.Compression.Level == 6 {
-		config.Compression.Enabled = true // Default enabled
+	// Preserve explicit false from YAML; only default to true when key is absent
+	if !v.IsSet("compression.enabled") {
+		config.Compression.Enabled = true
 	}
 
 	// Set default values for resume configuration (FR-4.1.5, FR-4.1.7)
@@ -262,9 +266,11 @@ func LoadConfig(configPath string) (*Config, error) {
 	if config.Resume.AlertReservePercent == 0 {
 		config.Resume.AlertReservePercent = 30 // Default 30% reserved for alerts
 	}
-	// Resume.Enabled and AlertPriorityMode default to false, but we want true
-	if !config.Resume.Enabled && config.Resume.MaxCacheSizeBytes == 10*1024*1024 {
+	// Preserve explicit false from YAML; only default to true when keys are absent
+	if !v.IsSet("resume.enabled") {
 		config.Resume.Enabled = true
+	}
+	if !v.IsSet("resume.alert_priority_mode") {
 		config.Resume.AlertPriorityMode = true
 	}
 
@@ -282,10 +288,118 @@ func LoadConfig(configPath string) (*Config, error) {
 	return &config, nil
 }
 
+func applyEnvOverrides(config *Config, v *viper.Viper) {
+	if v.IsSet("pulse_server") {
+		config.PulseServer = v.GetString("pulse_server")
+	}
+	if v.IsSet("node_id") {
+		config.NodeID = v.GetString("node_id")
+	}
+	if v.IsSet("node_name") {
+		config.NodeName = v.GetString("node_name")
+	}
+	if v.IsSet("region") {
+		config.Region = v.GetString("region")
+	}
+	if v.IsSet("api_key") {
+		config.APIKey = v.GetString("api_key")
+	}
+	if v.IsSet("metrics_enabled") {
+		config.MetricsEnabled = v.GetBool("metrics_enabled")
+	}
+	if v.IsSet("metrics_port") {
+		config.MetricsPort = v.GetInt("metrics_port")
+	}
+	if v.IsSet("metrics_update_seconds") {
+		config.MetricsUpdateSeconds = v.GetInt("metrics_update_seconds")
+	}
+	if v.IsSet("log_level") {
+		config.LogLevel = v.GetString("log_level")
+	}
+	if v.IsSet("log_file") {
+		config.LogFile = v.GetString("log_file")
+	}
+	if v.IsSet("log_max_size") {
+		config.LogMaxSize = v.GetInt("log_max_size")
+	}
+	if v.IsSet("log_max_age") {
+		config.LogMaxAge = v.GetInt("log_max_age")
+	}
+	if v.IsSet("log_max_backups") {
+		config.LogMaxBackups = v.GetInt("log_max_backups")
+	}
+	if v.IsSet("log_compress") {
+		config.LogCompress = v.GetBool("log_compress")
+	}
+	if v.IsSet("log_to_console") {
+		config.LogToConsole = v.GetBool("log_to_console")
+	}
+	if v.IsSet("debug_mode") {
+		config.DebugMode = v.GetBool("debug_mode")
+	}
+	if v.IsSet("debug") {
+		config.Debug = v.GetBool("debug")
+	}
+
+	if v.IsSet("reconnect.max_retries") {
+		config.Reconnect.MaxRetries = v.GetInt("reconnect.max_retries")
+	}
+	if v.IsSet("reconnect.retry_interval") {
+		config.Reconnect.RetryInterval = v.GetInt("reconnect.retry_interval")
+	}
+	if v.IsSet("reconnect.backoff") {
+		config.Reconnect.Backoff = v.GetString("reconnect.backoff")
+	}
+
+	if v.IsSet("mode.mode") {
+		config.Mode.Mode = OperatingMode(v.GetString("mode.mode"))
+	}
+	if v.IsSet("mode.config_check_interval_seconds") {
+		config.Mode.ConfigCheckIntervalSeconds = v.GetInt("mode.config_check_interval_seconds")
+	}
+	if v.IsSet("mode.degraded_mode_threshold") {
+		config.Mode.DegradedModeThreshold = v.GetInt("mode.degraded_mode_threshold")
+	}
+	if v.IsSet("mode.node_token") {
+		config.Mode.NodeToken = v.GetString("mode.node_token")
+	}
+
+	if v.IsSet("compression.enabled") {
+		config.Compression.Enabled = v.GetBool("compression.enabled")
+	}
+	if v.IsSet("compression.level") {
+		config.Compression.Level = v.GetInt("compression.level")
+	}
+	if v.IsSet("compression.min_size_bytes") {
+		config.Compression.MinSizeBytes = v.GetInt("compression.min_size_bytes")
+	}
+
+	if v.IsSet("resume.enabled") {
+		config.Resume.Enabled = v.GetBool("resume.enabled")
+	}
+	if v.IsSet("resume.max_cache_size_bytes") {
+		config.Resume.MaxCacheSizeBytes = v.GetInt64("resume.max_cache_size_bytes")
+	}
+	if v.IsSet("resume.cache_file_path") {
+		config.Resume.CacheFilePath = v.GetString("resume.cache_file_path")
+	}
+	if v.IsSet("resume.alert_priority_mode") {
+		config.Resume.AlertPriorityMode = v.GetBool("resume.alert_priority_mode")
+	}
+	if v.IsSet("resume.alert_reserve_percent") {
+		config.Resume.AlertReservePercent = v.GetInt("resume.alert_reserve_percent")
+	}
+}
+
 // resolveConfigPath resolves config file path with fallback
 func resolveConfigPath(customPath string) (string, error) {
 	if customPath != "" {
 		return customPath, nil
+	}
+
+	// Check environment-provided config path first
+	if envPath := os.Getenv("BEACON_CONFIG_PATH"); envPath != "" {
+		return envPath, nil
 	}
 
 	// Check /etc/beacon/beacon.yaml first
@@ -598,9 +712,9 @@ type ThresholdsConfig struct {
 
 // DegradationConfig represents degradation policy configuration
 type DegradationConfig struct {
-	DegradedLevel  DegradationLevelConfig `mapstructure:"degraded_level" yaml:"degraded_level"`
-	CriticalLevel  DegradationLevelConfig `mapstructure:"critical_level" yaml:"critical_level"`
-	Recovery       RecoveryConfig         `mapstructure:"recovery" yaml:"recovery"`
+	DegradedLevel DegradationLevelConfig `mapstructure:"degraded_level" yaml:"degraded_level"`
+	CriticalLevel DegradationLevelConfig `mapstructure:"critical_level" yaml:"critical_level"`
+	Recovery      RecoveryConfig         `mapstructure:"recovery" yaml:"recovery"`
 }
 
 // DegradationLevelConfig represents a single degradation level configuration

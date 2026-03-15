@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -166,7 +167,7 @@ func TestConfig_ValidateRateLimitConfig(t *testing.T) {
 				APIKeyMaxPerMinute:  11,
 			},
 			wantErr:     true,
-			errContains: "ratelimit login_max_per_minute must be positive",
+			errContains: "rate_limit login_max_per_minute must be positive",
 		},
 		{
 			name: "negative login max per day",
@@ -178,7 +179,7 @@ func TestConfig_ValidateRateLimitConfig(t *testing.T) {
 				APIKeyMaxPerMinute:  11,
 			},
 			wantErr:     true,
-			errContains: "ratelimit login_max_per_day must be positive",
+			errContains: "rate_limit login_max_per_day must be positive",
 		},
 		{
 			name: "zero refresh max per minute",
@@ -190,7 +191,7 @@ func TestConfig_ValidateRateLimitConfig(t *testing.T) {
 				APIKeyMaxPerMinute:  11,
 			},
 			wantErr:     true,
-			errContains: "ratelimit refresh_max_per_minute must be positive",
+			errContains: "rate_limit refresh_max_per_minute must be positive",
 		},
 		{
 			name: "zero refresh max per day",
@@ -202,7 +203,7 @@ func TestConfig_ValidateRateLimitConfig(t *testing.T) {
 				APIKeyMaxPerMinute:  11,
 			},
 			wantErr:     true,
-			errContains: "ratelimit refresh_max_per_day must be positive",
+			errContains: "rate_limit refresh_max_per_day must be positive",
 		},
 		{
 			name: "zero apikey max per minute",
@@ -214,7 +215,7 @@ func TestConfig_ValidateRateLimitConfig(t *testing.T) {
 				APIKeyMaxPerMinute:  0,
 			},
 			wantErr:     true,
-			errContains: "ratelimit apikey_max_per_minute must be positive",
+			errContains: "rate_limit apikey_max_per_minute must be positive",
 		},
 		{
 			name: "login per day less than per minute (invalid)",
@@ -226,7 +227,7 @@ func TestConfig_ValidateRateLimitConfig(t *testing.T) {
 				APIKeyMaxPerMinute:  11,
 			},
 			wantErr:     true,
-			errContains: "ratelimit login_max_per_day (50) must be >= login_max_per_minute (100)",
+			errContains: "rate_limit login_max_per_day (50) must be >= login_max_per_minute (100)",
 		},
 		{
 			name: "refresh per day less than per minute (invalid)",
@@ -238,7 +239,7 @@ func TestConfig_ValidateRateLimitConfig(t *testing.T) {
 				APIKeyMaxPerMinute:  11,
 			},
 			wantErr:     true,
-			errContains: "ratelimit refresh_max_per_day (100) must be >= refresh_max_per_minute (200)",
+			errContains: "rate_limit refresh_max_per_day (100) must be >= refresh_max_per_minute (200)",
 		},
 		{
 			name: "login per day equal to per minute (valid)",
@@ -529,8 +530,8 @@ func TestConfig_LoadFromEnv(t *testing.T) {
 	originalEnv := make(map[string]string)
 	envVars := []string{
 		"PULSE_JWT_SECRET",
-		"PULSE_RATELIMIT_LOGIN_MAX_PER_MINUTE",
-		"PULSE_RATELIMIT_REFRESH_MAX_PER_MINUTE",
+		"PULSE_RATE_LIMIT_LOGIN_MAX_PER_MINUTE",
+		"PULSE_RATE_LIMIT_REFRESH_MAX_PER_MINUTE",
 	}
 	for _, envVar := range envVars {
 		originalEnv[envVar] = os.Getenv(envVar)
@@ -565,8 +566,8 @@ func TestConfig_LoadFromEnv(t *testing.T) {
 		{
 			name: "load rate limit config from env",
 			setEnv: map[string]string{
-				"PULSE_RATELIMIT_LOGIN_MAX_PER_MINUTE":   "10",
-				"PULSE_RATELIMIT_REFRESH_MAX_PER_MINUTE": "20",
+				"PULSE_RATE_LIMIT_LOGIN_MAX_PER_MINUTE":   "10",
+				"PULSE_RATE_LIMIT_REFRESH_MAX_PER_MINUTE": "20",
 			},
 			validate: func(t *testing.T, cfg *Config) {
 				assert.Equal(t, 10, cfg.RateLimit.LoginMaxPerMinute)
@@ -610,4 +611,74 @@ func TestConfig_GenerateRandomSecret(t *testing.T) {
 		assert.True(t, (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f'),
 			"Secret should contain only hexadecimal characters")
 	}
+}
+
+func TestConfig_LoadFromFile_RateLimitKey(t *testing.T) {
+	Reset()
+	_ = os.Unsetenv("PULSE_CONFIG_PATH")
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "pulse.yaml")
+	configContent := []byte(`rate_limit:
+  login_max_per_minute: 12
+  login_max_per_day: 120
+  refresh_max_per_minute: 24
+  refresh_max_per_day: 240
+  apikey_max_per_minute: 25
+`)
+	err := os.WriteFile(configPath, configContent, 0644)
+	assert.NoError(t, err)
+
+	_ = os.Setenv("PULSE_CONFIG_PATH", configPath)
+	defer func() { _ = os.Unsetenv("PULSE_CONFIG_PATH") }()
+
+	cfg, err := Load()
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+	assert.Equal(t, 12, cfg.RateLimit.LoginMaxPerMinute)
+	assert.Equal(t, 120, cfg.RateLimit.LoginMaxPerDay)
+}
+
+func TestConfig_LoadFromFile_LegacyRateLimitKeyFails(t *testing.T) {
+	Reset()
+	_ = os.Unsetenv("PULSE_CONFIG_PATH")
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "pulse.yaml")
+	configContent := []byte(`ratelimit:
+  login_max_per_minute: 12
+`)
+	err := os.WriteFile(configPath, configContent, 0644)
+	assert.NoError(t, err)
+
+	_ = os.Setenv("PULSE_CONFIG_PATH", configPath)
+	defer func() { _ = os.Unsetenv("PULSE_CONFIG_PATH") }()
+
+	_, err = Load()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "field ratelimit not found")
+}
+
+func TestConfig_LoadFromFile_UnknownFieldFails(t *testing.T) {
+	Reset()
+	_ = os.Unsetenv("PULSE_CONFIG_PATH")
+
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "pulse.yaml")
+	configContent := []byte(`
+server:
+  port: "6532"
+unknown_field: true
+`)
+	err := os.WriteFile(configPath, configContent, 0644)
+	assert.NoError(t, err)
+
+	_ = os.Setenv("PULSE_CONFIG_PATH", configPath)
+	defer func() { _ = os.Unsetenv("PULSE_CONFIG_PATH") }()
+
+	_, err = Load()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to parse YAML")
 }

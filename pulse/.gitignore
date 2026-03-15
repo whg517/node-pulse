@@ -28,6 +28,8 @@ go.work
 # Configuration files (may contain sensitive data)
 config.yaml
 config.yml
+pulse.yaml
+pulse.yml
 
 # IDE
 .vscode/

@@ -24,9 +24,9 @@ func (db *Database) Check(ctx context.Context) error {
 // New creates a new database connection
 func New(databaseURL string) (*Database, error) {
 	if databaseURL == "" {
-		log.Println("[ERROR] [DB] DATABASE_URL environment variable is not set")
+		log.Println("[ERROR] [DB] PULSE_DATABASE_URL environment variable is not set")
 		log.Println("[WARN] [DB] The server will start in DEGRADED MODE without database functionality")
-		log.Println("[INFO] [DB] To enable database, set: export DATABASE_URL=\"postgres://user:password@localhost:5432/dbname\"")
+		log.Println("[INFO] [DB] To enable database, set: export PULSE_DATABASE_URL=\"postgres://user:password@localhost:5432/dbname\"")
 		return nil, os.ErrInvalid
 	}
 
@@ -40,7 +40,7 @@ func New(databaseURL string) (*Database, error) {
 	// Test connection
 	if err := pool.Ping(context.Background()); err != nil {
 		log.Printf("[ERROR] [DB] Failed to connect to database: %v", err)
-		log.Println("[WARN] [DB] Please check your DATABASE_URL and ensure the database server is running")
+		log.Println("[WARN] [DB] Please check your PULSE_DATABASE_URL and ensure the database server is running")
 		return nil, err
 	}
 

@@ -26,10 +26,6 @@ func GetTestDBURL() string {
 	if url := os.Getenv("PULSE_DATABASE_URL"); url != "" {
 		return url
 	}
-	// Check legacy DATABASE_URL for backward compatibility
-	if url := os.Getenv("DATABASE_URL"); url != "" {
-		return url
-	}
 	return defaultTestDBURL
 }
 

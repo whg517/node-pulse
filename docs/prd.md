@@ -117,7 +117,7 @@ DevOps 工程师需要在边缘环境中快速部署一个独立的 beacon,不�
 **部署步骤:**
 1. 下载 beacon 二进制文件到目标服务器
 2. 编写探测任务配置文件(指定目标 IP、协议、间隔)
-3. 启动 beacon: `./beacon --config=/path/to/config.yaml --mode=standalone`
+3. 启动 beacon: `./beacon --config=/path/to/beacon.yaml --mode=standalone`
 4. 配置 Prometheus 抓取目标: `http://beacon-server:9090/metrics`
 5. 在 Grafana 中导入预定义的仪表板查看 beacon metrics
 

@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -26,7 +27,7 @@ type Config struct {
 	Admin     AdminConfig     `yaml:"admin"`
 	Session   SessionConfig   `yaml:"session"`
 	JWT       JWTConfig       `yaml:"jwt"`
-	RateLimit RateLimitConfig `yaml:"ratelimit"`
+	RateLimit RateLimitConfig `yaml:"rate_limit"`
 }
 
 // ServerConfig holds server configuration
@@ -142,14 +143,9 @@ func loadConfig() (*Config, error) {
 	// Start with defaults
 	cfg := defaultConfig()
 
-	// Load from config file if exists
-	fileCfg, err := loadFromFile()
-	if err != nil {
+	// Load from config file if exists (merged onto defaults)
+	if err := loadFromFile(cfg); err != nil {
 		return nil, fmt.Errorf("failed to load config file: %w", err)
-	}
-	if fileCfg != nil {
-		// Merge file config over defaults (non-zero values only)
-		mergeConfig(cfg, fileCfg)
 	}
 
 	// Override with environment variables
@@ -168,22 +164,22 @@ func loadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// loadFromFile attempts to load configuration from YAML file
-// Search order: CONFIG_PATH env var → ./config.yaml → /etc/node-pulse/config.yaml
+// loadFromFile attempts to load configuration from YAML file.
+// Search order: PULSE_CONFIG_PATH env var → ./pulse.yaml → /etc/node-pulse/pulse.yaml
 // Returns nil if no file found (not an error)
-func loadFromFile() (*Config, error) {
+func loadFromFile(cfg *Config) error {
 	var configPaths []string
 
-	// Check CONFIG_PATH environment variable first
-	if configPath := os.Getenv("CONFIG_PATH"); configPath != "" {
+	// Check PULSE_CONFIG_PATH environment variable first
+	if configPath := os.Getenv("PULSE_CONFIG_PATH"); configPath != "" {
 		configPaths = append(configPaths, configPath)
 	}
 
 	// Check current working directory
-	configPaths = append(configPaths, "./config.yaml")
+	configPaths = append(configPaths, "./pulse.yaml")
 
 	// Check system-wide config directory
-	configPaths = append(configPaths, "/etc/node-pulse/config.yaml")
+	configPaths = append(configPaths, "/etc/node-pulse/pulse.yaml")
 
 	// Try each path
 	for _, path := range configPaths {
@@ -191,149 +187,21 @@ func loadFromFile() (*Config, error) {
 			// File exists, try to load it
 			data, err := os.ReadFile(path)
 			if err != nil {
-				return nil, fmt.Errorf("failed to read config file %s: %w", path, err)
+				return fmt.Errorf("failed to read config file %s: %w", path, err)
 			}
 
-			var cfg Config
-			if err := yaml.Unmarshal(data, &cfg); err != nil {
-				return nil, fmt.Errorf("failed to parse YAML from %s: %w", path, err)
+			decoder := yaml.NewDecoder(bytes.NewReader(data))
+			decoder.KnownFields(true)
+			if err := decoder.Decode(cfg); err != nil {
+				return fmt.Errorf("failed to parse YAML from %s: %w", path, err)
 			}
 
-			return &cfg, nil
+			return nil
 		}
 	}
 
 	// No config file found - this is OK, will use env vars and defaults
-	return nil, nil
-}
-
-// mergeConfig merges src config into dst config (overwrites non-zero values)
-func mergeConfig(dst, src *Config) {
-	if src.Server.Port != "" {
-		dst.Server.Port = src.Server.Port
-	}
-	if src.Server.ReadTimeout != 0 {
-		dst.Server.ReadTimeout = src.Server.ReadTimeout
-	}
-	if src.Server.WriteTimeout != 0 {
-		dst.Server.WriteTimeout = src.Server.WriteTimeout
-	}
-	if src.Server.IdleTimeout != 0 {
-		dst.Server.IdleTimeout = src.Server.IdleTimeout
-	}
-	if src.Server.Mode != "" {
-		dst.Server.Mode = src.Server.Mode
-	}
-
-	if src.DB.URL != "" {
-		dst.DB.URL = src.DB.URL
-	}
-	if src.DB.MaxConnections != 0 {
-		dst.DB.MaxConnections = src.DB.MaxConnections
-	}
-	if src.DB.MinConnections != 0 {
-		dst.DB.MinConnections = src.DB.MinConnections
-	}
-	if src.DB.ConnMaxLifetime != 0 {
-		dst.DB.ConnMaxLifetime = src.DB.ConnMaxLifetime
-	}
-	if src.DB.ConnMaxIdleTime != 0 {
-		dst.DB.ConnMaxIdleTime = src.DB.ConnMaxIdleTime
-	}
-
-	if src.Cleanup.Enabled {
-		dst.Cleanup.Enabled = src.Cleanup.Enabled
-	}
-	if src.Cleanup.IntervalSeconds != 0 {
-		dst.Cleanup.IntervalSeconds = src.Cleanup.IntervalSeconds
-	}
-	if src.Cleanup.RetentionDays != 0 {
-		dst.Cleanup.RetentionDays = src.Cleanup.RetentionDays
-	}
-	if src.Cleanup.SlowThresholdMs != 0 {
-		dst.Cleanup.SlowThresholdMs = src.Cleanup.SlowThresholdMs
-	}
-
-	if src.Log.Level != "" {
-		dst.Log.Level = src.Log.Level
-	}
-	if src.Log.Format != "" {
-		dst.Log.Format = src.Log.Format
-	}
-	if src.Log.Output != "" {
-		dst.Log.Output = src.Log.Output
-	}
-
-	if src.CORS.AllowedOrigins != "" {
-		dst.CORS.AllowedOrigins = src.CORS.AllowedOrigins
-	}
-	if src.CORS.AllowedMethods != "" {
-		dst.CORS.AllowedMethods = src.CORS.AllowedMethods
-	}
-	if src.CORS.AllowedHeaders != "" {
-		dst.CORS.AllowedHeaders = src.CORS.AllowedHeaders
-	}
-	if src.CORS.MaxAge != 0 {
-		dst.CORS.MaxAge = src.CORS.MaxAge
-	}
-
-	if src.Admin.Username != "" {
-		dst.Admin.Username = src.Admin.Username
-	}
-	if src.Admin.Password != "" {
-		dst.Admin.Password = src.Admin.Password
-	}
-
-	if src.Session.Secret != "" {
-		dst.Session.Secret = src.Session.Secret
-	}
-	if src.Session.ExpirationHours != 0 {
-		dst.Session.ExpirationHours = src.Session.ExpirationHours
-	}
-	if src.Session.CookieSecure {
-		dst.Session.CookieSecure = src.Session.CookieSecure
-	}
-	if src.Session.CookieSameSite != "" {
-		dst.Session.CookieSameSite = src.Session.CookieSameSite
-	}
-
-	if src.JWT.Secret != "" {
-		dst.JWT.Secret = src.JWT.Secret
-	}
-	if src.JWT.PrivateKey != "" {
-		dst.JWT.PrivateKey = src.JWT.PrivateKey
-	}
-	if src.JWT.PublicKey != "" {
-		dst.JWT.PublicKey = src.JWT.PublicKey
-	}
-	if src.JWT.KeyID != "" {
-		dst.JWT.KeyID = src.JWT.KeyID
-	}
-	if src.JWT.AccessTokenExpirationMinutes != 0 {
-		dst.JWT.AccessTokenExpirationMinutes = src.JWT.AccessTokenExpirationMinutes
-	}
-	if src.JWT.RefreshTokenExpirationDays != 0 {
-		dst.JWT.RefreshTokenExpirationDays = src.JWT.RefreshTokenExpirationDays
-	}
-	if src.JWT.RefreshTokenMaxValidityDays != 0 {
-		dst.JWT.RefreshTokenMaxValidityDays = src.JWT.RefreshTokenMaxValidityDays
-	}
-
-	if src.RateLimit.LoginMaxPerMinute != 0 {
-		dst.RateLimit.LoginMaxPerMinute = src.RateLimit.LoginMaxPerMinute
-	}
-	if src.RateLimit.LoginMaxPerDay != 0 {
-		dst.RateLimit.LoginMaxPerDay = src.RateLimit.LoginMaxPerDay
-	}
-	if src.RateLimit.RefreshMaxPerMinute != 0 {
-		dst.RateLimit.RefreshMaxPerMinute = src.RateLimit.RefreshMaxPerMinute
-	}
-	if src.RateLimit.RefreshMaxPerDay != 0 {
-		dst.RateLimit.RefreshMaxPerDay = src.RateLimit.RefreshMaxPerDay
-	}
-	if src.RateLimit.APIKeyMaxPerMinute != 0 {
-		dst.RateLimit.APIKeyMaxPerMinute = src.RateLimit.APIKeyMaxPerMinute
-	}
+	return nil
 }
 
 // generateSecrets auto-generates secrets if not provided
@@ -476,16 +344,8 @@ func mergeFromEnv(cfg *Config) *Config {
 	// Server configuration
 	if v := os.Getenv("PULSE_SERVER_PORT"); v != "" {
 		cfg.Server.Port = v
-	} else if v := os.Getenv("PULSE_PORT"); v != "" {
-		// Legacy fallback
-		cfg.Server.Port = v
 	}
 	if v := os.Getenv("PULSE_SERVER_READ_TIMEOUT"); v != "" {
-		if i := parseInt(v, cfg.Server.ReadTimeout); i > 0 {
-			cfg.Server.ReadTimeout = i
-		}
-	} else if v := os.Getenv("PULSE_READ_TIMEOUT"); v != "" {
-		// Legacy fallback
 		if i := parseInt(v, cfg.Server.ReadTimeout); i > 0 {
 			cfg.Server.ReadTimeout = i
 		}
@@ -494,42 +354,21 @@ func mergeFromEnv(cfg *Config) *Config {
 		if i := parseInt(v, cfg.Server.WriteTimeout); i > 0 {
 			cfg.Server.WriteTimeout = i
 		}
-	} else if v := os.Getenv("PULSE_WRITE_TIMEOUT"); v != "" {
-		// Legacy fallback
-		if i := parseInt(v, cfg.Server.WriteTimeout); i > 0 {
-			cfg.Server.WriteTimeout = i
-		}
 	}
 	if v := os.Getenv("PULSE_SERVER_IDLE_TIMEOUT"); v != "" {
-		if i := parseInt(v, cfg.Server.IdleTimeout); i > 0 {
-			cfg.Server.IdleTimeout = i
-		}
-	} else if v := os.Getenv("PULSE_IDLE_TIMEOUT"); v != "" {
-		// Legacy fallback
 		if i := parseInt(v, cfg.Server.IdleTimeout); i > 0 {
 			cfg.Server.IdleTimeout = i
 		}
 	}
 	if v := os.Getenv("PULSE_SERVER_MODE"); v != "" {
 		cfg.Server.Mode = v
-	} else if v := os.Getenv("PULSE_MODE"); v != "" {
-		// Legacy fallback
-		cfg.Server.Mode = v
 	}
 
 	// Database configuration
 	if v := os.Getenv("PULSE_DATABASE_URL"); v != "" {
 		cfg.DB.URL = v
-	} else if v := os.Getenv("DATABASE_URL"); v != "" {
-		// Legacy fallback
-		cfg.DB.URL = v
 	}
 	if v := os.Getenv("PULSE_DATABASE_MAX_CONNECTIONS"); v != "" {
-		if i := parseInt(v, cfg.DB.MaxConnections); i > 0 {
-			cfg.DB.MaxConnections = i
-		}
-	} else if v := os.Getenv("DB_MAX_CONNECTIONS"); v != "" {
-		// Legacy fallback
 		if i := parseInt(v, cfg.DB.MaxConnections); i > 0 {
 			cfg.DB.MaxConnections = i
 		}
@@ -538,18 +377,8 @@ func mergeFromEnv(cfg *Config) *Config {
 		if i := parseInt(v, cfg.DB.MinConnections); i >= 0 {
 			cfg.DB.MinConnections = i
 		}
-	} else if v := os.Getenv("DB_MIN_CONNECTIONS"); v != "" {
-		// Legacy fallback
-		if i := parseInt(v, cfg.DB.MinConnections); i >= 0 {
-			cfg.DB.MinConnections = i
-		}
 	}
 	if v := os.Getenv("PULSE_DATABASE_CONN_MAX_LIFETIME"); v != "" {
-		if i := parseInt(v, cfg.DB.ConnMaxLifetime); i > 0 {
-			cfg.DB.ConnMaxLifetime = i
-		}
-	} else if v := os.Getenv("DB_CONN_MAX_LIFETIME"); v != "" {
-		// Legacy fallback
 		if i := parseInt(v, cfg.DB.ConnMaxLifetime); i > 0 {
 			cfg.DB.ConnMaxLifetime = i
 		}
@@ -558,26 +387,13 @@ func mergeFromEnv(cfg *Config) *Config {
 		if i := parseInt(v, cfg.DB.ConnMaxIdleTime); i >= 0 {
 			cfg.DB.ConnMaxIdleTime = i
 		}
-	} else if v := os.Getenv("DB_CONN_MAX_IDLE_TIME"); v != "" {
-		// Legacy fallback
-		if i := parseInt(v, cfg.DB.ConnMaxIdleTime); i >= 0 {
-			cfg.DB.ConnMaxIdleTime = i
-		}
 	}
 
 	// Cleanup configuration
 	if v := os.Getenv("PULSE_CLEANUP_ENABLED"); v != "" {
 		cfg.Cleanup.Enabled = parseBool(v, cfg.Cleanup.Enabled)
-	} else if v := os.Getenv("CLEANUP_ENABLED"); v != "" {
-		// Legacy fallback
-		cfg.Cleanup.Enabled = parseBool(v, cfg.Cleanup.Enabled)
 	}
 	if v := os.Getenv("PULSE_CLEANUP_INTERVAL"); v != "" {
-		if i := parseInt(v, cfg.Cleanup.IntervalSeconds); i > 0 {
-			cfg.Cleanup.IntervalSeconds = i
-		}
-	} else if v := os.Getenv("CLEANUP_INTERVAL"); v != "" {
-		// Legacy fallback
 		if i := parseInt(v, cfg.Cleanup.IntervalSeconds); i > 0 {
 			cfg.Cleanup.IntervalSeconds = i
 		}
@@ -586,18 +402,8 @@ func mergeFromEnv(cfg *Config) *Config {
 		if i := parseInt(v, cfg.Cleanup.RetentionDays); i > 0 {
 			cfg.Cleanup.RetentionDays = i
 		}
-	} else if v := os.Getenv("CLEANUP_RETENTION_DAYS"); v != "" {
-		// Legacy fallback
-		if i := parseInt(v, cfg.Cleanup.RetentionDays); i > 0 {
-			cfg.Cleanup.RetentionDays = i
-		}
 	}
 	if v := os.Getenv("PULSE_CLEANUP_SLOW_THRESHOLD"); v != "" {
-		if i := parseInt64(v, cfg.Cleanup.SlowThresholdMs); i >= 0 {
-			cfg.Cleanup.SlowThresholdMs = i
-		}
-	} else if v := os.Getenv("CLEANUP_SLOW_THRESHOLD"); v != "" {
-		// Legacy fallback
 		if i := parseInt64(v, cfg.Cleanup.SlowThresholdMs); i >= 0 {
 			cfg.Cleanup.SlowThresholdMs = i
 		}
@@ -606,28 +412,16 @@ func mergeFromEnv(cfg *Config) *Config {
 	// Log configuration
 	if v := os.Getenv("PULSE_LOG_LEVEL"); v != "" {
 		cfg.Log.Level = v
-	} else if v := os.Getenv("LOG_LEVEL"); v != "" {
-		// Legacy fallback
-		cfg.Log.Level = v
 	}
 	if v := os.Getenv("PULSE_LOG_FORMAT"); v != "" {
 		cfg.Log.Format = v
-	} else if v := os.Getenv("LOG_FORMAT"); v != "" {
-		// Legacy fallback
-		cfg.Log.Format = v
 	}
 	if v := os.Getenv("PULSE_LOG_OUTPUT"); v != "" {
-		cfg.Log.Output = v
-	} else if v := os.Getenv("LOG_OUTPUT"); v != "" {
-		// Legacy fallback
 		cfg.Log.Output = v
 	}
 
 	// CORS configuration
 	if v := os.Getenv("PULSE_CORS_ALLOWED_ORIGINS"); v != "" {
-		cfg.CORS.AllowedOrigins = v
-	} else if v := os.Getenv("CORS_ALLOWED_ORIGINS"); v != "" {
-		// Legacy fallback
 		cfg.CORS.AllowedOrigins = v
 	}
 	if v := os.Getenv("PULSE_CORS_ALLOWED_METHODS"); v != "" {
@@ -645,22 +439,13 @@ func mergeFromEnv(cfg *Config) *Config {
 	// Admin configuration
 	if v := os.Getenv("PULSE_ADMIN_USERNAME"); v != "" {
 		cfg.Admin.Username = v
-	} else if v := os.Getenv("ADMIN_USERNAME"); v != "" {
-		// Legacy fallback
-		cfg.Admin.Username = v
 	}
 	if v := os.Getenv("PULSE_ADMIN_PASSWORD"); v != "" {
-		cfg.Admin.Password = v
-	} else if v := os.Getenv("ADMIN_PASSWORD"); v != "" {
-		// Legacy fallback
 		cfg.Admin.Password = v
 	}
 
 	// Session configuration
 	if v := os.Getenv("PULSE_SESSION_SECRET"); v != "" {
-		cfg.Session.Secret = v
-	} else if v := os.Getenv("SESSION_SECRET"); v != "" {
-		// Legacy fallback
 		cfg.Session.Secret = v
 	}
 	if v := os.Getenv("PULSE_SESSION_EXPIRATION_HOURS"); v != "" {
@@ -677,9 +462,6 @@ func mergeFromEnv(cfg *Config) *Config {
 
 	// JWT configuration
 	if v := os.Getenv("PULSE_JWT_SECRET"); v != "" {
-		cfg.JWT.Secret = v
-	} else if v := os.Getenv("JWT_SECRET"); v != "" {
-		// Legacy fallback
 		cfg.JWT.Secret = v
 	}
 	if v := os.Getenv("PULSE_JWT_PRIVATE_KEY"); v != "" {
@@ -708,27 +490,27 @@ func mergeFromEnv(cfg *Config) *Config {
 	}
 
 	// Rate Limit configuration
-	if v := os.Getenv("PULSE_RATELIMIT_LOGIN_MAX_PER_MINUTE"); v != "" {
+	if v := os.Getenv("PULSE_RATE_LIMIT_LOGIN_MAX_PER_MINUTE"); v != "" {
 		if i := parseInt(v, cfg.RateLimit.LoginMaxPerMinute); i > 0 {
 			cfg.RateLimit.LoginMaxPerMinute = i
 		}
 	}
-	if v := os.Getenv("PULSE_RATELIMIT_LOGIN_MAX_PER_DAY"); v != "" {
+	if v := os.Getenv("PULSE_RATE_LIMIT_LOGIN_MAX_PER_DAY"); v != "" {
 		if i := parseInt(v, cfg.RateLimit.LoginMaxPerDay); i > 0 {
 			cfg.RateLimit.LoginMaxPerDay = i
 		}
 	}
-	if v := os.Getenv("PULSE_RATELIMIT_REFRESH_MAX_PER_MINUTE"); v != "" {
+	if v := os.Getenv("PULSE_RATE_LIMIT_REFRESH_MAX_PER_MINUTE"); v != "" {
 		if i := parseInt(v, cfg.RateLimit.RefreshMaxPerMinute); i > 0 {
 			cfg.RateLimit.RefreshMaxPerMinute = i
 		}
 	}
-	if v := os.Getenv("PULSE_RATELIMIT_REFRESH_MAX_PER_DAY"); v != "" {
+	if v := os.Getenv("PULSE_RATE_LIMIT_REFRESH_MAX_PER_DAY"); v != "" {
 		if i := parseInt(v, cfg.RateLimit.RefreshMaxPerDay); i > 0 {
 			cfg.RateLimit.RefreshMaxPerDay = i
 		}
 	}
-	if v := os.Getenv("PULSE_RATELIMIT_APIKEY_MAX_PER_MINUTE"); v != "" {
+	if v := os.Getenv("PULSE_RATE_LIMIT_APIKEY_MAX_PER_MINUTE"); v != "" {
 		if i := parseInt(v, cfg.RateLimit.APIKeyMaxPerMinute); i > 0 {
 			cfg.RateLimit.APIKeyMaxPerMinute = i
 		}
@@ -769,7 +551,7 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("jwt config invalid: %w", err)
 	}
 	if err := c.RateLimit.Validate(); err != nil {
-		return fmt.Errorf("ratelimit config invalid: %w", err)
+		return fmt.Errorf("rate_limit config invalid: %w", err)
 	}
 	return nil
 }
@@ -939,27 +721,27 @@ func (c *JWTConfig) Validate() error {
 // Validate validates rate limit configuration
 func (c *RateLimitConfig) Validate() error {
 	if c.LoginMaxPerMinute <= 0 {
-		return fmt.Errorf("ratelimit login_max_per_minute must be positive, got %d", c.LoginMaxPerMinute)
+		return fmt.Errorf("rate_limit login_max_per_minute must be positive, got %d", c.LoginMaxPerMinute)
 	}
 	if c.LoginMaxPerDay <= 0 {
-		return fmt.Errorf("ratelimit login_max_per_day must be positive, got %d", c.LoginMaxPerDay)
+		return fmt.Errorf("rate_limit login_max_per_day must be positive, got %d", c.LoginMaxPerDay)
 	}
 	if c.RefreshMaxPerMinute <= 0 {
-		return fmt.Errorf("ratelimit refresh_max_per_minute must be positive, got %d", c.RefreshMaxPerMinute)
+		return fmt.Errorf("rate_limit refresh_max_per_minute must be positive, got %d", c.RefreshMaxPerMinute)
 	}
 	if c.RefreshMaxPerDay <= 0 {
-		return fmt.Errorf("ratelimit refresh_max_per_day must be positive, got %d", c.RefreshMaxPerDay)
+		return fmt.Errorf("rate_limit refresh_max_per_day must be positive, got %d", c.RefreshMaxPerDay)
 	}
 	if c.APIKeyMaxPerMinute <= 0 {
-		return fmt.Errorf("ratelimit apikey_max_per_minute must be positive, got %d", c.APIKeyMaxPerMinute)
+		return fmt.Errorf("rate_limit apikey_max_per_minute must be positive, got %d", c.APIKeyMaxPerMinute)
 	}
 	// Validate that per-day limits are greater than per-minute limits
 	if c.LoginMaxPerDay < c.LoginMaxPerMinute {
-		return fmt.Errorf("ratelimit login_max_per_day (%d) must be >= login_max_per_minute (%d)",
+		return fmt.Errorf("rate_limit login_max_per_day (%d) must be >= login_max_per_minute (%d)",
 			c.LoginMaxPerDay, c.LoginMaxPerMinute)
 	}
 	if c.RefreshMaxPerDay < c.RefreshMaxPerMinute {
-		return fmt.Errorf("ratelimit refresh_max_per_day (%d) must be >= refresh_max_per_minute (%d)",
+		return fmt.Errorf("rate_limit refresh_max_per_day (%d) must be >= refresh_max_per_minute (%d)",
 			c.RefreshMaxPerDay, c.RefreshMaxPerMinute)
 	}
 	return nil

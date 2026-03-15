@@ -2,20 +2,20 @@
 # Node-Pulse API Configuration File
 # ==================================
 # This is an example configuration file for the pulse-api application.
-# Copy this file to config.yaml and update with your values.
+# Copy this file to pulse.yaml and update with your values.
 #
-# WARNING: DO NOT commit config.yaml with credentials to version control!
+# WARNING: DO NOT commit pulse.yaml with credentials to version control!
 #          Use environment variables for sensitive data in production.
 #
 # Configuration Priority:
 # 1. Environment variables (highest priority)
-# 2. config.yaml file
+# 2. pulse.yaml file
 # 3. Default values (lowest priority)
 #
-# Search paths for config.yaml:
-# - CONFIG_PATH environment variable
-# - ./config.yaml (current working directory)
-# - /etc/node-pulse/config.yaml (system-wide)
+# Search paths for pulse.yaml:
+# - PULSE_CONFIG_PATH environment variable
+# - ./pulse.yaml (current working directory)
+# - /etc/node-pulse/pulse.yaml (system-wide)
 
 # ==================================
 # Server Configuration
@@ -118,5 +118,5 @@ rate_limit:
 #
 # 4. Review and update CORS settings for your domain.
 #
-# 5. Use environment variables instead of config.yaml for production.
+# 5. Use environment variables instead of pulse.yaml for production.
 #    Config files should only be used for local development.

@@ -50,8 +50,8 @@ Beacon (per node)          Pulse Server              PostgreSQL
 cd pulse
 
 # Copy and edit configuration
-cp config.example.yaml config.yaml
-# Edit config.yaml: set database.url at minimum
+cp pulse.yaml.example pulse.yaml
+# Edit pulse.yaml: set database.url at minimum
 
 # Download dependencies and run
 make deps
@@ -85,9 +85,9 @@ make run
 
 ## Configuration
 
-### Pulse (`pulse/config.yaml`)
+### Pulse (`pulse/pulse.yaml`)
 
-Copy `config.example.yaml` → `config.yaml`. All settings can be overridden with `PULSE_`-prefixed environment variables (e.g. `PULSE_DATABASE_URL`).
+Copy `pulse.yaml.example` → `pulse.yaml`. All settings can be overridden with `PULSE_`-prefixed environment variables (e.g. `PULSE_DATABASE_URL`).
 
 | Key | Default | Description |
 |-----|---------|-------------|

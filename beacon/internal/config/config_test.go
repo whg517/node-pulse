@@ -1141,3 +1141,111 @@ probes:
 		t.Errorf("Expected probe target to be 'google.com', got: %s", cfg.Probes[0].Target)
 	}
 }
+
+func TestLoadConfig_PreserveExplicitFalseBooleans(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "beacon.yaml")
+
+	configContent := `
+pulse_server: "https://pulse.example.com"
+node_id: "us-east-01"
+node_name: "Test Node"
+metrics_enabled: false
+compression:
+  enabled: false
+resume:
+  enabled: false
+  alert_priority_mode: false
+`
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test config: %v", err)
+	}
+
+	cfg, err := LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if cfg.MetricsEnabled {
+		t.Error("Expected metrics_enabled to remain false")
+	}
+	if cfg.Compression.Enabled {
+		t.Error("Expected compression.enabled to remain false")
+	}
+	if cfg.Resume.Enabled {
+		t.Error("Expected resume.enabled to remain false")
+	}
+	if cfg.Resume.AlertPriorityMode {
+		t.Error("Expected resume.alert_priority_mode to remain false")
+	}
+}
+
+func TestLoadConfig_ResolveConfigPathFromEnv(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "beacon.yaml")
+
+	configContent := `
+pulse_server: "https://pulse.example.com"
+node_id: "env-path-01"
+node_name: "Env Path Node"
+`
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test config: %v", err)
+	}
+
+	_ = os.Setenv("BEACON_CONFIG_PATH", configPath)
+	defer func() { _ = os.Unsetenv("BEACON_CONFIG_PATH") }()
+
+	cfg, err := LoadConfig("")
+	if err != nil {
+		t.Fatalf("Expected no error when loading from BEACON_CONFIG_PATH, got: %v", err)
+	}
+
+	if cfg.NodeID != "env-path-01" {
+		t.Errorf("Expected NodeID env-path-01, got: %s", cfg.NodeID)
+	}
+}
+
+func TestLoadConfig_EnvOverrides(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "beacon.yaml")
+
+	configContent := `
+pulse_server: "https://pulse.example.com"
+node_id: "file-node"
+node_name: "File Node"
+metrics_enabled: true
+mode:
+  degraded_mode_threshold: 3
+`
+	err := os.WriteFile(configPath, []byte(configContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test config: %v", err)
+	}
+
+	_ = os.Setenv("BEACON_NODE_ID", "env-node")
+	_ = os.Setenv("BEACON_METRICS_ENABLED", "false")
+	_ = os.Setenv("BEACON_MODE_DEGRADED_MODE_THRESHOLD", "5")
+	defer func() {
+		_ = os.Unsetenv("BEACON_NODE_ID")
+		_ = os.Unsetenv("BEACON_METRICS_ENABLED")
+		_ = os.Unsetenv("BEACON_MODE_DEGRADED_MODE_THRESHOLD")
+	}()
+
+	cfg, err := LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if cfg.NodeID != "env-node" {
+		t.Errorf("Expected env override node_id=env-node, got: %s", cfg.NodeID)
+	}
+	if cfg.MetricsEnabled {
+		t.Error("Expected env override metrics_enabled=false")
+	}
+	if cfg.Mode.DegradedModeThreshold != 5 {
+		t.Errorf("Expected env override degraded_mode_threshold=5, got: %d", cfg.Mode.DegradedModeThreshold)
+	}
+}

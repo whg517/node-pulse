@@ -14,7 +14,7 @@ type Checker interface {
 func TestDatabase_New_InvalidURL(t *testing.T) {
 	_, err := New("")
 	if err == nil {
-		t.Error("Expected error for empty DATABASE_URL")
+		t.Error("Expected error for empty PULSE_DATABASE_URL")
 	}
 }
 

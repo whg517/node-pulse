@@ -26,6 +26,7 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+beacon.yaml
 
 # Logs
 *.log
@@ -34,4 +35,3 @@ logs/
 # Temporary files
 tmp/
 tmp-*
-
