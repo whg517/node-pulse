@@ -23,6 +23,12 @@ func TestCleanupJob_Debug(t *testing.T) {
 	}
 	defer pool.Close()
 
+	// Verify actual connectivity before proceeding
+	if err := pool.Ping(ctx); err != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", err)
+		return
+	}
+
 	cleanupTables(ctx, pool)
 	createTestTables(ctx, t, pool)
 

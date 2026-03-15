@@ -21,6 +21,11 @@ func TestNodesTableCreation(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Run migration
 	err = Migrate(ctx, pool)
@@ -89,6 +94,11 @@ func TestNodesIndexCreation(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Run migration
 	err = Migrate(ctx, pool)
@@ -116,6 +126,11 @@ func TestNodesTableConstraints(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Run migration
 	err = Migrate(ctx, pool)
@@ -147,6 +162,11 @@ func TestNodesTableUUIDGeneration(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Run migration
 	err = Migrate(ctx, pool)
@@ -176,6 +196,11 @@ func TestNodesTableTimestampDefaults(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Run migration
 	err = Migrate(ctx, pool)

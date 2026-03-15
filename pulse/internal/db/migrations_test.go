@@ -28,6 +28,11 @@ func TestUsersTableCreation(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Act - Check users table exists
 	var tableName string
@@ -113,6 +118,11 @@ func TestSessionsTableCreation(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Act - Check sessions table exists
 	var tableName string
@@ -220,6 +230,11 @@ func TestSeedAdminUser(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Load config to get admin username
 	cfg := config.MustLoad()
@@ -280,6 +295,11 @@ func TestCompositeIndexPerformance(t *testing.T) {
 		return
 	}
 	defer pool.Close()
+	// Verify actual connectivity (pgxpool.New is lazy)
+	if pingErr := pool.Ping(ctx); pingErr != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", pingErr)
+		return
+	}
 
 	// Arrange - Create a test user and session
 	userID := uuid.New()

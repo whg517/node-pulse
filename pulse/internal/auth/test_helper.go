@@ -25,6 +25,15 @@ func cleanupTables(ctx context.Context, pool *pgxpool.Pool) {
 
 // createTestTables creates all required test database tables
 func createTestTables(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+
+	// Verify DB connectivity; skip the test when the database is not reachable
+	// (pgxpool.New is lazy and succeeds even without an actual connection)
+	if err := pool.Ping(ctx); err != nil {
+		t.Skipf("Skipping test: cannot ping test database: %v", err)
+		return
+	}
+
 	// Create tables in correct order to satisfy foreign key constraints
 	tables := []string{
 		// Users table must be created first
