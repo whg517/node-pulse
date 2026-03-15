@@ -140,13 +140,13 @@ func TestScheduler_TaskExecution(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go sched.Start(ctx)
+	go func() { _ = sched.Start(ctx) }()
 
 	// Wait for task to execute multiple times
 	time.Sleep(170 * time.Millisecond)
 
 	// Stop scheduler
-	sched.Stop()
+	_ = sched.Stop()
 
 	// Verify task executed at least 3 times (0ms, 50ms, 100ms, 150ms)
 	count := task.GetExecuteCount()
@@ -186,7 +186,7 @@ func TestScheduler_GracefulStop(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go sched.Start(ctx)
+	go func() { _ = sched.Start(ctx) }()
 
 	// Wait for task to start
 	<-taskRunning
@@ -237,7 +237,7 @@ func TestScheduler_ContextCancellation(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 
-	go sched.Start(ctx)
+	go func() { _ = sched.Start(ctx) }()
 
 	// Wait a bit then cancel context
 	time.Sleep(50 * time.Millisecond)

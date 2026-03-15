@@ -233,7 +233,7 @@ func (c *JWTClient) refreshToken(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Handle response
 	if err := c.handleTokenResponse(resp, usingRefreshToken); err != nil {

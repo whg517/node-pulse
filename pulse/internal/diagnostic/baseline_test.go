@@ -35,14 +35,6 @@ func (l *mockLogger) Warn(msg string, args ...any) {
 	l.messages = append(l.messages, msg)
 }
 
-func (l *mockLogger) getMessages() []string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	result := make([]string, len(l.messages))
-	copy(result, l.messages)
-	return result
-}
-
 func TestBaselineCache_GetSet(t *testing.T) {
 	cache := &BaselineCache{}
 
@@ -273,7 +265,7 @@ func TestBaselineCalculator_CalculateBaselines_Integration(t *testing.T) {
 
 	db, err := sql.Open("postgres", dbURL)
 	require.NoError(t, err)
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	// Set up test data
 	setupBaselineTestData(t, db)

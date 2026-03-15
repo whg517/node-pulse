@@ -23,14 +23,14 @@ func TestGetNodeStatus_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store before test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := "status_test_user"
 	password := "testpass123"
 
 	// Clean up any existing test user
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 
 	// Create test user
 	userID := uuid.New()
@@ -235,18 +235,18 @@ func TestGetNodeStatus_ResponseFormat(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store before test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and node
 	username := "response_format_user"
 	password := "testpass123"
 
 	// Cleanup existing user
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 
 	userID := uuid.New()
 	hashedPassword, _ := auth.HashPassword(password)
-	pool.Exec(context.Background(),
+	_, _ = pool.Exec(context.Background(),
 		"INSERT INTO users (user_id, username, password_hash, role, failed_login_attempts, locked_until, created_at, updated_at) VALUES ($1, $2, $3, $4, 0, NULL, NOW(), NOW())",
 		userID, username, hashedPassword, "admin",
 	)
@@ -254,7 +254,7 @@ func TestGetNodeStatus_ResponseFormat(t *testing.T) {
 	// Create node
 	nodeID := uuid.New()
 	now := time.Now()
-	pool.Exec(context.Background(),
+	_, _ = pool.Exec(context.Background(),
 		"INSERT INTO nodes (id, name, ip, region, tags, last_heartbeat, last_report_time, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())",
 		nodeID, "格式测试节点", "192.168.1.99", "us-west", "{}", now.Add(-1*time.Minute), now, "online",
 	)

@@ -73,7 +73,7 @@ func TestGetDiagnosisHandler_Success_NodeLocalFailure(t *testing.T) {
 	// Check response
 	if w.Code != http.StatusOK {
 		var errorResp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &errorResp)
+		_ = json.Unmarshal(w.Body.Bytes(), &errorResp)
 		t.Logf("Error response: %+v", errorResp)
 	}
 
@@ -150,7 +150,7 @@ func TestGetDiagnosisHandler_Success_CrossBorderLink(t *testing.T) {
 	// Check response
 	if w.Code != http.StatusOK {
 		var errorResp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &errorResp)
+		_ = json.Unmarshal(w.Body.Bytes(), &errorResp)
 		t.Logf("Error response: %+v", errorResp)
 	}
 
@@ -220,7 +220,7 @@ func TestGetDiagnosisHandler_Success_ISPRouting(t *testing.T) {
 	// Check response
 	if w.Code != http.StatusOK {
 		var errorResp map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &errorResp)
+		_ = json.Unmarshal(w.Body.Bytes(), &errorResp)
 		t.Logf("Error response: %+v", errorResp)
 	}
 

@@ -33,7 +33,7 @@ func TestBeaconRuntimeLogging(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InitLogger failed: %v", err)
 	}
-	defer Close()
+	defer func() { _ = Close() }()
 
 	// Simulate Beacon lifecycle logging
 	// 1. Configuration loading
@@ -45,21 +45,21 @@ func TestBeaconRuntimeLogging(t *testing.T) {
 
 	// 2. Probe scheduler starting
 	WithFields(map[string]interface{}{
-		"component":  "probe",
-		"interval":   "60s",
-		"tcp_count":  2,
-		"udp_count":  1,
+		"component": "probe",
+		"interval":  "60s",
+		"tcp_count": 2,
+		"udp_count": 1,
 	}).Info("Probe scheduler started")
 
 	// 3. Individual probe execution
 	WithFields(map[string]interface{}{
-		"component":   "probe",
-		"probe_type":  "tcp_ping",
-		"target":      "192.168.1.1:80",
-		"success":     true,
+		"component":    "probe",
+		"probe_type":   "tcp_ping",
+		"target":       "192.168.1.1:80",
+		"success":      true,
 		"sample_count": 10,
-		"rtt_ms":      25.5,
-		"packet_loss": 0.0,
+		"rtt_ms":       25.5,
+		"packet_loss":  0.0,
 	}).Info("TCP probe completed")
 
 	// 4. Metrics server starting
@@ -94,7 +94,7 @@ func TestBeaconRuntimeLogging(t *testing.T) {
 		"node_name": cfg.NodeName,
 	}).Info("Shutting down gracefully")
 
-	Close()
+	_ = Close()
 
 	// Verify log file was created and contains valid JSON
 	data, err := os.ReadFile(logFile)
@@ -164,7 +164,7 @@ func TestMultiModuleLoggingConsistency(t *testing.T) {
 	if err != nil {
 		t.Fatalf("InitLogger failed: %v", err)
 	}
-	defer Close()
+	defer func() { _ = Close() }()
 
 	// Simulate logging from different modules concurrently
 	modules := []string{"probe", "reporter", "metrics", "config"}
@@ -190,7 +190,7 @@ func TestMultiModuleLoggingConsistency(t *testing.T) {
 
 	// Give time for logs to flush
 	time.Sleep(100 * time.Millisecond)
-	Close()
+	_ = Close()
 
 	// Verify all log entries have consistent structure
 	data, _ := os.ReadFile(logFile)
@@ -253,7 +253,7 @@ func TestLogRotationTrigger(t *testing.T) {
 
 	// Wait for rotation
 	time.Sleep(200 * time.Millisecond)
-	Close()
+	_ = Close()
 
 	// Check for rotated files
 	files, _ := os.ReadDir(tempDir)
@@ -296,7 +296,7 @@ func TestLogDateFormatting(t *testing.T) {
 	}
 
 	Info("Test message for timestamp validation")
-	Close()
+	_ = Close()
 
 	// Read and verify timestamp format
 	data, _ := os.ReadFile(logFile)
@@ -307,7 +307,7 @@ func TestLogDateFormatting(t *testing.T) {
 	}
 
 	var entry map[string]interface{}
-	json.Unmarshal(lines[0], &entry)
+	_ = json.Unmarshal(lines[0], &entry)
 
 	timestamp, ok := entry["timestamp"].(string)
 	if !ok {

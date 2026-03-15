@@ -50,9 +50,9 @@ func TestCleanupTask_Integration(t *testing.T) {
 	testProbeID := uuid.New()
 
 	// Clean up test data first
-	pool.Exec(ctx, "DELETE FROM metrics WHERE probe_id = $1", testProbeID)
-	pool.Exec(ctx, "DELETE FROM probes WHERE id = $1", testProbeID)
-	pool.Exec(ctx, "DELETE FROM nodes WHERE id = $1", testNodeID)
+	_, _ = pool.Exec(ctx, "DELETE FROM metrics WHERE probe_id = $1", testProbeID)
+	_, _ = pool.Exec(ctx, "DELETE FROM probes WHERE id = $1", testProbeID)
+	_, _ = pool.Exec(ctx, "DELETE FROM nodes WHERE id = $1", testNodeID)
 
 	// Insert test node
 	_, err = pool.Exec(ctx, `
@@ -125,9 +125,9 @@ func TestCleanupTask_Integration(t *testing.T) {
 	assert.Empty(t, status.LastError)
 
 	// Cleanup test data
-	pool.Exec(ctx, "DELETE FROM metrics WHERE probe_id = $1", testProbeID)
-	pool.Exec(ctx, "DELETE FROM probes WHERE id = $1", testProbeID)
-	pool.Exec(ctx, "DELETE FROM nodes WHERE id = $1", testNodeID)
+	_, _ = pool.Exec(ctx, "DELETE FROM metrics WHERE probe_id = $1", testProbeID)
+	_, _ = pool.Exec(ctx, "DELETE FROM probes WHERE id = $1", testProbeID)
+	_, _ = pool.Exec(ctx, "DELETE FROM nodes WHERE id = $1", testNodeID)
 }
 
 // TestCleanupTask_ZeroRows_Integration tests cleanup when no data needs to be deleted
@@ -185,31 +185,31 @@ func TestCleanupTask_CustomRetention_Integration(t *testing.T) {
 	testProbeID := uuid.New()
 
 	// Clean up
-	defer pool.Exec(ctx, "DELETE FROM metrics WHERE probe_id = $1", testProbeID)
-	defer pool.Exec(ctx, "DELETE FROM probes WHERE id = $1", testProbeID)
-	defer pool.Exec(ctx, "DELETE FROM nodes WHERE id = $1", testNodeID)
+	defer func() { _, _ = pool.Exec(ctx, "DELETE FROM metrics WHERE probe_id = $1", testProbeID) }()
+	defer func() { _, _ = pool.Exec(ctx, "DELETE FROM probes WHERE id = $1", testProbeID) }()
+	defer func() { _, _ = pool.Exec(ctx, "DELETE FROM nodes WHERE id = $1", testNodeID) }()
 
 	// Insert test data
-	pool.Exec(ctx, `
+	_, _ = pool.Exec(ctx, `
 		INSERT INTO nodes (id, name, ip, region, tags, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
 	`, testNodeID, "cleanup-test-node-2", "192.168.1.101", "us-east", "{}")
 
-	pool.Exec(ctx, `
+	_, _ = pool.Exec(ctx, `
 		INSERT INTO probes (id, node_id, type, target, port, interval_seconds, count, timeout_seconds, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
 	`, testProbeID, testNodeID, "TCP", "example.com", 80, 60, 5, 5)
 
 	// Insert data 15 days old (should be deleted with 7-day retention)
 	oldTime := time.Now().Add(-15 * 24 * time.Hour)
-	pool.Exec(ctx, `
+	_, _ = pool.Exec(ctx, `
 		INSERT INTO metrics (node_id, probe_id, timestamp, latency_ms, packet_loss_rate, jitter_ms)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`, testNodeID, testProbeID, oldTime, 100.0, 0.02, 5.0)
 
 	// Insert data 5 days old (should be kept with 7-day retention)
 	recentTime := time.Now().Add(-5 * 24 * time.Hour)
-	pool.Exec(ctx, `
+	_, _ = pool.Exec(ctx, `
 		INSERT INTO metrics (node_id, probe_id, timestamp, latency_ms, packet_loss_rate, jitter_ms)
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`, testNodeID, testProbeID, recentTime, 200.0, 0.01, 3.0)
@@ -228,6 +228,6 @@ func TestCleanupTask_CustomRetention_Integration(t *testing.T) {
 	assert.NoError(t, err)
 
 	var count int
-	pool.QueryRow(ctx, "SELECT COUNT(*) FROM metrics WHERE probe_id = $1", testProbeID).Scan(&count)
+	_ = pool.QueryRow(ctx, "SELECT COUNT(*) FROM metrics WHERE probe_id = $1", testProbeID).Scan(&count)
 	assert.Equal(t, 1, count, "Should keep 5-day-old data, delete 15-day-old data")
 }

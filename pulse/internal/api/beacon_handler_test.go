@@ -24,13 +24,13 @@ import (
 
 func TestMain(m *testing.M) {
 	// Set up test config environment variables before running tests
-	os.Setenv("PULSE_JWT_SECRET", "test-secret-key-for-jwt-token-generation-in-tests-min-64-bytes-long-for-security")
-	os.Setenv("PULSE_SERVER_PORT", "6532")
-	os.Setenv("PULSE_DB_HOST", "localhost")
-	os.Setenv("PULSE_DB_PORT", "5432")
-	os.Setenv("PULSE_DB_NAME", "test")
-	os.Setenv("PULSE_DB_USER", "test")
-	os.Setenv("PULSE_DB_PASSWORD", "test")
+	_ = os.Setenv("PULSE_JWT_SECRET", "test-secret-key-for-jwt-token-generation-in-tests-min-64-bytes-long-for-security")
+	_ = os.Setenv("PULSE_SERVER_PORT", "6532")
+	_ = os.Setenv("PULSE_DB_HOST", "localhost")
+	_ = os.Setenv("PULSE_DB_PORT", "5432")
+	_ = os.Setenv("PULSE_DB_NAME", "test")
+	_ = os.Setenv("PULSE_DB_USER", "test")
+	_ = os.Setenv("PULSE_DB_PASSWORD", "test")
 
 	// Load config (will use env vars if config file doesn't exist)
 	_, err := config.Load()

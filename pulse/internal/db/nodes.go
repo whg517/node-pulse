@@ -250,7 +250,7 @@ func UpdateNode(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUID, updat
 	}
 	defer func() {
 		if err != nil {
-			tx.Rollback(ctx)
+			_ = tx.Rollback(ctx)
 		}
 	}()
 
@@ -284,11 +284,10 @@ func UpdateNode(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUID, updat
 		}
 		setParts = append(setParts, fmt.Sprintf("tags = $%d", argIndex))
 		args = append(args, string(tagsBytes))
-		argIndex++
 	}
 
 	if len(setParts) == 0 {
-		tx.Rollback(ctx) // Nothing to update
+		_ = tx.Rollback(ctx) // Nothing to update
 		return nil
 	}
 

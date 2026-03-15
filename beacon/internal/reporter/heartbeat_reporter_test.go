@@ -14,9 +14,9 @@ import (
 
 // mockJWTClient is a mock implementation of JWT client for testing
 type mockJWTClient struct {
-	token   string
-	nodeID  string
-	valid   bool
+	token  string
+	nodeID string
+	valid  bool
 }
 
 func newMockJWTClient(token, nodeID string) *mockJWTClient {
@@ -322,7 +322,7 @@ func TestAggregateMetricsPartialFailures(t *testing.T) {
 			JitterMs:       2.0,
 		},
 		{
-			Success:        false, // Failed probe - should be excluded
+			Success: false, // Failed probe - should be excluded
 		},
 		{
 			Success:        true,
@@ -458,16 +458,16 @@ func TestAggregateMetricsAllFailed(t *testing.T) {
 // TestStartReporting tests starting the heartbeat reporter
 func TestStartReporting(t *testing.T) {
 	// Initialize logger for tests
-	logger.InitLogger(&config.Config{
-		LogLevel:     "INFO",
-		LogFile:      "/tmp/test-reporter.log",
-		LogMaxSize:   10,
-		LogMaxAge:    7,
+	_ = logger.InitLogger(&config.Config{
+		LogLevel:      "INFO",
+		LogFile:       "/tmp/test-reporter.log",
+		LogMaxSize:    10,
+		LogMaxAge:     7,
 		LogMaxBackups: 3,
-		LogCompress:  false,
-		LogToConsole: false,
+		LogCompress:   false,
+		LogToConsole:  false,
 	})
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Arrange
 	_, apiClient := createTestClient()
@@ -526,16 +526,16 @@ func TestStopReporting(t *testing.T) {
 // TestReportWithRetrySuccess tests successful heartbeat reporting without retries
 func TestReportWithRetrySuccess(t *testing.T) {
 	// Initialize logger for this test
-	logger.InitLogger(&config.Config{
-		LogLevel:     "INFO",
-		LogFile:      "/tmp/test-retry.log",
-		LogMaxSize:   10,
-		LogMaxAge:    7,
+	_ = logger.InitLogger(&config.Config{
+		LogLevel:      "INFO",
+		LogFile:       "/tmp/test-retry.log",
+		LogMaxSize:    10,
+		LogMaxAge:     7,
 		LogMaxBackups: 3,
-		LogCompress:  false,
-		LogToConsole: false,
+		LogCompress:   false,
+		LogToConsole:  false,
 	})
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Arrange - start mock Pulse server
 	mockServer := NewMockPulseServer()
@@ -577,16 +577,16 @@ func TestReportWithRetryFailure(t *testing.T) {
 	t.Skip("Skipping complex retry test - basic retry mechanism verified by other tests")
 
 	// Initialize logger for this test
-	logger.InitLogger(&config.Config{
-		LogLevel:     "INFO",
-		LogFile:      "/tmp/test-retry-fail.log",
-		LogMaxSize:   10,
-		LogMaxAge:    7,
+	_ = logger.InitLogger(&config.Config{
+		LogLevel:      "INFO",
+		LogFile:       "/tmp/test-retry-fail.log",
+		LogMaxSize:    10,
+		LogMaxAge:     7,
 		LogMaxBackups: 3,
-		LogCompress:  false,
-		LogToConsole: false,
+		LogCompress:   false,
+		LogToConsole:  false,
 	})
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Arrange - start mock Pulse server configured to fail
 	mockServer := NewMockPulseServer()

@@ -23,7 +23,7 @@ func setupAlertRecordsTest(t *testing.T) (*pgxpool.Pool, func()) {
 
 	return pool, func() {
 		// Additional cleanup for alert_records
-		pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
+		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
 		cleanup()
 	}
 }
@@ -86,8 +86,6 @@ func TestGetAlertRecords(t *testing.T) {
 
 	// Create multiple alert events and records
 	alertEventsQuerier := NewAlertEventsQuerier(pool)
-	records := []models.AlertRecord{}
-
 	for i := 0; i < 3; i++ {
 		alertEvent := &models.AlertEvent{
 			ID:           uuid.New().String(),
@@ -110,7 +108,6 @@ func TestGetAlertRecords(t *testing.T) {
 		}
 		err = CreateAlertRecord(ctx, pool, record)
 		require.NoError(t, err)
-		records = append(records, *record)
 	}
 
 	// Test getting all records

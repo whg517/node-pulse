@@ -124,7 +124,7 @@ func (c *Compressor) Compress(data []byte) (*CompressedData, error) {
 
 	// Write compressed data
 	if _, err := writer.Write(data); err != nil {
-		writer.Close()
+		_ = writer.Close()
 		return nil, fmt.Errorf("failed to compress data: %w", err)
 	}
 
@@ -207,7 +207,7 @@ func (c *Compressor) Decompress(compressed *CompressedData) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	// Read decompressed data
 	data, err := io.ReadAll(reader)
@@ -297,7 +297,7 @@ func CompressWithLevel(data []byte, level int) ([]byte, error) {
 	}
 
 	if _, err := writer.Write(data); err != nil {
-		writer.Close()
+		_ = writer.Close()
 		return nil, fmt.Errorf("failed to compress data: %w", err)
 	}
 
@@ -314,7 +314,7 @@ func Decompress(compressedData []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create gzip reader: %w", err)
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	data, err := io.ReadAll(reader)
 	if err != nil {

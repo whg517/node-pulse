@@ -174,7 +174,7 @@ func TestCacheIntegration_ConcurrentNodes(t *testing.T) {
 					JitterMs:       5.0,
 				}
 
-				memoryCache.Store(nodeID, point)
+				_ = memoryCache.Store(nodeID, point)
 
 				record := &cache.MetricRecord{
 					NodeID:         nodeID,
@@ -186,7 +186,7 @@ func TestCacheIntegration_ConcurrentNodes(t *testing.T) {
 					IsAggregated:   false,
 				}
 
-				batchWriter.Write(record)
+				_ = batchWriter.Write(record)
 			}
 		}(i)
 	}
@@ -239,7 +239,7 @@ func TestCacheIntegration_MemoryOccupancy(t *testing.T) {
 				JitterMs:       5.0,
 			}
 
-			memoryCache.Store(nodeID, point)
+			_ = memoryCache.Store(nodeID, point)
 			totalPoints++
 		}
 	}
@@ -287,7 +287,7 @@ func TestCacheIntegration_FIFOEviction(t *testing.T) {
 			PacketLossRate: 0.0,
 			JitterMs:       5.0,
 		}
-		memoryCache.Store(nodeID, point)
+		_ = memoryCache.Store(nodeID, point)
 	}
 
 	points := memoryCache.Get(nodeID)
@@ -317,7 +317,7 @@ func TestCacheIntegration_Aggregation(t *testing.T) {
 			PacketLossRate: 0.1,
 			JitterMs:       5.0,
 		}
-		memoryCache.Store(nodeID, point)
+		_ = memoryCache.Store(nodeID, point)
 	}
 
 	// Get aggregated metrics

@@ -205,7 +205,6 @@ func (h *ProbeHandler) GetProbesHandler(c *gin.Context) {
 	nodeIDParam := c.Query("node_id")
 
 	var probes []*models.Probe
-	var err error
 
 	if nodeIDParam != "" {
 		// Filter by node
@@ -220,19 +219,28 @@ func (h *ProbeHandler) GetProbesHandler(c *gin.Context) {
 			})
 			return
 		}
-		probes, err = h.probeQuerier.GetProbesByNode(ctx, nodeID)
+		probesByNode, err := h.probeQuerier.GetProbesByNode(ctx, nodeID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Code:    ErrDatabaseError,
+				Message: "探测配置列表获取失败",
+				Details: err.Error(),
+			})
+			return
+		}
+		probes = probesByNode
 	} else {
 		// Get all probes
-		probes, err = h.probeQuerier.GetProbes(ctx)
-	}
-
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
-			Code:    ErrDatabaseError,
-			Message: "探测配置列表获取失败",
-			Details: err.Error(),
-		})
-		return
+		allProbes, err := h.probeQuerier.GetProbes(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Code:    ErrDatabaseError,
+				Message: "探测配置列表获取失败",
+				Details: err.Error(),
+			})
+			return
+		}
+		probes = allProbes
 	}
 
 	c.JSON(http.StatusOK, models.GetProbesResponse{

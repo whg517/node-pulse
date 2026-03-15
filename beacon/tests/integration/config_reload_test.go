@@ -82,7 +82,7 @@ log_file: /tmp/beacon-integration-test.log
 		}
 	case <-time.After(5 * time.Second):
 		t.Error("Beacon did not exit within 5 seconds")
-		cmd.Process.Kill()
+		_ = cmd.Process.Kill()
 	}
 }
 
@@ -129,7 +129,7 @@ log_file: %s
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start beacon: %v", err)
 	}
-	defer cmd.Process.Kill()
+	defer func() { _ = cmd.Process.Kill() }()
 
 	// Give beacon time to start
 	time.Sleep(2 * time.Second)
@@ -230,7 +230,7 @@ log_file: %s
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("Failed to start beacon: %v", err)
 	}
-	defer cmd.Process.Kill()
+	defer func() { _ = cmd.Process.Kill() }()
 
 	// Give beacon time to start
 	time.Sleep(2 * time.Second)
@@ -337,7 +337,7 @@ log_file: /tmp/beacon-concurrent-test.log
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	go watcher.Start(ctx)
+	go func() { _ = watcher.Start(ctx) }()
 	time.Sleep(500 * time.Millisecond)
 
 	// Launch concurrent readers and config modifiers
@@ -350,6 +350,7 @@ log_file: /tmp/beacon-concurrent-test.log
 				config := watcher.GetConfig()
 				if config == nil {
 					t.Errorf("Reader %d: got nil config", id)
+					continue
 				}
 				if config.PulseServer == "" {
 					t.Errorf("Reader %d: pulse_server is empty", id)
@@ -377,7 +378,7 @@ probes:
 log_to_console: false
 log_file: /tmp/beacon-concurrent-test.log
 `, port)
-			os.WriteFile(cfgPath, []byte(modifiedConfig), 0644)
+			_ = os.WriteFile(cfgPath, []byte(modifiedConfig), 0644)
 			time.Sleep(200 * time.Millisecond)
 		}
 		done <- true

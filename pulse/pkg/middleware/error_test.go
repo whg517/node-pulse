@@ -70,7 +70,7 @@ func TestErrorHandler_GinError(t *testing.T) {
 	router.GET("/test", func(c *gin.Context) {
 		// Add error to context without calling RespondWithError
 		// This will be caught by ErrorHandler middleware
-		c.Error(&AppError{
+		_ = c.Error(&AppError{
 			Code:    ERR_DATABASE_ERROR,
 			Message: "Database connection failed",
 		})
@@ -108,7 +108,7 @@ func TestErrorHandler_StandardError(t *testing.T) {
 	router.Use(ErrorHandler())
 	router.GET("/test", func(c *gin.Context) {
 		// Add standard error to context
-		c.Error(http.ErrNotSupported)
+		_ = c.Error(http.ErrNotSupported)
 		// Don't call c.JSON - let ErrorHandler handle it
 	})
 

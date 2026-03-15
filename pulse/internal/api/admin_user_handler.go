@@ -324,7 +324,7 @@ func (h *AdminUserHandler) CreateUser(c *gin.Context) {
 	if h.auditLogger != nil {
 		requestingUserUUID, _ := uuid.Parse(requestingUserID)
 		createdUserUUID, _ := uuid.Parse(user.UserID)
-		h.auditLogger.LogEvent(ctx, "user_created", &requestingUserUUID, c.ClientIP(), map[string]interface{}{
+		_ = h.auditLogger.LogEvent(ctx, "user_created", &requestingUserUUID, c.ClientIP(), map[string]interface{}{
 			"created_user_id": createdUserUUID.String(),
 			"username":        user.Username,
 			"role":            user.Role,
@@ -506,7 +506,7 @@ func (h *AdminUserHandler) UpdateUser(c *gin.Context) {
 	// Audit logging
 	if h.auditLogger != nil {
 		requestingUserUUID, _ := uuid.Parse(requestingUserID)
-		h.auditLogger.LogEvent(ctx, "user_updated", &requestingUserUUID, c.ClientIP(), map[string]interface{}{
+		_ = h.auditLogger.LogEvent(ctx, "user_updated", &requestingUserUUID, c.ClientIP(), map[string]interface{}{
 			"updated_user_id": userID.String(),
 			"username":        user.Username,
 			"role":            user.Role,
@@ -632,7 +632,7 @@ func (h *AdminUserHandler) DeleteUser(c *gin.Context) {
 	// Audit logging
 	if h.auditLogger != nil {
 		requestingUserUUID, _ := uuid.Parse(requestingUserID)
-		h.auditLogger.LogEvent(ctx, "user_deleted", &requestingUserUUID, c.ClientIP(), map[string]interface{}{
+		_ = h.auditLogger.LogEvent(ctx, "user_deleted", &requestingUserUUID, c.ClientIP(), map[string]interface{}{
 			"deleted_user_id": userID.String(),
 			"username":        user.Username,
 			"role":            user.Role,

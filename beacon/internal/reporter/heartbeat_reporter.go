@@ -146,7 +146,7 @@ func (c *PulseAPIClient) SendHeartbeat(ctx context.Context, data *HeartbeatData)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Handle authentication errors
 	if resp.StatusCode == http.StatusUnauthorized {

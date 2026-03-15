@@ -56,7 +56,7 @@ func SetupTestConfig() {
 
 	// Set test mode by default
 	if os.Getenv("PULSE_SERVER_MODE") == "" {
-		os.Setenv("PULSE_SERVER_MODE", "test")
+		_ = os.Setenv("PULSE_SERVER_MODE", "test")
 	}
 }
 
@@ -78,7 +78,7 @@ func TeardownTestConfig() {
 	}
 
 	for _, envVar := range testEnvVars {
-		os.Unsetenv(envVar)
+		_ = os.Unsetenv(envVar)
 	}
 }
 

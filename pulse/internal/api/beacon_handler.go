@@ -408,7 +408,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 		})
 		return
 	}
-	defer reader.Close()
+	defer func() { _ = reader.Close() }()
 
 	decompressed, err := io.ReadAll(reader)
 	if err != nil {
@@ -503,7 +503,7 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 		JitterMs:       req.JitterMs,
 		IsAggregated:   false,
 	}
-	h.batchWriter.Write(metricRecord)
+	_ = h.batchWriter.Write(metricRecord)
 
 	// Trigger alert evaluation
 	if h.alertEngine != nil {

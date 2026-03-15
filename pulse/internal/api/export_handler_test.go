@@ -502,12 +502,12 @@ func setupTestDBWithCleanup(t *testing.T) (*pgxpool.Pool, func()) {
 	}
 
 	// Clean up any existing tables from previous tests
-	pool.Exec(ctx, "DROP TABLE IF EXISTS alerts CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alerts CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS sessions CASCADE")
 
 	// Create all tables
 	if err := db.Migrate(ctx, pool); err != nil {

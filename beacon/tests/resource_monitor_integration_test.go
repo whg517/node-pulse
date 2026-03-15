@@ -74,7 +74,7 @@ log_to_console: false
 	if err := logger.InitLogger(cfg); err != nil {
 		t.Fatalf("Failed to init logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Create probe scheduler
 	scheduler, err := probe.NewProbeScheduler(cfg.Probes)
@@ -210,7 +210,7 @@ log_to_console: false
 	if err := logger.InitLogger(cfg); err != nil {
 		t.Fatalf("Failed to init logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	scheduler, _ := probe.NewProbeScheduler(cfg.Probes)
 	logAdapter := &monitor.LogrusLogger{}
@@ -219,7 +219,7 @@ log_to_console: false
 		Enabled:              true,
 		CheckIntervalSeconds: 1,
 		Thresholds: monitor.ThresholdsConfig{
-			CPUMicrocores: 1,  // Very low threshold
+			CPUMicrocores: 1, // Very low threshold
 			MemoryMB:      1,
 		},
 		Degradation: monitor.DegradationConfig{
@@ -283,7 +283,7 @@ func TestIntegration_ResourceMonitorWithDebugCommand(t *testing.T) {
 	if err := exec.Command("go", "build", "-o", "/tmp/beacon-test", ".").Run(); err != nil {
 		t.Skipf("Skipping test: failed to build beacon: %v", err)
 	}
-	defer os.Remove("/tmp/beacon-test")
+	defer func() { _ = os.Remove("/tmp/beacon-test") }()
 
 	// Create config file
 	tmpDir := t.TempDir()

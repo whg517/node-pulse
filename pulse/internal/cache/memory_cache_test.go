@@ -253,7 +253,7 @@ func TestMemoryCache_Get(t *testing.T) {
 			PacketLossRate: 0.0,
 			JitterMs:       5.0,
 		}
-		mc.Store(nodeID, point)
+		_ = mc.Store(nodeID, point)
 	}
 
 	points := mc.Get(nodeID)
@@ -285,7 +285,7 @@ func TestMemoryCache_GetAllNodeIDs(t *testing.T) {
 			PacketLossRate: 0.0,
 			JitterMs:       5.0,
 		}
-		mc.Store(nodeID, point)
+		_ = mc.Store(nodeID, point)
 	}
 
 	retrievedNodeIDs := mc.GetAllNodeIDs()
@@ -321,7 +321,7 @@ func TestMemoryCache_AggregateMetricsByNode(t *testing.T) {
 			PacketLossRate: 0.1,
 			JitterMs:       5.0,
 		}
-		mc.Store(nodeID, point)
+		_ = mc.Store(nodeID, point)
 	}
 
 	aggregated := mc.AggregateMetricsByNode(nodeID)
@@ -344,7 +344,7 @@ func TestMemoryCache_MultipleNodes(t *testing.T) {
 			PacketLossRate: 0.0,
 			JitterMs:       5.0,
 		}
-		mc.Store(nodeID, point)
+		_ = mc.Store(nodeID, point)
 	}
 
 	if mc.GetSize() != numNodes {
@@ -380,7 +380,7 @@ func TestMemoryCache_ConcurrentAccess(t *testing.T) {
 					PacketLossRate: 0.0,
 					JitterMs:       5.0,
 				}
-				mc.Store(nodeID, point)
+				_ = mc.Store(nodeID, point)
 
 				// Get
 				mc.Get(nodeID)
@@ -414,7 +414,7 @@ func TestMemoryCache_OneHourDataEviction(t *testing.T) {
 			PacketLossRate: 0.0,
 			JitterMs:       5.0,
 		}
-		mc.Store(nodeID, point)
+		_ = mc.Store(nodeID, point)
 	}
 
 	points := mc.Get(nodeID)

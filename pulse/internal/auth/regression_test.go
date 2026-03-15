@@ -300,7 +300,7 @@ func TestRegression_ProbeHandlersWithNewAuth(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &response)
+		_ = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NotNil(t, response["probes"])
 
 		// POST /probes
@@ -548,7 +548,7 @@ func TestRegression_BeaconHeartbeatWithNewJWT(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code, "Beacon heartbeat should succeed")
 
 		var response map[string]interface{}
-		json.Unmarshal(w.Body.Bytes(), &response)
+		_ = json.Unmarshal(w.Body.Bytes(), &response)
 		assert.Equal(t, "accepted", response["status"])
 		assert.Equal(t, "node-123", response["node_id"])
 	})

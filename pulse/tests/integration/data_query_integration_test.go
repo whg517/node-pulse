@@ -28,14 +28,14 @@ func TestDataQueryEndpoints_Integration(t *testing.T) {
 	defer pool.Close()
 
 	// Clear rate limit store before test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Create test user and login
 	username := fmt.Sprintf("dataquery_%s", uuid.New().String()[:8])
 	password := "testpass123"
 
 	// Clean up any existing test user
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 
 	// Create test user
 	userID := uuid.New()
@@ -549,8 +549,8 @@ func TestDataQueryEndpoints_Integration(t *testing.T) {
 	// Cleanup
 	t.Cleanup(func() {
 		// Clean up all test data
-		pool.Exec(context.Background(), "DELETE FROM metrics WHERE node_id = ANY($1)", []uuid.UUID{node1ID, node2ID, node3ID})
-		pool.Exec(context.Background(), "DELETE FROM nodes WHERE id = ANY($1)", []uuid.UUID{node1ID, node2ID, node3ID})
-		pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+		_, _ = pool.Exec(context.Background(), "DELETE FROM metrics WHERE node_id = ANY($1)", []uuid.UUID{node1ID, node2ID, node3ID})
+		_, _ = pool.Exec(context.Background(), "DELETE FROM nodes WHERE id = ANY($1)", []uuid.UUID{node1ID, node2ID, node3ID})
+		_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 	})
 }

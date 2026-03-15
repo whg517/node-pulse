@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"os"
@@ -480,20 +479,6 @@ func getEnvOrDefault(key, defaultValue string) string {
 		return defaultValue
 	}
 	return value
-}
-
-// generateJWTSecret generates a 512-bit (64 byte) random JWT secret using crypto/rand
-// Deprecated: Use generateRSAKeyPair for RS256 signing instead
-func generateJWTSecret() string {
-	secret := make([]byte, 64)
-	// Use crypto/rand for cryptographically secure random bytes
-	_, err := rand.Read(secret)
-	if err != nil {
-		// Fallback: panic on failure as this is a critical security function
-		panic(fmt.Sprintf("failed to generate JWT secret: %v", err))
-	}
-	// Return as hex string for easier configuration
-	return hex.EncodeToString(secret)
 }
 
 // generateRSAKeyPair generates an RSA-2048 key pair for JWT RS256 signing

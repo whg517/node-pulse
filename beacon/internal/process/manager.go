@@ -142,7 +142,7 @@ func (m *Manager) Stop() error {
 	// Check if process is running
 	if !m.IsRunning(pid) {
 		// Process not running, clean up stale PID file
-		m.Cleanup()
+		_ = m.Cleanup()
 		return fmt.Errorf("beacon process (PID %d) is not running", pid)
 	}
 
@@ -174,7 +174,7 @@ func (m *Manager) Stop() error {
 		case <-ticker.C:
 			if !m.IsRunning(pid) {
 				// Process has terminated
-				m.Cleanup()
+				_ = m.Cleanup()
 				return nil
 			}
 		}

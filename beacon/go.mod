@@ -1,6 +1,6 @@
 module beacon
 
-go 1.24.11
+go 1.25.8
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0

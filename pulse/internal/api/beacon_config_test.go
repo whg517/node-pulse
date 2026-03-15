@@ -483,17 +483,17 @@ func TestCompressedHeartbeat(t *testing.T) {
 
 	t.Run("CRC32 checksum validation", func(t *testing.T) {
 		// Create test data
-	 testData := []byte("test data for compression")
-	 checksum := crc32.ChecksumIEEE(testData)
+		testData := []byte("test data for compression")
+		checksum := crc32.ChecksumIEEE(testData)
 
 		// Verify checksum matches
-	 computedChecksum := crc32.ChecksumIEEE(testData)
-	 assert.Equal(t, checksum, computedChecksum)
+		computedChecksum := crc32.ChecksumIEEE(testData)
+		assert.Equal(t, checksum, computedChecksum)
 
 		// Verify different data produces different checksum
-	 differentData := []byte("different test data")
-	 differentChecksum := crc32.ChecksumIEEE(differentData)
-	 assert.NotEqual(t, checksum, differentChecksum)
+		differentData := []byte("different test data")
+		differentChecksum := crc32.ChecksumIEEE(differentData)
+		assert.NotEqual(t, checksum, differentChecksum)
 	})
 
 	t.Run("Gzip compression and decompression", func(t *testing.T) {
@@ -515,14 +515,14 @@ func TestCompressedHeartbeat(t *testing.T) {
 		writer := gzip.NewWriter(&compressed)
 		_, err = writer.Write(jsonBytes)
 		require.NoError(t, err)
-		writer.Close()
+		require.NoError(t, writer.Close())
 
 		// Decompress
 		reader, err := gzip.NewReader(bytes.NewReader(compressed.Bytes()))
 		require.NoError(t, err)
 
 		decompressed, err := io.ReadAll(reader)
-		reader.Close()
+		require.NoError(t, reader.Close())
 		require.NoError(t, err)
 
 		// Verify decompressed data matches original

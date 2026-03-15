@@ -275,16 +275,16 @@ func TestCoreMetricsSerialization(t *testing.T) {
 
 	t.Run("UDP probe result serialization", func(t *testing.T) {
 		result := models.NewUDPProbeResultWithMetrics(
-			true,   // success
-			0.0,    // packetLossRate
-			98.76,  // rttMs
-			97.50,  // rttMedianMs
-			4.56,   // jitterMs
-			10.12,  // varianceMs
-			10,     // sentPackets
-			10,     // receivedPackets
-			10,     // sampleCount
-			"",     // errorMessage
+			true,  // success
+			0.0,   // packetLossRate
+			98.76, // rttMs
+			97.50, // rttMedianMs
+			4.56,  // jitterMs
+			10.12, // varianceMs
+			10,    // sentPackets
+			10,    // receivedPackets
+			10,    // sampleCount
+			"",    // errorMessage
 		)
 
 		// Verify all fields are populated
@@ -338,13 +338,13 @@ func (s *integrationTestTCPServer) start() {
 		if err != nil {
 			break
 		}
-		conn.Close()
+		_ = conn.Close()
 	}
 }
 
 func (s *integrationTestTCPServer) Close() {
 	if s.lis != nil {
-		s.lis.Close()
+		_ = s.lis.Close()
 	}
 }
 
@@ -400,7 +400,7 @@ func (s *integrationTestUDPEchoServer) start() {
 			fmt.Printf("🛑 UDP echo server on %s stopping\n", s.addr)
 			return
 		default:
-			conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			_ = conn.SetReadDeadline(time.Now().Add(1 * time.Second))
 			n, clientAddr, err := conn.ReadFromUDP(buf)
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -422,6 +422,6 @@ func (s *integrationTestUDPEchoServer) Close() {
 		close(s.stopChan)
 	}
 	if s.conn != nil {
-		s.conn.Close()
+		_ = s.conn.Close()
 	}
 }

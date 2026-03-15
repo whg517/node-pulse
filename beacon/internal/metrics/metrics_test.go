@@ -32,13 +32,13 @@ func initTestLogger(t *testing.T) {
 // TestNewMetrics tests the creation of a new Metrics handler
 func TestNewMetrics(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	cfg := &config.Config{
-		NodeID:         "test-node-id",
-		NodeName:       "test-node",
-		MetricsEnabled: true,
-		MetricsPort:    2112,
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       true,
+		MetricsPort:          2112,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -63,12 +63,12 @@ func TestNewMetrics(t *testing.T) {
 // TestMetricsStart tests starting the metrics server
 func TestMetricsStart(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
-		NodeID:         "test-node-id",
-		NodeName:       "test-node",
-		MetricsEnabled: true,
-		MetricsPort:    19112, // Use a different port to avoid conflicts
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       true,
+		MetricsPort:          19112, // Use a different port to avoid conflicts
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -89,7 +89,7 @@ func TestMetricsStart(t *testing.T) {
 	resp, err := http.Get("http://localhost:19112/metrics")
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
-	resp.Body.Close()
+	_ = resp.Body.Close()
 
 	// Stop metrics server
 	err = m.Stop()
@@ -100,12 +100,12 @@ func TestMetricsStart(t *testing.T) {
 // TestMetricsStartDisabled tests that metrics server doesn't start when disabled
 func TestMetricsStartDisabled(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
-		NodeID:         "test-node-id",
-		NodeName:       "test-node",
-		MetricsEnabled: false,
-		MetricsPort:    19113,
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       false,
+		MetricsPort:          19113,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -123,12 +123,12 @@ func TestMetricsStartDisabled(t *testing.T) {
 // TestMetricsStartAlreadyRunning tests that starting an already running server returns error
 func TestMetricsStartAlreadyRunning(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
-		NodeID:         "test-node-id",
-		NodeName:       "test-node",
-		MetricsEnabled: true,
-		MetricsPort:    19114,
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       true,
+		MetricsPort:          19114,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -140,7 +140,7 @@ func TestMetricsStartAlreadyRunning(t *testing.T) {
 	// Start metrics server
 	err = m.Start()
 	require.NoError(t, err)
-	defer m.Stop()
+	defer func() { _ = m.Stop() }()
 
 	// Try to start again
 	err = m.Start()
@@ -151,12 +151,12 @@ func TestMetricsStartAlreadyRunning(t *testing.T) {
 // TestMetricsEndpoint tests the /metrics endpoint returns correct format
 func TestMetricsEndpoint(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
-		NodeID:         "test-node-123",
-		NodeName:       "beacon-test",
-		MetricsEnabled: true,
-		MetricsPort:    19115,
+		NodeID:               "test-node-123",
+		NodeName:             "beacon-test",
+		MetricsEnabled:       true,
+		MetricsPort:          19115,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -168,7 +168,7 @@ func TestMetricsEndpoint(t *testing.T) {
 	// Start metrics server
 	err = m.Start()
 	require.NoError(t, err)
-	defer m.Stop()
+	defer func() { _ = m.Stop() }()
 
 	// Give server time to start
 	time.Sleep(100 * time.Millisecond)
@@ -176,7 +176,7 @@ func TestMetricsEndpoint(t *testing.T) {
 	// Request metrics endpoint
 	resp, err := http.Get("http://localhost:19115/metrics")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	// Verify status code
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
@@ -212,12 +212,12 @@ func TestMetricsEndpoint(t *testing.T) {
 // TestUpdateMetricsNoResults tests metrics update with no probe results
 func TestUpdateMetricsNoResults(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
-		NodeID:         "test-node-id",
-		NodeName:       "test-node",
-		MetricsEnabled: true,
-		MetricsPort:    19116,
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       true,
+		MetricsPort:          19116,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -237,12 +237,12 @@ func TestUpdateMetricsNoResults(t *testing.T) {
 // TestUpdateMetricsWithResults tests metrics update with probe results
 func TestUpdateMetricsWithResults(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
-		NodeID:         "test-node-id",
-		NodeName:       "test-node",
-		MetricsEnabled: true,
-		MetricsPort:    19117,
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       true,
+		MetricsPort:          19117,
 		MetricsUpdateSeconds: 10,
 		Probes: []config.ProbeConfig{
 			{
@@ -265,7 +265,7 @@ func TestUpdateMetricsWithResults(t *testing.T) {
 	// Start metrics server
 	err = m.Start()
 	require.NoError(t, err)
-	defer m.Stop()
+	defer func() { _ = m.Stop() }()
 
 	// Give server time to start and collect metrics
 	time.Sleep(200 * time.Millisecond)
@@ -273,7 +273,7 @@ func TestUpdateMetricsWithResults(t *testing.T) {
 	// Request metrics endpoint
 	resp, err := http.Get("http://localhost:19117/metrics")
 	require.NoError(t, err)
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
@@ -288,12 +288,12 @@ func TestUpdateMetricsWithResults(t *testing.T) {
 // TestMetricsStopGraceful tests graceful shutdown
 func TestMetricsStopGraceful(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
-		NodeID:         "test-node-id",
-		NodeName:       "test-node",
-		MetricsEnabled: true,
-		MetricsPort:    19118,
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       true,
+		MetricsPort:          19118,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -323,12 +323,12 @@ func TestMetricsStopGraceful(t *testing.T) {
 // TestMetricsStopNotRunning tests stopping a non-running server
 func TestMetricsStopNotRunning(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
-		NodeID:         "test-node-id",
-		NodeName:       "test-node",
-		MetricsEnabled: true,
-		MetricsPort:    19119,
+		NodeID:               "test-node-id",
+		NodeName:             "test-node",
+		MetricsEnabled:       true,
+		MetricsPort:          19119,
 		MetricsUpdateSeconds: 10,
 	}
 
@@ -346,7 +346,7 @@ func TestMetricsStopNotRunning(t *testing.T) {
 // Fix #2: Add WaitGroup.Wait() blocking test
 func TestMetricsWaitGroupBlocking(t *testing.T) {
 	initTestLogger(t)
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 	cfg := &config.Config{
 		NodeID:               "test-node-id",
 		NodeName:             "test-node",
@@ -369,7 +369,7 @@ func TestMetricsWaitGroupBlocking(t *testing.T) {
 
 	// Track if collector goroutine has finished
 	collectorDone := make(chan struct{})
-	
+
 	// Call Stop in goroutine to detect blocking
 	go func() {
 		_ = m.Stop()

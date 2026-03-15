@@ -40,7 +40,7 @@ func TestLogRotation_BySize(t *testing.T) {
 	// Give lumberjack time to rotate
 	time.Sleep(100 * time.Millisecond)
 
-	Close()
+	_ = Close()
 
 	// Check for rotated log files
 	files, err := os.ReadDir(tempDir)
@@ -98,7 +98,7 @@ func TestLogRotation_Compression(t *testing.T) {
 	// Give lumberjack time to rotate and compress
 	time.Sleep(200 * time.Millisecond)
 
-	Close()
+	_ = Close()
 
 	// Check for compressed log files
 	files, err := os.ReadDir(tempDir)
@@ -150,7 +150,7 @@ func TestLogRotation_MaxBackups(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	Close()
+	_ = Close()
 
 	// Count log files
 	files, err := os.ReadDir(tempDir)
@@ -250,7 +250,7 @@ func TestLogRotation_FileIntegrity(t *testing.T) {
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	Close()
+	_ = Close()
 
 	// Read all log files and verify JSON validity
 	files, err := os.ReadDir(tempDir)

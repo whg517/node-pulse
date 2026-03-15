@@ -64,7 +64,7 @@ func setupTestRouterForRegression(t *testing.T) (*gin.Engine, *pgxpool.Pool) {
 
 // cleanupTestUser removes test user from database
 func cleanupTestUserForRegression(pool *pgxpool.Pool, username string) {
-	pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
+	_, _ = pool.Exec(context.Background(), "DELETE FROM users WHERE username = $1", username)
 }
 
 // TestRegression_NodeEndpointsWithNewAuth verifies that existing node management endpoints
@@ -76,7 +76,7 @@ func TestRegression_NodeEndpointsWithNewAuth(t *testing.T) {
 	}
 
 	// Clear rate limit store for clean test
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user and login
 	testUserID := uuid.New()
@@ -162,7 +162,7 @@ func TestRegression_ProbeEndpointsWithNewAuth(t *testing.T) {
 		return
 	}
 
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create operator user (can manage probes)
 	testUserID := uuid.New()
@@ -214,7 +214,7 @@ func TestRegression_AlertEndpointsWithNewAuth(t *testing.T) {
 		return
 	}
 
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create operator user
 	testUserID := uuid.New()
@@ -266,7 +266,7 @@ func TestRegression_RBACWithNewJWT(t *testing.T) {
 		return
 	}
 
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Test 1: Viewer role should NOT be able to create nodes
 	t.Run("ViewerCannotCreateNodes", func(t *testing.T) {
@@ -397,7 +397,7 @@ func TestRegression_UserContextPreservation(t *testing.T) {
 		return
 	}
 
-	auth.ClearRateLimitStore(context.Background(), pool)
+	_ = auth.ClearRateLimitStore(context.Background(), pool)
 
 	// Arrange - Create test user
 	testUserID := uuid.New()

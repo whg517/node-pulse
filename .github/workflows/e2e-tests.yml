@@ -1,18 +1,6 @@
 name: E2E Tests
 
 on:
-  push:
-    paths:
-      - .github/workflows/**
-      - e2e/**
-      - frontend/**
-      - pulse/**
-  pull_request:
-    paths:
-      - .github/workflows/**
-      - e2e/**
-      - frontend/**
-      - pulse/**
   workflow_dispatch:
 
 permissions:
@@ -46,7 +34,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 25
           cache: npm
           cache-dependency-path: e2e/package-lock.json
 
@@ -122,7 +110,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 25
           cache: npm
           cache-dependency-path: e2e/package-lock.json
 

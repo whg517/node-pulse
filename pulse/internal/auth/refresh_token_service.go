@@ -237,7 +237,7 @@ func (s *RefreshTokenService) ValidateRefreshToken(ctx context.Context, token st
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	var dbToken models.RefreshToken
 	err = tx.QueryRow(ctx, `
@@ -323,7 +323,7 @@ func (s *RefreshTokenService) RotateRefreshToken(ctx context.Context, oldToken s
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Double-check token hasn't been used (concurrent request)
 	var revokedAt *time.Time

@@ -41,9 +41,9 @@ func setupTestDBForAlertRecords(t *testing.T) (*pgxpool.Pool, func()) {
 	}
 
 	// Clean up and migrate
-	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS alert_events CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alert_events CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")
 
 	if err := db.Migrate(ctx, pool); err != nil {
 		t.Fatalf("Failed to migrate test database: %v", err)

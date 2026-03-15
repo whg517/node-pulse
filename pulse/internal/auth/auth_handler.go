@@ -534,7 +534,7 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	var req struct {
 		RefreshToken string `json:"refresh_token"`
 	}
-	c.ShouldBindJSON(&req)
+	_ = c.ShouldBindJSON(&req)
 
 	if req.RefreshToken != "" {
 		// Hash and revoke by token_hash (not token_id)
@@ -1175,7 +1175,7 @@ func (h *AuthHandler) ConfirmPasswordReset(c *gin.Context) {
 	h.logAuditEvent(ctx, "password_reset_completed", &userIDStr, c.ClientIP(), nil)
 
 	// Revoke all user sessions for security
-	h.refreshTokenService.RevokeAllUserTokens(ctx, userIDStr)
+	_ = h.refreshTokenService.RevokeAllUserTokens(ctx, userIDStr)
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Password reset successfully",

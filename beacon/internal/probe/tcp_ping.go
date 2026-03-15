@@ -111,7 +111,7 @@ func (p *TCPPinger) Execute() (*models.TCPProbeResult, error) {
 	}
 
 	// Connection succeeded, close immediately
-	conn.Close()
+	_ = conn.Close()
 
 	// Calculate RTT in milliseconds (rounded to 2 decimal places)
 	rttMs := math.Round(elapsed.Seconds()*1000*rttPrecisionMultiplier) / rttPrecisionMultiplier
@@ -172,7 +172,7 @@ func (p *TCPPinger) ExecuteBatch(count int) (*models.TCPProbeResult, error) {
 		}
 
 		// Connection succeeded, close immediately
-		conn.Close()
+		_ = conn.Close()
 		receivedPackets++
 
 		samples = append(samples, SamplePoint{

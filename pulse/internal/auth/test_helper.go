@@ -15,12 +15,12 @@ import (
 
 // cleanupTables drops all test tables
 func cleanupTables(ctx context.Context, pool *pgxpool.Pool) {
-	pool.Exec(ctx, "DROP TABLE IF EXISTS api_keys CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS auth_audit_logs CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS rate_limits CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS token_blacklist CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS refresh_tokens CASCADE")
-	pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS api_keys CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS auth_audit_logs CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS rate_limits CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS token_blacklist CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS refresh_tokens CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS users CASCADE")
 }
 
 // createTestTables creates all required test database tables

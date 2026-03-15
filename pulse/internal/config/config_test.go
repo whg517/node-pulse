@@ -540,9 +540,9 @@ func TestConfig_LoadFromEnv(t *testing.T) {
 	defer func() {
 		for envVar, value := range originalEnv {
 			if value == "" {
-				os.Unsetenv(envVar)
+				_ = os.Unsetenv(envVar)
 			} else {
-				os.Setenv(envVar, value)
+				_ = os.Setenv(envVar, value)
 			}
 		}
 		Reset()
@@ -580,7 +580,7 @@ func TestConfig_LoadFromEnv(t *testing.T) {
 			// Reset and set env vars
 			Reset()
 			for key, value := range tt.setEnv {
-				os.Setenv(key, value)
+				_ = os.Setenv(key, value)
 			}
 
 			// Load config
@@ -597,7 +597,7 @@ func TestConfig_LoadFromEnv(t *testing.T) {
 func TestConfig_GenerateRandomSecret(t *testing.T) {
 	// Reset and set empty JWT secret to trigger auto-generation
 	Reset()
-	os.Unsetenv("PULSE_JWT_SECRET")
+	_ = os.Unsetenv("PULSE_JWT_SECRET")
 
 	cfg, err := Load()
 	assert.NoError(t, err, "Load should not return error")

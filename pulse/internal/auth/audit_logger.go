@@ -73,7 +73,7 @@ func (a *AuditLogger) LogLoginSuccess(ctx context.Context, userID uuid.UUID, ipA
 	details := map[string]interface{}{
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	a.LogEvent(ctx, EventLoginSuccess, &userID, ipAddress, details)
+	_ = a.LogEvent(ctx, EventLoginSuccess, &userID, ipAddress, details)
 }
 
 // LogLoginFailed records a failed login attempt
@@ -83,7 +83,7 @@ func (a *AuditLogger) LogLoginFailed(ctx context.Context, username, ipAddress st
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
 	// userID is nil for failed logins
-	a.LogEvent(ctx, EventLoginFailed, nil, ipAddress, details)
+	_ = a.LogEvent(ctx, EventLoginFailed, nil, ipAddress, details)
 }
 
 // LogLoginLocked records an account lockout
@@ -92,7 +92,7 @@ func (a *AuditLogger) LogLoginLocked(ctx context.Context, userID uuid.UUID, ipAd
 		"failed_attempts": failedAttempts,
 		"timestamp":       time.Now().UTC().Format(time.RFC3339),
 	}
-	a.LogEvent(ctx, EventLoginLocked, &userID, ipAddress, details)
+	_ = a.LogEvent(ctx, EventLoginLocked, &userID, ipAddress, details)
 }
 
 // LogTokenRefreshed records a token refresh
@@ -100,7 +100,7 @@ func (a *AuditLogger) LogTokenRefreshed(ctx context.Context, userID uuid.UUID, i
 	details := map[string]interface{}{
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	a.LogEvent(ctx, EventTokenRefreshed, &userID, ipAddress, details)
+	_ = a.LogEvent(ctx, EventTokenRefreshed, &userID, ipAddress, details)
 }
 
 // LogTokenRevoked records a token revocation (logout)
@@ -109,7 +109,7 @@ func (a *AuditLogger) LogTokenRevoked(ctx context.Context, userID uuid.UUID, ipA
 		"jti":       jti,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	a.LogEvent(ctx, EventTokenRevoked, &userID, ipAddress, details)
+	_ = a.LogEvent(ctx, EventTokenRevoked, &userID, ipAddress, details)
 }
 
 // LogAllSessionsRevoked records admin revocation of all user sessions
@@ -119,7 +119,7 @@ func (a *AuditLogger) LogAllSessionsRevoked(ctx context.Context, targetUserID uu
 		"admin_user_id":  adminUserID.String(),
 		"timestamp":      time.Now().UTC().Format(time.RFC3339),
 	}
-	a.LogEvent(ctx, EventAdminRevokeAll, &adminUserID, ipAddress, details)
+	_ = a.LogEvent(ctx, EventAdminRevokeAll, &adminUserID, ipAddress, details)
 }
 
 // LogRateLimitExceeded records a rate limit violation
@@ -128,7 +128,7 @@ func (a *AuditLogger) LogRateLimitExceeded(ctx context.Context, userID *uuid.UUI
 		"endpoint":  endpoint,
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 	}
-	a.LogEvent(ctx, EventRateLimitExceeded, userID, ipAddress, details)
+	_ = a.LogEvent(ctx, EventRateLimitExceeded, userID, ipAddress, details)
 }
 
 // AuditLogFilter represents filters for querying audit logs
