@@ -16,8 +16,6 @@ import { LoginPage, DashboardPage, NodesPage } from '../../pages'
 const ADMIN_USERNAME = process.env.TEST_ADMIN_USER || 'admin'
 const ADMIN_PASSWORD = process.env.TEST_ADMIN_PASS || 'Admin123'
 
-test.describe.configure({ mode: 'parallel' })
-
 test.describe('Smoke Tests - Authentication', () => {
   test('SMOKE-001: admin can login', async ({ page }) => {
     const loginPage = new LoginPage(page)

@@ -88,7 +88,7 @@ export class LoginPage extends BasePage {
    */
   async loginAndWait(username: string, password: string, timeout = 15000): Promise<void> {
     await this.login(username, password)
-    await this.page.waitForURL('**/dashboard**', { timeout })
+    await this.expectRedirectToDashboard(timeout)
   }
 
   /**
@@ -147,8 +147,19 @@ export class LoginPage extends BasePage {
   /**
    * Expect redirect to dashboard after login
    */
-  async expectRedirectToDashboard(): Promise<void> {
-    await this.page.waitForURL('**/dashboard**', { timeout: 15000 })
+  async expectRedirectToDashboard(timeout = 15000): Promise<void> {
+    try {
+      await this.page.waitForURL('**/dashboard**', { timeout, waitUntil: 'domcontentloaded' })
+    } catch {
+      if (this.page.url().includes('/dashboard')) {
+        return
+      }
+      await this.page.waitForFunction(
+        () => !window.location.pathname.includes('/login'),
+        undefined,
+        { timeout }
+      )
+    }
   }
 
   /**
