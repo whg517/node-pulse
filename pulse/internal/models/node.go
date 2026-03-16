@@ -18,18 +18,18 @@ type Node struct {
 
 // CreateNodeRequest represents request to create a new node
 type CreateNodeRequest struct {
-	Name   string                 `json:"name" binding:"required,max=255"`
-	IP     string                 `json:"ip" binding:"required,max=45"`
-	Region string                 `json:"region" binding:"required,max=100"`
-	Tags   map[string]interface{} `json:"tags,omitempty"`
+	Name   string   `json:"name" binding:"required,max=255"`
+	IP     string   `json:"ip" binding:"required,max=45"`
+	Region string   `json:"region" binding:"required,max=100"`
+	Tags   []string `json:"tags,omitempty"`
 }
 
 // UpdateNodeRequest represents request to update a node
 type UpdateNodeRequest struct {
-	Name   *string                 `json:"name,omitempty" binding:"omitempty,max=255"`
-	IP     *string                 `json:"ip,omitempty" binding:"omitempty,max=45"`
-	Region *string                 `json:"region,omitempty" binding:"omitempty,max=100"`
-	Tags   *map[string]interface{} `json:"tags,omitempty"`
+	Name   *string  `json:"name,omitempty" binding:"omitempty,max=255"`
+	IP     *string  `json:"ip,omitempty" binding:"omitempty,max=45"`
+	Region *string  `json:"region,omitempty" binding:"omitempty,max=100"`
+	Tags   []string `json:"tags,omitempty"`
 }
 
 // CreateNodeData represents node data in create response

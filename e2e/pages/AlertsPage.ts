@@ -14,12 +14,12 @@ export class AlertRulesPage {
   readonly loadingSpinner: Locator
   readonly emptyState: Locator
 
-  // Form fields
-  readonly nameInput: Locator
+  // Form fields (matching AlertRuleForm.tsx)
   readonly metricSelect: Locator
   readonly thresholdInput: Locator
-  readonly durationInput: Locator
   readonly levelSelect: Locator
+  readonly nodeSelect: Locator
+  readonly enabledCheckbox: Locator
   readonly submitButton: Locator
 
   constructor(page: Page) {
@@ -33,17 +33,36 @@ export class AlertRulesPage {
     this.loadingSpinner = page.locator('.animate-spin')
     this.emptyState = page.locator('.text-center.py-12, .text-center:has-text("No")')
 
-    // Form fields
-    this.nameInput = page.locator('#name, input[name="name"]')
-    this.metricSelect = page.locator('select[name="metric_type"], select[name="metricType"]')
-    this.thresholdInput = page.locator('#threshold, input[name="threshold"]')
-    this.durationInput = page.locator('#duration, input[name="duration"]')
-    this.levelSelect = page.locator('select[name="level"]')
+    // Form fields - match actual AlertRuleForm.tsx IDs
+    this.metricSelect = page.locator('#metric')
+    this.thresholdInput = page.locator('#threshold')
+    this.levelSelect = page.locator('#level')
+    this.nodeSelect = page.locator('#node')
+    this.enabledCheckbox = page.locator('#enabled')
     this.submitButton = page.locator('button[type="submit"]')
   }
 
   async goto() {
+    const currentUrl = this.page.url()
+
+    // If already on login page, navigation will fail - skip
+    if (currentUrl.includes('/login')) {
+      throw new Error('Cannot navigate: user is on login page (not authenticated)')
+    }
+
+    // Close any open modals first by pressing Escape
+    try {
+      await this.page.keyboard.press('Escape')
+      await this.page.waitForTimeout(200)
+    } catch {
+      // Ignore errors
+    }
+
+    // Direct navigation works now that auth state is properly persisted
+    // (localhost URL and vite proxy cookie handling were fixed)
     await this.page.goto('/alerts/rules')
+
+    // Wait for page to settle
     await this.page.waitForLoadState('networkidle')
   }
 
@@ -76,15 +95,21 @@ export class AlertRulesPage {
     await this.modal.waitFor({ state: 'visible' })
   }
 
-  async createRule(name: string, metric: string, threshold: number, level: string) {
+  async createRule(metric: string, threshold: number, level: string, nodeId?: string) {
     await this.clickCreate()
-    await this.nameInput.fill(name)
+    // Select metric type (latency, packet_loss_rate, jitter)
     if (await this.metricSelect.count() > 0) {
       await this.metricSelect.selectOption(metric)
     }
+    // Fill threshold
     await this.thresholdInput.fill(String(threshold))
+    // Select level (P0, P1, P2)
     if (await this.levelSelect.count() > 0) {
       await this.levelSelect.selectOption(level)
+    }
+    // Optionally select a node (default is global)
+    if (nodeId && (await this.nodeSelect.count() > 0)) {
+      await this.nodeSelect.selectOption(nodeId)
     }
     await this.submitButton.click()
     await this.modal.waitFor({ state: 'hidden' })

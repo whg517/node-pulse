@@ -26,6 +26,19 @@ var (
 	ErrDatabaseError      = "ERR_DATABASE_ERROR"
 )
 
+// convertTagsToMap converts a string slice of tags to a map[string]interface{}
+// for storage in the database. Each tag becomes a key with a true value.
+func convertTagsToMap(tags []string) map[string]interface{} {
+	if tags == nil {
+		return nil
+	}
+	result := make(map[string]interface{})
+	for _, tag := range tags {
+		result[tag] = true
+	}
+	return result
+}
+
 // NodeHandler handles node API requests
 type NodeHandler struct {
 	nodeQuerier db.NodesQuerier
@@ -169,7 +182,7 @@ func (h *NodeHandler) CreateNodeHandler(c *gin.Context) {
 			updates["region"] = req.Region
 		}
 		if req.Tags != nil {
-			updates["tags"] = req.Tags
+			updates["tags"] = convertTagsToMap(req.Tags)
 		}
 
 		// Update existing node
@@ -215,7 +228,7 @@ func (h *NodeHandler) CreateNodeHandler(c *gin.Context) {
 	nodeID := uuid.New()
 
 	// Create node in database
-	err = h.nodeQuerier.CreateNode(ctx, nodeID, req.Name, req.IP, req.Region, req.Tags)
+	err = h.nodeQuerier.CreateNode(ctx, nodeID, req.Name, req.IP, req.Region, convertTagsToMap(req.Tags))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    ErrDatabaseError,
@@ -503,7 +516,7 @@ func (h *NodeHandler) UpdateNodeHandler(c *gin.Context) {
 		updates["region"] = *req.Region
 	}
 	if req.Tags != nil {
-		updates["tags"] = *req.Tags
+		updates["tags"] = convertTagsToMap(req.Tags)
 	}
 
 	// Update node in database

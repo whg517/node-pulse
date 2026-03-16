@@ -266,3 +266,13 @@ export function setupVisibilityHandler(): () => void {
      document.removeEventListener('visibilitychange', handleVisibilityChange)
    }
 }
+
+// ============== E2E Testing Support ==============
+// Expose store to window for e2e tests (development/test only)
+// Always expose in non-production for debugging and e2e testing
+if (import.meta.env.DEV || import.meta.env.MODE === 'test' || import.meta.env.MODE === 'development') {
+  ;(window as unknown as { useAuthStore: typeof useAuthStore }).useAuthStore = useAuthStore
+  if (import.meta.env.DEV) {
+    console.log('[AuthStore] Exposed useAuthStore to window for e2e testing')
+  }
+}

@@ -9,6 +9,26 @@ export default defineConfig({
       '/api': {
         target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:6532',
         changeOrigin: true,
+        cookieDomainRewrite: '',
+        cookiePathRewrite: '',
+        configure: (proxy) => {
+          proxy.on('proxyReq', (proxyReq, req) => {
+            // Log request for debugging
+            if (req.url?.includes('/auth/')) {
+              console.log('[Proxy] Request:', req.method, req.url)
+            }
+          })
+          proxy.on('proxyRes', (proxyRes, req) => {
+            // Log auth responses for debugging
+            if (req.url?.includes('/auth/')) {
+              console.log('[Proxy] Response:', proxyRes.statusCode, req.url)
+              const setCookie = proxyRes.headers['set-cookie']
+              if (setCookie) {
+                console.log('[Proxy] Set-Cookie:', setCookie)
+              }
+            }
+          })
+        },
       },
     },
   },

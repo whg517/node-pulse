@@ -85,6 +85,21 @@ export async function apiClient<T>(
 /**
  * Internal request function with retry logic
  */
+/**
+ * Get CSRF token from cookie as fallback
+ */
+function getCsrfTokenFromCookie(): string | null {
+  if (typeof document === 'undefined') return null
+  const cookies = document.cookie.split(';')
+  for (const cookie of cookies) {
+    const [name, value] = cookie.trim().split('=')
+    if (name === 'csrf_token' && value) {
+      return value
+    }
+  }
+  return null
+}
+
 async function makeRequest<T>(
   endpoint: string,
   options: RequestInit,
@@ -99,7 +114,13 @@ async function makeRequest<T>(
 
   // Get current auth state
   const { accessToken } = authStore
-  const { csrfToken } = useAuthStore.getState()
+  let { csrfToken } = useAuthStore.getState()
+
+  // Fallback: Get CSRF token from cookie if not in store
+  // This handles cases where the store state is not properly hydrated
+  if (!csrfToken) {
+    csrfToken = getCsrfTokenFromCookie()
+  }
 
   // Determine if this is a state-changing request that needs CSRF protection
   const method = (options.method || 'GET').toUpperCase()
@@ -132,8 +153,8 @@ async function makeRequest<T>(
         // Retry original request with new token
         return makeRequest<T>(endpoint, options, true)
       } catch (refreshError) {
-        // 429 rate-limit on refresh: don't force logout, propagate as-is
-        if (refreshError instanceof ApiError && refreshError.status === 429) {
+        // 429 rate-limit or 409 conflict on refresh: don't force logout, propagate as-is
+        if (refreshError instanceof ApiError && (refreshError.status === 429 || refreshError.status === 409)) {
           throw refreshError
         }
         authStore.clearAuth()
@@ -199,6 +220,22 @@ async function performRefresh(): Promise<string> {
       if (response.status === 429) {
         console.warn('[apiClient] Token refresh rate-limited (429), will retry later')
         throw new ApiError('Too many refresh requests, please wait a moment', 'ERR_RATE_LIMIT_EXCEEDED', undefined, 429)
+      }
+
+      // 409 Conflict means token was already used by another concurrent refresh
+      // This is not an auth failure - another refresh succeeded, so we should retry
+      if (response.status === 409) {
+        console.warn('[apiClient] Token refresh conflict (409) - token already used by concurrent request')
+        // Wait a brief moment for the other refresh to complete and update the store
+        await new Promise(resolve => setTimeout(resolve, 100))
+        // Check if we now have a valid access token from the other refresh
+        const { accessToken } = useAuthStore.getState()
+        if (accessToken) {
+          console.log('[apiClient] Access token available after 409, returning existing token')
+          return accessToken
+        }
+        // If still no token, throw a retryable error
+        throw new ApiError('Token already used, please retry', 'ERR_TOKEN_CONFLICT', undefined, 409)
       }
 
       throw new AuthenticationError('Failed to refresh token')

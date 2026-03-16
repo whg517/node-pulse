@@ -108,7 +108,8 @@ test.describe('Smoke Tests - Core Pages', () => {
 
   test('SMOKE-011: webhooks page loads', async ({ adminPage }) => {
     await adminPage.goto('/integrations/webhooks')
-    await adminPage.waitForLoadState('networkidle')
+    // Use domcontentloaded instead of networkidle - webhooks page may have ongoing requests
+    await adminPage.waitForLoadState('domcontentloaded')
     await expect(adminPage).toHaveURL(/.*webhooks/)
   })
 

@@ -16,7 +16,7 @@ import bcrypt from 'bcryptjs'
 // Test database connection
 const TEST_DB_URL = process.env.TEST_DB_URL || 'postgresql://testuser:testpass123@localhost:5432/nodepulse_test'
 const API_BASE_URL = process.env.API_BASE_URL || 'http://localhost:6532'
-const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://127.0.0.1:5173'
+const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || 'http://localhost:5173'
 
 // Test user credentials - use environment variables for security
 // Falls back to defaults only for local development

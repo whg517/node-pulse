@@ -21,9 +21,12 @@ export interface DataExportSelectors extends FormSelectors {
 
 export const DEFAULT_DATA_EXPORT_SELECTORS: DataExportSelectors = {
   ...DEFAULT_FORM_SELECTORS,
-  nodeSelect: '[data-testid="node-select"], select[name="node"], select[name="nodeId"]',
-  timeRangeSelect: '[data-testid="time-range-select"], select[name="timeRange"], select[name="time_range"]',
-  formatSelect: '[data-testid="format-select"], select[name="format"]',
+  // Node selection uses checkboxes, not a select dropdown
+  nodeSelect: 'input[type="checkbox"]',
+  // Time range uses radio buttons
+  timeRangeSelect: 'input[type="radio"][name="timeRange"]',
+  // Format uses radio buttons
+  formatSelect: 'input[type="radio"][name="format"]',
   progressBar: '[data-testid="progress-bar"], .progress-bar, [role="progressbar"]',
   downloadButton: '[data-testid="download-button"], button:has-text("Download"), a:has-text("Download")',
   accessWarning: '[data-testid="access-warning"], .bg-yellow-50:has-text("Admin"), .access-warning',
@@ -75,31 +78,55 @@ export class DataExportPage extends FormPage {
   }
 
   /**
-   * Select node for export
+   * Select node for export (click checkbox by node name)
    */
   async selectNode(nodeName: string): Promise<void> {
-    await this.selectOption('node', nodeName)
+    const checkbox = this.page.locator(`label:has-text("${nodeName}") input[type="checkbox"]`)
+    if (await checkbox.count() > 0) {
+      await checkbox.first().check()
+    }
   }
 
   /**
-   * Select node by value
+   * Select node by checking first available checkbox
    */
-  async selectNodeByValue(nodeValue: string): Promise<void> {
-    await this.nodeSelect.selectOption({ value: nodeValue })
+  async selectFirstNode(): Promise<void> {
+    const checkbox = this.nodeSelect.first()
+    if (await checkbox.count() > 0) {
+      await checkbox.check()
+    }
   }
 
   /**
-   * Select time range
+   * Select node by value (click checkbox by index)
+   */
+  async selectNodeByIndex(index: number): Promise<void> {
+    const checkbox = this.nodeSelect.nth(index)
+    if (await checkbox.count() > 0) {
+      await checkbox.check()
+    }
+  }
+
+  /**
+   * Select time range (click radio button)
+   * Options: '7d', '30d', 'custom'
    */
   async selectTimeRange(range: string): Promise<void> {
-    await this.selectOption('timeRange', range)
+    const radio = this.page.locator(`input[type="radio"][name="timeRange"][value="${range}"]`)
+    if (await radio.count() > 0) {
+      await radio.check()
+    }
   }
 
   /**
-   * Select export format
+   * Select export format (click radio button)
+   * Options: 'csv', 'excel'
    */
   async selectFormat(format: string): Promise<void> {
-    await this.selectOption('format', format)
+    const radio = this.page.locator(`input[type="radio"][name="format"][value="${format}"]`)
+    if (await radio.count() > 0) {
+      await radio.check()
+    }
   }
 
   /**
@@ -221,9 +248,12 @@ export class DataExportPage extends FormPage {
    */
   async expectFormVisible(): Promise<void> {
     await expect(this.form).toBeVisible()
-    await expect(this.nodeSelect).toBeVisible()
-    await expect(this.timeRangeSelect).toBeVisible()
-    await expect(this.formatSelect).toBeVisible()
+    // Check that node checkboxes exist
+    await expect(this.nodeSelect.first()).toBeVisible()
+    // Check that time range radio buttons exist
+    await expect(this.timeRangeSelect.first()).toBeVisible()
+    // Check that format radio buttons exist
+    await expect(this.formatSelect.first()).toBeVisible()
     await expect(this.submitButton).toBeVisible()
   }
 

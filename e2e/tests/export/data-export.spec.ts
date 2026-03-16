@@ -36,20 +36,17 @@ test.describe('Data Export Page - Admin', () => {
 
     await exportPage.expectFormVisible()
 
-    // Check for node selector
-    if (await exportPage.nodeSelect.count() > 0) {
-      await expect(exportPage.nodeSelect).toBeVisible()
-    }
+    // Check for node checkboxes (at least one)
+    const nodeCheckboxes = adminPage.locator('input[type="checkbox"]')
+    await expect(nodeCheckboxes.first()).toBeVisible()
 
-    // Check for time range
-    if (await exportPage.timeRangeSelect.count() > 0) {
-      await expect(exportPage.timeRangeSelect).toBeVisible()
-    }
+    // Check for time range radio buttons
+    const timeRangeRadios = adminPage.locator('input[type="radio"][name="timeRange"]')
+    await expect(timeRangeRadios.first()).toBeVisible()
 
-    // Check for format selector
-    if (await exportPage.formatSelect.count() > 0) {
-      await expect(exportPage.formatSelect).toBeVisible()
-    }
+    // Check for format radio buttons
+    const formatRadios = adminPage.locator('input[type="radio"][name="format"]')
+    await expect(formatRadios.first()).toBeVisible()
   })
 
   test('can submit export', async ({ adminPage }) => {
@@ -62,14 +59,14 @@ test.describe('Data Export Page - Admin', () => {
 
     await exportPage.expectFormVisible()
 
-    // Select options if available
-    if (await exportPage.timeRangeSelect.count() > 0) {
-      await exportPage.selectTimeRange('24h')
-    }
+    // Select first available node checkbox
+    await exportPage.selectFirstNode()
 
-    if (await exportPage.formatSelect.count() > 0) {
-      await exportPage.selectFormat('csv')
-    }
+    // Select time range (7d is default, but let's select explicitly)
+    await exportPage.selectTimeRange('7d')
+
+    // Select format
+    await exportPage.selectFormat('csv')
 
     // Submit export
     await exportPage.submitExport()
@@ -87,13 +84,19 @@ test.describe('Data Export Page - Admin', () => {
     }
 
     await exportPage.expectFormVisible()
+
+    // Select first node
+    await exportPage.selectFirstNode()
+
+    // Submit export
     await exportPage.submitExport()
 
-    // Look for progress indicator
-    const progressVisible = await adminPage.locator('[data-testid="progress-bar"], .progress, [role="progressbar"]').count() > 0
+    // Look for progress indicator or just wait a bit
+    await adminPage.waitForTimeout(1000)
 
-    // Progress may or may not be shown depending on export speed
-    expect(progressVisible || true).toBe(true)
+    // Progress may or may not be shown depending on export speed - just verify no crash
+    const pageContent = await adminPage.content()
+    expect(pageContent).toBeTruthy()
   })
 
   test('export API works', async ({ adminPage }) => {

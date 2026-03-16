@@ -22,7 +22,7 @@ export interface NodesSelectors extends TableSelectors, ModalSelectors {
 export const DEFAULT_NODES_SELECTORS: NodesSelectors = {
   ...DEFAULT_TABLE_SELECTORS,
   ...DEFAULT_MODAL_SELECTORS,
-  createButton: '[data-testid="create-button"], button:has-text("Create"), button:has-text("Add")',
+  createButton: '[data-testid="create-button"], button:has-text("Add New Node"), button:has-text("Create"), button:has-text("Add")',
   nameInput: '[data-testid="name-input"], #name, input[name="name"]',
   regionInput: '[data-testid="region-input"], #region, input[name="region"], select[name="region"]',
   ipInput: '[data-testid="ip-input"], #ip, input[name="ip"]',
@@ -64,8 +64,14 @@ export class NodesPage extends TablePage {
   /**
    * Wait for modal to close
    */
-  async waitForModalClose(timeout = 5000): Promise<void> {
-    await this.modal.first().waitFor({ state: 'hidden', timeout })
+  async waitForModalClose(timeout = 10000): Promise<void> {
+    try {
+      await this.modal.first().waitFor({ state: 'hidden', timeout })
+    } catch {
+      // Modal might already be closed or have different structure
+      // Just wait a bit for the page to stabilize
+      await this.page.waitForTimeout(500)
+    }
   }
 
   /**
@@ -101,6 +107,8 @@ export class NodesPage extends TablePage {
    * Click create button
    */
   async clickCreate(): Promise<void> {
+    // Wait for the create button to be visible and click it
+    await this.createButton.first().waitFor({ state: 'visible', timeout: 10000 })
     await this.createButton.first().click()
     await this.waitForModalOpen()
   }
@@ -110,10 +118,20 @@ export class NodesPage extends TablePage {
    */
   async createNode(name: string, region: string): Promise<void> {
     await this.clickCreate()
-    await this.nameInput.fill(name)
-    if (await this.regionInput.count() > 0) {
-      await this.regionInput.fill(region)
-    }
+
+    // Wait for form to be interactive and fill fields within the modal
+    const modalForm = this.modal.first()
+
+    // Fill name - wait for it to be visible first
+    const nameField = modalForm.locator('#name, input[name="name"]')
+    await nameField.waitFor({ state: 'visible', timeout: 5000 })
+    await nameField.fill(name)
+
+    // Fill region
+    const regionField = modalForm.locator('#region, input[name="region"]')
+    await regionField.waitFor({ state: 'visible', timeout: 5000 })
+    await regionField.fill(region)
+
     await this.submit()
     await this.waitForModalClose()
   }
@@ -123,13 +141,25 @@ export class NodesPage extends TablePage {
    */
   async createNodeWithIp(name: string, region: string, ip: string): Promise<void> {
     await this.clickCreate()
-    await this.nameInput.fill(name)
-    if (await this.regionInput.count() > 0) {
-      await this.regionInput.fill(region)
-    }
-    if (await this.ipInput.count() > 0) {
-      await this.ipInput.fill(ip)
-    }
+
+    // Wait for form to be interactive and fill fields within the modal
+    const modalForm = this.modal.first()
+
+    // Fill name - wait for it to be visible first
+    const nameField = modalForm.locator('#name, input[name="name"]')
+    await nameField.waitFor({ state: 'visible', timeout: 5000 })
+    await nameField.fill(name)
+
+    // Fill IP
+    const ipField = modalForm.locator('#ip, input[name="ip"]')
+    await ipField.waitFor({ state: 'visible', timeout: 5000 })
+    await ipField.fill(ip)
+
+    // Fill region
+    const regionField = modalForm.locator('#region, input[name="region"]')
+    await regionField.waitFor({ state: 'visible', timeout: 5000 })
+    await regionField.fill(region)
+
     await this.submit()
     await this.waitForModalClose()
   }

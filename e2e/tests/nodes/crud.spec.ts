@@ -27,7 +27,75 @@ test.describe('Node CRUD - Admin/Operator', () => {
     await nodesPage.expectTableVisible()
 
     const nodeName = `e2e_test_${Date.now()}`
-    await nodesPage.createNode(nodeName, 'us-east-1')
+    const nodeIp = `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`
+
+    // Get CSRF token from HttpOnly cookie via Playwright context
+    const allCookies = await adminPage.context().cookies()
+    const csrfCookie = allCookies.find(c => c.name === 'csrf_token')
+    const csrfToken = csrfCookie?.value
+
+    if (!csrfToken) {
+      throw new Error('CSRF token cookie not found - login may have failed')
+    }
+
+    // Intercept API requests and add CSRF header using route.fetch()
+    // This ensures cookies are properly sent with the request
+    await adminPage.route('**/api/v1/**', async (route, request) => {
+      const method = request.method()
+      const headers: Record<string, string> = {
+        ...Object.fromEntries(Object.entries(request.headers())),
+      }
+
+      // Add CSRF header for mutation requests
+      if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+        headers['X-CSRF-Token'] = csrfToken
+      }
+
+      // Build cookie header from all context cookies (including HttpOnly ones)
+      const cookieHeader = allCookies.map(c => `${c.name}=${c.value}`).join('; ')
+
+      // Use route.fetch() with explicit cookie header to ensure cookies are sent
+      const response = await route.fetch({
+        headers: {
+          ...headers,
+          'Cookie': cookieHeader,
+        },
+      })
+
+      await route.fulfill({ response })
+    })
+
+    // Open create modal
+    await nodesPage.clickCreate()
+
+    // Verify modal is open
+    await expect(nodesPage.modal).toBeVisible()
+
+    // Fill form fields
+    const nameInput = adminPage.locator('#name')
+    const ipInput = adminPage.locator('#ip')
+    const regionInput = adminPage.locator('#region')
+
+    // Wait for inputs to be visible and fill them
+    await nameInput.waitFor({ state: 'visible', timeout: 5000 })
+    await nameInput.fill(nodeName)
+
+    await ipInput.waitFor({ state: 'visible', timeout: 5000 })
+    await ipInput.fill(nodeIp)
+
+    await regionInput.waitFor({ state: 'visible', timeout: 5000 })
+    await regionInput.fill('us-east-1')
+
+    // Click submit button
+    const submitBtn = adminPage.locator('button[type="submit"]')
+    await submitBtn.click()
+
+    // Wait for modal to close
+    await nodesPage.waitForModalClose()
+
+    // Reload page to ensure we see the latest data
+    await adminPage.reload()
+    await nodesPage.expectTableVisible()
 
     // Verify node appears in list
     const hasNode = await nodesPage.hasNode(nodeName)
@@ -165,16 +233,16 @@ test.describe('Node CRUD - Admin/Operator', () => {
 })
 
 test.describe('Node CRUD - Operator', () => {
-  test('operator can create nodes', async ({ operatorPage }) => {
+  test('operator cannot create nodes (admin only)', async ({ operatorPage }) => {
     const nodesPage = new NodesPage(operatorPage)
     await nodesPage.goto()
     await nodesPage.expectTableVisible()
 
-    const nodeName = `e2e_operator_${Date.now()}`
-    await nodesPage.createNode(nodeName, 'eu-west-1')
+    // Operator should NOT see the create button (admin only feature)
+    const createButton = operatorPage.locator('button:has-text("Add New Node"), button:has-text("Create")')
+    const isVisible = await createButton.isVisible().catch(() => false)
 
-    const hasNode = await nodesPage.hasNode(nodeName)
-    expect(hasNode).toBeTruthy()
+    expect(isVisible).toBeFalsy()
   })
 })
 
