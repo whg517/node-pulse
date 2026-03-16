@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -16,15 +17,20 @@ import (
 
 // Mock WebhookLogsQuerier for testing
 type mockWebhookLogsQuerier struct {
+	mu          sync.Mutex
 	logsCreated []*models.WebhookLog
 }
 
 func (m *mockWebhookLogsQuerier) CreateWebhookLog(ctx context.Context, log *models.WebhookLog) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.logsCreated = append(m.logsCreated, log)
 	return nil
 }
 
 func (m *mockWebhookLogsQuerier) CountRecentWebhookLogs(ctx context.Context, totalCount, successCount *int64, limit int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	*totalCount = int64(len(m.logsCreated))
 	*successCount = int64(len(m.logsCreated)) // Simplified mock - all successful
 	return nil
