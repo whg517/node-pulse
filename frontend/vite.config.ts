@@ -12,7 +12,7 @@ export default defineConfig({
         cookieDomainRewrite: '',
         cookiePathRewrite: '',
         configure: (proxy) => {
-          proxy.on('proxyReq', (proxyReq, req) => {
+            proxy.on('proxyReq', (_proxyReq, req) => {
             // Log request for debugging
             if (req.url?.includes('/auth/')) {
               console.log('[Proxy] Request:', req.method, req.url)

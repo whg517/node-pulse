@@ -137,7 +137,7 @@ func TestRegression_NodeEndpointsWithNewAuth(t *testing.T) {
 			Name:   "test-node-regression",
 			IP:     "192.168.1.100",
 			Region: "us-west-1",
-			Tags:   map[string]interface{}{"env": "test", "tier": "frontend"},
+				Tags:   []string{"env:test", "tier:frontend"},
 		}
 		nodeBody, _ := json.Marshal(newNode)
 		req, _ := http.NewRequest("POST", "/api/v1/nodes", bytes.NewBuffer(nodeBody))
