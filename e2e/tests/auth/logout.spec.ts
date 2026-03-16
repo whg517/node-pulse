@@ -81,7 +81,14 @@ test.describe('Logout Flow', () => {
     await adminPage.waitForLoadState('networkidle')
     await expect(adminPage).toHaveURL(/.*dashboard/)
 
-    // Click logout button directly (it's visible in the nav, no dropdown needed)
+    // First, open the user menu dropdown by clicking on the user avatar/menu button
+    const userMenuButton = adminPage.locator('[data-testid="user-menu-button"], [data-testid="user-menu"], button[aria-label*="User menu"]')
+    await userMenuButton.first().click()
+
+    // Wait for dropdown to appear
+    await adminPage.waitForTimeout(500)
+
+    // Now click the logout button
     const logoutButton = adminPage.locator('button:has-text("Logout")')
     await logoutButton.click()
 

@@ -132,6 +132,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
         <div className="relative ml-2">
           <button
             type="button"
+            data-testid="user-menu-button"
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="flex items-center gap-2 rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
           >
