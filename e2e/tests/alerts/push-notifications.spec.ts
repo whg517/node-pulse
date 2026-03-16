@@ -979,9 +979,9 @@ test.describe('Alert Push Notifications - FR-4.3.13 Integration', () => {
     await adminPage.waitForTimeout(1000)
 
     // Look for common webhook integrations
-    const integrations = adminPage.locator(
-      'text=/Slack|Discord|Teams|WeChat|钉钉|企业微信/i, [data-testid="integration"]'
-    )
+    const integrations = adminPage.locator('[data-testid="integration"]').filter({
+      hasText: /Slack|Discord|Teams|WeChat|钉钉|企业微信/i
+    })
 
     const hasIntegrations = await integrations.count() > 0
     expect(hasIntegrations || true).toBe(true)
