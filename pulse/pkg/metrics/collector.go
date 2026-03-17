@@ -93,15 +93,17 @@ func (c *Collector) Start() {
 // Stop gracefully stops the metrics collector
 func (c *Collector) Stop() {
 	c.mu.Lock()
-	defer c.mu.Unlock()
-
 	if !c.started {
+		c.mu.Unlock()
 		return
 	}
-
 	c.cancel()
-	c.wg.Wait()
 	c.started = false
+	c.mu.Unlock()
+
+	// Wait outside the lock so in-progress aggregation goroutines can acquire
+	// the mutex to complete their current work before exiting.
+	c.wg.Wait()
 
 	log.Println("[Metrics] Collector stopped")
 }
