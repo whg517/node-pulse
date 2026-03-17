@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import LoginPage from './LoginPage'
@@ -293,10 +293,13 @@ describe('LoginPage', () => {
     expect(screen.getByText('Signing in...')).toBeInTheDocument()
 
     // Resolve the login promise to clean up
-    resolveLogin!({
-      data: { user_id: '123', username: 'admin', role: 'admin' },
-      message: 'Login successful',
-      timestamp: '2026-01-26T10:00:00Z'
+    await act(async () => {
+      resolveLogin!({
+        data: { user_id: '123', username: 'admin', role: 'admin' },
+        message: 'Login successful',
+        timestamp: '2026-01-26T10:00:00Z'
+      })
+      await mockLoginPromise
     })
   })
 })

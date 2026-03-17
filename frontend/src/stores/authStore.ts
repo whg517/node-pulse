@@ -47,6 +47,14 @@ type AuthStore = AuthState & AuthActions
 const LOGOUT_EVENT_KEY = 'auth:logout'
 const LOGOUT_EVENT_VALUE = 'logout'
 
+function shouldLogAuthStoreDebug(): boolean {
+  return import.meta.env.DEV && import.meta.env.MODE !== 'test'
+}
+
+function shouldLogAuthStoreErrors(): boolean {
+  return import.meta.env.MODE !== 'test'
+}
+
 // ============== Store ==============
 
 export const useAuthStore = create<AuthStore>((set) => ({
@@ -86,7 +94,9 @@ export const useAuthStore = create<AuthStore>((set) => ({
     try {
       await apiLogout()
     } catch (error) {
-      console.error('Logout API call failed:', error)
+      if (shouldLogAuthStoreErrors()) {
+        console.error('Logout API call failed:', error)
+      }
       // Continue with local logout even if API call fails
     } finally {
       // Broadcast logout to other tabs
@@ -191,7 +201,9 @@ function broadcastLogout(): void {
       localStorage.removeItem(LOGOUT_EVENT_KEY)
     }, 100)
   } catch (error) {
-    console.error('Failed to broadcast logout:', error)
+    if (shouldLogAuthStoreErrors()) {
+      console.error('Failed to broadcast logout:', error)
+    }
   }
 }
 
@@ -203,7 +215,7 @@ function broadcastLogout(): void {
 export function setupCrossTabLogoutSync(): () => void {
   const handleStorageEvent = (event: StorageEvent) => {
     if (event.key === LOGOUT_EVENT_KEY && event.newValue === LOGOUT_EVENT_VALUE) {
-      if (import.meta.env.DEV) {
+      if (shouldLogAuthStoreDebug()) {
         console.log('[AuthStore] Received logout event from another tab')
       }
 
@@ -246,13 +258,15 @@ export function setupVisibilityHandler(): () => void {
 
         // If token is expired, try to restore session
         if (now >= tokenExpiresAt) {
-          if (import.meta.env.DEV) {
+          if (shouldLogAuthStoreDebug()) {
             console.log('[AuthStore] Token expired on tab focus, restoring session...')
           }
           try {
             await useAuthStore.getState().restoreSession()
           } catch (error) {
-            console.warn('[AuthStore] Session restoration failed on tab focus:', error)
+            if (shouldLogAuthStoreErrors()) {
+              console.warn('[AuthStore] Session restoration failed on tab focus:', error)
+            }
           }
          }
        }
@@ -272,7 +286,7 @@ export function setupVisibilityHandler(): () => void {
 // Always expose in non-production for debugging and e2e testing
 if (import.meta.env.DEV || import.meta.env.MODE === 'test' || import.meta.env.MODE === 'development') {
   ;(window as unknown as { useAuthStore: typeof useAuthStore }).useAuthStore = useAuthStore
-  if (import.meta.env.DEV) {
+  if (shouldLogAuthStoreDebug()) {
     console.log('[AuthStore] Exposed useAuthStore to window for e2e testing')
   }
 }

@@ -1,6 +1,82 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 
+const noisyConsolePatterns = [
+  'i18next is maintained with support from Locize',
+  '[ECharts] Can\'t get DOM width or height.',
+  '[ECharts] Specified `grid.containLabel` but no `use(LegacyGridContainLabel)`',
+  '[ECharts] Component toolbox is used but not imported.',
+]
+
+function shouldSuppressConsoleOutput(args: unknown[]): boolean {
+  const message = args
+    .map((value) => (typeof value === 'string' ? value : value instanceof Error ? value.message : String(value)))
+    .join(' ')
+
+  return noisyConsolePatterns.some((pattern) => message.includes(pattern))
+}
+
+const originalConsoleError = console.error.bind(console)
+const originalConsoleWarn = console.warn.bind(console)
+const originalConsoleLog = console.log.bind(console)
+const originalConsoleInfo = console.info.bind(console)
+const originalConsoleDebug = console.debug.bind(console)
+
+console.error = (...args: unknown[]) => {
+  if (shouldSuppressConsoleOutput(args)) {
+    return
+  }
+  originalConsoleError(...args)
+}
+
+console.warn = (...args: unknown[]) => {
+  if (shouldSuppressConsoleOutput(args)) {
+    return
+  }
+  originalConsoleWarn(...args)
+}
+
+console.log = (...args: unknown[]) => {
+  if (shouldSuppressConsoleOutput(args)) {
+    return
+  }
+  originalConsoleLog(...args)
+}
+
+console.info = (...args: unknown[]) => {
+  if (shouldSuppressConsoleOutput(args)) {
+    return
+  }
+  originalConsoleInfo(...args)
+}
+
+console.debug = (...args: unknown[]) => {
+  if (shouldSuppressConsoleOutput(args)) {
+    return
+  }
+  originalConsoleDebug(...args)
+}
+
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, options?: Record<string, unknown>) => {
+        if (options && 'defaultValue' in options && typeof options.defaultValue === 'string') {
+          return options.defaultValue
+        }
+        return key
+      },
+      i18n: {
+        language: 'en',
+        changeLanguage: vi.fn(),
+      },
+    }),
+  }
+})
+
 // Mock localStorage for i18n and settings
 const localStorageMock = (() => {
   let store: Record<string, string> = {}

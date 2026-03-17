@@ -328,7 +328,7 @@ export default function MTRVisualization({
 
           return (
             <div
-              key={`${hop.hopNumber}-${hop.ip}`}
+              key={`${hop.hopNumber}-${hop.ip}-${hop.hostname ?? 'unknown'}-${index}`}
               className={`relative flex items-start gap-3 p-3 rounded-lg border ${hopConfig.borderColor} ${hopConfig.bgColor} ${onHopClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`}
               role={onHopClick ? 'button' : 'listitem'}
               tabIndex={onHopClick ? 0 : undefined}

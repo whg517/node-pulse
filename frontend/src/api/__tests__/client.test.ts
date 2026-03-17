@@ -487,3 +487,85 @@ describe('rate limit (429) on token refresh', () => {
     expect(clearAuthSpy).not.toHaveBeenCalled()
   })
 })
+
+describe('concurrent 401 handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    resetModuleState()
+    useAuthStore.setState({
+      user: {
+        id: 'user-1',
+        username: 'admin',
+        role: 'admin',
+      },
+      isAuthenticated: true,
+      role: 'admin',
+      accessToken: 'expired-token',
+      tokenExpiresAt: null,
+      csrfToken: null,
+      isLoading: false,
+      refreshFailureCount: 0,
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('should share one refresh request across concurrent 401 responses', async () => {
+    const mockFetch = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+
+      if (url.includes('/api/v1/auth/refresh')) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: async () => ({
+            data: {
+              access_token: 'fresh-token',
+              expires_in: 900,
+            },
+          }),
+        } as Response)
+      }
+
+      if (url.includes('/api/v1/nodes') || url.includes('/api/v1/webhooks')) {
+        const authHeader = ((mockFetch.mock.calls.at(-1)?.[1] as RequestInit | undefined)?.headers as Record<string, string> | undefined)?.Authorization
+
+        if (authHeader === 'Bearer fresh-token') {
+          return Promise.resolve({
+            ok: true,
+            status: 200,
+            json: async () => ({ data: { url } }),
+          } as Response)
+        }
+
+        return Promise.resolve({
+          ok: false,
+          status: 401,
+          json: async () => ({ code: 'ERR_UNAUTHORIZED', message: 'Unauthorized' }),
+        } as Response)
+      }
+
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        json: async () => ({ data: {} }),
+      } as Response)
+    })
+
+    vi.stubGlobal('fetch', mockFetch)
+
+    const [nodesResult, webhooksResult] = await Promise.all([
+      apiClient('/api/v1/nodes'),
+      apiClient('/api/v1/webhooks'),
+    ])
+
+    const refreshCalls = mockFetch.mock.calls.filter(([input]) => String(input).includes('/api/v1/auth/refresh'))
+
+    expect(refreshCalls).toHaveLength(1)
+    expect(nodesResult).toEqual({ data: { url: 'http://localhost:6532/api/v1/nodes' } })
+    expect(webhooksResult).toEqual({ data: { url: 'http://localhost:6532/api/v1/webhooks' } })
+    expect(useAuthStore.getState().accessToken).toBe('fresh-token')
+  })
+})

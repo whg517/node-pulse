@@ -1,7 +1,31 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import DataExportPage from './DataExportPage'
+
+vi.mock('../i18n', () => ({
+  default: {},
+  i18nInitPromise: Promise.resolve(),
+}))
+
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
+
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string) => {
+        const translations: Record<string, string> = {
+          'dataExport.title': 'Data Export',
+          'dataExport.description': 'Export monitoring data for offline analysis and reporting.',
+        }
+
+        return translations[key] || key
+      },
+      i18n: { changeLanguage: vi.fn() },
+    }),
+  }
+})
 
 vi.mock('../stores/authStore', () => ({
   useAuthStore: vi.fn((selector) => {
@@ -16,45 +40,55 @@ vi.mock('../stores/authStore', () => ({
 }))
 
 vi.mock('../api/nodes', () => ({
-  fetchNodes: vi.fn(() => Promise.resolve({ data: [] })),
+  fetchNodes: vi.fn(() => Promise.resolve({ data: { nodes: [] } })),
 }))
 
 describe('DataExportPage', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+
   beforeEach(() => {
     vi.clearAllMocks()
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
-  it('renders page header with title', () => {
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
+  })
+
+  it('renders page header with title', async () => {
     render(
       <MemoryRouter>
         <DataExportPage />
       </MemoryRouter>
     )
 
-    expect(screen.getByText('Data Export')).toBeInTheDocument()
+    expect(await screen.findByText('Data Export')).toBeInTheDocument()
   })
 
-  it('renders breadcrumb navigation', () => {
+  it('renders breadcrumb navigation', async () => {
     render(
       <MemoryRouter>
         <DataExportPage />
       </MemoryRouter>
     )
 
-    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument()
+    expect(await screen.findByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument()
   })
 
-  it('renders page title', () => {
+  it('renders page title', async () => {
     render(
       <MemoryRouter>
         <DataExportPage />
       </MemoryRouter>
     )
 
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
   })
 
-  it('shows loading state initially', () => {
+  it('shows loading state initially', async () => {
+    const { fetchNodes } = await import('../api/nodes')
+    vi.mocked(fetchNodes).mockImplementationOnce(() => new Promise(() => {}))
+
     render(
       <MemoryRouter>
         <DataExportPage />
@@ -76,5 +110,8 @@ describe('DataExportPage', () => {
 
     const errorMessage = await screen.findByText(/Failed to load nodes/)
     expect(errorMessage).toBeInTheDocument()
+    await waitFor(() => {
+      expect(consoleErrorSpy).toHaveBeenCalled()
+    })
   })
 })

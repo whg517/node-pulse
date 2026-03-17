@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useAlertsStore } from '../alertsStore'
 import * as alertsApi from '../../api/alerts'
@@ -13,6 +13,8 @@ vi.mock('../../api/alerts', () => ({
 }))
 
 describe('useAlertsStore', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+
   beforeEach(() => {
     // Reset store state before each test
     useAlertsStore.setState({
@@ -26,6 +28,11 @@ describe('useAlertsStore', () => {
       },
     })
     vi.clearAllMocks()
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
   })
 
   it('should have initial state', () => {
