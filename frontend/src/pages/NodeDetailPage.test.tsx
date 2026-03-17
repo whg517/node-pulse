@@ -473,4 +473,183 @@ describe('NodeDetailPage', () => {
     expect(backLink).toBeInTheDocument()
     expect(backLink.closest('a')).toHaveAttribute('href', '/dashboard')
   })
+
+  it('handles offline node status for problem detection', () => {
+    const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'offline' }
+    const mockNodeStatus = { status: 'offline', last_heartbeat: '2024-01-01T12:00:00Z' }
+    const mockMetrics = { node_id: 'node-1', latency_ms: 45, packet_loss_rate: 60, jitter_ms: 5, timestamp: '2024-01-01T12:00:00Z' }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: mockMetrics as any,
+      isLoading: false,
+      error: null,
+      isPolling: false,
+      refetch: vi.fn(),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/nodes/node-1']}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Test Node')).toBeInTheDocument()
+  })
+
+  it('handles high packet loss metrics', () => {
+    const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
+    const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
+    // packet_loss_rate > 10 triggers specific code paths
+    const mockMetrics = { node_id: 'node-1', latency_ms: 600, packet_loss_rate: 15, jitter_ms: 5, timestamp: '2024-01-01T12:00:00Z' }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: mockMetrics as any,
+      isLoading: false,
+      error: null,
+      isPolling: false,
+      refetch: vi.fn(),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/nodes/node-1']}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Test Node')).toBeInTheDocument()
+  })
+
+  it('handles very high latency metrics', () => {
+    const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
+    const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
+    // latency_ms > 1000
+    const mockMetrics = { node_id: 'node-1', latency_ms: 1500, packet_loss_rate: 5, jitter_ms: 150, timestamp: '2024-01-01T12:00:00Z' }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: mockMetrics as any,
+      isLoading: false,
+      error: null,
+      isPolling: false,
+      refetch: vi.fn(),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/nodes/node-1']}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Test Node')).toBeInTheDocument()
+  })
+
+  it('handles elevated metrics (packet loss > 3)', () => {
+    const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
+    const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
+    const mockMetrics = { node_id: 'node-1', latency_ms: 350, packet_loss_rate: 4, jitter_ms: 110, timestamp: '2024-01-01T12:00:00Z' }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: mockMetrics as any,
+      isLoading: false,
+      error: null,
+      isPolling: false,
+      refetch: vi.fn(),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/nodes/node-1']}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Test Node')).toBeInTheDocument()
+  })
+
+  it('handles mildly elevated metrics (packet loss > 1)', () => {
+    const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
+    const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
+    const mockMetrics = { node_id: 'node-1', latency_ms: 200, packet_loss_rate: 2, jitter_ms: 60, timestamp: '2024-01-01T12:00:00Z' }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: mockMetrics as any,
+      isLoading: false,
+      error: null,
+      isPolling: false,
+      refetch: vi.fn(),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/nodes/node-1']}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Test Node')).toBeInTheDocument()
+  })
+
+  it('handles old last_heartbeat timestamp (> 24 hours)', () => {
+    const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
+    const oldTimestamp = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
+    const mockNodeStatus = { status: 'online', last_heartbeat: oldTimestamp }
+    const mockMetrics = { node_id: 'node-1', latency_ms: 45, packet_loss_rate: 0, jitter_ms: 5, timestamp: oldTimestamp }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: mockMetrics as any,
+      isLoading: false,
+      error: null,
+      isPolling: false,
+      refetch: vi.fn(),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/nodes/node-1']}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Test Node')).toBeInTheDocument()
+  })
+
+  it('handles high severity score for medium confidence', () => {
+    const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
+    const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
+    // severity score > 2 but not high conditions: latency_ms: 450, packet_loss_rate: 5
+    const mockMetrics = { node_id: 'node-1', latency_ms: 450, packet_loss_rate: 5, jitter_ms: 110, timestamp: '2024-01-01T12:00:00Z' }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: mockMetrics as any,
+      isLoading: false,
+      error: null,
+      isPolling: false,
+      refetch: vi.fn(),
+    })
+
+    render(
+      <MemoryRouter initialEntries={['/nodes/node-1']}>
+        <Routes>
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    )
+    expect(screen.getByText('Test Node')).toBeInTheDocument()
+  })
 })

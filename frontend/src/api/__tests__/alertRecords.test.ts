@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { getAlertRecords, updateAlertRecordStatus } from '../alertRecords'
+import {
+  getAlertRecords,
+  updateAlertRecordStatus,
+  addAlertNote,
+  getAlertNotes,
+  isValidStatusTransition,
+} from '../alertRecords'
 import { apiClient } from '../client'
 
 // Mock apiClient
@@ -191,6 +197,90 @@ describe('AlertRecords API', () => {
           body: expect.stringContaining('pending'),
         })
       )
+    })
+
+    it('includes note in request body when provided', async () => {
+      vi.mocked(apiClient).mockResolvedValueOnce({
+        data: {},
+        message: 'Success',
+        timestamp: '2024-01-01T10:00:00Z',
+      })
+
+      await updateAlertRecordStatus('record-1', 'in_progress', 'Investigating now')
+
+      expect(apiClient).toHaveBeenCalledWith('/api/v1/alerts/records/record-1/status', {
+        method: 'PUT',
+        body: JSON.stringify({ status: 'in_progress', note: 'Investigating now' }),
+      })
+    })
+  })
+
+  describe('addAlertNote', () => {
+    it('adds a note to an alert record', async () => {
+      const mockResponse = {
+        data: { id: 'record-1', notes: [{ id: 'note-1', content: 'Test note' }] },
+        message: 'Note added',
+        timestamp: '2024-01-01T12:00:00Z',
+      }
+      vi.mocked(apiClient).mockResolvedValueOnce(mockResponse)
+
+      const result = await addAlertNote('record-1', 'Test note')
+
+      expect(apiClient).toHaveBeenCalledWith('/api/v1/alerts/records/record-1/notes', {
+        method: 'POST',
+        body: JSON.stringify({ note: 'Test note' }),
+      })
+      expect(result.message).toBe('Note added')
+    })
+  })
+
+  describe('getAlertNotes', () => {
+    it('fetches notes for an alert record', async () => {
+      const mockNotes = [
+        { id: 'note-1', alert_id: 'record-1', user_id: 'user-1', user_name: 'Admin', content: 'Note 1', created_at: '2024-01-01T10:00:00Z' },
+      ]
+      vi.mocked(apiClient).mockResolvedValueOnce({
+        data: mockNotes,
+        message: 'Notes retrieved',
+        timestamp: '2024-01-01T10:00:00Z',
+      })
+
+      const result = await getAlertNotes('record-1')
+
+      expect(apiClient).toHaveBeenCalledWith('/api/v1/alerts/records/record-1/notes')
+      expect(result.data).toEqual(mockNotes)
+    })
+  })
+
+  describe('isValidStatusTransition', () => {
+    it('allows pending → in_progress', () => {
+      expect(isValidStatusTransition('pending', 'in_progress')).toBe(true)
+    })
+
+    it('allows pending → resolved', () => {
+      expect(isValidStatusTransition('pending', 'resolved')).toBe(true)
+    })
+
+    it('allows in_progress → resolved', () => {
+      expect(isValidStatusTransition('in_progress', 'resolved')).toBe(true)
+    })
+
+    it('disallows resolved → pending', () => {
+      expect(isValidStatusTransition('resolved', 'pending')).toBe(false)
+    })
+
+    it('disallows resolved → in_progress', () => {
+      expect(isValidStatusTransition('resolved', 'in_progress')).toBe(false)
+    })
+
+    it('disallows in_progress → pending', () => {
+      expect(isValidStatusTransition('in_progress', 'pending')).toBe(false)
+    })
+
+    it('allows same status transition', () => {
+      expect(isValidStatusTransition('pending', 'pending')).toBe(true)
+      expect(isValidStatusTransition('in_progress', 'in_progress')).toBe(true)
+      expect(isValidStatusTransition('resolved', 'resolved')).toBe(true)
     })
   })
 })

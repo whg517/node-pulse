@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { login, logout, refreshToken } from './auth'
+import { login, logout, refreshToken, getMe } from './auth'
 import { AuthenticationError } from './errors'
 import { resetModuleState } from './client'
 
@@ -297,6 +297,32 @@ describe('auth API', () => {
       vi.stubGlobal('fetch', mockFetch)
 
       await expect(refreshToken()).rejects.toThrow(AuthenticationError)
+
+      vi.unstubAllGlobals()
+    })
+  })
+
+  describe('getMe', () => {
+    it('wraps non-AuthenticationError errors in AuthenticationError', async () => {
+      const mockFetch = vi.fn().mockRejectedValue(new Error('Network error'))
+
+      vi.stubGlobal('fetch', mockFetch)
+
+      await expect(getMe()).rejects.toThrow(AuthenticationError)
+
+      vi.unstubAllGlobals()
+    })
+
+    it('rethrows AuthenticationError as-is', async () => {
+      const mockFetch = vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ code: 'ERR_NOT_AUTHENTICATED', message: 'Not authenticated' }),
+      })
+
+      vi.stubGlobal('fetch', mockFetch)
+
+      await expect(getMe()).rejects.toThrow(AuthenticationError)
 
       vi.unstubAllGlobals()
     })

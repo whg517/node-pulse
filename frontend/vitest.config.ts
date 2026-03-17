@@ -13,6 +13,18 @@ export default defineConfig({
     typecheck: {
       enabled: false,
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'clover', 'json'],
+      exclude: [
+        'src/locales/**',
+        'src/**/*.types.ts',
+        'src/api/types.ts',
+        'src/**/index.ts',
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+      ],
+    },
   },
   resolve: {
     alias: {

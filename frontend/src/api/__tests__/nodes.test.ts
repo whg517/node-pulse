@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   fetchNodes,
+  fetchNode,
   createNode,
   updateNode,
   deleteNode,
@@ -15,6 +16,37 @@ import { ValidationError, NotFoundError } from '../errors'
 describe('nodes API', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  describe('fetchNode', () => {
+    it('fetches a single node by ID', async () => {
+      const mockNode = {
+        id: 'node-1',
+        name: 'Node 1',
+        ip: '192.168.1.1',
+        region: 'us-east',
+        tags: ['production'],
+        status: 'online' as const,
+        created_at: '2024-01-01T00:00:00Z',
+        updated_at: '2024-01-01T00:00:00Z',
+      }
+      const mockResponse = { data: mockNode }
+      const mockFetch = vi.fn(() =>
+        Promise.resolve({
+          ok: true,
+          json: async () => mockResponse,
+        } as Response)
+      )
+      vi.stubGlobal('fetch', mockFetch)
+
+      const result = await fetchNode('node-1')
+
+      const fetchCall = (fetch as unknown as { mock: { calls: string[][] } }).mock.calls[0]
+      expect(fetchCall[0]).toContain('/api/v1/nodes/node-1')
+      expect(result).toEqual(mockResponse)
+
+      vi.unstubAllGlobals()
+    })
   })
 
   describe('fetchNodes', () => {
