@@ -308,7 +308,7 @@ func defaultConfig() *Config {
 			Output: "stdout",
 		},
 		CORS: CORSConfig{
-			AllowedOrigins: "http://localhost:3000,http://localhost:5173,http://localhost:6532",
+			AllowedOrigins: "http://localhost:4173,http://localhost:5173,http://localhost:6532",
 			AllowedMethods: "GET,POST,PUT,DELETE,OPTIONS",
 			AllowedHeaders: "Content-Type,Authorization",
 			MaxAge:         86400, // 24 hours

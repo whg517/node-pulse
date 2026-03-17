@@ -95,7 +95,7 @@ Copy `pulse.yaml.example` → `pulse.yaml`. All settings can be overridden with 
 | `server.mode` | `debug` | `debug` or `release` |
 | `database.url` | — | PostgreSQL connection string (**required**) |
 | `log.level` | `info` | `debug`, `info`, `warn`, `error` |
-| `cors.allowed_origins` | `http://localhost:3000,http://localhost:5173` | Allowed CORS origins |
+| `cors.allowed_origins` | `http://localhost:4173,http://localhost:5173` | Allowed CORS origins |
 | `admin.username` / `admin.password` | `admin` / `Admin123` | Initial admin credentials |
 | `jwt.secret` | *(auto-generated)* | 512-bit secret; auto-generated if empty |
 | `session.expiration_hours` | `24` | Session lifetime |
