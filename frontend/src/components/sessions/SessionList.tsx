@@ -92,13 +92,13 @@ export default function SessionList({
   }
 
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900">{t('sessions.activeSessions')}</h3>
+    <div className="bg-white dark:bg-slate-800 shadow rounded-lg overflow-hidden">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
+        <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">{t('sessions.activeSessions')}</h3>
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="inline-flex items-center px-3 py-1.5 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-md text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
         >
           <svg
             className={`-ml-1 mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
@@ -118,32 +118,32 @@ export default function SessionList({
       </div>
 
       {sessions.length === 0 ? (
-        <div className="px-6 py-8 text-center text-gray-500">
+        <div className="px-6 py-8 text-center text-gray-500 dark:text-slate-400">
           {t('sessions.noSessions')}
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+            <thead className="bg-gray-50 dark:bg-slate-700">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   {t('sessions.device')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   {t('sessions.ipAddress')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   {t('sessions.created')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   {t('sessions.expires')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   {t('common.actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
               {sessions.map((session) => {
                 const isCurrent = session.session_id === currentSessionId
                 const isRevoking = revokingId === session.session_id
@@ -151,12 +151,12 @@ export default function SessionList({
                 const { browser, device } = parseUserAgent(session.user_agent || '')
 
                 return (
-                  <tr key={session.session_id} className="hover:bg-gray-50">
+                  <tr key={session.session_id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-100 dark:bg-slate-600 flex items-center justify-center">
                           <svg
-                            className="h-4 w-4 text-gray-600"
+                            className="h-4 w-4 text-gray-600 dark:text-slate-300"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -171,7 +171,7 @@ export default function SessionList({
                         </div>
                         <div className="ml-4">
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-gray-900">
+                            <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
                               {device}
                             </span>
                             {isCurrent && (
@@ -180,17 +180,17 @@ export default function SessionList({
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500">{browser}</span>
+                          <span className="text-xs text-gray-500 dark:text-slate-400">{browser}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
                       {session.ip_address || 'Unknown IP'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
                       {formatDateTime(session.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
                       {formatDateTime(session.expires_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -209,7 +209,7 @@ export default function SessionList({
                           <button
                             onClick={() => setConfirmRevoke(null)}
                             disabled={isRevoking}
-                            className="inline-flex items-center px-2 py-1 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none disabled:opacity-50"
+                            className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-xs font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none disabled:opacity-50"
                           >
                             {t('common.cancel')}
                           </button>

@@ -27,7 +27,7 @@ export function NodeTable({
   const { t } = useTranslation()
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-center py-12">
           <div
             className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
@@ -41,7 +41,7 @@ export function NodeTable({
 
   if (nodes.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm p-6">
         <div className="text-center py-12">
           <svg
             className="mx-auto h-12 w-12 text-gray-400"
@@ -56,8 +56,8 @@ export function NodeTable({
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">{t('nodes.noNodes')}</h3>
-          <p className="mt-1 text-sm text-gray-500">
+          <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-slate-100">{t('nodes.noNodes')}</h3>
+          <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
             {canEdit
               ? t('nodes.noNodesHint')
               : t('nodes.noNodesConfigured')}
@@ -68,54 +68,54 @@ export function NodeTable({
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+          <thead className="bg-gray-50 dark:bg-slate-700">
             <tr>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider"
               >
                 {t('nodes.nodeName')}
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider"
               >
                 {t('common.status')}
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider"
               >
                 {t('nodes.region')}
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider"
               >
                 {t('nodes.tags')}
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider"
               >
                 {t('nodes.createdAt')}
               </th>
               {canEdit && (
                 <th
                   scope="col"
-                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider"
                 >
                   {t('common.actions')}
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
             {nodes.map((node) => (
-              <tr key={node.id} className="hover:bg-gray-50">
+              <tr key={node.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-col">
                     <Link
@@ -124,13 +124,13 @@ export function NodeTable({
                     >
                       {node.name}
                     </Link>
-                    <span className="text-xs text-gray-500 font-mono">{node.ip}</span>
+                    <span className="text-xs text-gray-500 dark:text-slate-400 font-mono">{node.ip}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <NodeStatusBadge status={node.status} />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-slate-100">
                   {node.region}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -145,11 +145,11 @@ export function NodeTable({
                         </span>
                       ))
                     ) : (
-                      <span className="text-sm text-gray-400">—</span>
+                      <span className="text-sm text-gray-400 dark:text-slate-500">—</span>
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
                   {formatDate(node.created_at)}
                 </td>
                 {canEdit && (
