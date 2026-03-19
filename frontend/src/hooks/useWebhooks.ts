@@ -18,7 +18,6 @@ export function useWebhooks(): UseWebhooksResult {
   const webhooks = useWebhooksStore((state) => state.webhooks)
   const status = useWebhooksStore((state) => state.status)
   const error = useWebhooksStore((state) => state.error)
-  const hasLoaded = useWebhooksStore((state) => state.hasLoaded)
   const loadWebhooks = useWebhooksStore((state) => state.loadWebhooks)
   const createWebhookAction = useWebhooksStore((state) => state.createWebhook)
   const updateWebhookAction = useWebhooksStore((state) => state.updateWebhook)
@@ -27,10 +26,9 @@ export function useWebhooks(): UseWebhooksResult {
   const findWebhookById = useWebhooksStore((state) => state.findWebhookById)
 
   useEffect(() => {
-    if (!hasLoaded && status !== 'loading') {
-      void loadWebhooks()
-    }
-  }, [hasLoaded, loadWebhooks, status])
+    void loadWebhooks()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const reload = useCallback(async () => {
     await loadWebhooks({ force: true })

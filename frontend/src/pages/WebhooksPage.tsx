@@ -17,7 +17,7 @@ import { WebhookDialog } from '../components/webhooks/WebhookDialog'
 
 export default function WebhooksPage() {
   const { t } = useTranslation()
-  const { user } = useAuthStore()
+  const user = useAuthStore((state) => state.user)
   const {
     webhooks,
     isLoading,

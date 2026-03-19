@@ -78,17 +78,27 @@ export const useWebhooksStore = create<WebhooksStore>((set, get) => ({
       return
     }
 
+    if (status === 'loading') {
+      return inFlightLoad ?? undefined
+    }
+
     if (inFlightLoad) {
       return inFlightLoad
     }
 
-    set((state) => ({
-      status: state.webhooks.length === 0 || force ? 'loading' : state.status,
-      error: null,
-    }))
-
+    // Assign inFlightLoad BEFORE calling set() to close the race window.
+    // set() synchronously notifies Zustand subscribers which can trigger
+    // a React re-render and a second loadWebhooks() call before the IIFE
+    // assignment below would otherwise execute. At that point the caller
+    // would see status='loading' but inFlightLoad=null, causing the guard
+    // on line 81 to return undefined instead of the in-flight promise.
     inFlightLoad = (async () => {
       try {
+        set((state) => ({
+          status: state.webhooks.length === 0 || force ? 'loading' : state.status,
+          error: null,
+        }))
+
         const response = await webhooksAPI.fetchWebhooks()
         const webhooks = (response.data.webhooks || []).map(mapWebhook)
 
