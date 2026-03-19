@@ -4,6 +4,11 @@ import ProtectedRoute from './components/common/ProtectedRoute'
 import { AppLayout } from './components/layout'
 import { useAuthStore, setupCrossTabLogoutSync, setupVisibilityHandler } from './stores/authStore'
 import { useAlertsStore } from './stores/alertsStore'
+import { initializeTheme } from './stores/settingsStore'
+
+// Apply persisted theme immediately (before first render) so there is no
+// flash of unstyled/wrong-theme content on page load.
+initializeTheme()
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
