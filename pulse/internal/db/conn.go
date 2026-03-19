@@ -2,7 +2,7 @@ package db
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -24,27 +24,28 @@ func (db *Database) Check(ctx context.Context) error {
 // New creates a new database connection
 func New(databaseURL string) (*Database, error) {
 	if databaseURL == "" {
-		log.Println("[ERROR] [DB] PULSE_DATABASE_URL environment variable is not set")
-		log.Println("[WARN] [DB] The server will start in DEGRADED MODE without database functionality")
-		log.Println("[INFO] [DB] To enable database, set: export PULSE_DATABASE_URL=\"postgres://user:password@localhost:5432/dbname\"")
+		slog.Error("PULSE_DATABASE_URL is not set; server will start in DEGRADED MODE without database functionality",
+			"component", "db",
+			"hint", `set: export PULSE_DATABASE_URL="postgres://user:password@localhost:5432/dbname"`,
+		)
 		return nil, os.ErrInvalid
 	}
 
 	pool, err := pgxpool.New(context.Background(), databaseURL)
 	if err != nil {
-		log.Printf("[ERROR] [DB] Failed to create connection pool: %v", err)
-		log.Println("[WARN] [DB] The server will start in DEGRADED MODE without database functionality")
+		slog.Error("Failed to create connection pool; server will start in DEGRADED MODE",
+			"component", "db", "error", err)
 		return nil, err
 	}
 
 	// Test connection
 	if err := pool.Ping(context.Background()); err != nil {
-		log.Printf("[ERROR] [DB] Failed to connect to database: %v", err)
-		log.Println("[WARN] [DB] Please check your PULSE_DATABASE_URL and ensure the database server is running")
+		slog.Error("Failed to connect to database; check PULSE_DATABASE_URL and ensure the database server is running",
+			"component", "db", "error", err)
 		return nil, err
 	}
 
-	log.Println("[INFO] [DB] Database connection pool initialized successfully")
+	slog.Info("Database connection pool initialized", "component", "db")
 	return &Database{Pool: pool}, nil
 }
 
@@ -52,6 +53,6 @@ func New(databaseURL string) (*Database, error) {
 func (db *Database) Close() {
 	if db.Pool != nil {
 		db.Pool.Close()
-		log.Println("[DB] Database connection pool closed")
+		slog.Info("Database connection pool closed", "component", "db")
 	}
 }

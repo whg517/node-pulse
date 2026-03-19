@@ -3,7 +3,7 @@ package cleanup
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -17,10 +17,9 @@ type PgxPool interface {
 
 // CleanupTask implements the scheduler.Task interface for metrics data cleanup
 type CleanupTask struct {
-	name   string
-	cfg    *config.CleanupConfig
-	db     PgxPool
-	logger *log.Logger
+	name string
+	cfg  *config.CleanupConfig
+	db   PgxPool
 
 	// Runtime state
 	lastRun      time.Time
@@ -30,12 +29,11 @@ type CleanupTask struct {
 	isRunning    bool
 }
 
-// NewCleanupTask creates a new cleanup task
-func NewCleanupTask(cfg *config.CleanupConfig, db PgxPool, logger *log.Logger) (*CleanupTask, error) {
+// NewCleanupTask creates a new cleanup task.
+// Returns nil (without error) when cleanup is disabled in config.
+func NewCleanupTask(cfg *config.CleanupConfig, db PgxPool) (*CleanupTask, error) {
 	if !cfg.Enabled {
-		if logger != nil {
-			logger.Println("[Cleanup] Task disabled")
-		}
+		slog.Info("Cleanup task disabled", "component", "cleanup")
 		return nil, nil
 	}
 
@@ -48,10 +46,9 @@ func NewCleanupTask(cfg *config.CleanupConfig, db PgxPool, logger *log.Logger) (
 	}
 
 	return &CleanupTask{
-		name:   "metrics-cleanup",
-		cfg:    cfg,
-		db:     db,
-		logger: logger,
+		name: "metrics-cleanup",
+		cfg:  cfg,
+		db:   db,
 	}, nil
 }
 
@@ -71,19 +68,17 @@ func (c *CleanupTask) Execute(ctx context.Context) error {
 	c.isRunning = true
 	defer func() { c.isRunning = false }()
 
-	if c.logger != nil {
-		c.logger.Printf("[Cleanup] Starting metrics data cleanup (retention_days: %d, timestamp: %s)",
-			c.cfg.RetentionDays, start.Format(time.RFC3339))
-	}
+	slog.Info("Starting metrics data cleanup",
+		"component", "cleanup",
+		"retention_days", c.cfg.RetentionDays,
+	)
 
 	// Execute cleanup SQL with parameterized query to prevent SQL injection
 	sql := "DELETE FROM metrics WHERE timestamp < NOW() - INTERVAL '1 day' * $1"
 	result, err := c.db.Exec(ctx, sql, c.cfg.RetentionDays)
 	if err != nil {
 		c.lastError = err
-		if c.logger != nil {
-			c.logger.Printf("[Cleanup] ERROR: Failed to execute cleanup SQL: %v", err)
-		}
+		slog.Error("Failed to execute cleanup SQL", "component", "cleanup", "error", err)
 		return fmt.Errorf("cleanup failed: %w", err)
 	}
 
@@ -97,17 +92,19 @@ func (c *CleanupTask) Execute(ctx context.Context) error {
 	c.lastError = nil
 	c.runCount++
 
-	if c.logger != nil {
-		c.logger.Printf("[Cleanup] Metrics data cleanup completed (rows_deleted: %d, duration_ms: %d)",
-			rowsAffected, duration.Milliseconds())
-	}
+	slog.Info("Metrics data cleanup completed",
+		"component", "cleanup",
+		"rows_deleted", rowsAffected,
+		"duration_ms", duration.Milliseconds(),
+	)
 
 	// Check for slow query
 	if c.cfg.SlowThresholdMs > 0 && duration.Milliseconds() > c.cfg.SlowThresholdMs {
-		if c.logger != nil {
-			c.logger.Printf("[Cleanup] WARN: Slow cleanup operation detected (duration_ms: %d, threshold_ms: %d)",
-				duration.Milliseconds(), c.cfg.SlowThresholdMs)
-		}
+		slog.Warn("Slow cleanup operation detected",
+			"component", "cleanup",
+			"duration_ms", duration.Milliseconds(),
+			"threshold_ms", c.cfg.SlowThresholdMs,
+		)
 	}
 
 	return nil

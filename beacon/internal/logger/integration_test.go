@@ -2,6 +2,7 @@ package logger
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -177,7 +178,7 @@ func TestMultiModuleLoggingConsistency(t *testing.T) {
 					"component": mod,
 					"iteration": i,
 					"module":    mod,
-				}).Infof("Module %s iteration %d", mod, i)
+				}).Info(fmt.Sprintf("Module %s iteration %d", mod, i))
 			}
 			done <- true
 		}(module)
@@ -314,8 +315,12 @@ func TestLogDateFormatting(t *testing.T) {
 		t.Fatal("No timestamp field found")
 	}
 
-	// Verify ISO 8601 format (RFC3339)
-	_, err = time.Parse(time.RFC3339, timestamp)
+	// Verify ISO 8601 format (RFC3339 or RFC3339Nano)
+	_, err = time.Parse(time.RFC3339Nano, timestamp)
+	if err != nil {
+		// Try RFC3339 as fallback
+		_, err = time.Parse(time.RFC3339, timestamp)
+	}
 	if err != nil {
 		t.Errorf("Timestamp %s is not valid ISO 8601 format: %v", timestamp, err)
 	} else {

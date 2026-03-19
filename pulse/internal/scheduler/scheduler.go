@@ -3,7 +3,7 @@ package scheduler
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -41,7 +41,7 @@ func (s *taskScheduler) Start(ctx context.Context) error {
 	s.ctx, s.cancel = context.WithCancel(ctx)
 	s.mu.Unlock()
 
-	log.Printf("[Scheduler] Started with %d tasks", len(s.tasks))
+	slog.Info("Scheduler started", "component", "scheduler", "task_count", len(s.tasks))
 
 	// Start a goroutine for each task
 	for _, taskState := range s.tasks {
@@ -54,7 +54,7 @@ func (s *taskScheduler) Start(ctx context.Context) error {
 
 // Stop stops the scheduler and waits for all running tasks to complete
 func (s *taskScheduler) Stop() error {
-	log.Println("[Scheduler] Stopping...")
+	slog.Info("Scheduler stopping", "component", "scheduler")
 
 	s.mu.Lock()
 	if s.cancel != nil {
@@ -65,7 +65,7 @@ func (s *taskScheduler) Stop() error {
 	// Wait for all tasks to complete
 	s.wg.Wait()
 
-	log.Println("[Scheduler] Stopped")
+	slog.Info("Scheduler stopped", "component", "scheduler")
 	return nil
 }
 
@@ -84,7 +84,7 @@ func (s *taskScheduler) RegisterTask(task Task) error {
 		task: task,
 	}
 
-	log.Printf("[Scheduler] Task registered: %s (interval: %s)", name, task.Interval())
+	slog.Info("Task registered", "component", "scheduler", "task", name, "interval", task.Interval())
 
 	return nil
 }
@@ -126,12 +126,12 @@ func (s *taskScheduler) runTask(taskState *taskState) {
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
-	log.Printf("[Scheduler] Task %s: started (interval: %s)", task.Name(), interval)
+	slog.Debug("Task started", "component", "scheduler", "task", task.Name(), "interval", interval)
 
 	for {
 		select {
 		case <-s.ctx.Done():
-			log.Printf("[Scheduler] Task %s: stopping", task.Name())
+			slog.Debug("Task stopping", "component", "scheduler", "task", task.Name())
 			return
 
 		case <-ticker.C:
@@ -147,7 +147,7 @@ func (s *taskScheduler) executeTask(taskState *taskState) {
 
 	taskState.isRunning = true
 
-	log.Printf("[Scheduler] Task %s: executing", task.Name())
+	slog.Debug("Task executing", "component", "scheduler", "task", task.Name())
 
 	err := task.Execute(s.ctx)
 
@@ -159,10 +159,17 @@ func (s *taskScheduler) executeTask(taskState *taskState) {
 	taskState.lastError = err
 
 	if err != nil {
-		log.Printf("[Scheduler] Task %s: failed (duration: %s, error: %v)",
-			task.Name(), duration, err)
+		slog.Error("Task failed",
+			"component", "scheduler",
+			"task", task.Name(),
+			"duration", duration,
+			"error", err,
+		)
 	} else {
-		log.Printf("[Scheduler] Task %s: completed (duration: %s)",
-			task.Name(), duration)
+		slog.Info("Task completed",
+			"component", "scheduler",
+			"task", task.Name(),
+			"duration", duration,
+		)
 	}
 }

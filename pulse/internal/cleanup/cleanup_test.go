@@ -25,7 +25,7 @@ func TestNewCleanupTask_Success(t *testing.T) {
 		SlowThresholdMs: 30000,
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	assert.NoError(t, err)
 	assert.NotNil(t, task)
 	assert.Equal(t, "metrics-cleanup", task.Name())
@@ -41,7 +41,7 @@ func TestNewCleanupTask_Disabled(t *testing.T) {
 		Enabled: false,
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	assert.NoError(t, err)
 	assert.Nil(t, task) // Should return nil when disabled
 }
@@ -57,7 +57,7 @@ func TestNewCleanupTask_InvalidInterval(t *testing.T) {
 		RetentionDays:   7,
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	assert.Error(t, err)
 	assert.Nil(t, task)
 	assert.Contains(t, err.Error(), "invalid interval_seconds")
@@ -74,7 +74,7 @@ func TestNewCleanupTask_InvalidRetention(t *testing.T) {
 		RetentionDays:   0, // Invalid
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	assert.Error(t, err)
 	assert.Nil(t, task)
 	assert.Contains(t, err.Error(), "invalid retention_days")
@@ -97,7 +97,7 @@ func TestCleanupTask_Execute_Success(t *testing.T) {
 		SlowThresholdMs: 30000,
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -126,7 +126,7 @@ func TestCleanupTask_Execute_DatabaseError(t *testing.T) {
 		RetentionDays:   7,
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -154,7 +154,7 @@ func TestCleanupTask_Execute_SlowQuery(t *testing.T) {
 		SlowThresholdMs: 1, // 1ms threshold - will trigger warning
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -180,7 +180,7 @@ func TestCleanupTask_Execute_ZeroRows(t *testing.T) {
 		RetentionDays:   7,
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	require.NoError(t, err)
 
 	ctx := context.Background()
@@ -201,7 +201,7 @@ func TestCleanupTask_GetStatus(t *testing.T) {
 		RetentionDays:   7,
 	}
 
-	task, err := NewCleanupTask(cfg, mock, nil)
+	task, err := NewCleanupTask(cfg, mock)
 	require.NoError(t, err)
 
 	status := task.GetStatus()

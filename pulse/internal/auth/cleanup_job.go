@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -10,11 +10,11 @@ import (
 
 // CleanupJob handles periodic cleanup of expired refresh tokens
 type CleanupJob struct {
-	pool           *pgxpool.Pool
-	interval       time.Duration
-	retentionDays  int
-	stopChan       chan struct{}
-	batchSize      int
+	pool          *pgxpool.Pool
+	interval      time.Duration
+	retentionDays int
+	stopChan      chan struct{}
+	batchSize     int
 }
 
 // NewCleanupJob creates a new cleanup job for refresh tokens
@@ -30,8 +30,11 @@ func NewCleanupJob(pool *pgxpool.Pool, intervalSeconds, retentionDays int) *Clea
 
 // Start begins the cleanup job in a background goroutine
 func (j *CleanupJob) Start() {
-	log.Printf("[CleanupJob] Starting refresh token cleanup job (interval: %v, retention: %d days)",
-		j.interval, j.retentionDays)
+	slog.Info("Starting refresh token cleanup job",
+		"component", "cleanup_job",
+		"interval", j.interval,
+		"retention_days", j.retentionDays,
+	)
 
 	go func() {
 		ticker := time.NewTicker(j.interval)
@@ -45,7 +48,7 @@ func (j *CleanupJob) Start() {
 			case <-ticker.C:
 				j.Run()
 			case <-j.stopChan:
-				log.Printf("[CleanupJob] Stopping refresh token cleanup job")
+				slog.Info("Stopping refresh token cleanup job", "component", "cleanup_job")
 				return
 			}
 		}
@@ -66,12 +69,16 @@ func (j *CleanupJob) Run() {
 	elapsed := time.Since(startTime)
 
 	if err != nil {
-		log.Printf("[CleanupJob] Error cleaning up expired tokens: %v", err)
+		slog.Error("Error cleaning up expired tokens", "component", "cleanup_job", "error", err)
 		return
 	}
 
 	if totalDeleted > 0 {
-		log.Printf("[CleanupJob] Cleaned up %d expired tokens in %v", totalDeleted, elapsed)
+		slog.Info("Cleaned up expired tokens",
+			"component", "cleanup_job",
+			"count", totalDeleted,
+			"duration", elapsed,
+		)
 	}
 }
 
@@ -127,7 +134,8 @@ func (j *CleanupJob) CleanupTokenBlacklist(ctx context.Context) error {
 	}
 	rowsAffected := result.RowsAffected()
 	if rowsAffected > 0 {
-		log.Printf("[CleanupJob] Cleaned up %d expired blacklist entries", rowsAffected)
+		slog.Info("Cleaned up expired blacklist entries",
+			"component", "cleanup_job", "count", rowsAffected)
 	}
 	return nil
 }
@@ -144,7 +152,8 @@ func (j *CleanupJob) CleanupRateLimits(ctx context.Context, retentionHours int) 
 	}
 	rowsAffected := result.RowsAffected()
 	if rowsAffected > 0 {
-		log.Printf("[CleanupJob] Cleaned up %d old rate limit entries", rowsAffected)
+		slog.Info("Cleaned up old rate limit entries",
+			"component", "cleanup_job", "count", rowsAffected)
 	}
 	return nil
 }
@@ -161,7 +170,8 @@ func (j *CleanupJob) CleanupAuditLogs(ctx context.Context, retentionDays int) er
 	}
 	rowsAffected := result.RowsAffected()
 	if rowsAffected > 0 {
-		log.Printf("[CleanupJob] Cleaned up %d old audit log entries", rowsAffected)
+		slog.Info("Cleaned up old audit log entries",
+			"component", "cleanup_job", "count", rowsAffected)
 	}
 	return nil
 }
@@ -179,7 +189,8 @@ func (j *CleanupJob) CleanupExpiredAPIKeys(ctx context.Context, retentionDays in
 	}
 	rowsAffected := result.RowsAffected()
 	if rowsAffected > 0 {
-		log.Printf("[CleanupJob] Cleaned up %d expired/inactive API keys", rowsAffected)
+		slog.Info("Cleaned up expired/inactive API keys",
+			"component", "cleanup_job", "count", rowsAffected)
 	}
 	return nil
 }
@@ -189,33 +200,35 @@ func (j *CleanupJob) RunAll() {
 	startTime := time.Now()
 	ctx := context.Background()
 
-	log.Printf("[CleanupJob] Starting comprehensive cleanup...")
+	slog.Info("Starting comprehensive cleanup", "component", "cleanup_job")
 
 	// Cleanup refresh tokens
 	if _, err := j.cleanupExpiredTokens(ctx); err != nil {
-		log.Printf("[CleanupJob] Error cleaning up refresh tokens: %v", err)
+		slog.Error("Error cleaning up refresh tokens", "component", "cleanup_job", "error", err)
 	}
 
 	// Cleanup token blacklist
 	if err := j.CleanupTokenBlacklist(ctx); err != nil {
-		log.Printf("[CleanupJob] Error cleaning up token blacklist: %v", err)
+		slog.Error("Error cleaning up token blacklist", "component", "cleanup_job", "error", err)
 	}
 
 	// Cleanup rate limits (keep for 24 hours)
 	if err := j.CleanupRateLimits(ctx, 24); err != nil {
-		log.Printf("[CleanupJob] Error cleaning up rate limits: %v", err)
+		slog.Error("Error cleaning up rate limits", "component", "cleanup_job", "error", err)
 	}
 
 	// Cleanup audit logs (keep for 90 days)
 	if err := j.CleanupAuditLogs(ctx, 90); err != nil {
-		log.Printf("[CleanupJob] Error cleaning up audit logs: %v", err)
+		slog.Error("Error cleaning up audit logs", "component", "cleanup_job", "error", err)
 	}
 
 	// Cleanup expired API keys (keep inactive keys for 30 days)
 	if err := j.CleanupExpiredAPIKeys(ctx, 30); err != nil {
-		log.Printf("[CleanupJob] Error cleaning up API keys: %v", err)
+		slog.Error("Error cleaning up API keys", "component", "cleanup_job", "error", err)
 	}
 
-	elapsed := time.Since(startTime)
-	log.Printf("[CleanupJob] Comprehensive cleanup completed in %v", elapsed)
+	slog.Info("Comprehensive cleanup completed",
+		"component", "cleanup_job",
+		"duration", time.Since(startTime),
+	)
 }

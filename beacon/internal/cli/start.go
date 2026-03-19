@@ -109,7 +109,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 	// Create and start resource monitor (Story 3.11)
 	var resourceMonitor monitor.Monitor
 	if cfg.ResourceMonitor.Enabled {
-		logAdapter := &monitor.LogrusLogger{}
+		logAdapter := monitor.NewSlogLogger(logger.GetLogger())
 		monitorCfg := &monitor.ResourceMonitorConfig{
 			Enabled:              cfg.ResourceMonitor.Enabled,
 			CheckIntervalSeconds: cfg.ResourceMonitor.CheckIntervalSeconds,
