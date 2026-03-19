@@ -34,8 +34,6 @@ probes:
 
 	// Initialize logger for testing
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
-	
 
 	cfg, err := LoadConfig(cfgPath)
 	if err != nil {
@@ -102,8 +100,6 @@ probes:
 
 	// Initialize logger for testing
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
-	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -192,8 +188,6 @@ probes:
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
-	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -275,8 +269,6 @@ probes:
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
-	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -356,8 +348,6 @@ probes:
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
-	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -420,8 +410,6 @@ probes:
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
-	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -507,8 +495,6 @@ probes:
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	
-	
 
 	watcher, err := NewFileWatcher(customCfgPath, cfg, logger)
 	if err != nil {
