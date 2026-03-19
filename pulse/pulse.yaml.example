@@ -120,3 +120,27 @@ rate_limit:
 #
 # 5. Use environment variables instead of pulse.yaml for production.
 #    Config files should only be used for local development.
+
+# ==================================
+# Telemetry / Distributed Tracing
+# ==================================
+# Node-Pulse uses OpenTelemetry for distributed tracing (the "Traces" pillar of
+# observability).  When enabled, every HTTP request handled by Pulse is traced
+# with a W3C traceparent span.  Beacon→Pulse request chains are correlated
+# end-to-end when the Beacon is also configured with telemetry.enabled: true.
+#
+# Environment variable overrides:
+#   PULSE_TELEMETRY_ENABLED=true
+#   PULSE_TELEMETRY_SERVICE_NAME=pulse
+#   PULSE_TELEMETRY_SERVICE_VERSION=1.0.0
+#   PULSE_TELEMETRY_ENVIRONMENT=production
+#   PULSE_TELEMETRY_OTLP_ENDPOINT=localhost:4317
+#   PULSE_TELEMETRY_SAMPLING_RATE=0.1
+telemetry:
+  enabled: false                    # Set true to activate tracing
+  service_name: pulse               # Service name in traces
+  service_version: unknown          # Populated automatically in CI/CD
+  environment: development          # "development", "staging", or "production"
+  otlp_endpoint: ""                 # gRPC OTLP collector, e.g. "localhost:4317"
+                                    # Leave empty to export spans to stdout (dev mode)
+  sampling_rate: 1.0                # 1.0 = trace all requests; 0.1 = 10% in prod

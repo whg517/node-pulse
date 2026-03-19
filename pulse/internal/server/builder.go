@@ -8,6 +8,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/health"
 	"github.com/whg517/node-pulse/pulse/internal/scheduler"
+	"github.com/whg517/node-pulse/pulse/pkg/telemetry"
 )
 
 // Builder provides a fluent interface for building a Server
@@ -47,6 +48,13 @@ func (b *Builder) Build() (*Server, error) {
 	// Setup shutdown context
 	srv.setupContext()
 
+	// Initialize OpenTelemetry tracing (must happen before routes are registered
+	// so that the otelgin middleware picks up the correct global TracerProvider).
+	if err := srv.initTelemetry(); err != nil {
+		// Non-fatal: log a warning and continue without tracing
+		log.Printf("[WARN] [Server] Telemetry initialization failed: %v", err)
+	}
+
 	// Initialize database
 	if err := srv.initDatabase(); err != nil {
 		log.Printf("[WARN] [Server] Database initialization failed: %v", err)
@@ -84,6 +92,26 @@ func (b *Builder) Build() (*Server, error) {
 	return srv, nil
 }
 
+// initTelemetry initialises the global OpenTelemetry TracerProvider.
+func (s *Server) initTelemetry() error {
+	cfg := telemetry.Config{
+		Enabled:        s.config.Telemetry.Enabled,
+		ServiceName:    s.config.Telemetry.ServiceName,
+		ServiceVersion: s.config.Telemetry.ServiceVersion,
+		Environment:    s.config.Telemetry.Environment,
+		OTLPEndpoint:   s.config.Telemetry.OTLPEndpoint,
+		SamplingRate:   s.config.Telemetry.SamplingRate,
+	}
+
+	provider, err := telemetry.Init(s.shutdownCtx, cfg)
+	if err != nil {
+		return err
+	}
+	s.telemetryProvider = provider
+	log.Println("[INFO] [Server] Telemetry initialized")
+	return nil
+}
+
 // initDatabase initializes the database connection
 func (s *Server) initDatabase() error {
 	database, err := db.New(s.config.DB.URL)
@@ -119,3 +147,4 @@ func (s *Server) initScheduler() error {
 	log.Println("[INFO] [Server] Scheduler initialized")
 	return nil
 }
+

@@ -16,19 +16,21 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/health"
 	"github.com/whg517/node-pulse/pulse/internal/scheduler"
+	"github.com/whg517/node-pulse/pulse/pkg/telemetry"
 )
 
 // Server represents the HTTP server with all its dependencies
 type Server struct {
-	config         *Config
-	router         *gin.Engine
-	httpServer     *http.Server
-	database       *db.Database
-	healthChecker  *health.HealthChecker
-	scheduler      scheduler.Scheduler
-	cacheManager   *api.CacheManager
-	shutdownCtx    context.Context
-	shutdownCancel context.CancelFunc
+	config            *Config
+	router            *gin.Engine
+	httpServer        *http.Server
+	database          *db.Database
+	healthChecker     *health.HealthChecker
+	scheduler         scheduler.Scheduler
+	cacheManager      *api.CacheManager
+	telemetryProvider *telemetry.Provider
+	shutdownCtx       context.Context
+	shutdownCancel    context.CancelFunc
 }
 
 // Start starts the server and all its dependencies
@@ -79,6 +81,11 @@ func (s *Server) Shutdown() error {
 	// Close database
 	if s.database != nil {
 		s.database.Close()
+	}
+
+	// Flush and shutdown telemetry (must be after HTTP server to export remaining spans)
+	if s.telemetryProvider != nil {
+		s.telemetryProvider.Shutdown(ctx)
 	}
 
 	// Cancel shutdown context

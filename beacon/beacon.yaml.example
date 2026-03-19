@@ -50,3 +50,18 @@ reconnect:
 metrics_enabled: true      # Enable/disable metrics server (default: true)
 metrics_port: 2112         # Metrics server port (default: 2112, range: 1024-65535)
 metrics_update_seconds: 10 # Metrics update interval (default: 10, range: 10-60 seconds)
+
+# ==================================
+# Telemetry / Distributed Tracing
+# ==================================
+# When enabled, the Beacon wraps its outbound HTTP calls to Pulse with an
+# OpenTelemetry span and injects a W3C "traceparent" header.  This enables
+# end-to-end trace correlation from the Beacon probe loop through Pulse's
+# API handlers.
+telemetry:
+  enabled: false                    # Set true to activate tracing
+  service_name: beacon              # Service name in traces
+  service_version: unknown          # Populated automatically in CI/CD
+  otlp_endpoint: ""                 # gRPC OTLP collector, e.g. "localhost:4317"
+                                    # Leave empty to export spans to stdout (dev mode)
+  sampling_rate: 1.0                # 1.0 = trace all operations

@@ -62,6 +62,9 @@ type Config struct {
 	// Resume upload configuration (FR-4.1.5, FR-4.1.7)
 	Resume ResumeConfig `mapstructure:"resume" yaml:"resume"`
 
+	// Telemetry / distributed tracing configuration
+	Telemetry TelemetryConfig `mapstructure:"telemetry" yaml:"telemetry"`
+
 	// Internal fields (not from config file)
 	ConfigPath string `mapstructure:"-"`
 	Debug      bool   `mapstructure:"debug"`
@@ -82,6 +85,25 @@ type ReconnectConfig struct {
 	MaxRetries    int    `mapstructure:"max_retries" yaml:"max_retries"`
 	RetryInterval int    `mapstructure:"retry_interval" yaml:"retry_interval"`
 	Backoff       string `mapstructure:"backoff" yaml:"backoff"`
+}
+
+// TelemetryConfig holds OpenTelemetry / distributed-tracing settings.
+type TelemetryConfig struct {
+	// Enabled controls whether distributed tracing is active (default: false).
+	Enabled bool `mapstructure:"enabled" yaml:"enabled"`
+
+	// ServiceName is the logical name reported in traces (default: "beacon").
+	ServiceName string `mapstructure:"service_name" yaml:"service_name"`
+
+	// ServiceVersion is the deployed version string (default: "unknown").
+	ServiceVersion string `mapstructure:"service_version" yaml:"service_version"`
+
+	// OTLPEndpoint is the gRPC address of an OTLP-compatible collector,
+	// e.g. "localhost:4317".  When empty, spans are written to stdout.
+	OTLPEndpoint string `mapstructure:"otlp_endpoint" yaml:"otlp_endpoint"`
+
+	// SamplingRate controls the fraction of requests traced (0.0 – 1.0, default 1.0).
+	SamplingRate float64 `mapstructure:"sampling_rate" yaml:"sampling_rate"`
 }
 
 // LoadConfig loads configuration from file with validation

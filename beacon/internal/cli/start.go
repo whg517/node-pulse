@@ -18,6 +18,7 @@ import (
 	"beacon/internal/probe"
 	"beacon/internal/process"
 	"beacon/internal/reporter"
+	"beacon/internal/telemetry"
 )
 
 var startCmd = &cobra.Command{
@@ -52,6 +53,26 @@ func runStart(cmd *cobra.Command, args []string) error {
 		"config":    cfg.ConfigPath,
 	}).Info("Configuration loaded successfully")
 
+	// Create context for canceling goroutines (must be before telemetry init)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Initialize distributed tracing (opt-in via config).
+	telemetryCfg := telemetry.Config{
+		Enabled:        cfg.Telemetry.Enabled,
+		ServiceName:    cfg.Telemetry.ServiceName,
+		ServiceVersion: cfg.Telemetry.ServiceVersion,
+		NodeID:         cfg.NodeID,
+		OTLPEndpoint:   cfg.Telemetry.OTLPEndpoint,
+		SamplingRate:   cfg.Telemetry.SamplingRate,
+	}
+	telemetryProvider, err := telemetry.Init(ctx, telemetryCfg)
+	if err != nil {
+		logger.WithError(err).Warn("Telemetry initialization failed – continuing without tracing")
+	} else {
+		defer telemetryProvider.Shutdown(context.Background())
+	}
+
 	// Create process manager
 	procMgr := process.NewManager(cfg)
 
@@ -62,10 +83,6 @@ func runStart(cmd *cobra.Command, args []string) error {
 	defer func() { _ = procMgr.Cleanup() }()
 
 	logger.Info("Starting probes...")
-
-	// Create context for canceling goroutines
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Create probe scheduler
 	scheduler, err := probe.NewProbeScheduler(cfg.Probes)

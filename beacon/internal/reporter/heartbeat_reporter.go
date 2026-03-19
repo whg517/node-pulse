@@ -15,6 +15,7 @@ import (
 
 	"beacon/internal/logger"
 	"beacon/internal/models"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 const (
@@ -91,8 +92,14 @@ func NewPulseAPIClient(serverURL string, timeout time.Duration, jwtClient TokenP
 		},
 	}
 
+	// Wrap the transport with otelhttp so that every outbound request to Pulse
+	// automatically carries a W3C "traceparent" header.  This propagates the
+	// active span context from the Beacon probe loop into Pulse's API handler,
+	// enabling end-to-end distributed trace correlation.
+	tracingTransport := otelhttp.NewTransport(transport)
+
 	httpClient := &http.Client{
-		Transport: transport,
+		Transport: tracingTransport,
 		Timeout:   timeout,
 	}
 
