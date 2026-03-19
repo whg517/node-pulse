@@ -1,12 +1,11 @@
 package probe
 
 import (
+	"log/slog"
 	"net"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/sirupsen/logrus"
 
 	"beacon/internal/config"
 	"beacon/internal/logger"
@@ -15,9 +14,7 @@ import (
 // TestMain initializes the logger for all tests in this package
 func TestMain(m *testing.M) {
 	// Initialize a simple test logger to avoid nil pointer panics
-	logger.Logger = logrus.New()
-	logger.Logger.SetOutput(os.Stderr)
-	logger.Logger.SetLevel(logrus.WarnLevel) // Use WARN to reduce noise
+	logger.Logger = slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelWarn}))
 	os.Exit(m.Run())
 }
 

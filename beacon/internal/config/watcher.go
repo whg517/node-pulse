@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 	"sync"
@@ -10,7 +11,6 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
-	"github.com/sirupsen/logrus"
 )
 
 // FileWatcher monitors configuration file for changes and supports hot reloading
@@ -18,7 +18,7 @@ type FileWatcher struct {
 	path     string
 	config   atomic.Value // stores *Config
 	debounce time.Duration
-	logger   *logrus.Logger
+	logger   *slog.Logger
 
 	mu            sync.RWMutex
 	callbacks     []func(*Config, []string) error // Added changes parameter
@@ -30,7 +30,7 @@ type FileWatcher struct {
 }
 
 // NewFileWatcher creates a new configuration file watcher
-func NewFileWatcher(path string, initialConfig *Config, logger *logrus.Logger) (*FileWatcher, error) {
+func NewFileWatcher(path string, initialConfig *Config, logger *slog.Logger) (*FileWatcher, error) {
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, fmt.Errorf("config file not found: %s", path)
 	}
@@ -58,10 +58,10 @@ func (fw *FileWatcher) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to watch config file: %w", err)
 	}
 
-	fw.logger.WithFields(logrus.Fields{
-		"path":    fw.path,
-		"version": fw.version,
-	}).Info("Config watcher started")
+	fw.logger.Info("Config watcher started",
+		"path", fw.path,
+		"version", fw.version,
+	)
 
 	var timer *time.Timer
 
@@ -84,7 +84,7 @@ func (fw *FileWatcher) Start(ctx context.Context) error {
 				continue
 			}
 
-			fw.logger.WithField("event", event.Op.String()).Debug("File event detected")
+			fw.logger.Debug("File event detected", "event", event.Op.String())
 
 			// Debounce: reset timer
 			fw.timerMu.Lock()
@@ -93,7 +93,7 @@ func (fw *FileWatcher) Start(ctx context.Context) error {
 			}
 			fw.timer = time.AfterFunc(fw.debounce, func() {
 				if err := fw.reloadConfig(); err != nil {
-					fw.logger.WithError(err).Error("Failed to reload config")
+					fw.logger.Error("Failed to reload config", "error", err)
 				}
 			})
 			fw.timerMu.Unlock()
@@ -102,17 +102,17 @@ func (fw *FileWatcher) Start(ctx context.Context) error {
 			if !ok {
 				return nil
 			}
-			fw.logger.WithError(err).Error("File watcher error")
+			fw.logger.Error("File watcher error", "error", err)
 		}
 	}
 }
 
 // reloadConfig reloads the configuration from file
 func (fw *FileWatcher) reloadConfig() error {
-	fw.logger.WithFields(logrus.Fields{
-		"path":            fw.path,
-		"current_version": fw.version,
-	}).Info("Reloading configuration")
+	fw.logger.Info("Reloading configuration",
+		"path", fw.path,
+		"current_version", fw.version,
+	)
 
 	// Check file permissions (security check)
 	fileInfo, err := os.Stat(fw.path)
@@ -122,7 +122,7 @@ func (fw *FileWatcher) reloadConfig() error {
 	// Warn if file is world-writable (permissions 0777 or others have write access)
 	perms := fileInfo.Mode().Perm()
 	if perms&0002 != 0 {
-		fw.logger.WithField("permissions", perms).Warn("Config file is world-writable, this is a security risk")
+		fw.logger.Warn("Config file is world-writable, this is a security risk", "permissions", perms)
 	}
 
 	// Load new config
@@ -154,17 +154,17 @@ func (fw *FileWatcher) reloadConfig() error {
 	changeSummary := fmt.Sprintf("%d change(s)", changeCount)
 	if changeCount <= 5 {
 		// Log all changes if few
-		fw.logger.WithFields(logrus.Fields{
-			"changes":     changes,
-			"new_version": newVersion,
-		}).Info("Configuration changes detected")
+		fw.logger.Info("Configuration changes detected",
+			"changes", changes,
+			"new_version", newVersion,
+		)
 	} else {
 		// Log summary if many changes
-		fw.logger.WithFields(logrus.Fields{
-			"summary":     changeSummary,
-			"new_version": newVersion,
-		}).Info("Configuration changes detected")
-		fw.logger.WithField("changes", changes).Debug("Detailed changes")
+		fw.logger.Info("Configuration changes detected",
+			"summary", changeSummary,
+			"new_version", newVersion,
+		)
+		fw.logger.Debug("Detailed changes", "changes", changes)
 	}
 
 	// Check for restart-required fields and warn
@@ -189,7 +189,7 @@ func (fw *FileWatcher) reloadConfig() error {
 
 	for _, callback := range callbacks {
 		if err := callback(newConfig, changes); err != nil {
-			fw.logger.WithError(err).Error("Config reload callback failed")
+		fw.logger.Error("Config reload callback failed", "error", err)
 
 			// Rollback config AND version
 			fw.config.Store(&oldConfigCopy)
@@ -202,11 +202,11 @@ func (fw *FileWatcher) reloadConfig() error {
 	fw.reloadCount++
 	fw.lastReload = time.Now()
 
-	fw.logger.WithFields(logrus.Fields{
-		"version":      fw.version,
-		"reload_count": fw.reloadCount,
-		"summary":      changeSummary,
-	}).Info("Configuration reloaded successfully")
+	fw.logger.Info("Configuration reloaded successfully",
+		"version", fw.version,
+		"reload_count", fw.reloadCount,
+		"summary", changeSummary,
+	)
 
 	return nil
 }

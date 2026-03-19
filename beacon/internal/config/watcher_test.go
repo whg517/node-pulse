@@ -3,13 +3,12 @@ package config
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 // TestFileWatcher_StartStop tests starting and stopping the file watcher
@@ -34,9 +33,9 @@ probes:
 	}
 
 	// Initialize logger for testing
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-	logger.SetLevel(logrus.DebugLevel)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	
+	
 
 	cfg, err := LoadConfig(cfgPath)
 	if err != nil {
@@ -102,9 +101,9 @@ probes:
 	}
 
 	// Initialize logger for testing
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-	logger.SetLevel(logrus.DebugLevel)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	
+	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -192,9 +191,9 @@ probes:
 		t.Fatal(err)
 	}
 
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-	logger.SetLevel(logrus.DebugLevel)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	
+	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -275,9 +274,9 @@ probes:
 		t.Fatal(err)
 	}
 
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-	logger.SetLevel(logrus.DebugLevel)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	
+	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -356,9 +355,9 @@ probes:
 		t.Fatal(err)
 	}
 
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-	logger.SetLevel(logrus.DebugLevel)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	
+	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -420,9 +419,9 @@ probes:
 		t.Fatal(err)
 	}
 
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-	logger.SetLevel(logrus.DebugLevel)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	
+	
 
 	watcher, err := NewFileWatcher(cfgPath, cfg, logger)
 	if err != nil {
@@ -507,9 +506,9 @@ probes:
 		t.Fatal(err)
 	}
 
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-	logger.SetLevel(logrus.DebugLevel)
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	
+	
 
 	watcher, err := NewFileWatcher(customCfgPath, cfg, logger)
 	if err != nil {

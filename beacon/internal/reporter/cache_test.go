@@ -1,12 +1,11 @@
 package reporter
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/sirupsen/logrus"
 
 	"beacon/internal/logger"
 )
@@ -14,9 +13,7 @@ import (
 // TestMain initializes the logger for all tests
 func TestMain(m *testing.M) {
 	// Initialize a simple test logger
-	logger.Logger = logrus.New()
-	logger.Logger.SetLevel(logrus.DebugLevel)
-	logger.Logger.SetOutput(os.Stdout)
+	logger.Logger = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 
 	os.Exit(m.Run())
 }

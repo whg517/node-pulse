@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/csv"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -175,7 +175,8 @@ func (s *ExportService) processExport(task *models.ExportTask) {
 	// Generate export file
 	filePath, recordCount, err := s.generateExportFile(task)
 	if err != nil {
-		log.Printf("[Export] Failed to generate export %s: %v", task.ID, err)
+		slog.Error("Failed to generate export",
+			"component", "export", "task_id", task.ID, "error", err)
 		s.updateTaskStatus(task.ID, "failed", "", 0, 0, err.Error())
 		return
 	}
@@ -183,7 +184,8 @@ func (s *ExportService) processExport(task *models.ExportTask) {
 	// Get file size
 	fileInfo, err := os.Stat(filePath)
 	if err != nil {
-		log.Printf("[Export] Failed to get file size for %s: %v", task.ID, err)
+		slog.Error("Failed to get file size",
+			"component", "export", "task_id", task.ID, "error", err)
 		s.updateTaskStatus(task.ID, "failed", "", 0, 0, err.Error())
 		return
 	}
@@ -204,7 +206,12 @@ func (s *ExportService) processExport(task *models.ExportTask) {
 		task.CompletedAt = &now
 	}
 
-	log.Printf("[Export] Completed export %s: %d records, %d bytes", task.ID, recordCount, fileInfo.Size())
+	slog.Info("Export completed",
+		"component", "export",
+		"task_id", task.ID,
+		"records", recordCount,
+		"bytes", fileInfo.Size(),
+	)
 }
 
 // generateExportFile generates the export file
@@ -395,7 +402,7 @@ func (s *ExportService) cleanupOldExports() {
 
 // performCleanup performs the actual cleanup
 func (s *ExportService) performCleanup() {
-	log.Printf("[Export] Starting cleanup of old export files")
+	slog.Info("Starting cleanup of old export files", "component", "export")
 
 	now := time.Now()
 	cutoffTime := now.Add(-ExportRetention)
@@ -409,9 +416,10 @@ func (s *ExportService) performCleanup() {
 			// Delete file
 			if task.FilePath != "" {
 				if err := os.Remove(task.FilePath); err != nil {
-					log.Printf("[Export] Failed to delete export file %s: %v", task.FilePath, err)
+					slog.Error("Failed to delete export file",
+						"component", "export", "file", task.FilePath, "error", err)
 				} else {
-					log.Printf("[Export] Deleted export file: %s", task.FilePath)
+					slog.Info("Deleted export file", "component", "export", "file", task.FilePath)
 				}
 			}
 
@@ -420,7 +428,7 @@ func (s *ExportService) performCleanup() {
 		}
 	}
 
-	log.Printf("[Export] Cleanup completed")
+	slog.Info("Export cleanup completed", "component", "export")
 }
 
 // Shutdown stops the export service

@@ -2,7 +2,7 @@ package metrics
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sync"
 	"time"
 )
@@ -86,8 +86,12 @@ func (c *Collector) Start() {
 	c.wg.Add(1)
 	go c.aggregationLoop()
 
-	log.Printf("[Metrics] Collector started (capacity: %d, aggregation: %v, retention: %v)",
-		c.capacity, c.aggregationInterval, c.retentionPeriod)
+	slog.Info("Metrics collector started",
+		"component", "metrics",
+		"capacity", c.capacity,
+		"aggregation_interval", c.aggregationInterval,
+		"retention_period", c.retentionPeriod,
+	)
 }
 
 // Stop gracefully stops the metrics collector
@@ -105,7 +109,7 @@ func (c *Collector) Stop() {
 	// the mutex to complete their current work before exiting.
 	c.wg.Wait()
 
-	log.Println("[Metrics] Collector stopped")
+	slog.Info("Metrics collector stopped", "component", "metrics")
 }
 
 // RecordMetric records a single metric
@@ -222,7 +226,11 @@ func (c *Collector) aggregateMetrics() {
 	c.aggregated = append(c.aggregated, aggregated...)
 	c.mu.Unlock()
 
-	log.Printf("[Metrics] Aggregated %d raw metrics into %d time windows", len(records), len(aggregated))
+	slog.Debug("Aggregated metrics",
+		"component", "metrics",
+		"raw_count", len(records),
+		"window_count", len(aggregated),
+	)
 }
 
 // cleanupOldMetrics removes raw metrics older than the retention period
@@ -242,8 +250,9 @@ func (c *Collector) cleanupOldMetrics() {
 	}
 
 	if len(filtered) < len(c.aggregated) {
+		removed := len(c.aggregated) - len(filtered)
 		c.aggregated = filtered
-		log.Printf("[Metrics] Cleaned up %d old aggregated metrics", len(c.aggregated)-len(filtered))
+		slog.Debug("Cleaned up old aggregated metrics", "component", "metrics", "removed", removed)
 	}
 }
 
@@ -291,13 +300,21 @@ func (c *Collector) checkAlertThresholds() {
 		}
 
 		if p99 > threshold {
-			log.Printf("[Metrics] ALERT: %s P99 (%v) exceeds threshold (%v)",
-				metricName, p99, threshold)
+			slog.Warn("Performance alert: P99 exceeds threshold",
+				"component", "metrics",
+				"metric", metricName,
+				"p99", p99,
+				"threshold", threshold,
+			)
 		}
 
 		if errorRate > c.alertThresholds.ErrorRate {
-			log.Printf("[Metrics] ALERT: %s error rate (%.2f%%) exceeds threshold (%.2f%%)",
-				metricName, errorRate*100, c.alertThresholds.ErrorRate*100)
+			slog.Warn("Performance alert: error rate exceeds threshold",
+				"component", "metrics",
+				"metric", metricName,
+				"error_rate_pct", errorRate*100,
+				"threshold_pct", c.alertThresholds.ErrorRate*100,
+			)
 		}
 	}
 }
@@ -308,7 +325,7 @@ func (c *Collector) SetAlertThresholds(thresholds AlertThresholds) {
 	defer c.mu.Unlock()
 
 	c.alertThresholds = thresholds
-	log.Printf("[Metrics] Alert thresholds updated")
+	slog.Debug("Alert thresholds updated", "component", "metrics")
 }
 
 // GetStats returns collector statistics

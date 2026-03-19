@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -33,28 +33,29 @@ type Server struct {
 
 // Start starts the server and all its dependencies
 func (s *Server) Start() error {
-	log.Printf("[INFO] [Server] Starting Node Pulse API on port %s...", s.config.Server.Port)
+	slog.Info("Starting Node Pulse API", "component", "server", "port", s.config.Server.Port)
 
 	// Start scheduler
 	if err := s.scheduler.Start(s.shutdownCtx); err != nil {
 		return err
 	}
-	log.Println("[INFO] [Server] Scheduler started")
+	slog.Info("Scheduler started", "component", "server")
 
 	// Start HTTP server in background
 	go func() {
 		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("[ERROR] [Server] Failed to start: %v", err)
+			slog.Error("Failed to start HTTP server", "component", "server", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	log.Println("[INFO] [Server] Node Pulse API started successfully")
+	slog.Info("Node Pulse API started successfully", "component", "server")
 	return nil
 }
 
 // Shutdown gracefully shuts down the server
 func (s *Server) Shutdown() error {
-	log.Println("[INFO] [Server] Shutting down...")
+	slog.Info("Shutting down", "component", "server")
 
 	// Create shutdown context with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -67,12 +68,12 @@ func (s *Server) Shutdown() error {
 
 	// Stop scheduler
 	if err := s.scheduler.Stop(); err != nil {
-		log.Printf("[WARN] [Server] Error stopping scheduler: %v", err)
+		slog.Warn("Error stopping scheduler", "component", "server", "error", err)
 	}
 
 	// Shutdown HTTP server
 	if err := s.httpServer.Shutdown(ctx); err != nil {
-		log.Printf("[WARN] [Server] Forced to shutdown: %v", err)
+		slog.Warn("Forced to shutdown", "component", "server", "error", err)
 		return err
 	}
 
@@ -86,7 +87,7 @@ func (s *Server) Shutdown() error {
 		s.shutdownCancel()
 	}
 
-	log.Println("[INFO] [Server] Shutdown complete")
+	slog.Info("Shutdown complete", "component", "server")
 	return nil
 }
 
@@ -97,7 +98,7 @@ func (s *Server) WaitForShutdown() {
 	<-quit
 
 	if err := s.Shutdown(); err != nil {
-		log.Printf("[ERROR] [Server] Shutdown error: %v", err)
+		slog.Error("Shutdown error", "component", "server", "error", err)
 		os.Exit(1)
 	}
 
@@ -106,30 +107,30 @@ func (s *Server) WaitForShutdown() {
 
 // stopCacheComponents stops all cache-related components
 func (s *Server) stopCacheComponents() {
-	log.Println("[INFO] [Server] Stopping cache components...")
+	slog.Info("Stopping cache components", "component", "server")
 
 	if s.cacheManager.AlertEngine != nil {
-		log.Println("  -> Alert engine")
+		slog.Debug("Stopping alert engine", "component", "server")
 		s.cacheManager.AlertEngine.Stop()
 	}
 
 	if s.cacheManager.BatchWriter != nil {
-		log.Println("  -> Batch writer")
+		slog.Debug("Stopping batch writer", "component", "server")
 		s.cacheManager.BatchWriter.Stop()
 	}
 
 	if s.cacheManager.MemoryCache != nil {
-		log.Println("  -> Memory cache")
+		slog.Debug("Stopping memory cache", "component", "server")
 		s.cacheManager.MemoryCache.Stop()
 	}
 
 	if s.cacheManager.ExportService != nil {
-		log.Println("  -> Export service")
+		slog.Debug("Stopping export service", "component", "server")
 		s.cacheManager.ExportService.Shutdown()
 	}
 
 	if s.cacheManager.MetricsCollector != nil {
-		log.Println("  -> Metrics collector")
+		slog.Debug("Stopping metrics collector", "component", "server")
 		s.cacheManager.MetricsCollector.Stop()
 	}
 }
@@ -146,7 +147,7 @@ func (s *Server) setupHealthChecker() {
 			webhookLogsQuerier,
 			alertSuppressionsQuerier,
 		)
-		log.Println("[INFO] [Server] Alert system health checker initialized")
+		slog.Info("Alert system health checker initialized", "component", "server")
 	}
 
 	// Create health checker with all components
@@ -166,7 +167,7 @@ func (s *Server) setupRoutes() {
 	}
 
 	s.cacheManager = api.SetupRoutes(s.router, s.healthChecker, dbPool)
-	log.Println("[INFO] [Server] Routes configured")
+	slog.Info("Routes configured", "component", "server")
 }
 
 // setupSchedulerTasks registers all scheduled tasks

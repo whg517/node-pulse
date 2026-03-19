@@ -3,7 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -44,7 +44,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 	}
 
 	for _, step := range steps {
-		log.Printf("[Migration] Running step: %s", step.name)
+		slog.Info("Running migration step", "component", "migration", "step", step.name)
 		if err := step.fn(ctx, pool); err != nil {
 			return fmt.Errorf("step %s failed: %w", step.name, err)
 		}
@@ -161,8 +161,8 @@ func seedAdminUser(ctx context.Context, pool *pgxpool.Pool) error {
 
 	// Validate admin password meets security requirements
 	if err := auth.ValidatePassword(adminPassword); err != nil {
-		log.Printf("[WARN] [Migration] Admin password validation failed: %v", err)
-		log.Printf("[WARN] [Migration] Using default admin password is NOT recommended for production!")
+		slog.Warn("Admin password validation failed; using default admin password is NOT recommended for production",
+			"component", "migration", "error", err)
 		// Note: We don't fail here to allow development setups, but log a warning
 	}
 
@@ -197,9 +197,9 @@ func seedAdminUser(ctx context.Context, pool *pgxpool.Pool) error {
 			return err
 		}
 
-		log.Printf("[Migration] Admin user created: %s", adminUsername)
+		slog.Info("Admin user created", "component", "migration", "username", adminUsername)
 	} else {
-		log.Printf("[Migration] Admin user already exists: %s", adminUsername)
+		slog.Info("Admin user already exists", "component", "migration", "username", adminUsername)
 	}
 
 	return nil

@@ -1,7 +1,7 @@
 package server
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/whg517/node-pulse/pulse/internal/cleanup"
 	"github.com/whg517/node-pulse/pulse/internal/config"
@@ -28,7 +28,7 @@ func NewTaskRegistry(sched scheduler.Scheduler, database *db.Database) *TaskRegi
 // RegisterAll registers all scheduled tasks
 func (r *TaskRegistry) RegisterAll() error {
 	if r.database == nil || r.database.Pool == nil {
-		log.Println("[WARN] [Registry] Skipping task registration (no database)")
+		slog.Warn("Skipping task registration (no database)", "component", "registry")
 		return nil
 	}
 
@@ -54,12 +54,12 @@ func (r *TaskRegistry) registerCleanupTask() error {
 	}
 
 	if !cleanupConfig.Enabled {
-		log.Println("[WARN] [Registry] Cleanup task disabled in configuration")
+		slog.Warn("Cleanup task disabled in configuration", "component", "registry")
 		return nil
 	}
 
 	var err error
-	r.cleanupTask, err = cleanup.NewCleanupTask(cleanupConfig, r.database.Pool, log.Default())
+	r.cleanupTask, err = cleanup.NewCleanupTask(cleanupConfig, r.database.Pool)
 	if err != nil {
 		return err
 	}
@@ -68,8 +68,11 @@ func (r *TaskRegistry) registerCleanupTask() error {
 		return err
 	}
 
-	log.Printf("[INFO] [Registry] Cleanup task registered (interval: %ds, retention: %ddays)",
-		cleanupConfig.IntervalSeconds, cleanupConfig.RetentionDays)
+	slog.Info("Cleanup task registered",
+		"component", "registry",
+		"interval_seconds", cleanupConfig.IntervalSeconds,
+		"retention_days", cleanupConfig.RetentionDays,
+	)
 	return nil
 }
 
@@ -80,6 +83,6 @@ func (r *TaskRegistry) registerSuppressionCleanup() error {
 		return err
 	}
 
-	log.Println("[INFO] [Registry] Suppression cleanup task registered (interval: 1h)")
+	slog.Info("Suppression cleanup task registered", "component", "registry", "interval", "1h")
 	return nil
 }
