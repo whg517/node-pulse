@@ -160,7 +160,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700">
+        <div className="px-6 py-4 border-b border-[var(--color-border)]">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
             {mode === 'create' ? t('nodes.addNode') : t('nodes.editNode')}
           </h3>
@@ -263,7 +263,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-slate-700">
+          <div className="flex justify-end space-x-3 pt-4 border-t border-[var(--color-border)]">
             <button
               type="button"
               onClick={onCancel}

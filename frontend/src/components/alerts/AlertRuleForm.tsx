@@ -143,7 +143,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
             type="checkbox"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
-            className="focus:ring-[var(--color-brand)] h-4 w-4 text-[var(--color-brand)] border-gray-300 rounded"
+            className="focus:ring-[var(--color-brand)] h-4 w-4 text-[var(--color-brand)] border-[var(--color-border)] rounded"
           />
         </div>
         <div className="ml-3 text-sm">

@@ -337,7 +337,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               type="button"
               onClick={clearNodeSelection}
               disabled={loading}
-              className="text-xs text-gray-600 hover:text-gray-800 dark:text-gray-400"
+              className="text-xs text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]"
             >
               {t('reports.clearSelection')}
             </button>
@@ -357,7 +357,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
                 checked={selectedNodeIds.includes(node.id)}
                 onChange={() => toggleNode(node.id)}
                 disabled={loading}
-                className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
+                className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-[var(--color-border)] rounded"
               />
               <span className="text-sm text-[var(--color-text-primary)]">
                 {node.name}
@@ -502,7 +502,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               checked={includeCharts}
               onChange={(e) => setIncludeCharts(e.target.checked)}
               disabled={loading}
-              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-[var(--color-border)] rounded"
             />
             <span className="text-sm text-[var(--color-text-secondary)]">
               {t('reports.includeCharts')}
@@ -514,7 +514,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               checked={includeSummary}
               onChange={(e) => setIncludeSummary(e.target.checked)}
               disabled={loading}
-              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-[var(--color-border)] rounded"
             />
             <span className="text-sm text-[var(--color-text-secondary)]">
               {t('reports.includeSummary')}

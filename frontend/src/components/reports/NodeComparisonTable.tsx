@@ -244,7 +244,7 @@ export function NodeComparisonTable({ nodes, highlightDifferences = true }: Node
               <span className="w-3 h-3 rounded bg-[var(--color-critical-bg)]" />
               <span>{t('status.warning')}</span>
             </div>
-            <span className="text-gray-300 dark:text-gray-600">|</span>
+            <span className="text-[var(--color-border)]">|</span>
             <span>{t('nodes.comparison')} - {t('nodes.selectedCount', { count: nodes.length, max: 5 })}</span>
           </div>
         </div>

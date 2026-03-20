@@ -126,7 +126,7 @@ export default function PerformanceDashboard() {
       {isLoading && !data && (
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('performance.loadingData')}</p>
+          <p className="mt-4 text-[var(--color-text-secondary)]">{t('performance.loadingData')}</p>
         </div>
       )}
 
@@ -202,19 +202,19 @@ export default function PerformanceDashboard() {
                   <div className="text-3xl font-bold text-[var(--color-brand)]">
                     {data.summary.total_requests.toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('performance.totalRequests')}</div>
+                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.totalRequests')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-[var(--color-healthy)]">
                     {data.summary.avg_response_time.toFixed(2)} ms
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('performance.avgResponseTime')}</div>
+                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.avgResponseTime')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-purple-600">
                     {data.summary.max_response_time.toFixed(2)} ms
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('performance.maxResponseTime')}</div>
+                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.maxResponseTime')}</div>
                 </div>
               </div>
             </div>

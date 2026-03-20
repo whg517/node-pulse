@@ -460,7 +460,7 @@ describe('NodeDetailPage', () => {
     expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 
-  it('handles offline node status for problem detection', () => {
+  it('handles offline node status for problem detection', async () => {
     const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'offline' }
     const mockNodeStatus = { status: 'offline', last_heartbeat: '2024-01-01T12:00:00Z' }
     const mockMetrics = { node_id: 'node-1', latency_ms: 45, packet_loss_rate: 60, jitter_ms: 5, timestamp: '2024-01-01T12:00:00Z' }
@@ -475,17 +475,11 @@ describe('NodeDetailPage', () => {
       refetch: vi.fn(),
     })
 
-    render(
-      <MemoryRouter initialEntries={['/nodes/node-1']}>
-        <Routes>
-          <Route path="/nodes/:id" element={<NodeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    )
+    await renderNodeDetailPage()
     expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 
-  it('handles high packet loss metrics', () => {
+  it('handles high packet loss metrics', async () => {
     const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
     const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
     // packet_loss_rate > 10 triggers specific code paths
@@ -501,17 +495,11 @@ describe('NodeDetailPage', () => {
       refetch: vi.fn(),
     })
 
-    render(
-      <MemoryRouter initialEntries={['/nodes/node-1']}>
-        <Routes>
-          <Route path="/nodes/:id" element={<NodeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    )
+    await renderNodeDetailPage()
     expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 
-  it('handles very high latency metrics', () => {
+  it('handles very high latency metrics', async () => {
     const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
     const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
     // latency_ms > 1000
@@ -527,17 +515,11 @@ describe('NodeDetailPage', () => {
       refetch: vi.fn(),
     })
 
-    render(
-      <MemoryRouter initialEntries={['/nodes/node-1']}>
-        <Routes>
-          <Route path="/nodes/:id" element={<NodeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    )
+    await renderNodeDetailPage()
     expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 
-  it('handles elevated metrics (packet loss > 3)', () => {
+  it('handles elevated metrics (packet loss > 3)', async () => {
     const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
     const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
     const mockMetrics = { node_id: 'node-1', latency_ms: 350, packet_loss_rate: 4, jitter_ms: 110, timestamp: '2024-01-01T12:00:00Z' }
@@ -552,17 +534,11 @@ describe('NodeDetailPage', () => {
       refetch: vi.fn(),
     })
 
-    render(
-      <MemoryRouter initialEntries={['/nodes/node-1']}>
-        <Routes>
-          <Route path="/nodes/:id" element={<NodeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    )
+    await renderNodeDetailPage()
     expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 
-  it('handles mildly elevated metrics (packet loss > 1)', () => {
+  it('handles mildly elevated metrics (packet loss > 1)', async () => {
     const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
     const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
     const mockMetrics = { node_id: 'node-1', latency_ms: 200, packet_loss_rate: 2, jitter_ms: 60, timestamp: '2024-01-01T12:00:00Z' }
@@ -577,17 +553,11 @@ describe('NodeDetailPage', () => {
       refetch: vi.fn(),
     })
 
-    render(
-      <MemoryRouter initialEntries={['/nodes/node-1']}>
-        <Routes>
-          <Route path="/nodes/:id" element={<NodeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    )
+    await renderNodeDetailPage()
     expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 
-  it('handles old last_heartbeat timestamp (> 24 hours)', () => {
+  it('handles old last_heartbeat timestamp (> 24 hours)', async () => {
     const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
     const oldTimestamp = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString()
     const mockNodeStatus = { status: 'online', last_heartbeat: oldTimestamp }
@@ -603,17 +573,11 @@ describe('NodeDetailPage', () => {
       refetch: vi.fn(),
     })
 
-    render(
-      <MemoryRouter initialEntries={['/nodes/node-1']}>
-        <Routes>
-          <Route path="/nodes/:id" element={<NodeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    )
+    await renderNodeDetailPage()
     expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 
-  it('handles high severity score for medium confidence', () => {
+  it('handles high severity score for medium confidence', async () => {
     const mockNode = { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' }
     const mockNodeStatus = { status: 'online', last_heartbeat: '2024-01-01T12:00:00Z' }
     // severity score > 2 but not high conditions: latency_ms: 450, packet_loss_rate: 5
@@ -629,13 +593,7 @@ describe('NodeDetailPage', () => {
       refetch: vi.fn(),
     })
 
-    render(
-      <MemoryRouter initialEntries={['/nodes/node-1']}>
-        <Routes>
-          <Route path="/nodes/:id" element={<NodeDetailPage />} />
-        </Routes>
-      </MemoryRouter>
-    )
+    await renderNodeDetailPage()
     expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 })

@@ -283,7 +283,7 @@ export function HealthReportPDF({
         {onClose && (
           <button
             onClick={onClose}
-            className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors duration-150"
+            className="bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] font-medium py-2 px-4 rounded-lg transition-colors duration-150"
           >
             {t('common.close')}
           </button>

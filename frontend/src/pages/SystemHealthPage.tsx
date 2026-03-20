@@ -137,7 +137,7 @@ export default function SystemHealthPage() {
         subtitle={t('integrations.systemHealthDescription')}
         actions={
           <div className="flex flex-shrink-0 items-center gap-3">
-            <span className="text-sm text-gray-500 dark:text-gray-400">
+            <span className="text-sm text-[var(--color-text-secondary)]">
               {t('integrations.lastRefresh')}: {lastRefresh.toLocaleTimeString()}
             </span>
             <ActionButton onClick={handleRefresh} disabled={isLoading}>
@@ -177,14 +177,14 @@ export default function SystemHealthPage() {
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">{t('integrations.responseTime')}:</span>
-                  <span className="ml-2 font-medium text-gray-900 dark:text-gray-200">
+                  <span className="text-[var(--color-text-secondary)]">{t('integrations.responseTime')}:</span>
+                  <span className="ml-2 font-medium text-[var(--color-text-primary)]">
                     {service.responseTime}ms
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-500 dark:text-gray-400">{t('integrations.uptime')}:</span>
-                  <span className="ml-2 font-medium text-gray-900 dark:text-gray-200">
+                  <span className="text-[var(--color-text-secondary)]">{t('integrations.uptime')}:</span>
+                  <span className="ml-2 font-medium text-[var(--color-text-primary)]">
                     {service.uptime}
                   </span>
                 </div>
@@ -208,10 +208,10 @@ export default function SystemHealthPage() {
               className={`p-4 border-l-4 ${getEventStyles(event.type)}`}
             >
               <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-800 dark:text-gray-200">
+                <p className="text-sm text-[var(--color-text-primary)]">
                   {event.message}
                 </p>
-                <span className="text-xs text-gray-400 dark:text-gray-500">
+                <span className="text-xs text-[var(--color-text-muted)]">
                   {new Date(event.timestamp).toLocaleString()}
                 </span>
               </div>

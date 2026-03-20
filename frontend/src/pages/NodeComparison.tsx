@@ -284,7 +284,7 @@ export default function NodeComparisonPage() {
                       disabled={
                         !selectedNodeIds.includes(node.node_id) && selectedNodeIds.length >= 5
                       }
-                      className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
+                      className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-[var(--color-border)] rounded"
                     />
                     <div className="ml-3 flex-1">
                       <div className="flex items-center justify-between">
@@ -439,7 +439,7 @@ export default function NodeComparisonPage() {
               selectedMetrics.length > 0 &&
               !isLoadingComparison
                 ? 'bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)]'
-                : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
+                : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-placeholder)] cursor-not-allowed'
             }`}
           >
             {isLoadingComparison ? t('common.loading') : t('nodes.compareNodes')}
