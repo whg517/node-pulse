@@ -105,7 +105,6 @@ export default function ReportsPage() {
       <PageHeader
         title={t('reports.title')}
         subtitle={`${t('reports.generateReport')} - ${t('reports.exportHistory')}`}
-        showBreadcrumb
       />
 
         {/* Error State */}

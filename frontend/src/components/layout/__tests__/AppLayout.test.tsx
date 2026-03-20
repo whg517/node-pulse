@@ -1,7 +1,17 @@
+import React from 'react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { AppLayout } from '../AppLayout'
+
+// Mock react-router-dom to avoid data router requirement for BreadcrumbProvider
+vi.mock('react-router-dom', () => ({
+  useLocation: () => ({ pathname: '/dashboard', search: '', hash: '', state: null, key: 'test' }),
+  useMatches: () => [],
+  Link: (props: { to: string; children: React.ReactNode; className?: string }) =>
+    React.createElement('a', { href: props.to, className: props.className }, props.children),
+  MemoryRouter: ({ children }: { children: React.ReactNode }) => React.createElement('div', null, children),
+}))
 
 // Mock Sidebar and Header to avoid deep dependency chains
 vi.mock('../Sidebar', () => ({

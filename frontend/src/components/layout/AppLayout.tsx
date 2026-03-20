@@ -11,6 +11,8 @@ import { useState, useEffect } from 'react'
 import type { ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
+import { BreadcrumbProvider } from './BreadcrumbContext'
+import { Breadcrumb } from './Breadcrumb'
 
 export interface AppLayoutProps {
   /** Page content */
@@ -71,10 +73,15 @@ export function AppLayout({ children, alertCount = 0 }: AppLayoutProps) {
         {/* Header */}
         <Header onMenuToggle={handleToggleSidebar} />
 
-        {/* Page content */}
-        <main className="flex-1 p-4 md:p-6" onClick={isSidebarOpen ? handleCloseSidebar : undefined}>
-          {children}
-        </main>
+        {/* Breadcrumb + Page content */}
+        <BreadcrumbProvider>
+          <div className="flex-1 p-4 md:p-6" onClick={isSidebarOpen ? handleCloseSidebar : undefined}>
+            <div className="mb-4">
+              <Breadcrumb />
+            </div>
+            {children}
+          </div>
+        </BreadcrumbProvider>
 
         {/* Footer (optional) */}
         <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg-surface)] py-4 text-center text-sm text-[var(--color-text-muted)]">

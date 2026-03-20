@@ -18,3 +18,5 @@ export type { HeaderProps } from './Header'
 
 export { Breadcrumb } from './Breadcrumb'
 
+export { BreadcrumbProvider, useBreadcrumb, useSetBreadcrumbLabel } from './BreadcrumbContext'
+export type { BreadcrumbItem, BreadcrumbHandle, BreadcrumbContextValue } from './BreadcrumbContext'

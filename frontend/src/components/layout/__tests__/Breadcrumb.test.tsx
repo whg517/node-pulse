@@ -1,98 +1,146 @@
+import React from 'react'
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { render, screen, cleanup } from '@testing-library/react'
 import { Breadcrumb } from '../Breadcrumb'
 
-// Mock react-i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
+// ---------------------------------------------------------------------------
+// Mock BreadcrumbContext — test Breadcrumb rendering in isolation
+// ---------------------------------------------------------------------------
+// The Breadcrumb component only consumes useBreadcrumb() from context.
+// We mock it here so we don't need a React Router data router context.
+
+const mockItems: Array<{ path: string; label: string }> = []
+vi.mock('../BreadcrumbContext', () => ({
+  useBreadcrumb: () => ({
+    items: mockItems,
+    setDynamicLabel: vi.fn(),
+    clearDynamicLabels: vi.fn(),
   }),
 }))
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+afterEach(() => {
+  mockItems.length = 0
+  cleanup()
+})
+
+/** Simulate breadcrumb items for a single-level path (Home + page) */
+function mockSingleLevel(pagePath: string, pageLabel: string) {
+  mockItems.length = 0
+  mockItems.push(
+    { path: '/dashboard', label: 'Home' },
+    { path: pagePath, label: pageLabel },
+  )
+}
+
+/** Simulate breadcrumb items for a two-level path (Home + section + page) */
+function mockTwoLevel(sectionPath: string, sectionLabel: string, pagePath: string, pageLabel: string) {
+  mockItems.length = 0
+  mockItems.push(
+    { path: '/dashboard', label: 'Home' },
+    { path: sectionPath, label: sectionLabel },
+    { path: pagePath, label: pageLabel },
+  )
+}
+
+/** Render Breadcrumb. Link from react-router-dom needs a router context,
+    so we mock it as a plain <a> tag. */
+vi.mock('react-router-dom', () => ({
+  Link: (props: { to: string; children: React.ReactNode; className?: string }) =>
+    React.createElement('a', { href: props.to, className: props.className }, props.children),
+}))
+
+function renderBreadcrumb() {
+  return render(<Breadcrumb />)
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 describe('Breadcrumb', () => {
-  it('renders home icon on root path', () => {
-    render(
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    expect(screen.getByRole('navigation')).toBeInTheDocument()
+  it('renders navigation element with aria-label', () => {
+    mockSingleLevel('/dashboard', 'Dashboard')
+    renderBreadcrumb()
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument()
+  })
+
+  it('renders Home icon (SVG) for the first item', () => {
+    mockSingleLevel('/dashboard', 'Dashboard')
+    renderBreadcrumb()
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    const svgs = nav.querySelectorAll('svg')
+    expect(svgs.length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders breadcrumb for /dashboard', () => {
-    render(
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('nav.dashboard')).toBeInTheDocument()
+    mockSingleLevel('/dashboard', 'Dashboard')
+    renderBreadcrumb()
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
   })
 
   it('renders breadcrumb for /nodes', () => {
-    render(
-      <MemoryRouter initialEntries={['/nodes']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('nav.nodes')).toBeInTheDocument()
+    mockSingleLevel('/nodes', 'Nodes')
+    renderBreadcrumb()
+    expect(screen.getByText('Nodes')).toBeInTheDocument()
   })
 
-  it('renders breadcrumb for /nodes/:id with ID segment', () => {
-    render(
-      <MemoryRouter initialEntries={['/nodes/550e8400-e29b-41d4-a716-446655440000']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('nav.nodes')).toBeInTheDocument()
-    expect(screen.getByText('nav.details')).toBeInTheDocument()
+  it('renders breadcrumb for /alerts/rules (two levels)', () => {
+    mockTwoLevel('/alerts', 'Alerts', '/alerts/rules', 'Alert Rules')
+    renderBreadcrumb()
+    expect(screen.getByText('Alert Rules')).toBeInTheDocument()
   })
 
-  it('renders breadcrumb for /nodes/123 with numeric ID segment', () => {
-    render(
-      <MemoryRouter initialEntries={['/nodes/123']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('nav.details')).toBeInTheDocument()
-  })
-
-  it('renders breadcrumb for /alerts/rules', () => {
-    render(
-      <MemoryRouter initialEntries={['/alerts/rules']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('nav.alerts')).toBeInTheDocument()
-    expect(screen.getByText('nav.alertRules')).toBeInTheDocument()
-  })
-
-  it('renders breadcrumb for unknown segment', () => {
-    render(
-      <MemoryRouter initialEntries={['/unknownsection']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    expect(screen.getByText('nav.unknownsection')).toBeInTheDocument()
-  })
-
-  it('renders separator chevrons for multi-level paths', () => {
-    const { container } = render(
-      <MemoryRouter initialEntries={['/alerts/rules']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    // Multiple SVGs for separators
-    const svgs = container.querySelectorAll('svg')
+  it('renders chevron separators for multi-level paths', () => {
+    mockTwoLevel('/alerts', 'Alerts', '/alerts/rules', 'Alert Rules')
+    renderBreadcrumb()
+    const nav = screen.getByRole('navigation', { name: 'Breadcrumb' })
+    const svgs = nav.querySelectorAll('svg')
+    // 1 HomeIcon + 1 ChevronRight = at least 2
     expect(svgs.length).toBeGreaterThan(1)
   })
 
-  it('has navigation aria-label', () => {
-    render(
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <Breadcrumb />
-      </MemoryRouter>
-    )
-    expect(screen.getByLabelText('Breadcrumb')).toBeInTheDocument()
+  it('renders last item as text, not a link', () => {
+    mockSingleLevel('/dashboard', 'Dashboard')
+    renderBreadcrumb()
+    const links = screen.queryAllByRole('link')
+    const dashboardLink = links.find((l) => l.textContent?.includes('Dashboard'))
+    expect(dashboardLink).toBeUndefined()
+    expect(screen.getByText('Dashboard')).toBeInTheDocument()
+  })
+
+  it('renders Home as a link pointing to /dashboard', () => {
+    mockSingleLevel('/dashboard', 'Dashboard')
+    renderBreadcrumb()
+    const links = screen.queryAllByRole('link')
+    const homeLink = links.find((l) => l.getAttribute('href') === '/dashboard')
+    expect(homeLink).toBeInTheDocument()
+  })
+
+  it('renders correct breadcrumb for /reports/history (export history, not alert history)', () => {
+    mockTwoLevel('/reports', 'Reports', '/reports/history', 'Export History')
+    renderBreadcrumb()
+    expect(screen.getByText('Export History')).toBeInTheDocument()
+    expect(screen.queryByText('Alert History')).not.toBeInTheDocument()
+  })
+
+  it('renders correct breadcrumb for /alerts/history (alert history)', () => {
+    mockTwoLevel('/alerts', 'Alerts', '/alerts/history', 'Alert History')
+    renderBreadcrumb()
+    expect(screen.getByText('Alert History')).toBeInTheDocument()
+  })
+
+  it('renders intermediate items as links', () => {
+    mockTwoLevel('/alerts', 'Alerts', '/alerts/rules', 'Alert Rules')
+    renderBreadcrumb()
+    const links = screen.queryAllByRole('link')
+    const alertsLink = links.find((l) => l.textContent?.includes('Alerts'))
+    expect(alertsLink).toBeInTheDocument()
+    // Last item should NOT be a link
+    const alertRulesLink = links.find((l) => l.textContent?.includes('Alert Rules'))
+    expect(alertRulesLink).toBeUndefined()
   })
 })

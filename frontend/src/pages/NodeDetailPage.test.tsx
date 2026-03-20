@@ -76,6 +76,20 @@ vi.mock('../api/data', () => ({
   fetchHistory: vi.fn(() => Promise.resolve({ data: [] })),
 }))
 
+// Mock BreadcrumbContext — NodeDetailPage uses useSetBreadcrumbLabel
+vi.mock('../components/layout/BreadcrumbContext', () => ({
+  useBreadcrumb: () => ({
+    items: [],
+    setDynamicLabel: vi.fn(),
+    clearDynamicLabels: vi.fn(),
+  }),
+  useSetBreadcrumbLabel: () => ({
+    setDynamicLabel: vi.fn(),
+    clearDynamicLabels: vi.fn(),
+  }),
+  BreadcrumbProvider: ({ children }: { children: unknown }) => children,
+}))
+
 const mockUseNodeDetail = useNodeDetail as ReturnType<typeof vi.mocked<typeof useNodeDetail>>
 const mockFetchHistory = fetchHistory as ReturnType<typeof vi.fn>
 

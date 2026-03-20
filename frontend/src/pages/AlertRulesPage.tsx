@@ -123,7 +123,6 @@ export default function AlertRulesPage() {
       <PageHeader
         title={t('alerts.rulesTitle')}
         subtitle={t('alerts.rulesDescription')}
-        showBreadcrumb
         actions={
           canEdit && (
             <ActionButton onClick={handleCreate}>

@@ -63,7 +63,6 @@ export default function DashboardPage() {
       <PageHeader
         title={t('dashboard.title')}
         subtitle={t('dashboard.realTimeMetrics')}
-        showBreadcrumb={false}
         actions={
           <div className="flex items-center space-x-3">
             <ActionButton variant="secondary" onClick={() => refetch()}>

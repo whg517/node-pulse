@@ -315,7 +315,6 @@ export default function AlertRecordsPage() {
           <PageHeader
             title={t('alerts.alertHistory')}
             subtitle={t('alerts.viewManageHistory')}
-            showBreadcrumb
             actions={
               <button
                 type="button"

@@ -25,7 +25,8 @@
     "systemHealth": "系统健康",
     "webhooks": "Webhooks",
     "performance": "性能分析",
-    "users": "用户管理"
+    "users": "用户管理",
+    "exportHistory": "导出历史"
   },
   "common": {
     "loading": "加载中...",

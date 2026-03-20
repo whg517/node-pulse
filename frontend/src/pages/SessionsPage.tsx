@@ -80,7 +80,6 @@ export default function SessionsPage() {
       <PageHeader
         title={t('sessions.title')}
         subtitle={t('sessions.description')}
-        showBreadcrumb
       />
 
       {error && (

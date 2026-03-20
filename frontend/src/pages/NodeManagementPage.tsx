@@ -110,7 +110,6 @@ export default function NodeManagementPage() {
       <PageHeader
         title={t('nodes.management')}
         subtitle={t('nodes.managementDescription')}
-        showBreadcrumb
         actions={
           canEdit && (
             <ActionButton onClick={handleCreate}>

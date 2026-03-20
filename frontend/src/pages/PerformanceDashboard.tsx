@@ -102,7 +102,6 @@ export default function PerformanceDashboard() {
       <PageHeader
         title={t('performance.title')}
         subtitle={isPolling ? t('performance.realtimeUpdating') : t('performance.updatesPaused')}
-        showBreadcrumb
         actions={
           <div className="flex items-center space-x-6">
             {/* System Health Indicator */}

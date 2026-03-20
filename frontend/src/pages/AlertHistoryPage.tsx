@@ -123,7 +123,6 @@ export default function AlertHistoryPage() {
       <PageHeader
         title={t('alertHistory.title')}
         subtitle={t('alertHistory.description')}
-        showBreadcrumb
       />
 
       {/* Error State */}

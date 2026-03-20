@@ -135,7 +135,6 @@ export default function SystemHealthPage() {
       <PageHeader
         title={t('integrations.systemHealth')}
         subtitle={t('integrations.systemHealthDescription')}
-        showBreadcrumb
         actions={
           <div className="flex flex-shrink-0 items-center gap-3">
             <span className="text-sm text-gray-500 dark:text-gray-400">

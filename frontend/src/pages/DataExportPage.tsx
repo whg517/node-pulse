@@ -61,7 +61,6 @@ export default function DataExportPage() {
       <PageHeader
         title={t('dataExport.title')}
         subtitle={t('dataExport.description')}
-        showBreadcrumb
       />
 
       {/* Error State */}

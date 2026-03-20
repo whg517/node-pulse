@@ -111,7 +111,6 @@ export default function WebhooksPage() {
       <PageHeader
         title={t('webhooks.title')}
         subtitle={t('webhooks.description')}
-        showBreadcrumb
         actions={
           canEdit && (
             <ActionButton onClick={handleCreate}>

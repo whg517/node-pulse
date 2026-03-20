@@ -65,16 +65,6 @@ describe('DataExportPage', () => {
     expect(await screen.findByText('Data Export')).toBeInTheDocument()
   })
 
-  it('renders breadcrumb navigation', async () => {
-    render(
-      <MemoryRouter>
-        <DataExportPage />
-      </MemoryRouter>
-    )
-
-    expect(await screen.findByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument()
-  })
-
   it('renders page title', async () => {
     render(
       <MemoryRouter>

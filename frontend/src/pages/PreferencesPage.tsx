@@ -30,7 +30,6 @@ export default function PreferencesPage() {
       <PageHeader
         title={t('settings.preferences')}
         subtitle={t('settings.preferencesDescription')}
-        showBreadcrumb
       />
 
       <div>

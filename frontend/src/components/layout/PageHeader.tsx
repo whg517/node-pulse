@@ -2,11 +2,10 @@
  * PageHeader Component
  *
  * Standardized header for all pages.
- * Contains title, optional subtitle, optional actions, and optional breadcrumb.
+ * Contains title, optional subtitle, optional actions.
  */
 
 import type { ReactNode } from 'react'
-import { Breadcrumb } from '../layout/Breadcrumb'
 
 export interface PageHeaderProps {
   /** Page title */
@@ -15,8 +14,6 @@ export interface PageHeaderProps {
   subtitle?: string
   /** Optional action buttons (ReactNode) */
   actions?: ReactNode
-  /** Show breadcrumb navigation */
-  showBreadcrumb?: boolean
   /** Custom className for additional styling */
   className?: string
 }
@@ -28,18 +25,10 @@ export function PageHeader({
   title,
   subtitle,
   actions,
-  showBreadcrumb = true,
   className = '',
 }: PageHeaderProps) {
   return (
-    <div className={`mb-8 ${className}`}>
-      {/* Breadcrumb */}
-      {showBreadcrumb && (
-        <div className="mb-4">
-          <Breadcrumb />
-        </div>
-      )}
-
+    <div className={`mb-4 ${className}`}>
       {/* Title and actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
