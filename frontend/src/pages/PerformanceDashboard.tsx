@@ -125,8 +125,8 @@ export default function PerformanceDashboard() {
       {/* Loading State */}
       {isLoading && !data && (
         <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600 dark:text-gray-400">{t('performance.loadingData')}</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"></div>
+          <p className="mt-4 text-[var(--color-text-secondary)]">{t('performance.loadingData')}</p>
         </div>
       )}
 
@@ -141,8 +141,8 @@ export default function PerformanceDashboard() {
           </div>
 
           {/* Trend Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('performance.trendChart')}</h3>
+          <div className="bg-[var(--color-bg-surface)] rounded-lg shadow p-6 border border-[var(--color-border)]">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">{t('performance.trendChart')}</h3>
             <PerformanceTrendChart
               trendData={data.trend_data}
               targetP99={data.metrics[0]?.target_p99}
@@ -154,8 +154,8 @@ export default function PerformanceDashboard() {
 
           {/* Anomalies Section */}
           {data.anomalies && data.anomalies.length > 0 && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+            <div className="bg-[var(--color-bg-surface)] rounded-lg shadow p-6 border border-[var(--color-border)]">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 {t('performance.anomalies')} ({data.anomalies.length})
               </h3>
               <div className="space-y-3">
@@ -164,8 +164,8 @@ export default function PerformanceDashboard() {
                     key={index}
                     className={`p-4 rounded-md border-l-4 ${
                       anomaly.severity === 'P0'
-                        ? 'bg-red-50 dark:bg-red-900/20 border-red-500'
-                        : 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-500'
+                        ? 'bg-[var(--color-critical-bg)] border-[var(--color-critical)]'
+                        : 'bg-[var(--color-warning-bg)] border-[var(--color-warning)]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -174,17 +174,17 @@ export default function PerformanceDashboard() {
                           <span
                             className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
                               anomaly.severity === 'P0'
-                                ? 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300'
-                                : 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300'
+                                ? 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
+                                : 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
                             }`}
                           >
                             {anomaly.severity}
                           </span>
-                          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          <span className="text-sm font-medium text-[var(--color-text-primary)]">
                             {anomaly.metric_name}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">{anomaly.message}</p>
+                        <p className="text-sm text-[var(--color-text-secondary)] mt-1">{anomaly.message}</p>
                       </div>
                     </div>
                   </div>
@@ -195,26 +195,26 @@ export default function PerformanceDashboard() {
 
           {/* Summary Statistics */}
           {data.summary && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('performance.summary')}</h3>
+            <div className="bg-[var(--color-bg-surface)] rounded-lg shadow p-6 border border-[var(--color-border)]">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">{t('performance.summary')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-600">
+                  <div className="text-3xl font-bold text-[var(--color-brand)]">
                     {data.summary.total_requests.toLocaleString()}
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('performance.totalRequests')}</div>
+                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.totalRequests')}</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-green-600">
+                  <div className="text-3xl font-bold text-[var(--color-healthy)]">
                     {data.summary.avg_response_time.toFixed(2)} ms
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('performance.avgResponseTime')}</div>
+                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.avgResponseTime')}</div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-purple-600">
                     {data.summary.max_response_time.toFixed(2)} ms
                   </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">{t('performance.maxResponseTime')}</div>
+                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.maxResponseTime')}</div>
                 </div>
               </div>
             </div>

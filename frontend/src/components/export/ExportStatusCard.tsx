@@ -83,10 +83,10 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
    */
   const getStatusBadge = () => {
     const statusStyles = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      processing: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800',
-      failed: 'bg-red-100 text-red-800',
+      pending: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
+      processing: 'bg-[var(--color-brand-muted)] text-[var(--color-brand)]',
+      completed: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]',
+      failed: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]',
     }
 
     const statusLabels = {
@@ -141,7 +141,7 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
       {(exportTask.status === 'pending' || exportTask.status === 'processing') && (
         <div className="mb-4">
           <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--color-brand)]"></div>
             <span className="text-sm text-gray-600">
               {exportTask.status === 'pending' ? 'Initializing export...' : 'Exporting data...'}
             </span>
@@ -154,8 +154,8 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
 
       {/* Error message for failed exports */}
       {exportTask.status === 'failed' && exportTask.error && (
-        <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-3 rounded">
-          <p className="text-sm text-red-700">{exportTask.error}</p>
+        <div className="mb-4 bg-[var(--color-critical-bg)] border-l-4 border-[var(--color-critical)] p-3 rounded">
+          <p className="text-sm text-[var(--color-critical-text)]">{exportTask.error}</p>
         </div>
       )}
 
@@ -225,7 +225,7 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
           <button
             type="button"
             onClick={() => onDownload(exportTask.id)}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md transition-colors duration-150 flex items-center justify-center space-x-2"
+            className="w-full bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-medium py-2 px-4 rounded-md transition-colors duration-150 flex items-center justify-center space-x-2"
           >
             <svg
               className="h-5 w-5"

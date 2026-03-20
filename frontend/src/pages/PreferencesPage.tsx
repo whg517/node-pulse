@@ -72,7 +72,7 @@ export default function PreferencesPage() {
           {/* Save Button */}
           <div className="p-6 flex items-center justify-end">
             {saved && (
-              <span className="mr-4 text-sm text-green-600 dark:text-green-400">
+              <span className="mr-4 text-sm text-[var(--color-healthy)]">
                 {t('settings.saved')}
               </span>
             )}

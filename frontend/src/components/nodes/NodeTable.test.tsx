@@ -199,7 +199,7 @@ describe('NodeTable', () => {
 
       const onlineBadge = screen.getByText('online')
       expect(onlineBadge).toBeInTheDocument()
-      expect(onlineBadge).toHaveClass('bg-green-100', 'text-green-800')
+      expect(onlineBadge).toHaveClass('bg-[var(--color-healthy-bg)]', 'text-[var(--color-healthy-text)]')
     })
 
     it('renders offline status badge correctly', () => {
@@ -213,7 +213,7 @@ describe('NodeTable', () => {
 
       const offlineBadge = screen.getByText('offline')
       expect(offlineBadge).toBeInTheDocument()
-      expect(offlineBadge).toHaveClass('bg-red-100', 'text-red-800')
+      expect(offlineBadge).toHaveClass('bg-[var(--color-critical-bg)]', 'text-[var(--color-critical-text)]')
     })
 
     it('renders connecting status badge correctly', () => {
@@ -227,7 +227,7 @@ describe('NodeTable', () => {
 
       const connectingBadge = screen.getByText('connecting')
       expect(connectingBadge).toBeInTheDocument()
-      expect(connectingBadge).toHaveClass('bg-yellow-100', 'text-yellow-800')
+      expect(connectingBadge).toHaveClass('bg-[var(--color-warning-bg)]', 'text-[var(--color-warning-text)]')
     })
   })
 

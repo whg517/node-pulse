@@ -70,11 +70,11 @@ export default function DataExportPage() {
 
       {/* Access Warning for Non-Admin Users */}
       {!isLoading && !error && user?.role !== 'admin' && (
-        <div className="access-warning bg-yellow-50 dark:bg-yellow-900/20 border-l-4 border-yellow-400 dark:border-yellow-600 p-4 rounded-md mb-6">
+        <div className="access-warning bg-[var(--color-warning-bg)] border-l-4 border-[var(--color-warning)] p-4 rounded-md mb-6">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg
-                className="h-5 w-5 text-yellow-400"
+                className="h-5 w-5 text-[var(--color-warning)]"
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 aria-hidden="true"
@@ -87,8 +87,8 @@ export default function DataExportPage() {
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800 dark:text-yellow-300">{t('dataExport.adminOnly')}</h3>
-              <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+              <h3 className="text-sm font-medium text-[var(--color-warning-text)]">{t('dataExport.adminOnly')}</h3>
+              <p className="text-sm text-[var(--color-warning-text)] mt-1">
                 {t('dataExport.adminOnlyDescription')}
               </p>
             </div>
@@ -99,7 +99,7 @@ export default function DataExportPage() {
       {/* Loading State */}
       {isLoading && !error && (
         <div className="flex justify-center items-center py-12" data-testid="loading-spinner">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"></div>
         </div>
       )}
 
@@ -107,8 +107,8 @@ export default function DataExportPage() {
       {!isLoading && !error && user?.role === 'admin' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Export Form */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">{t('dataExport.createExport')}</h3>
+          <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-md p-6 border border-[var(--color-border)]">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">{t('dataExport.createExport')}</h3>
             <ExportForm
               nodes={nodes}
               onSubmit={handleExportSubmit}
@@ -118,9 +118,9 @@ export default function DataExportPage() {
 
           {/* Current Exports */}
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('dataExport.activeExports')}</h3>
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{t('dataExport.activeExports')}</h3>
             {currentExports.length === 0 ? (
-              <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700">
+              <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-md p-6 text-center text-[var(--color-text-muted)] border border-[var(--color-border)]">
                 <p>{t('dataExport.noActiveExports')}</p>
               </div>
             ) : (
@@ -138,7 +138,7 @@ export default function DataExportPage() {
 
       {/* Export History */}
       {!isLoading && !error && exportHistory.length > 0 && (
-        <div className="mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+        <div className="mt-8 bg-[var(--color-bg-surface)] rounded-lg shadow-md p-6 border border-[var(--color-border)]">
           <ExportHistoryTable
             exports={exportHistory}
             onDownload={downloadExport}

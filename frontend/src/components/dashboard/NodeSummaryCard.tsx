@@ -12,30 +12,30 @@ import { useTranslation } from 'react-i18next'
 import type { NodeDTO } from '../../api/types'
 import type { HealthStatus } from '../../utils/healthStatus'
 
-// Color palette from UI design
+// Color palette — CSS variables handle both light and dark themes
 const HEALTH_COLORS = {
   healthy: {
-    bg: 'bg-green-100 dark:bg-green-900/20',
-    text: 'text-green-800 dark:text-green-400',
-    dot: 'bg-green-500',
-    border: 'border-green-300 dark:border-green-800',
+    bg: 'bg-[var(--color-healthy-bg)]',
+    text: 'text-[var(--color-healthy-text)]',
+    dot: 'bg-[var(--color-healthy)]',
+    border: 'border-[var(--color-healthy-bg)]',
   },
   warning: {
-    bg: 'bg-amber-100 dark:bg-amber-900/20',
-    text: 'text-amber-800 dark:text-amber-400',
-    dot: 'bg-amber-500',
-    border: 'border-amber-300 dark:border-amber-800',
+    bg: 'bg-[var(--color-warning-bg)]',
+    text: 'text-[var(--color-warning-text)]',
+    dot: 'bg-[var(--color-warning)]',
+    border: 'border-[var(--color-warning-bg)]',
   },
   critical: {
-    bg: 'bg-red-100 dark:bg-red-900/20',
-    text: 'text-red-800 dark:text-red-400',
-    dot: 'bg-red-500',
-    border: 'border-red-300 dark:border-red-800',
+    bg: 'bg-[var(--color-critical-bg)]',
+    text: 'text-[var(--color-critical-text)]',
+    dot: 'bg-[var(--color-critical)]',
+    border: 'border-[var(--color-critical-bg)]',
   },
   offline: {
-    bg: 'bg-slate-100 dark:bg-slate-700/40',
-    text: 'text-slate-600 dark:text-slate-300',
-    dot: 'bg-slate-400 dark:bg-slate-500',
+    bg: 'bg-[var(--color-unknown-bg)]',
+    text: 'text-[var(--color-unknown-text)]',
+    dot: 'bg-[var(--color-unknown)]',
     border: 'border-[var(--color-border)]',
   },
 } as const

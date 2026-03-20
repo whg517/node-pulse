@@ -40,23 +40,23 @@ export default function MetricCard({
   trend,
   className = '',
 }: MetricCardProps) {
-  const statusColors = {
-    good: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300',
-    warning: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300',
-    critical: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300',
-    neutral: 'bg-[var(--color-bg-muted)] border-[var(--color-border)] text-[var(--color-text-secondary)]',
+  const statusBorderColors = {
+    good: 'border-l-[var(--color-healthy)]',
+    warning: 'border-l-[var(--color-warning)]',
+    critical: 'border-l-[var(--color-critical)]',
+    neutral: 'border-l-[var(--color-text-muted)]',
   }
 
   const statusIndicatorColors = {
-    good: 'bg-green-500',
-    warning: 'bg-yellow-500',
-    critical: 'bg-red-500',
+    good: 'bg-[var(--color-healthy)]',
+    warning: 'bg-[var(--color-warning)]',
+    critical: 'bg-[var(--color-critical)]',
     neutral: 'bg-[var(--color-text-muted)]',
   }
 
   return (
     <div
-      className={`metric-card rounded-lg border-2 p-4 shadow-sm hover:shadow-md transition-shadow duration-200 ${statusColors[status]} ${className}`}
+      className={`metric-card rounded-lg border border-[var(--color-border)] border-l-[3px] p-4 shadow-sm hover:shadow-md transition-shadow duration-200 bg-[var(--color-bg-surface)] ${statusBorderColors[status]} ${className}`}
       role="region"
       aria-label={`${title} metric`}
     >
@@ -87,7 +87,7 @@ export default function MetricCard({
       {trend && (
         <div className="mt-2 flex items-center text-sm">
           <span
-            className={`font-medium ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}
+            className={`font-medium ${trend.isPositive ? 'text-[var(--color-healthy)]' : 'text-[var(--color-critical)]'}`}
             aria-label={`trend ${trend.isPositive ? 'up' : 'down'} by ${Math.abs(trend.value)}%`}
           >
             {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%

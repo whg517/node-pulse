@@ -158,7 +158,7 @@ export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoa
                     <div className="text-sm text-[var(--color-text-primary)]">{node.ip}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--color-brand-muted)] text-[var(--color-brand)]">
                       {node.region}
                     </span>
                   </td>
@@ -166,7 +166,7 @@ export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoa
                     <span
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         node.status === 'online'
-                          ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300'
+                          ? 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
                           : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]'
                       }`}
                     >

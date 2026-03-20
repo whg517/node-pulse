@@ -11,18 +11,18 @@ type AlertLevel = 'P0' | 'P1' | 'P2'
 
 function getSeverityStyles(level: AlertLevel): string {
   const styles: Record<AlertLevel, string> = {
-    P0: 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-700 hover:bg-red-100 dark:hover:bg-red-900/50',
-    P1: 'bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/50',
-    P2: 'bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700 hover:bg-blue-100 dark:hover:bg-blue-900/50',
+    P0: 'bg-[var(--color-critical-bg)] border-[var(--color-critical-bg)] hover:opacity-80',
+    P1: 'bg-[var(--color-warning-bg)] border-[var(--color-warning-bg)] hover:opacity-80',
+    P2: 'bg-[var(--color-brand-muted)] border-[var(--color-brand-muted)] hover:opacity-80',
   }
   return styles[level]
 }
 
 function getLevelBadgeStyles(level: AlertLevel): string {
   const styles: Record<AlertLevel, string> = {
-    P0: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300',
-    P1: 'bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300',
-    P2: 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300',
+    P0: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]',
+    P1: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
+    P2: 'bg-[var(--color-brand-muted)] text-[var(--color-brand)]',
   }
   return styles[level]
 }
@@ -83,7 +83,7 @@ export const AlertStream = memo(function AlertStream({ maxItems = 10, className 
   }
 
   if (activeAlerts.length === 0) {
-    return (<div className={`rounded-lg border border-[var(--color-border)] shadow-sm overflow-hidden bg-[var(--color-bg-surface)] ${className}`}><div className="px-4 py-3 border-b border-[var(--color-border)]"><h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t('alerts.activeAlerts')}</h3></div><div className="text-center py-8"><svg className="mx-auto h-10 w-10 text-green-500 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">{t('alerts.noActiveAlerts')}</p><p className="mt-1 text-xs text-[var(--color-text-muted)]">{t('alerts.allSystemsNormal')}</p></div></div>)
+    return (<div className={`rounded-lg border border-[var(--color-border)] shadow-sm overflow-hidden bg-[var(--color-bg-surface)] ${className}`}><div className="px-4 py-3 border-b border-[var(--color-border)]"><h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t('alerts.activeAlerts')}</h3></div><div className="text-center py-8"><svg className="mx-auto h-10 w-10 text-[var(--color-healthy)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><p className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">{t('alerts.noActiveAlerts')}</p><p className="mt-1 text-xs text-[var(--color-text-muted)]">{t('alerts.allSystemsNormal')}</p></div></div>)
   }
 
   return (
@@ -107,7 +107,7 @@ export const AlertStream = memo(function AlertStream({ maxItems = 10, className 
           )
         })}
       </ul>
-      <div className="px-4 py-2 border-t border-[var(--color-border)] text-center"><button onClick={() => navigate('/alerts')} className="text-xs font-medium hover:underline text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300">{t('alerts.viewAllAlerts')}</button></div>
+      <div className="px-4 py-2 border-t border-[var(--color-border)] text-center"><button onClick={() => navigate('/alerts')} className="text-xs font-medium hover:underline text-[var(--color-brand)] hover:text-[var(--color-brand-hover)]">{t('alerts.viewAllAlerts')}</button></div>
     </div>
   )
 }, memoCompare)

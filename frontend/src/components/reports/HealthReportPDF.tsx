@@ -100,33 +100,33 @@ export function HealthReportPDF({
   const getTrendClass = (trend: 'improved' | 'degraded' | 'stable') => {
     switch (trend) {
       case 'improved':
-        return 'text-green-600 dark:text-green-400'
+        return 'text-[var(--color-healthy)]'
       case 'degraded':
-        return 'text-red-600 dark:text-red-400'
+        return 'text-[var(--color-critical)]'
       case 'stable':
-        return 'text-gray-600 dark:text-gray-400'
+        return 'text-[var(--color-text-secondary)]'
     }
   }
 
   const getSeverityClass = (severity: 'critical' | 'warning' | 'info') => {
     switch (severity) {
       case 'critical':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+        return 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
       case 'warning':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
       case 'info':
-        return 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300'
+        return 'bg-[var(--color-brand-muted)] text-[var(--color-brand)]'
     }
   }
 
   const getConfidenceClass = (confidence: 'high' | 'medium' | 'low') => {
     switch (confidence) {
       case 'high':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+        return 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
       case 'medium':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
       case 'low':
-        return 'bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300'
+        return 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]'
     }
   }
 
@@ -135,11 +135,11 @@ export function HealthReportPDF({
     const degradedCount = [latency, packetLoss, jitter].filter((m) => m.trend === 'degraded').length
 
     if (degradedCount === 0) {
-      return { status: t('status.healthy'), class: 'text-green-600 dark:text-green-400' }
+      return { status: t('status.healthy'), class: 'text-[var(--color-healthy)]' }
     } else if (degradedCount === 1) {
-      return { status: t('status.warning'), class: 'text-yellow-600 dark:text-yellow-400' }
+      return { status: t('status.warning'), class: 'text-[var(--color-warning)]' }
     } else {
-      return { status: t('status.critical'), class: 'text-red-600 dark:text-red-400' }
+      return { status: t('status.critical'), class: 'text-[var(--color-critical)]' }
     }
   }
 
@@ -273,7 +273,7 @@ export function HealthReportPDF({
       <div className="no-print flex justify-end gap-2 mb-4">
         <button
           onClick={handlePrint}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-150 flex items-center gap-2"
+          className="bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-medium py-2 px-4 rounded-lg transition-colors duration-150 flex items-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -283,7 +283,7 @@ export function HealthReportPDF({
         {onClose && (
           <button
             onClick={onClose}
-            className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-medium py-2 px-4 rounded-lg transition-colors duration-150"
+            className="bg-[var(--color-bg-subtle)] hover:bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] font-medium py-2 px-4 rounded-lg transition-colors duration-150"
           >
             {t('common.close')}
           </button>
@@ -397,7 +397,7 @@ export function HealthReportPDF({
           </div>
           <div className="metric-card">
             <p className="metric-label">{t('reports.failedProbes')}</p>
-            <p className="metric-value text-lg text-red-600">{metrics.failedProbes.toLocaleString()}</p>
+            <p className="metric-value text-lg text-[var(--color-critical)]">{metrics.failedProbes.toLocaleString()}</p>
           </div>
         </div>
       </section>
@@ -417,7 +417,7 @@ export function HealthReportPDF({
                 <div className="text-right">
                   <p className="text-sm font-medium">{hop.avgLatency.toFixed(1)} ms</p>
                   {hop.lossRate > 0 && (
-                    <p className="text-xs text-red-600">{hop.lossRate.toFixed(1)}% loss</p>
+                    <p className="text-xs text-[var(--color-critical)]">{hop.lossRate.toFixed(1)}% loss</p>
                   )}
                 </div>
               </div>
@@ -471,8 +471,8 @@ export function HealthReportPDF({
                 <td className="py-3 px-3">
                   <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                     [metrics.latency, metrics.packetLoss, metrics.jitter].some(m => m.trend === 'degraded')
-                      ? 'bg-yellow-100 text-yellow-800'
-                      : 'bg-green-100 text-green-800'
+                      ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
+                      : 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
                   }`}>
                     {getTrendIcon(
                       [metrics.latency, metrics.packetLoss, metrics.jitter].some(m => m.trend === 'degraded')
@@ -497,14 +497,14 @@ export function HealthReportPDF({
         <section className="report-section mb-6">
           <h2 className="section-title">{t('reports.rootCauseAnalysis')}</h2>
           {rootCause.probableCause === t('reports.noIssues') ? (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+            <div className="bg-[var(--color-healthy-bg)] border border-[var(--color-healthy-bg)] rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <svg className="w-5 h-5 text-green-600 dark:text-green-400 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-5 h-5 text-[var(--color-healthy)] mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p className="font-medium text-green-800 dark:text-green-300">{t('reports.healthyStatus')}</p>
-                  <p className="text-sm text-green-700 dark:text-green-400 mt-1">{t('reports.noIssues')}</p>
+                  <p className="font-medium text-[var(--color-healthy-text)]">{t('reports.healthyStatus')}</p>
+                  <p className="text-sm text-[var(--color-healthy)] mt-1">{t('reports.noIssues')}</p>
                 </div>
               </div>
             </div>
@@ -526,9 +526,9 @@ export function HealthReportPDF({
                   <p className="font-medium text-gray-900 text-sm">{rootCause.impact}</p>
                 </div>
               </div>
-              <div className="metric-card bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-                <p className="text-sm text-blue-700 dark:text-blue-300 mb-1 font-medium">{t('reports.recommendation')}</p>
-                <p className="text-blue-900 dark:text-blue-100">{rootCause.recommendation}</p>
+              <div className="metric-card bg-[var(--color-brand-muted)] border border-[var(--color-brand-muted)]">
+                <p className="text-sm text-[var(--color-brand)] mb-1 font-medium">{t('reports.recommendation')}</p>
+                <p className="text-[var(--color-text-primary)]">{rootCause.recommendation}</p>
               </div>
             </div>
           )}

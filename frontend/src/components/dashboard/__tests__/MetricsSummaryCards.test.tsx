@@ -86,11 +86,11 @@ describe('MetricsSummaryCards', () => {
         <MetricsSummaryCards metrics={goodMetrics} />
       )
 
-      // Check for green background classes
-      expect(container.querySelector('.bg-green-50')).toBeInTheDocument()
+      // Check for healthy background class
+      expect(container.querySelector('[class*="bg-[var(--color-healthy-bg)"]')).toBeInTheDocument()
     })
 
-    it('should show yellow color for warning metrics (80-100% threshold)', () => {
+    it('should show warning color for warning metrics (80-100% threshold)', () => {
       const warningMetrics: MetricsDTO[] = [
         {
           node_id: 'node-1',
@@ -105,11 +105,11 @@ describe('MetricsSummaryCards', () => {
         <MetricsSummaryCards metrics={warningMetrics} />
       )
 
-      // Check for yellow/warning background
-      expect(container.querySelector('.bg-yellow-50')).toBeInTheDocument()
+      // Check for warning background
+      expect(container.querySelector('[class*="bg-[var(--color-warning-bg)"]')).toBeInTheDocument()
     })
 
-    it('should show red color for critical metrics (exceeds threshold)', () => {
+    it('should show critical color for critical metrics (exceeds threshold)', () => {
       const criticalMetrics: MetricsDTO[] = [
         {
           node_id: 'node-1',
@@ -124,8 +124,8 @@ describe('MetricsSummaryCards', () => {
         <MetricsSummaryCards metrics={criticalMetrics} />
       )
 
-      // Check for red/critical background
-      expect(container.querySelector('.bg-red-50')).toBeInTheDocument()
+      // Check for critical background
+      expect(container.querySelector('[class*="bg-[var(--color-critical-bg)"]')).toBeInTheDocument()
     })
   })
 

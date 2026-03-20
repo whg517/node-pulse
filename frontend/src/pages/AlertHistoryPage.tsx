@@ -132,10 +132,10 @@ export default function AlertHistoryPage() {
 
       {/* Status Update Error */}
       {statusUpdateError && (
-        <div className="mb-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+        <div className="mb-6 bg-[var(--color-warning-bg)] border border-[var(--color-warning-bg)] rounded-lg p-4">
           <div className="flex items-center">
             <svg
-              className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mr-2"
+              className="w-5 h-5 text-[var(--color-warning)] mr-2"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -147,10 +147,10 @@ export default function AlertHistoryPage() {
                 d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
               />
             </svg>
-            <p className="text-yellow-800 dark:text-yellow-300">{statusUpdateError}</p>
+            <p className="text-[var(--color-warning-text)]">{statusUpdateError}</p>
             <button
               onClick={() => setStatusUpdateError(null)}
-              className="ml-auto px-3 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 transition-colors text-sm"
+              className="ml-auto px-3 py-1 bg-[var(--color-warning)] text-white rounded hover:bg-[var(--color-warning)] hover:opacity-90 transition-colors text-sm"
             >
               {t('alertHistory.dismiss')}
             </button>
@@ -172,7 +172,7 @@ export default function AlertHistoryPage() {
               onChange={(e) =>
                 handleFilterChange('node_id', e.target.value || undefined)
               }
-              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
+              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
             >
               <option value="">{t('alertHistory.allNodes')}</option>
               {nodes.map((node) => (
@@ -196,7 +196,7 @@ export default function AlertHistoryPage() {
                   (e.target.value as AlertLevel) || undefined
                 )
               }
-              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
+              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
             >
               <option value="">{t('alertHistory.allLevels')}</option>
               <option value="P0">{t('alertHistory.p0Critical')}</option>
@@ -218,7 +218,7 @@ export default function AlertHistoryPage() {
                   (e.target.value as AlertRecordStatus) || undefined
                 )
               }
-              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
+              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
             >
               <option value="">{t('alertHistory.allStatuses')}</option>
               <option value="pending">{t('alertHistory.pending')}</option>
@@ -232,7 +232,7 @@ export default function AlertHistoryPage() {
             <button
               type="button"
               onClick={applyFilters}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2 bg-[var(--color-brand)] text-white rounded-md hover:bg-[var(--color-brand-hover)] transition-colors"
             >
               {t('alertHistory.apply')}
             </button>
@@ -252,7 +252,7 @@ export default function AlertHistoryPage() {
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div
-              className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
+              className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"
               role="status"
               aria-label="Loading alert records"
             />
@@ -378,18 +378,18 @@ export default function AlertHistoryPage() {
 function LevelBadge({ level }: { level: AlertLevel }) {
   const levelConfig = {
     P0: {
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
-      textColor: 'text-red-800 dark:text-red-300',
+      bgColor: 'bg-[var(--color-critical-bg)]',
+      textColor: 'text-[var(--color-critical-text)]',
       label: 'P0 - Critical',
     },
     P1: {
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-      textColor: 'text-yellow-800 dark:text-yellow-300',
+      bgColor: 'bg-[var(--color-warning-bg)]',
+      textColor: 'text-[var(--color-warning-text)]',
       label: 'P1 - Warning',
     },
     P2: {
-      bgColor: 'bg-blue-100 dark:bg-blue-900/30',
-      textColor: 'text-blue-800 dark:text-blue-300',
+      bgColor: 'bg-[var(--color-brand-muted)]',
+      textColor: 'text-[var(--color-brand)]',
       label: 'P2 - Info',
     },
   }
@@ -411,18 +411,18 @@ function LevelBadge({ level }: { level: AlertLevel }) {
 function StatusBadge({ status }: { status: AlertRecordStatus }) {
   const statusConfig = {
     pending: {
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
-      textColor: 'text-red-800 dark:text-red-300',
+      bgColor: 'bg-[var(--color-critical-bg)]',
+      textColor: 'text-[var(--color-critical-text)]',
       label: 'Pending',
     },
     in_progress: {
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-      textColor: 'text-yellow-800 dark:text-yellow-300',
+      bgColor: 'bg-[var(--color-warning-bg)]',
+      textColor: 'text-[var(--color-warning-text)]',
       label: 'In Progress',
     },
     resolved: {
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-      textColor: 'text-green-800 dark:text-green-300',
+      bgColor: 'bg-[var(--color-healthy-bg)]',
+      textColor: 'text-[var(--color-healthy-text)]',
       label: 'Resolved',
     },
   }
@@ -472,7 +472,7 @@ function StatusActions({
           type="button"
           onClick={() => handleAction('in_progress')}
           disabled={isUpdating}
-          className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300 text-sm disabled:text-blue-300 dark:disabled:text-blue-600 disabled:cursor-not-allowed"
+          className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] text-sm disabled:text-[var(--color-brand-muted)] disabled:cursor-not-allowed"
         >
           {isUpdating ? 'Starting...' : 'Start'}
         </button>
@@ -480,7 +480,7 @@ function StatusActions({
           type="button"
           onClick={() => handleAction('resolved')}
           disabled={isUpdating}
-          className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 text-sm disabled:text-green-300 dark:disabled:text-green-600 disabled:cursor-not-allowed"
+          className="text-[var(--color-healthy)] hover:text-[var(--color-healthy)] hover:opacity-80 text-sm disabled:text-[var(--color-healthy-muted)] disabled:cursor-not-allowed"
         >
           {isUpdating ? 'Resolving...' : 'Resolve'}
         </button>
@@ -494,7 +494,7 @@ function StatusActions({
         type="button"
         onClick={() => handleAction('resolved')}
         disabled={isUpdating}
-        className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300 text-sm disabled:text-green-300 dark:disabled:text-green-600 disabled:cursor-not-allowed"
+        className="text-[var(--color-healthy)] hover:text-[var(--color-healthy)] hover:opacity-80 text-sm disabled:text-[var(--color-healthy-muted)] disabled:cursor-not-allowed"
       >
         {isUpdating ? 'Resolving...' : 'Resolve'}
       </button>

@@ -72,28 +72,28 @@ const healthStatusConfig: Record<
   }
 > = {
   healthy: {
-    borderColor: 'border-green-300',
-    bgColor: 'bg-green-50',
-    textColor: 'text-green-800',
-    badgeBgColor: 'bg-green-100',
-    badgeTextColor: 'text-green-700',
-    dotColor: 'bg-green-500',
+    borderColor: 'border-[var(--color-healthy-bg)]',
+    bgColor: 'bg-[var(--color-healthy-bg)]',
+    textColor: 'text-[var(--color-healthy-text)]',
+    badgeBgColor: 'bg-[var(--color-healthy-bg)]',
+    badgeTextColor: 'text-[var(--color-healthy-text)]',
+    dotColor: 'bg-[var(--color-healthy)]',
   },
   degraded: {
-    borderColor: 'border-yellow-300',
-    bgColor: 'bg-yellow-50',
-    textColor: 'text-yellow-800',
-    badgeBgColor: 'bg-yellow-100',
-    badgeTextColor: 'text-yellow-700',
-    dotColor: 'bg-yellow-500',
+    borderColor: 'border-[var(--color-warning-bg)]',
+    bgColor: 'bg-[var(--color-warning-bg)]',
+    textColor: 'text-[var(--color-warning-text)]',
+    badgeBgColor: 'bg-[var(--color-warning-bg)]',
+    badgeTextColor: 'text-[var(--color-warning-text)]',
+    dotColor: 'bg-[var(--color-warning)]',
   },
   problematic: {
-    borderColor: 'border-red-300',
-    bgColor: 'bg-red-50',
-    textColor: 'text-red-800',
-    badgeBgColor: 'bg-red-100',
-    badgeTextColor: 'text-red-700',
-    dotColor: 'bg-red-500',
+    borderColor: 'border-[var(--color-critical-bg)]',
+    bgColor: 'bg-[var(--color-critical-bg)]',
+    textColor: 'text-[var(--color-critical-text)]',
+    badgeBgColor: 'bg-[var(--color-critical-bg)]',
+    badgeTextColor: 'text-[var(--color-critical-text)]',
+    dotColor: 'bg-[var(--color-critical)]',
   },
 }
 
@@ -184,7 +184,7 @@ export default function MTRVisualization({
           role="status"
           aria-label={t('common.loading')}
         >
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]" />
           <p className="mt-3 text-gray-600">{t('mtr.running')}</p>
         </div>
       </div>
@@ -241,7 +241,7 @@ export default function MTRVisualization({
           aria-label={t('mtr.error')}
         >
           <svg
-            className="h-12 w-12 text-red-500 mb-3"
+            className="h-12 w-12 text-[var(--color-critical)] mb-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -254,7 +254,7 @@ export default function MTRVisualization({
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          <p className="text-red-600 font-medium mb-1">{t('mtr.error')}</p>
+          <p className="text-[var(--color-critical)] font-medium mb-1">{t('mtr.error')}</p>
           {errorMessage && (
             <p className="text-gray-500 text-sm">{errorMessage}</p>
           )}

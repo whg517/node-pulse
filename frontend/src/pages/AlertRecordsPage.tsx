@@ -283,12 +283,12 @@ export default function AlertRecordsPage() {
           key={toast.id}
           className={`fixed top-4 right-4 z-50 p-4 rounded-lg border shadow-lg transition-all duration-300 ${
             toast.type === 'success'
-              ? 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700'
+              ? 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)] border-[var(--color-healthy-bg)]'
               : toast.type === 'error'
-              ? 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700'
+              ? 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)] border-[var(--color-critical-bg)]'
               : toast.type === 'warning'
-              ? 'bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-700'
-              : 'bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700'
+              ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-bg)]'
+              : 'bg-[var(--color-brand-muted)] text-[var(--color-brand)] border-[var(--color-brand-muted)]'
           }`}
           role="alert"
         >
@@ -319,7 +319,7 @@ export default function AlertRecordsPage() {
               <button
                 type="button"
                 onClick={handleExportCSV}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors"
+                className="px-4 py-2 bg-[var(--color-healthy)] hover:bg-[var(--color-healthy)] hover:opacity-90 text-white rounded-md transition-colors"
               >
                 {t('common.export')} CSV
               </button>

@@ -1,14 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption } from '../../lib/echarts-core'
+import { useThemeColors } from '../../hooks/useThemeColors'
 
-const NODE_COLORS = [
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#ef4444',
-  '#8b5cf6',
-]
+// Node colors are now provided by useThemeColors hook via nodeColors useMemo
+
 
 const calculatePercentile = (sortedValues: number[], percentile: number): number => {
   if (sortedValues.length === 0) return 0
@@ -192,6 +188,7 @@ export default function ComparisonChart({
   const chartInstance = useRef<ECharts | null>(null)
   const [localTimeRange, setLocalTimeRange] = useState<TimeRange>(timeRange || '24h')
   const [localMode, setLocalMode] = useState<ComparisonMode>(mode)
+  const themeColors = useThemeColors()
 
   // Time range comparison state
   const [baselineStart, setBaselineStart] = useState('')
@@ -206,7 +203,7 @@ export default function ComparisonChart({
     latency_ms: {
       label: 'Latency',
       unit: 'ms',
-      color: '#3b82f6', // blue-500
+      color: themeColors.brand,
       yAxisLabel: 'Latency (ms)',
       warningThreshold: 0.2, // 20% difference
       criticalThreshold: 0.5, // 50% difference
@@ -214,7 +211,7 @@ export default function ComparisonChart({
     packet_loss_rate: {
       label: 'Packet Loss Rate',
       unit: '%',
-      color: '#ef4444', // red-500
+      color: themeColors.critical,
       yAxisLabel: 'Packet Loss Rate (%)',
       warningThreshold: 0.05, // 5% difference
       criticalThreshold: 0.1, // 10% difference
@@ -222,7 +219,7 @@ export default function ComparisonChart({
     jitter_ms: {
       label: 'Jitter',
       unit: 'ms',
-      color: '#8b5cf6', // purple-500
+      color: themeColors.unknown,
       yAxisLabel: 'Jitter (ms)',
       warningThreshold: 0.3, // 30% difference
       criticalThreshold: 0.6, // 60% difference
@@ -433,6 +430,15 @@ export default function ComparisonChart({
     return outliers
   }, [highlightDifferences, nodes, allStatistics, config.warningThreshold])
 
+  // Node colors using theme colors
+  const nodeColors = useMemo(() => [
+    themeColors.brand,
+    themeColors.healthy,
+    themeColors.warning,
+    themeColors.critical,
+    themeColors.unknown,
+  ], [themeColors])
+
   // Initialize chart
   useEffect(() => {
     if (!chartRef.current) return
@@ -473,6 +479,7 @@ export default function ComparisonChart({
     // Build series for each node
     const series = nodes.map((node, index) => {
       const nodeOutliers = outlierDataPoints[node.node_id] || []
+      const color = nodeColors[index % nodeColors.length]
 
       return {
         name: node.node_name,
@@ -483,11 +490,11 @@ export default function ComparisonChart({
         }),
         smooth: true,
         lineStyle: {
-          color: NODE_COLORS[index],
+          color,
           width: 2,
         },
         itemStyle: {
-          color: NODE_COLORS[index],
+          color,
         },
         // Add markPoints for outlier highlighting when enabled
         ...(highlightDifferences && nodeOutliers.length > 0
@@ -502,9 +509,9 @@ export default function ComparisonChart({
                     color:
                       outlier.type === 'max'
                         ? config.criticalThreshold * 100 < 50
-                          ? '#ef4444'
-                          : '#f59e0b'
-                        : '#3b82f6',
+                          ? themeColors.critical
+                          : themeColors.warning
+                        : themeColors.brand,
                   },
                   label: {
                     show: true,
@@ -687,7 +694,7 @@ export default function ComparisonChart({
               onClick={() => handleModeChange('node')}
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                 localMode === 'node'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[var(--color-brand)] text-[var(--color-text-on-primary)]'
                   : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
               aria-pressed={localMode === 'node'}
@@ -699,7 +706,7 @@ export default function ComparisonChart({
               onClick={() => handleModeChange('timeRange')}
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                 localMode === 'timeRange'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[var(--color-brand)] text-[var(--color-text-on-primary)]'
                   : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
               aria-pressed={localMode === 'timeRange'}
@@ -742,7 +749,7 @@ export default function ComparisonChart({
                       onClick={() => handleBaselineTimeRangeChange(range as TimeRange)}
                       className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                         customBaselineTimeRange === range
-                          ? 'bg-green-600 text-white'
+                          ? 'bg-[var(--color-healthy)] text-[var(--color-text-on-primary)]'
                           : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'
                       }`}
                       aria-pressed={customBaselineTimeRange === range}
@@ -763,7 +770,7 @@ export default function ComparisonChart({
                         onChange={(e) => setBaselineStart(e.target.value ? new Date(e.target.value).toISOString() : '')}
                         max={baselineEnd || new Date().toISOString().split('T')[0]}
                         disabled={isLoading}
-                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-green-500 focus:border-green-500 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
+                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-[var(--color-healthy)] focus:border-[var(--color-healthy)] bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
                       />
                     </div>
                     <div>
@@ -776,7 +783,7 @@ export default function ComparisonChart({
                         min={baselineStart}
                         max={new Date().toISOString().split('T')[0]}
                         disabled={isLoading}
-                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-green-500 focus:border-green-500 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
+                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-[var(--color-healthy)] focus:border-[var(--color-healthy)] bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
                       />
                     </div>
                   </div>
@@ -797,7 +804,7 @@ export default function ComparisonChart({
                       onClick={() => handleCurrentTimeRangeChange(range as TimeRange)}
                       className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                         customCurrentTimeRange === range
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[var(--color-brand)] text-[var(--color-text-on-primary)]'
                           : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'
                       }`}
                       aria-pressed={customCurrentTimeRange === range}
@@ -818,7 +825,7 @@ export default function ComparisonChart({
                         onChange={(e) => setCurrentStart(e.target.value ? new Date(e.target.value).toISOString() : '')}
                         max={currentEnd || new Date().toISOString().split('T')[0]}
                         disabled={isLoading}
-                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
+                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
                       />
                     </div>
                     <div>
@@ -831,7 +838,7 @@ export default function ComparisonChart({
                         min={currentStart}
                         max={new Date().toISOString().split('T')[0]}
                         disabled={isLoading}
-                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
+                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
                       />
                     </div>
                   </div>
@@ -852,7 +859,7 @@ export default function ComparisonChart({
                 onClick={() => handleTimeRangeChange(option.value)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   localTimeRange === option.value
-                    ? 'bg-blue-600 text-[var(--color-text-on-primary)]'
+                    ? 'bg-[var(--color-brand)] text-[var(--color-text-on-primary)]'
                     : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
                 }`}
                 aria-pressed={localTimeRange === option.value}
@@ -897,10 +904,10 @@ export default function ComparisonChart({
               <div className="text-sm text-[var(--color-text-secondary)]">Diff %</div>
               <div className={`text-lg font-semibold ${
                 overallStats.diffPercent > config.criticalThreshold * 100
-                  ? 'text-red-600'
+                  ? 'text-[var(--color-critical)]'
                   : overallStats.diffPercent > config.warningThreshold * 100
-                  ? 'text-yellow-600'
-                  : 'text-green-600'
+                  ? 'text-[var(--color-warning)]'
+                  : 'text-[var(--color-healthy)]'
               }`}>
                 {overallStats.diffPercent.toFixed(1)}%
               </div>
@@ -986,7 +993,7 @@ export default function ComparisonChart({
                       {timeRangeStatistics.current.avg.toFixed(2)} {config.unit}
                     </span>
                     <span className={`text-xs font-medium ${
-                      timeRangeStatistics.changes.avg > 0 ? 'text-red-600' : timeRangeStatistics.changes.avg < 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'
+                      timeRangeStatistics.changes.avg > 0 ? 'text-[var(--color-critical)]' : timeRangeStatistics.changes.avg < 0 ? 'text-[var(--color-healthy)]' : 'text-[var(--color-text-muted)]'
                     }`}>
                       {timeRangeStatistics.changes.avg > 0 ? '↑' : timeRangeStatistics.changes.avg < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.avg).toFixed(1)}%
                     </span>
@@ -999,7 +1006,7 @@ export default function ComparisonChart({
                       {timeRangeStatistics.current.median.toFixed(2)} {config.unit}
                     </span>
                     <span className={`text-xs font-medium ${
-                      timeRangeStatistics.changes.median > 0 ? 'text-red-600' : timeRangeStatistics.changes.median < 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'
+                      timeRangeStatistics.changes.median > 0 ? 'text-[var(--color-critical)]' : timeRangeStatistics.changes.median < 0 ? 'text-[var(--color-healthy)]' : 'text-[var(--color-text-muted)]'
                     }`}>
                       {timeRangeStatistics.changes.median > 0 ? '↑' : timeRangeStatistics.changes.median < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.median).toFixed(1)}%
                     </span>
@@ -1012,7 +1019,7 @@ export default function ComparisonChart({
                       {timeRangeStatistics.current.p95.toFixed(2)} {config.unit}
                     </span>
                     <span className={`text-xs font-medium ${
-                      timeRangeStatistics.changes.p95 > 0 ? 'text-red-600' : timeRangeStatistics.changes.p95 < 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'
+                      timeRangeStatistics.changes.p95 > 0 ? 'text-[var(--color-critical)]' : timeRangeStatistics.changes.p95 < 0 ? 'text-[var(--color-healthy)]' : 'text-[var(--color-text-muted)]'
                     }`}>
                       {timeRangeStatistics.changes.p95 > 0 ? '↑' : timeRangeStatistics.changes.p95 < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.p95).toFixed(1)}%
                     </span>
@@ -1025,7 +1032,7 @@ export default function ComparisonChart({
                       {timeRangeStatistics.current.p99.toFixed(2)} {config.unit}
                     </span>
                     <span className={`text-xs font-medium ${
-                      timeRangeStatistics.changes.p99 > 0 ? 'text-red-600' : timeRangeStatistics.changes.p99 < 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'
+                      timeRangeStatistics.changes.p99 > 0 ? 'text-[var(--color-critical)]' : timeRangeStatistics.changes.p99 < 0 ? 'text-[var(--color-healthy)]' : 'text-[var(--color-text-muted)]'
                     }`}>
                       {timeRangeStatistics.changes.p99 > 0 ? '↑' : timeRangeStatistics.changes.p99 < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.p99).toFixed(1)}%
                     </span>
@@ -1054,7 +1061,7 @@ export default function ComparisonChart({
           >
             <div className="flex flex-col items-center">
               <div
-                className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
+                className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"
               />
               <p className="mt-2 text-[var(--color-text-secondary)]">Loading chart data...</p>
             </div>
@@ -1102,10 +1109,10 @@ export default function ComparisonChart({
             <div key={node.node_id} className="flex items-center space-x-2">
               <div
                 className="w-4 h-1"
-                style={{ backgroundColor: NODE_COLORS[index] }}
+                style={{ backgroundColor: nodeColors[index] }}
                 aria-hidden="true"
               />
-              <span className="text-gray-700">
+              <span className="text-[var(--color-text-primary)]">
                 {node.node_name}
                 {groupBy === 'region' && node.region && ` (${node.region})`}
                 {groupBy === 'isp' && node.isp && ` (${node.isp})`}
@@ -1120,14 +1127,14 @@ export default function ComparisonChart({
         <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
           <div className="flex items-center space-x-2">
             <div
-              className="w-4 h-1 bg-green-600"
+              className="w-4 h-1 bg-[var(--color-healthy)]"
               aria-hidden="true"
             />
             <span className="text-gray-700">Baseline Period</span>
           </div>
           <div className="flex items-center space-x-2">
             <div
-              className="w-4 h-1 bg-blue-600"
+              className="w-4 h-1 bg-[var(--color-brand)]"
               aria-hidden="true"
             />
             <span className="text-gray-700">Current Period</span>

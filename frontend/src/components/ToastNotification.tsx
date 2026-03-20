@@ -11,10 +11,10 @@ export interface ToastProps {
 }
 
 const toastStyles = {
-  success: 'bg-green-100 text-green-800 border-green-300',
-  error: 'bg-red-100 text-red-800 border-red-300',
-  warning: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-  info: 'bg-blue-100 text-blue-800 border-blue-300',
+  success: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)] border-[var(--color-healthy)]',
+  error: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)] border-[var(--color-critical)]',
+  warning: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning)]',
+  info: 'bg-[var(--color-brand-muted)] text-[var(--color-brand)] border-[var(--color-brand)]',
 }
 
 export function ToastNotification({ id, type, title, message, onClose }: ToastProps) {

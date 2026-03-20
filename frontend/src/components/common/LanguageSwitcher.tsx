@@ -50,8 +50,8 @@ export function LanguageSwitcher({
             onClick={() => handleLanguageChange(lang.code)}
             className={`rounded-md font-medium transition-colors ${sizeClasses[size]}
               ${language === lang.code
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
+                ? 'bg-[var(--color-brand)] text-white'
+                : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)]'
               }`}
             title={lang.name}
             aria-label={lang.name}
@@ -69,9 +69,8 @@ export function LanguageSwitcher({
     <select
       value={language}
       onChange={(e) => handleLanguageChange(e.target.value as LanguageCode)}
-      className={`rounded-lg border border-gray-300 bg-white
-        text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
-        dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300
+      className={`rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)]
+        text-[var(--color-text-primary)] focus:border-[var(--color-brand)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)]
         ${sizeClasses[size]} ${className}`}
       aria-label={t('settings.language')}
     >

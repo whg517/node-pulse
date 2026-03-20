@@ -54,7 +54,7 @@ export function TimezoneSelector({
       <div>
         <label
           htmlFor="timezone-select"
-          className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+          className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]"
         >
           {t('settings.timezone')}
         </label>
@@ -62,9 +62,8 @@ export function TimezoneSelector({
           id="timezone-select"
           value={timezone}
           onChange={(e) => setTimezone(e.target.value)}
-          className={`w-full rounded-lg border border-gray-300 bg-white
-            text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
-            dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300
+          className={`w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)]
+            text-[var(--color-text-primary)] focus:border-[var(--color-brand)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)]
             ${sizeClasses[size]}`}
         >
           {COMMON_TIMEZONES.map((tz) => (
@@ -80,7 +79,7 @@ export function TimezoneSelector({
         <div>
           <label
             htmlFor="display-mode-select"
-            className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            className="mb-1 block text-sm font-medium text-[var(--color-text-secondary)]"
           >
             {t('settings.displayMode')}
           </label>
@@ -88,9 +87,8 @@ export function TimezoneSelector({
             id="display-mode-select"
             value={displayMode}
             onChange={(e) => setDisplayMode(e.target.value as TimezoneDisplayMode)}
-            className={`w-full rounded-lg border border-gray-300 bg-white
-              text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500
-              dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300
+            className={`w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)]
+              text-[var(--color-text-primary)] focus:border-[var(--color-brand)] focus:outline-none focus:ring-1 focus:ring-[var(--color-brand)]
               ${sizeClasses[size]}`}
           >
             {displayModes.map((mode) => (

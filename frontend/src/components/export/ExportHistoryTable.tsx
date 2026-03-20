@@ -82,10 +82,10 @@ export function ExportHistoryTable({
    */
   const getStatusBadge = (status: ExportStatus) => {
     const statusStyles = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      processing: 'bg-blue-100 text-blue-800',
-      completed: 'bg-green-100 text-green-800',
-      failed: 'bg-red-100 text-red-800',
+      pending: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
+      processing: 'bg-[var(--color-brand-muted)] text-[var(--color-brand)]',
+      completed: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]',
+      failed: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]',
     }
 
     const statusLabels = {
@@ -108,7 +108,7 @@ export function ExportHistoryTable({
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand)]"></div>
         <span className="ml-2 text-gray-600">Loading export history...</span>
       </div>
     )
@@ -147,7 +147,7 @@ export function ExportHistoryTable({
             onClick={() => handleFilterChange('all')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               statusFilter === 'all'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[var(--color-brand)] text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -158,7 +158,7 @@ export function ExportHistoryTable({
             onClick={() => handleFilterChange('completed')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               statusFilter === 'completed'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[var(--color-brand)] text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -169,7 +169,7 @@ export function ExportHistoryTable({
             onClick={() => handleFilterChange('failed')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               statusFilter === 'failed'
-                ? 'bg-blue-600 text-white'
+                ? 'bg-[var(--color-brand)] text-white'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -235,7 +235,7 @@ export function ExportHistoryTable({
                     <button
                       type="button"
                       onClick={() => onDownload(exp.id)}
-                      className="text-blue-600 hover:text-blue-800 font-medium"
+                      className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
                       title="Download"
                     >
                       Download
@@ -244,7 +244,7 @@ export function ExportHistoryTable({
                   <button
                     type="button"
                     onClick={() => onDelete(exp.id)}
-                    className="text-red-600 hover:text-red-800 font-medium"
+                    className="text-[var(--color-critical)] hover:text-[var(--color-critical)] font-medium"
                     title="Delete"
                   >
                     Delete
@@ -271,7 +271,7 @@ export function ExportHistoryTable({
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-[var(--color-border)] rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
@@ -282,7 +282,7 @@ export function ExportHistoryTable({
               type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-[var(--color-border)] rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

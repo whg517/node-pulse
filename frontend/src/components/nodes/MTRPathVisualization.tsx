@@ -67,40 +67,40 @@ const riskStatusConfig: Record<
   }
 > = {
   safe: {
-    borderColor: 'border-emerald-300',
-    bgColor: 'bg-emerald-50',
-    textColor: 'text-emerald-800',
-    badgeBgColor: 'bg-emerald-100',
-    badgeTextColor: 'text-emerald-700',
-    indicatorColor: 'bg-emerald-500',
-    shadowColor: 'shadow-emerald-200',
+    borderColor: 'border-[var(--color-healthy-bg)]',
+    bgColor: 'bg-[var(--color-healthy-bg)]',
+    textColor: 'text-[var(--color-healthy-text)]',
+    badgeBgColor: 'bg-[var(--color-healthy-bg)]',
+    badgeTextColor: 'text-[var(--color-healthy-text)]',
+    indicatorColor: 'bg-[var(--color-healthy)]',
+    shadowColor: 'shadow-sm',
   },
   warning: {
-    borderColor: 'border-amber-300',
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-800',
-    badgeBgColor: 'bg-amber-100',
-    badgeTextColor: 'text-amber-700',
-    indicatorColor: 'bg-amber-500',
-    shadowColor: 'shadow-amber-200',
+    borderColor: 'border-[var(--color-warning-bg)]',
+    bgColor: 'bg-[var(--color-warning-bg)]',
+    textColor: 'text-[var(--color-warning-text)]',
+    badgeBgColor: 'bg-[var(--color-warning-bg)]',
+    badgeTextColor: 'text-[var(--color-warning-text)]',
+    indicatorColor: 'bg-[var(--color-warning)]',
+    shadowColor: 'shadow-sm',
   },
   critical: {
-    borderColor: 'border-red-300',
-    bgColor: 'bg-red-50',
-    textColor: 'text-red-800',
-    badgeBgColor: 'bg-red-100',
-    badgeTextColor: 'text-red-700',
-    indicatorColor: 'bg-red-500',
-    shadowColor: 'shadow-red-200',
+    borderColor: 'border-[var(--color-critical-bg)]',
+    bgColor: 'bg-[var(--color-critical-bg)]',
+    textColor: 'text-[var(--color-critical-text)]',
+    badgeBgColor: 'bg-[var(--color-critical-bg)]',
+    badgeTextColor: 'text-[var(--color-critical-text)]',
+    indicatorColor: 'bg-[var(--color-critical)]',
+    shadowColor: 'shadow-sm',
   },
   timeout: {
-    borderColor: 'border-gray-300',
-    bgColor: 'bg-gray-50',
-    textColor: 'text-gray-800',
+    borderColor: 'border-[var(--color-border)]',
+    bgColor: 'bg-[var(--color-bg-muted)]',
+    textColor: 'text-[var(--color-text-primary)]',
     badgeBgColor: 'bg-gray-100',
     badgeTextColor: 'text-gray-700',
     indicatorColor: 'bg-gray-400',
-    shadowColor: 'shadow-gray-200',
+    shadowColor: 'shadow-sm',
   },
 }
 
@@ -310,8 +310,8 @@ function HopTooltip({ hop, conditions, position, onClose }: HopTooltipProps) {
                   key={idx}
                   className={`flex items-start gap-2 px-2 py-1.5 rounded text-xs ${
                     condition.severity === 'critical'
-                      ? 'bg-red-50 text-red-700'
-                      : 'bg-amber-50 text-amber-700'
+                      ? 'bg-[var(--color-critical-bg)] text-[var(--color-critical)]'
+                      : 'bg-[var(--color-warning-bg)] text-[var(--color-warning)]'
                   }`}
                 >
                   <svg
@@ -345,7 +345,7 @@ function HopTooltip({ hop, conditions, position, onClose }: HopTooltipProps) {
           onClick={() => {
             onClose()
           }}
-          className="w-full text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
+          className="w-full text-xs text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium transition-colors"
         >
           {t('mtr.closeTooltip', 'Click outside to close')}
         </button>
@@ -552,8 +552,8 @@ export default function MTRPathVisualization({
                             key={idx}
                             className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                               condition.severity === 'critical'
-                                ? 'bg-red-200 text-red-800'
-                                : 'bg-amber-200 text-amber-800'
+                                ? 'bg-[var(--color-critical-bg)] text-[var(--color-critical)]'
+                                : 'bg-[var(--color-warning-bg)] text-[var(--color-warning)]'
                             }`}
                             title={condition.message}
                           >
@@ -613,9 +613,9 @@ export default function MTRPathVisualization({
                       <span
                         className={`font-semibold ${
                           hop.lossRate >= 10
-                            ? 'text-red-700'
+                            ? 'text-[var(--color-critical)]'
                             : hop.lossRate >= 5
-                            ? 'text-amber-700'
+                            ? 'text-[var(--color-warning)]'
                             : 'text-gray-700'
                         }`}
                       >
@@ -629,9 +629,9 @@ export default function MTRPathVisualization({
                       <span
                         className={`font-medium ${
                           hop.avgRTTMs >= 200
-                            ? 'text-red-700'
+                            ? 'text-[var(--color-critical)]'
                             : hop.avgRTTMs >= 100
-                            ? 'text-amber-700'
+                            ? 'text-[var(--color-warning)]'
                             : 'text-gray-700'
                         }`}
                       >
@@ -653,7 +653,7 @@ export default function MTRPathVisualization({
                         <span
                           className={`font-medium ${
                             hop.stdDevMs >= 50
-                              ? 'text-amber-700'
+                              ? 'text-[var(--color-warning)]'
                               : 'text-gray-700'
                           }`}
                         >
@@ -667,7 +667,7 @@ export default function MTRPathVisualization({
                 {/* Status Indicator Icon */}
                 <div className="flex-shrink-0" aria-hidden="true">
                   {riskStatus === 'critical' && (
-                    <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-[var(--color-critical)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -677,7 +677,7 @@ export default function MTRPathVisualization({
                     </svg>
                   )}
                   {riskStatus === 'warning' && (
-                    <svg className="w-5 h-5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-[var(--color-warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -697,7 +697,7 @@ export default function MTRPathVisualization({
                     </svg>
                   )}
                   {riskStatus === 'safe' && (
-                    <svg className="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-[var(--color-healthy)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -718,19 +718,19 @@ export default function MTRPathVisualization({
         <p className="text-xs text-gray-500 mb-2">{t('mtr.riskLegend', 'Risk indicators')}:</p>
         <div className="flex items-center gap-3 flex-wrap text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-emerald-500" aria-hidden="true" />
+            <span className="w-3 h-3 rounded-full bg-[var(--color-healthy)]" aria-hidden="true" />
             <span className="text-gray-600">
               {t('mtr.riskSafe', 'Normal')} ({t('mtr.riskSafeDesc', '< 10% loss, < 200ms latency')})
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-amber-500" aria-hidden="true" />
+            <span className="w-3 h-3 rounded-full bg-[var(--color-warning)]" aria-hidden="true" />
             <span className="text-gray-600">
               {t('mtr.riskWarning', 'Warning')} ({t('mtr.riskWarningDesc', '≥ 50ms jitter')})
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-red-500" aria-hidden="true" />
+            <span className="w-3 h-3 rounded-full bg-[var(--color-critical)]" aria-hidden="true" />
             <span className="text-gray-600">
               {t('mtr.riskCritical', 'Critical')} ({t('mtr.riskCriticalDesc', '≥ 10% loss or ≥ 200ms latency')})
             </span>

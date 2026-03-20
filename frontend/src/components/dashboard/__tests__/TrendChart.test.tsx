@@ -30,7 +30,8 @@ describe('TrendChart', () => {
     render(<TrendChart data={mockData} metric="latency_ms" timeRange="7d" />)
 
     const button7d = screen.getByText('7 Days')
-    expect(button7d.closest('button')).toHaveClass('bg-blue-600', 'text-white')
+    expect(button7d.closest('button')).toHaveClass('bg-[var(--color-brand)]')
+    expect(button7d.closest('button')).toHaveClass('text-[var(--color-text-on-primary)]')
   })
 
   it('calls onTimeRangeChange when time range button is clicked', async () => {

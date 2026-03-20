@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ExportForm } from './ExportForm'
 
@@ -172,11 +172,11 @@ describe('ExportForm', () => {
       const startDateInput = screen.getByLabelText('dataExport.startDate')
       const endDateInput = screen.getByLabelText('dataExport.endDate')
 
-      await user.clear(startDateInput)
-      await user.type(startDateInput, '2024-01-01')
+
+      fireEvent.change(startDateInput, { target: { value: '2024-01-01' } })
 
       await user.clear(endDateInput)
-      await user.type(endDateInput, '2024-01-07')
+      fireEvent.change(endDateInput, { target: { value: '2024-01-07' } })
 
       await user.click(screen.getByLabelText('Node 1 (192.168.1.1)'))
       await user.click(screen.getByRole('button', { name: 'dataExport.export' }))

@@ -98,7 +98,7 @@ export default function SessionList({
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="inline-flex items-center px-3 py-1.5 border border-[var(--color-border-strong)] rounded-md text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          className="inline-flex items-center px-3 py-1.5 border border-[var(--color-border-strong)] rounded-md text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand)] disabled:opacity-50"
         >
           <svg
             className={`-ml-1 mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
@@ -175,7 +175,7 @@ export default function SessionList({
                               {device}
                             </span>
                             {isCurrent && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" data-testid="current-session">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]" data-testid="current-session">
                                 {t('sessions.currentSession')}
                               </span>
                             )}
@@ -196,13 +196,13 @@ export default function SessionList({
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {isConfirming ? (
                         <div className="flex items-center justify-end space-x-2">
-                          <span className="text-sm text-red-600">
+                          <span className="text-sm text-[var(--color-critical)]">
                             {isCurrent ? t('sessions.logoutWarning') + ' ' : ''}{t('sessions.confirmRevoke')}
                           </span>
                           <button
                             onClick={() => handleRevoke(session.session_id, isCurrent)}
                             disabled={isRevoking}
-                            className="inline-flex items-center px-2 py-1 border border-red-300 dark:border-red-700 rounded text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 focus:outline-none disabled:opacity-50"
+                            className="inline-flex items-center px-2 py-1 border border-[var(--color-critical-bg)] rounded text-xs font-medium text-[var(--color-critical-text)] bg-[var(--color-critical-bg)] hover:bg-[var(--color-critical-bg)] focus:outline-none disabled:opacity-50"
                           >
                             {isRevoking ? t('sessions.revoking') : t('sessions.yesRevoke')}
                           </button>
@@ -220,8 +220,8 @@ export default function SessionList({
                           disabled={isRevoking || isLoading}
                           className={`inline-flex items-center px-3 py-1.5 border rounded text-xs font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
                             isCurrent
-                              ? 'border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 focus:ring-red-500'
-                              : 'border-[var(--color-border-strong)] text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:ring-blue-500'
+                              ? 'border-[var(--color-critical-bg)] text-[var(--color-critical-text)] bg-[var(--color-critical-bg)] hover:bg-[var(--color-critical-bg)] focus:ring-[var(--color-critical)]'
+                              : 'border-[var(--color-border-strong)] text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:ring-[var(--color-brand)]'
                           }`}
                         >
                           {t('sessions.revoke')}

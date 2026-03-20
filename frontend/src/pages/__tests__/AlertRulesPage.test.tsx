@@ -53,22 +53,21 @@ vi.mock('../../stores/authStore', () => ({
 }))
 
 vi.mock('../../components/alerts/AlertRulesTable', () => ({
-  AlertRulesTable: ({ onEdit, onDelete }: { onEdit: (r: unknown) => void; onDelete: (id: string) => void }) => (
+  AlertRulesTable: ({ onEdit, onDelete }: { onEdit: (id: string) => void; onDelete: (id: string) => void }) => (
     <div data-testid="alert-rules-table">
-      <button onClick={() => onEdit({ id: 'rule-1', name: 'High Latency' })}>Edit Rule</button>
+      <button onClick={() => onEdit('rule-1')}>Edit Rule</button>
       <button onClick={() => onDelete('rule-1')}>Delete Rule</button>
     </div>
   ),
 }))
 
 vi.mock('../../components/alerts/AlertRuleDialog', () => ({
-  AlertRuleDialog: ({ open, onClose, onSave }: { open: boolean; onClose: () => void; onSave: (r: unknown) => void }) =>
-    open ? (
-      <div data-testid="alert-rule-dialog">
-        <button onClick={onClose}>Close Dialog</button>
-        <button onClick={() => onSave({ name: 'New Rule', metric: 'latency_ms' })}>Save Rule</button>
-      </div>
-    ) : null,
+  AlertRuleDialog: ({ onCancel, onSubmit }: { onCancel: () => void; onSubmit: (r: unknown) => void }) => (
+    <div data-testid="alert-rule-dialog">
+      <button onClick={onCancel}>Close Dialog</button>
+      <button onClick={() => onSubmit({ name: 'New Rule', metric: 'latency_ms' })}>Save Rule</button>
+    </div>
+  ),
 }))
 
 describe('AlertRulesPage', () => {
@@ -133,7 +132,7 @@ describe('AlertRulesPage', () => {
     mockFetchAlertRules.mockRejectedValueOnce(new Error('Load failed'))
     render(<MemoryRouter><AlertRulesPage /></MemoryRouter>)
     await waitFor(() => {
-      expect(screen.getByText('common.error')).toBeInTheDocument()
+      expect(screen.getByText('Load failed')).toBeInTheDocument()
     })
   })
 })

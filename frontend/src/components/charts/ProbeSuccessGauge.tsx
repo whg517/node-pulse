@@ -9,6 +9,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
+import { useThemeColors } from '../../hooks/useThemeColors'
 
 function getCSSVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -21,22 +22,14 @@ export interface ProbeSuccessGaugeProps {
   isLoading?: boolean
 }
 
-// Color palette from UI design
-const COLORS = {
-  healthy: '#22C55E',   // Green (task specified)
-  warning: '#F59E0B',   // Amber (task specified)
-  critical: '#EF4444',  // Red (task specified)
-  unknown: '#6B7280',   // Gray (task specified)
-}
-
 /**
  * Get color based on success rate value
  */
-function getColorForValue(value: number): string {
-  if (value >= 95) return COLORS.healthy
-  if (value >= 80) return COLORS.warning
-  if (value >= 50) return COLORS.critical
-  return COLORS.unknown
+function getColorForValue(value: number, themeColors: ReturnType<typeof useThemeColors>): string {
+  if (value >= 95) return themeColors.healthy
+  if (value >= 80) return themeColors.warning
+  if (value >= 50) return themeColors.critical
+  return themeColors.unknown
 }
 
 /**
@@ -56,11 +49,12 @@ export function ProbeSuccessGauge({
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
+  const themeColors = useThemeColors()
 
   const getChartOptions = useCallback((): EChartsOption => {
     const textColor = getCSSVar('--color-chart-text') || '#374151'
     const trackColor = getCSSVar('--color-chart-grid') || '#e5e7eb'
-    const color = getColorForValue(value)
+    const color = getColorForValue(value, themeColors)
 
     return {
       backgroundColor: 'transparent',
@@ -126,7 +120,7 @@ export function ProbeSuccessGauge({
         },
       ],
     }
-  }, [value, t])
+  }, [value, t, themeColors])
 
   // Initialize chart only once on mount
   useEffect(() => {
@@ -177,7 +171,7 @@ export function ProbeSuccessGauge({
       {isLoading && (
         <div className="flex items-center justify-center h-full">
           <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-500"
+            className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-healthy)]"
             role="status"
             aria-label={t('common.loading')}
           />
@@ -187,4 +181,5 @@ export function ProbeSuccessGauge({
   )
 }
 
-export { COLORS as GAUGE_COLORS }
+// Export empty for backward compatibility
+export const GAUGE_COLORS: Record<string, never> = {}

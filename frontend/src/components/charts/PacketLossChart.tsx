@@ -10,6 +10,7 @@ import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
 import type { DataPoint } from '../dashboard/TrendChart'
+import { useThemeColors } from '../../hooks/useThemeColors'
 
 function getCSSVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -22,15 +23,6 @@ export interface PacketLossChartProps {
   isLoading?: boolean
   warningThreshold?: number
   criticalThreshold?: number
-}
-
-// Color palette from UI design
-const COLORS = {
-  packetLoss: '#ef4444',  // Red-500
-  warning: '#f59e0b',     // Amber
-  critical: '#ef4444',    // Red
-  areaGradientStart: 'rgba(239, 68, 68, 0.3)',
-  areaGradientEnd: 'rgba(239, 68, 68, 0.05)',
 }
 
 /**
@@ -54,6 +46,7 @@ export function PacketLossChart({
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
+  const themeColors = useThemeColors()
 
   const getChartOptions = useCallback((): EChartsOption => {
     const textColor = getCSSVar('--color-chart-text') || '#374151'
@@ -62,6 +55,8 @@ export function PacketLossChart({
     const tooltipBg = getCSSVar('--color-chart-tooltip-bg') || 'rgba(255,255,255,0.95)'
     const tooltipBorder = getCSSVar('--color-chart-tooltip-border') || '#e5e7eb'
     const tooltipText = getCSSVar('--color-chart-tooltip-text') || '#374151'
+
+    const packetLossColor = themeColors.critical
 
     return {
       backgroundColor: 'transparent',
@@ -132,16 +127,16 @@ export function PacketLossChart({
           symbol: 'circle',
           symbolSize: 4,
           lineStyle: {
-            color: COLORS.packetLoss,
+            color: packetLossColor,
             width: 2,
           },
           itemStyle: {
-            color: COLORS.packetLoss,
+            color: packetLossColor,
           },
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: COLORS.areaGradientStart },
-              { offset: 1, color: COLORS.areaGradientEnd },
+              { offset: 0, color: `${packetLossColor}4D` },
+              { offset: 1, color: `${packetLossColor}0D` },
             ]),
           },
           markLine: {
@@ -150,23 +145,23 @@ export function PacketLossChart({
               {
                 yAxis: warningThreshold,
                 lineStyle: {
-                  color: COLORS.warning,
+                  color: themeColors.warning,
                   type: 'dashed',
                 },
                 label: {
                   formatter: t('status.warning'),
-                  color: COLORS.warning,
+                  color: themeColors.warning,
                 },
               },
               {
                 yAxis: criticalThreshold,
                 lineStyle: {
-                  color: COLORS.critical,
+                  color: themeColors.critical,
                   type: 'dashed',
                 },
                 label: {
                   formatter: t('status.critical'),
-                  color: COLORS.critical,
+                  color: themeColors.critical,
                 },
               },
             ],
@@ -174,7 +169,7 @@ export function PacketLossChart({
         },
       ],
     }
-  }, [data, warningThreshold, criticalThreshold, t])
+  }, [data, warningThreshold, criticalThreshold, t, themeColors])
 
   // Initialize chart only once on mount
   useEffect(() => {
@@ -225,7 +220,7 @@ export function PacketLossChart({
       {isLoading && (
         <div className="flex items-center justify-center h-full">
           <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"
+            className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-critical)]"
             role="status"
             aria-label={t('common.loading')}
           />

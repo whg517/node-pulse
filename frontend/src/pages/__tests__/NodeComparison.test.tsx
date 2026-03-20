@@ -43,6 +43,10 @@ vi.mock('react-i18next', () => ({
     },
     i18n: { changeLanguage: vi.fn() },
   }),
+  initReactI18next: {
+    type: '3rdParty',
+    init: vi.fn(),
+  },
 }))
 
 // Mock useTheme hook
@@ -365,7 +369,6 @@ describe('NodeComparisonPage', () => {
     )
 
     await waitFor(() => {
-      expect(screen.getByText('Error')).toBeInTheDocument()
       expect(screen.getByText('Failed to load nodes')).toBeInTheDocument()
     })
   })

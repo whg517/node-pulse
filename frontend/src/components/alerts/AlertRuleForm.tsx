@@ -68,7 +68,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           id="metric"
           value={metric}
           onChange={(e) => setMetric(e.target.value as 'latency' | 'packet_loss_rate' | 'jitter')}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] sm:text-sm rounded-md"
         >
           <option value="latency">{t('metrics.latency')} (ms)</option>
           <option value="packet_loss_rate">{t('metrics.packetLoss')} (%)</option>
@@ -88,10 +88,10 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           onChange={(e) => setThreshold(Number(e.target.value))}
           min="0"
           step="0.01"
-          className={`mt-1 block w-full border ${errors.threshold ? 'border-red-400 dark:border-red-500' : 'border-[var(--color-input-border)]'} rounded-md shadow-sm py-2 px-3 bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+          className={`mt-1 block w-full border ${errors.threshold ? 'border-[var(--color-critical)]' : 'border-[var(--color-input-border)]'} rounded-md shadow-sm py-2 px-3 bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] sm:text-sm`}
         />
         {errors.threshold && (
-          <p className="mt-2 text-sm text-red-600">{errors.threshold}</p>
+          <p className="mt-2 text-sm text-[var(--color-critical)]">{errors.threshold}</p>
         )}
       </div>
 
@@ -104,7 +104,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           id="level"
           value={level}
           onChange={(e) => setLevel(e.target.value as 'P0' | 'P1' | 'P2')}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] sm:text-sm rounded-md"
         >
           <option value="P0">P0 - {t('alerts.critical')}</option>
           <option value="P1">P1 - {t('alerts.warning')}</option>
@@ -121,7 +121,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           id="node"
           value={nodeId || ''}
           onChange={(e) => setNodeId(e.target.value || null)}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] sm:text-sm rounded-md"
         >
           <option value="">{t('alerts.globalRule')}</option>
           {nodes.map((node) => (
@@ -143,7 +143,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
             type="checkbox"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
-            className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+            className="focus:ring-[var(--color-brand)] h-4 w-4 text-[var(--color-brand)] border-[var(--color-border)] rounded"
           />
         </div>
         <div className="ml-3 text-sm">
@@ -160,14 +160,14 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="px-4 py-2 border border-[var(--color-border-strong)] rounded-md shadow-sm text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 border border-[var(--color-border-strong)] rounded-md shadow-sm text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? t('common.saving') : mode === 'create' ? t('alerts.createRule') : t('alerts.updateRule')}
         </button>

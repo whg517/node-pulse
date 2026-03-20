@@ -30,7 +30,7 @@ export function NodeTable({
       <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-center py-12">
           <div
-            className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
+            className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"
             role="status"
             aria-label="Loading nodes"
           />
@@ -120,7 +120,7 @@ export function NodeTable({
                   <div className="flex flex-col">
                     <Link
                       to={`/nodes/${node.id}`}
-                      className="text-sm font-medium text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300"
+                      className="text-sm font-medium text-[var(--color-brand)] hover:text-[var(--color-brand-hover)]"
                     >
                       {node.name}
                     </Link>
@@ -139,7 +139,7 @@ export function NodeTable({
                       node.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300"
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--color-brand-muted)] text-[var(--color-brand)]"
                         >
                           {tag}
                         </span>
@@ -157,14 +157,14 @@ export function NodeTable({
                     <button
                       type="button"
                       onClick={() => onEdit?.(node.id)}
-                      className="text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
+                      className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] mr-4"
                     >
                       {t('common.edit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete?.(node.id)}
-                      className="text-red-500 hover:text-red-400 dark:text-red-400 dark:hover:text-red-300"
+                      className="text-[var(--color-critical)] hover:text-[var(--color-critical)] hover:opacity-80"
                     >
                       {t('common.delete')}
                     </button>
@@ -185,19 +185,19 @@ export function NodeTable({
 function NodeStatusBadge({ status }: { status?: NodeDTO['status'] }) {
   const statusConfig = {
     online: {
-      bgColor: 'bg-green-100 dark:bg-green-900/30',
-      textColor: 'text-green-800 dark:text-green-300',
-      dotColor: 'bg-green-500',
+      bgColor: 'bg-[var(--color-healthy-bg)]',
+      textColor: 'text-[var(--color-healthy-text)]',
+      dotColor: 'bg-[var(--color-healthy)]',
     },
     offline: {
-      bgColor: 'bg-red-100 dark:bg-red-900/30',
-      textColor: 'text-red-800 dark:text-red-300',
-      dotColor: 'bg-red-500',
+      bgColor: 'bg-[var(--color-critical-bg)]',
+      textColor: 'text-[var(--color-critical-text)]',
+      dotColor: 'bg-[var(--color-critical)]',
     },
     connecting: {
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30',
-      textColor: 'text-yellow-800 dark:text-yellow-300',
-      dotColor: 'bg-yellow-500',
+      bgColor: 'bg-[var(--color-warning-bg)]',
+      textColor: 'text-[var(--color-warning-text)]',
+      dotColor: 'bg-[var(--color-warning)]',
     },
   }
 

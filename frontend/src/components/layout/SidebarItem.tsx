@@ -37,7 +37,7 @@ export function SidebarItem({ icon, label, path, badge, isCollapsed }: SidebarIt
         className={({ isActive }) =>
           `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200
           ${isActive
-            ? 'bg-blue-600 text-white dark:bg-blue-900/50 dark:text-blue-300'
+            ? 'bg-[var(--color-brand-muted)] text-[var(--color-brand)]'
             : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-primary)]'
           }
           ${isCollapsed ? 'justify-center px-2' : ''}`
@@ -55,14 +55,14 @@ export function SidebarItem({ icon, label, path, badge, isCollapsed }: SidebarIt
 
         {/* Badge - hidden when collapsed */}
         {!isCollapsed && badge !== undefined && badge > 0 && (
-          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-critical)] px-1.5 text-xs font-semibold text-white">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
 
         {/* Badge indicator - shown when collapsed */}
         {isCollapsed && badge !== undefined && badge > 0 && (
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--color-critical)]" />
         )}
       </NavLink>
 
@@ -72,7 +72,7 @@ export function SidebarItem({ icon, label, path, badge, isCollapsed }: SidebarIt
           <div className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-lg">
             {t(label)}
             {badge !== undefined && badge > 0 && (
-              <span className="ml-2 text-blue-300">({badge > 99 ? '99+' : badge})</span>
+              <span className="ml-2 text-[var(--color-brand-subtle)]">({badge > 99 ? '99+' : badge})</span>
             )}
           </div>
           {/* Arrow pointing left */}

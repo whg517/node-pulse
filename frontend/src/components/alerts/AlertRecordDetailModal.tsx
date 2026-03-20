@@ -43,11 +43,11 @@ export function AlertRecordDetailModal({
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+        return 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
       case 'in_progress':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
       case 'resolved':
-        return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+        return 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
       default:
         return 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'
     }
@@ -57,11 +57,11 @@ export function AlertRecordDetailModal({
   const getLevelBadgeColor = (level: string) => {
     switch (level) {
       case 'P0':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+        return 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
       case 'P1':
-        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
+        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
       case 'P2':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
       default:
         return 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'
     }
@@ -137,8 +137,8 @@ export function AlertRecordDetailModal({
 
         {/* Error Message */}
         {error && (
-          <div className="mb-4 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 dark:border-red-600 p-4 rounded-md">
-            <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
+          <div className="mb-4 bg-[var(--color-critical-bg)] border-l-4 border-[var(--color-critical)] p-4 rounded-md">
+            <p className="text-sm text-[var(--color-critical-text)]">{error}</p>
           </div>
         )}
 
@@ -158,7 +158,7 @@ export function AlertRecordDetailModal({
               <button
                 type="button"
                 onClick={handleViewNodeDetails}
-                className="text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+                className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] text-sm"
               >
                 查看节点详情
               </button>
@@ -217,7 +217,7 @@ export function AlertRecordDetailModal({
                     type="button"
                     onClick={() => handleStatusUpdate('in_progress')}
                     disabled={isUpdating}
-                    className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors disabled:opacity-50"
+                    className="px-4 py-2 bg-[var(--color-warning)] text-white rounded-md hover:bg-[var(--color-warning-hover)] transition-colors disabled:opacity-50"
                   >
                     标记为处理中
                   </button>
@@ -226,7 +226,7 @@ export function AlertRecordDetailModal({
                   type="button"
                   onClick={() => handleStatusUpdate('resolved')}
                   disabled={isUpdating}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-[var(--color-healthy)] text-white rounded-md hover:bg-[var(--color-healthy-hover)] transition-colors disabled:opacity-50"
                 >
                   标记为已解决
                 </button>

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
 import type { MetricTrendData } from '../../api/performance'
+import { useThemeColors } from '../../hooks/useThemeColors'
 
 interface TooltipParam {
   name: string
@@ -42,6 +43,7 @@ export function PerformanceTrendChart({
 }: PerformanceTrendChartProps) {
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<ECharts | null>(null)
+  const themeColors = useThemeColors()
 
   // Initialize chart
   useEffect(() => {
@@ -67,7 +69,7 @@ export function PerformanceTrendChart({
     const series: SeriesOption[] = []
 
     // Color palette for different metrics
-    const colors = ['#3b82f6', '#10b981', '#f59e0b'] // blue, green, amber
+    const colors = [themeColors.brand, themeColors.healthy, themeColors.warning]
 
     trendData.forEach((metric, index) => {
       if (!metric.data_points || metric.data_points.length === 0) return
@@ -123,7 +125,7 @@ export function PerformanceTrendChart({
         lineStyle: {
           width: 2,
           type: 'dashed',
-          color: '#10b981', // green
+          color: themeColors.healthy,
         },
         itemStyle: {
           opacity: 0,
@@ -131,7 +133,7 @@ export function PerformanceTrendChart({
         markLine: {
           silent: true,
           lineStyle: {
-            color: '#10b981',
+            color: themeColors.healthy,
             width: 2,
             type: 'dashed',
           },
@@ -151,7 +153,7 @@ export function PerformanceTrendChart({
         lineStyle: {
           width: 2,
           type: 'dashed',
-          color: '#34d399', // lighter green
+          color: themeColors.healthy,
         },
         itemStyle: {
           opacity: 0,
@@ -159,7 +161,7 @@ export function PerformanceTrendChart({
         markLine: {
           silent: true,
           lineStyle: {
-            color: '#34d399',
+            color: themeColors.healthy,
             width: 2,
             type: 'dashed',
           },

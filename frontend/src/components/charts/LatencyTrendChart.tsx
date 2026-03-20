@@ -10,6 +10,7 @@ import echarts, { graphic } from '../../lib/echarts-core'
 import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
 import type { DataPoint } from '../dashboard/TrendChart'
+import { useThemeColors } from '../../hooks/useThemeColors'
 
 function getCSSVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
@@ -22,14 +23,6 @@ export interface LatencyTrendChartProps {
   isLoading?: boolean
   showBaseline?: boolean
   baselineValue?: number
-}
-
-// Color palette from UI design
-const COLORS = {
-  latency: '#3b82f6',    // Blue-500
-  baseline: '#10b981',   // Green-500
-  areaGradientStart: 'rgba(59, 130, 246, 0.3)',
-  areaGradientEnd: 'rgba(59, 130, 246, 0.05)',
 }
 
 /**
@@ -53,6 +46,7 @@ export function LatencyTrendChart({
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
+  const themeColors = useThemeColors()
 
   const getChartOptions = useCallback((): EChartsOption => {
     const textColor = getCSSVar('--color-chart-text') || '#374151'
@@ -61,6 +55,9 @@ export function LatencyTrendChart({
     const tooltipBg = getCSSVar('--color-chart-tooltip-bg') || 'rgba(255,255,255,0.95)'
     const tooltipBorder = getCSSVar('--color-chart-tooltip-border') || '#e5e7eb'
     const tooltipText = getCSSVar('--color-chart-tooltip-text') || '#374151'
+
+    const latencyColor = themeColors.brand
+    const baselineColor = themeColors.healthy
 
     const series: SeriesOption[] = [
       {
@@ -71,16 +68,16 @@ export function LatencyTrendChart({
         symbol: 'circle',
         symbolSize: 4,
         lineStyle: {
-          color: COLORS.latency,
+          color: latencyColor,
           width: 2,
         },
         itemStyle: {
-          color: COLORS.latency,
+          color: latencyColor,
         },
         areaStyle: {
           color: new graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: COLORS.areaGradientStart },
-            { offset: 1, color: COLORS.areaGradientEnd },
+            { offset: 0, color: `${latencyColor}4D` },
+            { offset: 1, color: `${latencyColor}0D` },
           ]),
         },
       },
@@ -92,12 +89,12 @@ export function LatencyTrendChart({
         type: 'line',
         data: Array(data.length).fill(baselineValue),
         lineStyle: {
-          color: COLORS.baseline,
+          color: baselineColor,
           width: 2,
           type: 'dashed',
         },
         itemStyle: {
-          color: COLORS.baseline,
+          color: baselineColor,
         },
         symbol: 'none',
       })
@@ -168,7 +165,7 @@ export function LatencyTrendChart({
       },
       series,
     }
-  }, [data, showBaseline, baselineValue, t])
+  }, [data, showBaseline, baselineValue, t, themeColors])
 
   // Initialize chart only once on mount
   useEffect(() => {
@@ -219,7 +216,7 @@ export function LatencyTrendChart({
       {isLoading && (
         <div className="flex items-center justify-center h-full">
           <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"
+            className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand)]"
             role="status"
             aria-label={t('common.loading')}
           />
