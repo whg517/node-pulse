@@ -161,7 +161,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="px-6 py-4 border-b border-[var(--color-border)]">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-100">
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
             {mode === 'create' ? t('nodes.addNode') : t('nodes.editNode')}
           </h3>
         </div>
@@ -254,7 +254,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)]"
               placeholder="e.g., production, critical, backend (comma-separated)"
             />
-            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
               {t('nodes.tagsHint')}
             </p>
             {errors.tags && (
@@ -268,7 +268,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               type="button"
               onClick={onCancel}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-gray-200 dark:bg-slate-600 text-gray-800 dark:text-slate-200 rounded-md hover:bg-gray-300 dark:hover:bg-slate-500 transition-colors disabled:bg-gray-100 dark:disabled:bg-slate-700 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-hover-overlay)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('common.cancel')}
             </button>
