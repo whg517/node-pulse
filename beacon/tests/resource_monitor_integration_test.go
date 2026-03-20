@@ -83,7 +83,7 @@ log_to_console: false
 	}
 
 	// Create logrus adapter for monitor
-	logAdapter := &monitor.LogrusLogger{}
+	logAdapter := monitor.NewSlogLogger(logger.GetLogger())
 
 	// Convert config
 	monitorCfg := &monitor.ResourceMonitorConfig{
@@ -213,7 +213,7 @@ log_to_console: false
 	defer func() { _ = logger.Close() }()
 
 	scheduler, _ := probe.NewProbeScheduler(cfg.Probes)
-	logAdapter := &monitor.LogrusLogger{}
+	logAdapter := monitor.NewSlogLogger(logger.GetLogger())
 
 	monitorCfg := &monitor.ResourceMonitorConfig{
 		Enabled:              true,

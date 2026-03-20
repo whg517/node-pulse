@@ -2,7 +2,7 @@ package auth
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -210,7 +210,7 @@ func StartMetricsCollection(ctx context.Context, pool *pgxpool.Pool, interval ti
 		case <-ticker.C:
 			collectMetrics(ctx, pool)
 		case <-ctx.Done():
-			log.Println("[Metrics] Stopping metrics collection")
+			slog.Info("Stopping metrics collection", "component", "auth_metrics")
 			return
 		}
 	}
@@ -222,7 +222,7 @@ func collectMetrics(ctx context.Context, pool *pgxpool.Pool) {
 	var blacklistCount int64
 	err := pool.QueryRow(ctx, "SELECT COUNT(*) FROM token_blacklist").Scan(&blacklistCount)
 	if err != nil {
-		log.Printf("[Metrics] Error querying blacklist size: %v", err)
+		slog.Error("Error querying blacklist size", "component", "auth_metrics", "error", err)
 	} else {
 		UpdateBlacklistSize(float64(blacklistCount))
 	}
@@ -231,7 +231,7 @@ func collectMetrics(ctx context.Context, pool *pgxpool.Pool) {
 	var activeTokenCount int64
 	err = pool.QueryRow(ctx, "SELECT COUNT(*) FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW()").Scan(&activeTokenCount)
 	if err != nil {
-		log.Printf("[Metrics] Error querying active refresh tokens: %v", err)
+		slog.Error("Error querying active refresh tokens", "component", "auth_metrics", "error", err)
 	} else {
 		UpdateActiveRefreshTokens(float64(activeTokenCount))
 	}
@@ -240,7 +240,7 @@ func collectMetrics(ctx context.Context, pool *pgxpool.Pool) {
 	var userCount int64
 	err = pool.QueryRow(ctx, "SELECT COUNT(DISTINCT user_id) FROM refresh_tokens WHERE revoked_at IS NULL AND expires_at > NOW()").Scan(&userCount)
 	if err != nil {
-		log.Printf("[Metrics] Error querying active users: %v", err)
+		slog.Error("Error querying active users", "component", "auth_metrics", "error", err)
 	} else {
 		UpdateActiveUsers(float64(userCount))
 	}

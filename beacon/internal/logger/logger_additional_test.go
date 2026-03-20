@@ -1,11 +1,10 @@
 package logger
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/sirupsen/logrus"
 
 	"beacon/internal/config"
 )
@@ -69,9 +68,8 @@ func TestLogger_GetLogger(t *testing.T) {
 
 // TestLogger_GetLogger_SetDirectly tests GetLogger after direct set
 func TestLogger_GetLogger_SetDirectly(t *testing.T) {
-	// Set logger directly (as done in some tests)
-	testLogger := logrus.New()
-	testLogger.SetOutput(os.Stderr)
+	// Set logger directly
+	testLogger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	Logger = testLogger
 
 	l := GetLogger()
@@ -83,8 +81,8 @@ func TestLogger_GetLogger_SetDirectly(t *testing.T) {
 	}
 }
 
-// TestLogger_Close_MultiWriter tests Close with multi-writer
-func TestLogger_Close_MultiWriter(t *testing.T) {
+// TestLogger_Close tests Close
+func TestLogger_Close(t *testing.T) {
 	initAdditionalLogger(t)
 
 	// Close should not error
@@ -93,12 +91,13 @@ func TestLogger_Close_MultiWriter(t *testing.T) {
 	}
 }
 
-// TestLogger_Close_NonCloser tests Close when output is not a Closer
-func TestLogger_Close_NonCloser(t *testing.T) {
-	Logger = logrus.New()
-	Logger.SetOutput(os.Stderr) // os.Stderr is not an io.Closer for this
+// TestLogger_Close_NoFile tests Close when no file writer is set
+func TestLogger_Close_NoFile(t *testing.T) {
+	// Reset closer to nil
+	closer = nil
+	Logger = slog.New(slog.NewTextHandler(os.Stderr, nil))
 
-	// Close should not error (returns nil when not a Closer)
+	// Close should not error
 	if err := Close(); err != nil {
 		t.Errorf("Close() returned unexpected error: %v", err)
 	}

@@ -5,12 +5,11 @@
  * Uses standardized layout components for consistent UI.
  */
 
-import { useCallback, useEffect, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { createWebhook, deleteWebhook, updateWebhook } from '../api/webhooks'
 import type { CreateWebhookRequest } from '../api/webhooks'
-import { useWebhooksStore } from '../stores/webhooksStore'
 import { useAuthStore } from '../stores/authStore'
+import { useWebhooks } from '../hooks/useWebhooks'
 import { PageContainer, ErrorBanner, ConfirmDialog, ActionButton, LoadingSpinner } from '../components/common'
 import { PageHeader } from '../components/layout/PageHeader'
 import { WebhooksTable } from '../components/webhooks/WebhooksTable'
@@ -18,49 +17,44 @@ import { WebhookDialog } from '../components/webhooks/WebhookDialog'
 
 export default function WebhooksPage() {
   const { t } = useTranslation()
-  const { user } = useAuthStore()
-  const webhooksStore = useWebhooksStore()
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const user = useAuthStore((state) => state.user)
+  const {
+    webhooks,
+    isLoading,
+    error,
+    reload,
+    createWebhook,
+    updateWebhook,
+    deleteWebhook,
+    toggleWebhookEnabled,
+    getWebhookById,
+  } = useWebhooks()
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
-  const [selectedWebhook, setSelectedWebhook] = useState<typeof webhooksStore.webhooks[0] | undefined>(undefined)
+  const [selectedWebhookId, setSelectedWebhookId] = useState<string | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [webhookToDelete, setWebhookToDelete] = useState<string | undefined>(undefined)
+
+  const selectedWebhook = useMemo(() => {
+    return selectedWebhookId ? getWebhookById(selectedWebhookId) : undefined
+  }, [getWebhookById, selectedWebhookId])
 
   // Check if user can edit (admin only)
   const canEdit = user?.role === 'admin'
 
-  const loadWebhooks = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      await webhooksStore.fetchWebhooks()
-    } catch (err) {
-      setError(err as Error)
-      console.error('Failed to load webhooks:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [webhooksStore])
-
-  useEffect(() => {
-    void loadWebhooks()
-  }, [loadWebhooks])
-
   const handleCreate = () => {
     setDialogMode('create')
-    setSelectedWebhook(undefined)
+    setSelectedWebhookId(null)
     setDialogOpen(true)
   }
 
   const handleEdit = (id: string) => {
-    const webhook = webhooksStore.webhooks.find((w) => w.id === id)
+    const webhook = getWebhookById(id)
     if (webhook) {
       setDialogMode('edit')
-      setSelectedWebhook(webhook)
+      setSelectedWebhookId(webhook.id)
       setDialogOpen(true)
     }
   }
@@ -77,7 +71,6 @@ export default function WebhooksPage() {
       await deleteWebhook(webhookToDelete)
       setDeleteConfirmOpen(false)
       setWebhookToDelete(undefined)
-      await webhooksStore.fetchWebhooks()
     } catch (error) {
       console.error('Failed to delete webhook:', error)
     }
@@ -86,8 +79,7 @@ export default function WebhooksPage() {
   const handleToggleEnabled = (id: string, enabled: boolean) => {
     const submitToggle = async () => {
       try {
-        await updateWebhook(id, { enabled })
-        await webhooksStore.fetchWebhooks()
+        await toggleWebhookEnabled(id, enabled)
       } catch (error) {
         console.error('Failed to toggle webhook:', error)
       }
@@ -107,7 +99,7 @@ export default function WebhooksPage() {
       }
 
       setDialogOpen(false)
-      await webhooksStore.fetchWebhooks()
+      setSelectedWebhookId(null)
     } catch (error) {
       console.error('Failed to submit webhook:', error)
       throw error
@@ -155,7 +147,7 @@ export default function WebhooksPage() {
       {error && (
         <ErrorBanner
           error={error}
-          onRetry={loadWebhooks}
+          onRetry={reload}
           className="mb-6"
         />
       )}
@@ -170,7 +162,7 @@ export default function WebhooksPage() {
       {/* Content */}
       {!isLoading && !error && (
         <WebhooksTable
-          webhooks={webhooksStore.webhooks}
+          webhooks={webhooks}
           onEdit={handleEdit}
           onDelete={handleDelete}
           onToggleEnabled={handleToggleEnabled}
@@ -184,7 +176,10 @@ export default function WebhooksPage() {
           mode={dialogMode}
           initialData={selectedWebhook}
           onSubmit={handleSubmit}
-          onCancel={() => setDialogOpen(false)}
+          onCancel={() => {
+            setDialogOpen(false)
+            setSelectedWebhookId(null)
+          }}
         />
       )}
 

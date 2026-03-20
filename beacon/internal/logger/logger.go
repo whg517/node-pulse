@@ -3,136 +3,175 @@ package logger
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/sirupsen/logrus"
 	"gopkg.in/natefinch/lumberjack.v2"
 
 	"beacon/internal/config"
 )
 
 var (
-	// Logger is the global logger instance
-	Logger *logrus.Logger
+	// Logger is the global structured logger instance.
+	Logger *slog.Logger
+
+	// currentLevel tracks the configured log level for inspection.
+	currentLevel slog.Level
+
+	// closer holds the log file writer for cleanup.
+	closer io.Closer
 )
 
-// InitLogger initializes the global logger with configuration
+// InitLogger initializes the global logger with configuration.
+// It uses log/slog with a JSON handler, supporting log rotation via lumberjack.
 func InitLogger(cfg *config.Config) error {
-	Logger = logrus.New()
-
-	// Set log level
-	level, err := logrus.ParseLevel(cfg.LogLevel)
+	// Parse log level
+	level, err := parseLevel(cfg.LogLevel)
 	if err != nil {
 		return fmt.Errorf("invalid log level %s: %w", cfg.LogLevel, err)
 	}
-	Logger.SetLevel(level)
+	currentLevel = level
 
-	// Set JSON formatter
-	Logger.SetFormatter(&logrus.JSONFormatter{
-		TimestampFormat: "2006-01-02T15:04:05Z07:00",
-		FieldMap: logrus.FieldMap{
-			logrus.FieldKeyTime:  "timestamp",
-			logrus.FieldKeyLevel: "level",
-			logrus.FieldKeyMsg:   "message",
-		},
-	})
-
-	// Create log directory if not exists
+	// Create log directory if it does not exist
 	logDir := filepath.Dir(cfg.LogFile)
 	if err := os.MkdirAll(logDir, 0755); err != nil {
 		return fmt.Errorf("failed to create log directory %s: %w", logDir, err)
 	}
 
-	// Configure lumberjack for log rotation
-	lumberjackLogger := &lumberjack.Logger{
-		Filename:   cfg.LogFile,        // Log file path
-		MaxSize:    cfg.LogMaxSize,     // Max size in MB
-		MaxAge:     cfg.LogMaxAge,      // Max age in days
-		MaxBackups: cfg.LogMaxBackups,  // Max number of old log files
-		Compress:   cfg.LogCompress,    // Compress rotated files
-		LocalTime:  true,               // Use local time for file names
+	// Configure lumberjack for automatic log rotation
+	lj := &lumberjack.Logger{
+		Filename:   cfg.LogFile,
+		MaxSize:    cfg.LogMaxSize,
+		MaxAge:     cfg.LogMaxAge,
+		MaxBackups: cfg.LogMaxBackups,
+		Compress:   cfg.LogCompress,
+		LocalTime:  true,
 	}
+	closer = lj
 
-	// Multi-writer: file + console (if enabled)
+	// Build output writer (file + optional console)
 	var writers []io.Writer
-	writers = append(writers, lumberjackLogger)
-
+	writers = append(writers, lj)
 	if cfg.LogToConsole {
 		writers = append(writers, os.Stdout)
 	}
+	output := io.MultiWriter(writers...)
 
-	// Set output to multi-writer
-	Logger.SetOutput(io.MultiWriter(writers...))
+	// Create JSON handler with custom attribute names to match existing log schema:
+	//   "time" -> "timestamp", "msg" -> "message"
+	opts := &slog.HandlerOptions{
+		Level: level,
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+			switch a.Key {
+			case slog.TimeKey:
+				a.Key = "timestamp"
+			case slog.MessageKey:
+				a.Key = "message"
+			}
+			return a
+		},
+	}
+
+	Logger = slog.New(slog.NewJSONHandler(output, opts))
+	// Set as global default so slog.Info() etc. use this logger
+	slog.SetDefault(Logger)
 
 	return nil
 }
 
-// WithFields creates a logger entry with structured fields
-func WithFields(fields map[string]interface{}) *logrus.Entry {
-	return Logger.WithFields(fields)
+// parseLevel converts a level string to slog.Level.
+func parseLevel(levelStr string) (slog.Level, error) {
+	switch strings.ToUpper(levelStr) {
+	case "DEBUG":
+		return slog.LevelDebug, nil
+	case "INFO":
+		return slog.LevelInfo, nil
+	case "WARN", "WARNING":
+		return slog.LevelWarn, nil
+	case "ERROR":
+		return slog.LevelError, nil
+	default:
+		return 0, fmt.Errorf("unknown level %q", levelStr)
+	}
 }
 
-// WithField creates a logger entry with a single field
-func WithField(key string, value interface{}) *logrus.Entry {
-	return Logger.WithField(key, value)
+// GetLevel returns the configured log level.
+func GetLevel() slog.Level {
+	return currentLevel
 }
 
-// WithError creates a logger entry with an error field
-func WithError(err error) *logrus.Entry {
-	return Logger.WithError(err)
+// WithFields returns a child logger that includes the provided key-value pairs.
+func WithFields(fields map[string]interface{}) *slog.Logger {
+	args := make([]any, 0, len(fields)*2)
+	for k, v := range fields {
+		args = append(args, k, v)
+	}
+	return Logger.With(args...)
 }
 
-// Info logs an info message
+// WithField returns a child logger with a single additional field.
+func WithField(key string, value interface{}) *slog.Logger {
+	return Logger.With(key, value)
+}
+
+// WithError returns a child logger with an "error" field.
+func WithError(err error) *slog.Logger {
+	return Logger.With("error", err)
+}
+
+// Info logs a message at INFO level.
 func Info(args ...interface{}) {
-	Logger.Info(args...)
+	Logger.Info(fmt.Sprint(args...))
 }
 
-// Infof logs a formatted info message
+// Infof logs a formatted message at INFO level.
 func Infof(format string, args ...interface{}) {
-	Logger.Infof(format, args...)
+	Logger.Info(fmt.Sprintf(format, args...))
 }
 
-// Warn logs a warning message
+// Warn logs a message at WARN level.
 func Warn(args ...interface{}) {
-	Logger.Warn(args...)
+	Logger.Warn(fmt.Sprint(args...))
 }
 
-// Warnf logs a formatted warning message
+// Warnf logs a formatted message at WARN level.
 func Warnf(format string, args ...interface{}) {
-	Logger.Warnf(format, args...)
+	Logger.Warn(fmt.Sprintf(format, args...))
 }
 
-// Error logs an error message
+// Error logs a message at ERROR level.
 func Error(args ...interface{}) {
-	Logger.Error(args...)
+	Logger.Error(fmt.Sprint(args...))
 }
 
-// Errorf logs a formatted error message
+// Errorf logs a formatted message at ERROR level.
 func Errorf(format string, args ...interface{}) {
-	Logger.Errorf(format, args...)
+	Logger.Error(fmt.Sprintf(format, args...))
 }
 
-// Fatal logs a fatal message and exits
+// Fatal logs a message at ERROR level, then exits with status 1.
 func Fatal(args ...interface{}) {
-	Logger.Fatal(args...)
+	Logger.Error(fmt.Sprint(args...))
+	os.Exit(1)
 }
 
-// Fatalf logs a formatted fatal message and exits
+// Fatalf logs a formatted message at ERROR level, then exits with status 1.
 func Fatalf(format string, args ...interface{}) {
-	Logger.Fatalf(format, args...)
+	Logger.Error(fmt.Sprintf(format, args...))
+	os.Exit(1)
 }
 
-// Close flushes any buffered log entries
+// Close flushes any buffered log entries and releases file resources.
 func Close() error {
-	// lumberjack.Logger implements io.WriteCloser
-	if closer, ok := Logger.Out.(io.Closer); ok {
+	if closer != nil {
 		return closer.Close()
 	}
 	return nil
 }
 
-// GetLogger returns the global logger instance
-func GetLogger() *logrus.Logger {
+// GetLogger returns the global slog.Logger instance.
+func GetLogger() *slog.Logger {
 	return Logger
 }

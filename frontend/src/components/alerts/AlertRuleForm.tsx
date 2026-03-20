@@ -61,14 +61,14 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Metric Type Select */}
       <div>
-        <label htmlFor="metric" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="metric" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
           {t('alerts.alertType')}
         </label>
         <select
           id="metric"
           value={metric}
           onChange={(e) => setMetric(e.target.value as 'latency' | 'packet_loss_rate' | 'jitter')}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
         >
           <option value="latency">{t('metrics.latency')} (ms)</option>
           <option value="packet_loss_rate">{t('metrics.packetLoss')} (%)</option>
@@ -78,7 +78,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
 
       {/* Threshold Input */}
       <div>
-        <label htmlFor="threshold" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="threshold" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
           {t('alerts.threshold')}
         </label>
         <input
@@ -88,7 +88,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           onChange={(e) => setThreshold(Number(e.target.value))}
           min="0"
           step="0.01"
-          className={`mt-1 block w-full border ${errors.threshold ? 'border-red-300' : 'border-gray-300'} rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+          className={`mt-1 block w-full border ${errors.threshold ? 'border-red-300 dark:border-red-500' : 'border-gray-300 dark:border-slate-600'} rounded-md shadow-sm py-2 px-3 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
         />
         {errors.threshold && (
           <p className="mt-2 text-sm text-red-600">{errors.threshold}</p>
@@ -97,14 +97,14 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
 
       {/* Alert Level Select */}
       <div>
-        <label htmlFor="level" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="level" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
           {t('alerts.severity')}
         </label>
         <select
           id="level"
           value={level}
           onChange={(e) => setLevel(e.target.value as 'P0' | 'P1' | 'P2')}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
         >
           <option value="P0">P0 - {t('alerts.critical')}</option>
           <option value="P1">P1 - {t('alerts.warning')}</option>
@@ -114,14 +114,14 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
 
       {/* Node Selection */}
       <div>
-        <label htmlFor="node" className="block text-sm font-medium text-gray-700">
+        <label htmlFor="node" className="block text-sm font-medium text-gray-700 dark:text-slate-300">
           {t('alerts.scope')}
         </label>
         <select
           id="node"
           value={nodeId || ''}
           onChange={(e) => setNodeId(e.target.value || null)}
-          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
+          className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md border"
         >
           <option value="">{t('alerts.globalRule')}</option>
           {nodes.map((node) => (
@@ -130,7 +130,7 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
             </option>
           ))}
         </select>
-        <p className="mt-2 text-sm text-gray-500">
+        <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
           {t('alerts.scopeHint')}
         </p>
       </div>
@@ -147,20 +147,20 @@ export function AlertRuleForm({ mode, initialData, nodes, onSubmit, onCancel }: 
           />
         </div>
         <div className="ml-3 text-sm">
-          <label htmlFor="enabled" className="font-medium text-gray-700">
+          <label htmlFor="enabled" className="font-medium text-gray-700 dark:text-slate-300">
             {t('status.enabled')}
           </label>
-          <p className="text-gray-500">{t('alerts.enabledHint')}</p>
+          <p className="text-gray-500 dark:text-slate-400">{t('alerts.enabledHint')}</p>
         </div>
       </div>
 
       {/* Submit and Cancel Buttons */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+      <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-slate-700">
         <button
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('common.cancel')}
         </button>

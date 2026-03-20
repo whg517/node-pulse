@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import TrendChart, { DataPoint, TimeRange, MetricType } from '../TrendChart'
 
@@ -46,7 +46,7 @@ describe('TrendChart', () => {
     )
 
     const button30d = screen.getByText('30 Days')
-    button30d.click()
+    fireEvent.click(button30d)
 
     expect(handleTimeRangeChange).toHaveBeenCalledWith('30d')
   })

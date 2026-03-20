@@ -195,7 +195,7 @@ func TestRateLimitMiddleware_WindowExpiry(t *testing.T) {
 	rateLimiter = &RateLimiter{
 		visitors: map[string]*visitor{
 			"ip:": {
-				requests: unauthLimit + 100, // way over limit
+				requests: unauthLimit + 100,                // way over limit
 				timer:    time.Now().Add(-2 * time.Minute), // but window expired
 			},
 		},
@@ -214,6 +214,106 @@ func TestRateLimitMiddleware_WindowExpiry(t *testing.T) {
 
 	// Window expired, so counter reset → allowed
 	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestExtractUserIDFromBearer(t *testing.T) {
+	// A real JWT has three base64url parts: header.payload.signature
+	// Construct a minimal valid-structure token with user_id in payload
+	// header: {"alg":"RS256","typ":"JWT"}
+	// payload: {"user_id":"user-abc","role":"admin"}
+	// signature: arbitrary (not verified by extractUserIDFromBearer)
+	header := "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9"
+	payload := "eyJ1c2VyX2lkIjoidXNlci1hYmMiLCJyb2xlIjoiYWRtaW4ifQ" // {"user_id":"user-abc","role":"admin"}
+	sig := "FAKESIGNATURE"
+	token := header + "." + payload + "." + sig
+
+	tests := []struct {
+		name       string
+		authHeader string
+		wantUserID string
+	}{
+		{
+			name:       "valid Bearer token with user_id",
+			authHeader: "Bearer " + token,
+			wantUserID: "user-abc",
+		},
+		{
+			name:       "no Authorization header",
+			authHeader: "",
+			wantUserID: "",
+		},
+		{
+			name:       "Basic auth (not Bearer)",
+			authHeader: "Basic dXNlcjpwYXNz",
+			wantUserID: "",
+		},
+		{
+			name:       "Bearer with invalid JWT structure",
+			authHeader: "Bearer notajwt",
+			wantUserID: "",
+		},
+		{
+			name:       "Bearer with invalid base64 payload",
+			authHeader: "Bearer header.!!!invalid!!!.sig",
+			wantUserID: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := extractUserIDFromBearer(tt.authHeader)
+			assert.Equal(t, tt.wantUserID, got)
+		})
+	}
+}
+
+func TestRateLimitMiddleware_BearerTokenBeforeJWT(t *testing.T) {
+	// Regression test: rate limiter runs BEFORE JWTAuthMiddleware (router-level registration).
+	// Authenticated requests must use per-user limit (authLimit=600), not per-IP (unauthLimit=100).
+	origEnabled := rateLimitEnabled
+	origLimiter := rateLimiter
+	defer func() {
+		rateLimitEnabled = origEnabled
+		rateLimiter = origLimiter
+	}()
+
+	rateLimitEnabled = true
+	rateLimiter = &RateLimiter{
+		visitors: make(map[string]*visitor),
+		window:   time.Minute,
+	}
+
+	// Pre-fill IP counter beyond unauthLimit but below authLimit
+	// to prove requests are bucketed per user, not per IP
+	rateLimiter.visitors["ip:"] = &visitor{
+		requests: unauthLimit + 10, // over IP limit, but under user limit
+		timer:    time.Now(),
+	}
+
+	router := gin.New()
+	// Rate limiter registered BEFORE JWT (as in routes.go) — no user_id in context yet
+	router.Use(RateLimitMiddleware())
+	router.GET("/api/v1/webhooks", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"ok": true})
+	})
+
+	// Construct a Bearer token with user_id in payload (signature not checked here)
+	payload := "eyJ1c2VyX2lkIjoidXNlci1hYmMiLCJyb2xlIjoiYWRtaW4ifQ"
+	token := "eyJhbGciOiJSUzI1NiJ9." + payload + ".FAKESIG"
+
+	req, _ := http.NewRequest("GET", "/api/v1/webhooks", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Should be allowed: bucketed as user:user-abc (authLimit=600), not as IP (over unauthLimit)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// Verify the user bucket was created (not IP bucket)
+	rateLimiter.mu.RLock()
+	_, userBucketExists := rateLimiter.visitors["user:user-abc"]
+	rateLimiter.mu.RUnlock()
+	assert.True(t, userBucketExists, "expected a user:user-abc bucket to be created")
 }
 
 func TestIsRateLimitEnabled(t *testing.T) {
@@ -378,9 +478,9 @@ func TestSetDBQueryDuration_NoCollector(t *testing.T) {
 // ---- Auth middleware tests ----
 
 type mockJWTService struct {
-	claims  *JWTClaims
-	err     error
-	revoked bool
+	claims   *JWTClaims
+	err      error
+	revoked  bool
 	checkErr error
 }
 

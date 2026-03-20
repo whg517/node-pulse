@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,8 +11,6 @@ import (
 	"time"
 
 	"beacon/internal/config"
-
-	"github.com/sirupsen/logrus"
 )
 
 // TestConfigReload_BeaconStartup verifies Beacon can start with config watcher
@@ -396,11 +395,9 @@ log_file: /tmp/beacon-concurrent-test.log
 
 // Helper functions
 
-func setupTestLogger(t *testing.T) *logrus.Logger {
-	logger := logrus.New()
-	logger.SetOutput(os.Stdout)
-	logger.SetLevel(logrus.DebugLevel)
-	return logger
+func setupTestLogger(t *testing.T) *slog.Logger {
+	t.Helper()
+	return slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
 }
 
 func contains(s, substr string) bool {

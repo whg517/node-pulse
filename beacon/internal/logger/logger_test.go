@@ -2,6 +2,7 @@ package logger
 
 import (
 	"encoding/json"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,12 +57,20 @@ func TestInitLogger_LogLevels(t *testing.T) {
 	tempDir := t.TempDir()
 	logFile := filepath.Join(tempDir, "beacon.log")
 
-	levels := []string{"DEBUG", "INFO", "WARN", "ERROR"}
+	levels := []struct {
+		input    string
+		expected slog.Level
+	}{
+		{"DEBUG", slog.LevelDebug},
+		{"INFO", slog.LevelInfo},
+		{"WARN", slog.LevelWarn},
+		{"ERROR", slog.LevelError},
+	}
 
-	for _, level := range levels {
-		t.Run(level, func(t *testing.T) {
+	for _, tc := range levels {
+		t.Run(tc.input, func(t *testing.T) {
 			cfg := &config.Config{
-				LogLevel:      level,
+				LogLevel:      tc.input,
 				LogFile:       logFile,
 				LogMaxSize:    10,
 				LogMaxAge:     7,
@@ -72,18 +81,11 @@ func TestInitLogger_LogLevels(t *testing.T) {
 
 			err := InitLogger(cfg)
 			if err != nil {
-				t.Fatalf("InitLogger with level %s failed: %v", level, err)
+				t.Fatalf("InitLogger with level %s failed: %v", tc.input, err)
 			}
 
-			// Verify log level is set correctly
-			// Note: logrus uses "warning" instead of "warn" for WARN level
-			expectedLevel := strings.ToLower(level)
-			if level == "WARN" {
-				expectedLevel = "warning"
-			}
-
-			if Logger.GetLevel().String() != expectedLevel {
-				t.Errorf("Expected log level %s, got %s", expectedLevel, Logger.GetLevel().String())
+			if GetLevel() != tc.expected {
+				t.Errorf("Expected log level %v, got %v", tc.expected, GetLevel())
 			}
 
 			_ = Close()
@@ -200,14 +202,14 @@ func TestJSONFormatter(t *testing.T) {
 
 	// Verify timestamp format (ISO 8601)
 	if timestamp, ok := logEntry["timestamp"].(string); ok {
-		if _, err := time.Parse(time.RFC3339, timestamp); err != nil {
+		if _, err := time.Parse(time.RFC3339Nano, timestamp); err != nil {
 			t.Errorf("Invalid timestamp format: %s, error: %v", timestamp, err)
 		}
 	}
 
-	// Verify level
-	if logEntry["level"] != "info" {
-		t.Errorf("Expected level 'info', got '%v'", logEntry["level"])
+	// Verify level (slog outputs uppercase level names)
+	if logEntry["level"] != "INFO" {
+		t.Errorf("Expected level 'INFO', got '%v'", logEntry["level"])
 	}
 }
 
@@ -377,21 +379,16 @@ func TestLogLevels(t *testing.T) {
 		t.Errorf("Expected 3 log entries, got %d", len(lines))
 	}
 
-	// Verify each log entry has correct level
+	// slog outputs uppercase level names: INFO, WARN, ERROR
+	expectedLevels := []string{"INFO", "WARN", "ERROR"}
 	for i, line := range lines {
 		var logEntry map[string]interface{}
 		if err := json.Unmarshal([]byte(line), &logEntry); err != nil {
 			t.Fatalf("Failed to parse log JSON: %v", err)
 		}
 
-		expectedLevel := map[int]string{
-			0: "info",
-			1: "warning",
-			2: "error",
-		}[i]
-
-		if logEntry["level"] != expectedLevel {
-			t.Errorf("Entry %d: expected level '%s', got '%v'", i, expectedLevel, logEntry["level"])
+		if logEntry["level"] != expectedLevels[i] {
+			t.Errorf("Entry %d: expected level '%s', got '%v'", i, expectedLevels[i], logEntry["level"])
 		}
 	}
 }
@@ -416,9 +413,9 @@ func TestLogToConsole(t *testing.T) {
 		t.Fatalf("InitLogger failed: %v", err)
 	}
 
-	// Verify logger output is set (should be multi-writer)
-	if Logger.Out == nil {
-		t.Error("Logger output is nil")
+	// Verify logger is not nil
+	if Logger == nil {
+		t.Error("Logger is nil")
 	}
 
 	_ = Close()

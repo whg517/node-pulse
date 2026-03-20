@@ -42,6 +42,15 @@ const REFRESH_TIMEOUT_MS = 10_000
  * Pending request AbortControllers for cleanup on logout
  */
 const pendingRequests = new Set<AbortController>()
+let inFlightRefreshPromise: Promise<string> | null = null
+
+function shouldLogApiClientDebug(): boolean {
+  return import.meta.env.DEV && import.meta.env.MODE !== 'test'
+}
+
+function shouldLogApiClientErrors(): boolean {
+  return import.meta.env.MODE !== 'test'
+}
 
 // ============== Utility Functions ==============
 
@@ -165,7 +174,9 @@ async function makeRequest<T>(
 
     // Handle 5xx errors - don't logout, just throw
     if (response.status >= 500) {
-      console.error(`[apiClient] Server error (${response.status}) on ${endpoint}`)
+      if (shouldLogApiClientErrors()) {
+        console.error(`[apiClient] Server error (${response.status}) on ${endpoint}`)
+      }
       throw new ApiError(
         'Server temporarily unavailable. Please try again later.',
         'ERR_SERVER_ERROR',
@@ -191,6 +202,20 @@ async function makeRequest<T>(
  * @returns The new access token
  */
 async function performRefresh(): Promise<string> {
+  if (inFlightRefreshPromise) {
+    return inFlightRefreshPromise
+  }
+
+  inFlightRefreshPromise = executeRefresh()
+
+  try {
+    return await inFlightRefreshPromise
+  } finally {
+    inFlightRefreshPromise = null
+  }
+}
+
+async function executeRefresh(): Promise<string> {
   const authStore = useAuthStore.getState()
 
   // Create AbortController for timeout
@@ -212,26 +237,34 @@ async function performRefresh(): Promise<string> {
     if (!response.ok) {
       // Check for 5xx errors
       if (response.status >= 500) {
-        console.error('[apiClient] Refresh failed with server error:', response.status)
+        if (shouldLogApiClientErrors()) {
+          console.error('[apiClient] Refresh failed with server error:', response.status)
+        }
         throw new ApiError('Server error during refresh', 'ERR_SERVER_ERROR', undefined, response.status)
       }
 
       // 429 is a transient rate-limit, not an auth failure - don't count or logout
       if (response.status === 429) {
-        console.warn('[apiClient] Token refresh rate-limited (429), will retry later')
+        if (shouldLogApiClientErrors()) {
+          console.warn('[apiClient] Token refresh rate-limited (429), will retry later')
+        }
         throw new ApiError('Too many refresh requests, please wait a moment', 'ERR_RATE_LIMIT_EXCEEDED', undefined, 429)
       }
 
       // 409 Conflict means token was already used by another concurrent refresh
       // This is not an auth failure - another refresh succeeded, so we should retry
       if (response.status === 409) {
-        console.warn('[apiClient] Token refresh conflict (409) - token already used by concurrent request')
+        if (shouldLogApiClientErrors()) {
+          console.warn('[apiClient] Token refresh conflict (409) - token already used by concurrent request')
+        }
         // Wait a brief moment for the other refresh to complete and update the store
         await new Promise(resolve => setTimeout(resolve, 100))
         // Check if we now have a valid access token from the other refresh
         const { accessToken } = useAuthStore.getState()
         if (accessToken) {
-          console.log('[apiClient] Access token available after 409, returning existing token')
+          if (shouldLogApiClientDebug()) {
+            console.log('[apiClient] Access token available after 409, returning existing token')
+          }
           return accessToken
         }
         // If still no token, throw a retryable error
@@ -248,7 +281,7 @@ async function performRefresh(): Promise<string> {
     const expiry = Date.now() + expiresIn * 1000
     authStore.setAccessToken(data.data.access_token, expiresIn * 1000)
 
-    if (import.meta.env.DEV) {
+    if (shouldLogApiClientDebug()) {
       console.log(`[apiClient] Token refreshed successfully, expires at ${new Date(expiry).toISOString()}`)
     }
 
@@ -258,7 +291,9 @@ async function performRefresh(): Promise<string> {
 
     // Handle timeout specifically
     if (error instanceof Error && error.name === 'AbortError') {
-      console.error('[apiClient] Token refresh timed out after 10 seconds')
+      if (shouldLogApiClientErrors()) {
+        console.error('[apiClient] Token refresh timed out after 10 seconds')
+      }
       throw new AuthenticationError('Token refresh timed out')
     }
 
@@ -274,7 +309,7 @@ export function cancelPendingRequests(): void {
     controller.abort()
   })
   pendingRequests.clear()
-  if (import.meta.env.DEV) {
+  if (shouldLogApiClientDebug()) {
     console.log('[apiClient] Cancelled all pending requests')
   }
 }
@@ -284,6 +319,7 @@ export function cancelPendingRequests(): void {
  */
 export function resetModuleState(): void {
   pendingRequests.clear()
+  inFlightRefreshPromise = null
 }
 
 // ============== Error Handling ==============
@@ -322,7 +358,9 @@ async function handleError(response: Response): Promise<never> {
 
   // Log token-redacted errors for debugging
   if (code.includes('TOKEN') || code.includes('AUTH')) {
-    console.error(`[apiClient] Auth error: ${code} - ${message}`)
+    if (shouldLogApiClientErrors()) {
+      console.error(`[apiClient] Auth error: ${code} - ${message}`)
+    }
   }
 
   // Map HTTP status codes to error classes

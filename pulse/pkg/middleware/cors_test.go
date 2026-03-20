@@ -26,7 +26,7 @@ func TestCORSMiddleware(t *testing.T) {
 	}{
 		{
 			name:           "Allowed origin from default list",
-			origin:         "http://localhost:3000",
+			origin:         "http://localhost:4173",
 			method:         "GET",
 			expectedStatus: http.StatusOK,
 			expectCORS:     true,
@@ -40,7 +40,7 @@ func TestCORSMiddleware(t *testing.T) {
 		},
 		{
 			name:           "Preflight OPTIONS request",
-			origin:         "http://localhost:3000",
+			origin:         "http://localhost:4173",
 			method:         "OPTIONS",
 			expectedStatus: http.StatusNoContent,
 			expectCORS:     true,
@@ -140,7 +140,7 @@ func TestCORSMiddleware_CustomOrigins(t *testing.T) {
 		},
 		{
 			name:       "Disallowed origin (localhost not in custom list)",
-			origin:     "http://localhost:3000",
+			origin:     "http://localhost:4173",
 			expectCORS: false,
 		},
 		{

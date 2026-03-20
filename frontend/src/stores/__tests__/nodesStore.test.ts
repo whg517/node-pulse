@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useNodesStore } from '../nodesStore'
 import * as nodesApi from '../../api/nodes'
@@ -9,6 +9,8 @@ vi.mock('../../api/nodes', () => ({
 }))
 
 describe('useNodesStore', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+
   beforeEach(() => {
     // Reset store state before each test
     useNodesStore.setState({
@@ -17,6 +19,11 @@ describe('useNodesStore', () => {
       nodeStatuses: {},
     })
     vi.clearAllMocks()
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
   })
 
   it('should have initial state', () => {

@@ -17,6 +17,8 @@ vi.mock('../../api/client', () => ({
 }))
 
 describe('useAuthStore', () => {
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
+
   beforeEach(() => {
     // Reset store state before each test
     useAuthStore.setState({
@@ -29,10 +31,12 @@ describe('useAuthStore', () => {
       refreshFailureCount: 0,
     })
     vi.clearAllMocks()
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
   })
 
   afterEach(() => {
     vi.clearAllTimers()
+    consoleErrorSpy.mockRestore()
   })
 
   it('should have initial state', () => {

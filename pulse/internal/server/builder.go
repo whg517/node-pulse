@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/gin-gonic/gin"
 	"github.com/whg517/node-pulse/pulse/internal/db"
@@ -52,13 +52,13 @@ func (b *Builder) Build() (*Server, error) {
 	// so that the otelgin middleware picks up the correct global TracerProvider).
 	if err := srv.initTelemetry(); err != nil {
 		// Non-fatal: log a warning and continue without tracing
-		log.Printf("[WARN] [Server] Telemetry initialization failed: %v", err)
+		slog.Warn("Telemetry initialization failed", "component", "server", "error", err)
 	}
 
 	// Initialize database
 	if err := srv.initDatabase(); err != nil {
-		log.Printf("[WARN] [Server] Database initialization failed: %v", err)
-		log.Println("[WARN] [Server] Starting in DEGRADED MODE")
+		slog.Warn("Database initialization failed, starting in DEGRADED MODE",
+			"component", "server", "error", err)
 		srv.healthChecker = health.New(nil, nil, nil)
 	} else {
 		// Run migrations
@@ -108,7 +108,7 @@ func (s *Server) initTelemetry() error {
 		return err
 	}
 	s.telemetryProvider = provider
-	log.Println("[INFO] [Server] Telemetry initialized")
+	slog.Info("Telemetry initialized", "component", "server")
 	return nil
 }
 
@@ -120,19 +120,19 @@ func (s *Server) initDatabase() error {
 	}
 
 	s.database = database
-	log.Println("[INFO] [Server] Database initialized")
+	slog.Info("Database initialized", "component", "server")
 	return nil
 }
 
 // runMigrations runs database migrations
 func (s *Server) runMigrations() error {
-	log.Println("[INFO] [Server] Running database migrations...")
+	slog.Info("Running database migrations", "component", "server")
 	ctx := context.Background()
 	if err := db.Migrate(ctx, s.database.Pool); err != nil {
-		log.Fatalf("[ERROR] [Server] Migration failed: %v", err)
+		slog.Error("Migration failed", "component", "server", "error", err)
 		return err
 	}
-	log.Println("[INFO] [Server] Database migrations completed")
+	slog.Info("Database migrations completed", "component", "server")
 	return nil
 }
 
@@ -144,7 +144,7 @@ func (s *Server) initScheduler() error {
 	}
 
 	s.scheduler = sched
-	log.Println("[INFO] [Server] Scheduler initialized")
+	slog.Info("Scheduler initialized", "component", "server")
 	return nil
 }
 

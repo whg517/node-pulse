@@ -1,5 +1,5 @@
-import { render, screen, waitFor, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { MemoryRouter } from 'react-router-dom'
 import NodeComparisonPage from '../NodeComparison'
 import * as nodesApi from '../../api/nodes'
@@ -125,6 +125,7 @@ vi.mock('../../stores/dashboardStore', () => ({
 
 describe('NodeComparisonPage', () => {
   const mockFetchNodes = vi.mocked(nodesApi.fetchNodes)
+  let consoleErrorSpy: ReturnType<typeof vi.spyOn>
 
   const mockNodes = [
     {
@@ -162,12 +163,17 @@ describe('NodeComparisonPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     global.fetch = vi.fn()
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
     // Reset mock comparison state
     mockComparisonState.selectedNodeIds = []
     mockComparisonState.selectedMetrics = ['latency_ms']
     mockComparisonState.timeRange = '24h'
     mockComparisonState.groupBy = 'none'
+  })
+
+  afterEach(() => {
+    consoleErrorSpy.mockRestore()
   })
 
   it('renders page with title and description', async () => {
@@ -222,7 +228,7 @@ describe('NodeComparisonPage', () => {
 
     // Select one node and verify the store function is called
     const node1Checkbox = screen.getByLabelText(/Node 1/i)
-    node1Checkbox.click()
+    fireEvent.click(node1Checkbox)
 
     await waitFor(() => {
       expect(mockSetComparisonNodeIds).toHaveBeenCalledWith(['node-1'])
@@ -321,8 +327,8 @@ describe('NodeComparisonPage', () => {
     expect(node2Checkbox).not.toBeDisabled()
 
     // Interact with checkboxes
-    node1Checkbox.click()
-    node2Checkbox.click()
+    fireEvent.click(node1Checkbox)
+    fireEvent.click(node2Checkbox)
 
     // Verify store function was called (showing interaction works)
     await waitFor(() => {

@@ -2,6 +2,8 @@ package middleware
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,7 +20,7 @@ const (
 	// authLimit is the per-user limit for authenticated requests.
 	// Dashboard + node detail + alerts can easily generate 10+ requests/page-load;
 	// 600/min gives ~10 req/s headroom for normal multi-tab usage.
-	authLimit     = 600
+	authLimit       = 600
 	rateLimitWindow = time.Minute
 )
 
@@ -79,6 +81,48 @@ func ShutdownRateLimiter() {
 	}
 }
 
+// extractUserIDFromBearer extracts the user_id claim from a JWT Bearer token
+// without performing signature verification. This is intentionally unverified -
+// it is only used to bucket rate limit keys so that authenticated users get the
+// higher per-user limit instead of the per-IP limit. The actual token validity
+// is enforced by JWTAuthMiddleware downstream.
+func extractUserIDFromBearer(authHeader string) string {
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return ""
+	}
+	parts := strings.Split(authHeader[7:], ".")
+	if len(parts) != 3 {
+		return ""
+	}
+	// JWT payload is base64url-encoded without padding
+	payload := parts[1]
+	switch len(payload) % 4 {
+	case 2:
+		payload += "=="
+	case 3:
+		payload += "="
+	}
+	decoded, err := base64.URLEncoding.DecodeString(payload)
+	if err != nil {
+		// Try without padding correction
+		decoded, err = base64.RawURLEncoding.DecodeString(parts[1])
+		if err != nil {
+			return ""
+		}
+	}
+	var claims struct {
+		UserID string `json:"user_id"`
+		Sub    string `json:"sub"`
+	}
+	if err := json.Unmarshal(decoded, &claims); err != nil {
+		return ""
+	}
+	if claims.UserID != "" {
+		return claims.UserID
+	}
+	return claims.Sub
+}
+
 func RateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if !rateLimitEnabled || rateLimiter == nil {
@@ -86,8 +130,14 @@ func RateLimitMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Prefer user_id set by JWTAuthMiddleware; fall back to IP for unauthed requests.
+		// Prefer user_id set by JWTAuthMiddleware (when rate limiter runs after JWT).
+		// If not set yet (rate limiter runs before JWT at router level), extract it
+		// from the Bearer token payload without signature verification — this is only
+		// used for key bucketing; actual auth is enforced by JWTAuthMiddleware.
 		userID := c.GetString("user_id")
+		if userID == "" {
+			userID = extractUserIDFromBearer(c.GetHeader("Authorization"))
+		}
 
 		var key string
 		var limit int

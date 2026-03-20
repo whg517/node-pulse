@@ -1,9 +1,14 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
-import { lazy, useEffect, Suspense } from 'react'
+import { lazy, useEffect, useRef, Suspense } from 'react'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import { AppLayout } from './components/layout'
 import { useAuthStore, setupCrossTabLogoutSync, setupVisibilityHandler } from './stores/authStore'
 import { useAlertsStore } from './stores/alertsStore'
+import { initializeTheme } from './stores/settingsStore'
+
+// Apply persisted theme immediately (before first render) so there is no
+// flash of unstyled/wrong-theme content on page load.
+initializeTheme()
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
@@ -43,9 +48,15 @@ function ProtectedLayout() {
 
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession)
+  const sessionRestoredRef = useRef(false)
 
-  // Restore session on app startup only once (not on every isAuthenticated change)
+  // Restore session on app startup only once.
+  // useRef guard prevents double-invocation in React StrictMode (dev), which would
+  // cause isLoading to flip true→false twice, making ProtectedRoute unmount/remount
+  // child pages and re-trigger their useEffect hooks (e.g. loadWebhooks).
   useEffect(() => {
+    if (sessionRestoredRef.current) return
+    sessionRestoredRef.current = true
     restoreSession()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

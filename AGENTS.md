@@ -334,7 +334,7 @@ Key sections:
 - `server.port` (default: `6532`), `server.mode` (`debug`/`release`)
 - `database.url` - PostgreSQL connection string (**required**)
 - `log.level` (`debug`/`info`/`warn`/`error`), `log.format` (`text`/`json`)
-- `cors.allowed_origins` (default: `http://localhost:3000,http://localhost:5173`)
+- `cors.allowed_origins` (default: `http://localhost:4173,http://localhost:5173`)
 - `admin.username` / `admin.password` (default: `admin` / `Admin123`)
 - `jwt.secret` (auto-generated if empty), `jwt.expiration_hours` (default: 24)
 - `session.secret` (auto-generated if empty), `session.expiration_hours` (default: 24)

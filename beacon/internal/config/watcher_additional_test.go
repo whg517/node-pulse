@@ -1,12 +1,11 @@
 package config
 
 import (
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/sirupsen/logrus"
 )
 
 // createTestConfigForWatcher creates a minimal valid config for watcher tests
@@ -31,11 +30,8 @@ node_name: Test Node 1
 	return cfgPath, cfg
 }
 
-func newTestLogger() *logrus.Logger {
-	logger := logrus.New()
-	logger.SetOutput(os.Stderr)
-	logger.SetLevel(logrus.DebugLevel)
-	return logger
+func newTestLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelDebug}))
 }
 
 // TestFileWatcher_GetVersion tests GetVersion
