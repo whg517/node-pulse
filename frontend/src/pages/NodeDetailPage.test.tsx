@@ -76,8 +76,8 @@ vi.mock('../api/data', () => ({
   fetchHistory: vi.fn(() => Promise.resolve({ data: [] })),
 }))
 
-// Mock BreadcrumbContext — NodeDetailPage uses useSetBreadcrumbLabel
-vi.mock('../components/layout/BreadcrumbContext', () => ({
+// Mock useBreadcrumb — NodeDetailPage uses useSetBreadcrumbLabel
+vi.mock('../components/layout/useBreadcrumb', () => ({
   useBreadcrumb: () => ({
     items: [],
     setDynamicLabel: vi.fn(),
@@ -419,7 +419,7 @@ describe('NodeDetailPage', () => {
     expect(screen.getByText('1 minute ago')).toBeInTheDocument()
   })
 
-  it('navigates back to dashboard', async () => {
+  it('renders node detail page with page header', async () => {
     const mockNode = {
       id: 'node-1',
       name: 'Test Node',
@@ -448,7 +448,6 @@ describe('NodeDetailPage', () => {
       <MemoryRouter initialEntries={['/nodes/node-1']}>
         <Routes>
           <Route path="/nodes/:id" element={<NodeDetailPage />} />
-          <Route path="/dashboard" element={<div>Dashboard Page</div>} />
         </Routes>
       </MemoryRouter>
     )
@@ -457,9 +456,8 @@ describe('NodeDetailPage', () => {
       expect(mockFetchHistory).toHaveBeenCalledTimes(3)
     })
 
-    const backLink = screen.getByLabelText('Back to Dashboard')
-    expect(backLink).toBeInTheDocument()
-    expect(backLink.closest('a')).toHaveAttribute('href', '/dashboard')
+    // Page renders the node name (back navigation is now handled by breadcrumbs)
+    expect(screen.getByText('Test Node')).toBeInTheDocument()
   })
 
   it('handles offline node status for problem detection', () => {

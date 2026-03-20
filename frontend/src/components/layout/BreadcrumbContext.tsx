@@ -1,118 +1,112 @@
 /**
- * Breadcrumb Context
+ * Breadcrumb Provider
  *
- * Provides route-config-driven breadcrumb items to the layout.
- * Uses React Router's useMatches() to read breadcrumb metadata
- * from each matched route's handle property.
+ * Route-config-driven breadcrumb items for the layout.
+ * Reads current pathname and maps segments to breadcrumb labels
+ * using a static route config. Supports dynamic label overrides.
  */
 
-import { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from 'react'
-import { useMatches, useLocation } from 'react-router-dom'
+import { useState, useMemo, useCallback, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { BreadcrumbContext, type BreadcrumbItem } from './useBreadcrumb'
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-export interface BreadcrumbItem {
-  path: string
-  label: string
+// Route segment → i18n key mapping.
+// Each route path defines its own label, avoiding global key collisions
+// (e.g., /alerts/history vs /reports/history).
+const routeLabels: Record<string, string> = {
+  dashboard: 'nav.dashboard',
+  nodes: 'nav.nodes',
+  comparison: 'nav.comparison',
+  alerts: 'nav.alerts',
+  rules: 'nav.alertRules',
+  records: 'nav.alertRecords',
+  history: 'nav.alertHistory',       // default, overridden per-path below
+  performance: 'nav.performance',
+  reports: 'nav.reports',
+  webhooks: 'nav.webhooks',
+  health: 'nav.systemHealth',
+  integrations: 'nav.integrations',
+  settings: 'nav.settings',
+  preferences: 'nav.preferences',
+  sessions: 'nav.sessions',
+  users: 'nav.users',
+  export: 'nav.export',
 }
 
-/** Shape of the route handle property for breadcrumb metadata. */
-export interface BreadcrumbHandle {
-  breadcrumb: string // i18n key
+// Per-path overrides for segments that have different meanings
+// depending on their parent path context.
+const pathOverrides: Record<string, Record<string, string>> = {
+  '/reports/history': { history: 'nav.exportHistory' },
 }
 
-export interface BreadcrumbContextValue {
-  items: BreadcrumbItem[]
-  setDynamicLabel: (offset: number, label: string) => void
-  clearDynamicLabels: () => void
+function getLabel(segment: string, parentPath: string): string {
+  const overrides = pathOverrides[parentPath]
+  if (overrides?.[segment]) return overrides[segment]
+  return routeLabels[segment] || `nav.${segment}`
 }
 
-// ---------------------------------------------------------------------------
-// Context
-// ---------------------------------------------------------------------------
-
-const BreadcrumbContext = createContext<BreadcrumbContextValue | null>(null)
-
-// ---------------------------------------------------------------------------
-// Provider
-// ---------------------------------------------------------------------------
+function isIdSegment(segment: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment) || /^\d+$/.test(segment)
+}
 
 export function BreadcrumbProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
-  const matches = useMatches()
   const location = useLocation()
-  const [dynamicLabels, setDynamicLabels] = useState<Record<number, string>>({})
+  // Dynamic labels keyed by pathname — each route stores its own overrides
+  // so no cleanup is needed on navigation.
+  const [dynamicLabels, setDynamicLabels] = useState<Record<string, Record<number, string>>>({})
 
-  // Clear dynamic label overrides on every route change
-  useEffect(() => {
-    setDynamicLabels({})
-  }, [location.pathname])
+  const currentLabels = dynamicLabels[location.pathname]
 
   const items = useMemo(() => {
-    // Filter to only matches that have a breadcrumb handle.
-    // The parent layout route (ProtectedLayout) at App.tsx has NO handle
-    // and must be excluded to prevent a spurious breadcrumb entry.
-    const filtered = matches.filter(
-      (m): m is typeof m & { handle: BreadcrumbHandle } =>
-        m.handle != null && (m.handle as BreadcrumbHandle).breadcrumb != null
-    )
+    const segments = location.pathname.split('/').filter(Boolean)
+    const breadcrumbItems: BreadcrumbItem[] = []
 
-    const homeItem: BreadcrumbItem = {
-      path: '/dashboard',
-      label: t('nav.home'),
-    }
+    // Always add home
+    breadcrumbItems.push({ path: '/dashboard', label: t('nav.home') })
 
-    const routeItems: BreadcrumbItem[] = filtered.map((m) => ({
-      path: m.pathname,
-      label: t((m.handle as BreadcrumbHandle).breadcrumb),
-    }))
-
-    // Apply dynamic label overrides (offset 0 = last item)
-    const result = [homeItem, ...routeItems]
-    for (const [offsetStr, label] of Object.entries(dynamicLabels)) {
-      const offset = Number(offsetStr)
-      // offset 0 = last, -1 = second-to-last, etc.
-      const idx = result.length + offset - 1
-      if (idx >= 0 && idx < result.length) {
-        result[idx] = { ...result[idx], label }
+    let currentPath = ''
+    for (const segment of segments) {
+      currentPath += `/${segment}`
+      if (isIdSegment(segment)) {
+        breadcrumbItems.push({ path: currentPath, label: t('nav.details') })
+      } else {
+        breadcrumbItems.push({ path: currentPath, label: t(getLabel(segment, currentPath)) })
       }
     }
 
-    return result
-  }, [matches, t, dynamicLabels])
+    // Apply dynamic label overrides (offset 0 = last item)
+    if (currentLabels) {
+      for (const [offsetStr, label] of Object.entries(currentLabels)) {
+        const offset = Number(offsetStr)
+        const idx = breadcrumbItems.length + offset - 1
+        if (idx >= 0 && idx < breadcrumbItems.length) {
+          breadcrumbItems[idx] = { ...breadcrumbItems[idx], label }
+        }
+      }
+    }
 
-  const setDynamicLabel = (offset: number, label: string) => {
-    setDynamicLabels((prev) => ({ ...prev, [offset]: label }))
-  }
+    return breadcrumbItems
+  }, [location.pathname, t, currentLabels])
 
-  const clearDynamicLabels = () => {
-    setDynamicLabels({})
-  }
+  const setDynamicLabel = useCallback((offset: number, label: string) => {
+    setDynamicLabels((prev) => ({
+      ...prev,
+      [location.pathname]: { ...(prev[location.pathname] || {}), [offset]: label },
+    }))
+  }, [location.pathname])
+
+  const clearDynamicLabels = useCallback(() => {
+    setDynamicLabels((prev) => {
+      const { [location.pathname]: _, ...rest } = prev
+      return rest
+    })
+  }, [location.pathname])
 
   return (
     <BreadcrumbContext.Provider value={{ items, setDynamicLabel, clearDynamicLabels }}>
       {children}
     </BreadcrumbContext.Provider>
   )
-}
-
-// ---------------------------------------------------------------------------
-// Hooks
-// ---------------------------------------------------------------------------
-
-export function useBreadcrumb(): BreadcrumbContextValue {
-  const ctx = useContext(BreadcrumbContext)
-  if (!ctx) {
-    throw new Error('useBreadcrumb must be used within a <BreadcrumbProvider>')
-  }
-  return ctx
-}
-
-/** Convenience hook for pages that only need to set dynamic labels. */
-export function useSetBreadcrumbLabel() {
-  const { setDynamicLabel, clearDynamicLabels } = useBreadcrumb()
-  return { setDynamicLabel, clearDynamicLabels }
 }

@@ -82,37 +82,37 @@ function App() {
         {/* Protected routes with AppLayout */}
         <Route element={<ProtectedLayout />}>
           {/* Dashboard */}
-          <Route path="/dashboard" handle={{ breadcrumb: 'nav.dashboard' }} element={<DashboardPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           {/* Nodes */}
-          <Route path="/nodes" handle={{ breadcrumb: 'nav.nodes' }} element={<NodeManagementPage />} />
-          <Route path="/nodes/:id" handle={{ breadcrumb: 'nav.details' }} element={<NodeDetailPage />} />
-          <Route path="/nodes/comparison" handle={{ breadcrumb: 'nav.comparison' }} element={<NodeComparisonPage />} />
+          <Route path="/nodes" element={<NodeManagementPage />} />
+          <Route path="/nodes/:id" element={<NodeDetailPage />} />
+          <Route path="/nodes/comparison" element={<NodeComparisonPage />} />
 
           {/* Alerts */}
           <Route path="/alerts" element={<Navigate to="/alerts/rules" replace />} />
-          <Route path="/alerts/rules" handle={{ breadcrumb: 'nav.alertRules' }} element={<AlertRulesPage />} />
-          <Route path="/alerts/records" handle={{ breadcrumb: 'nav.alertRecords' }} element={<AlertRecordsPage />} />
-          <Route path="/alerts/history" handle={{ breadcrumb: 'nav.alertHistory' }} element={<AlertHistoryPage />} />
+          <Route path="/alerts/rules" element={<AlertRulesPage />} />
+          <Route path="/alerts/records" element={<AlertRecordsPage />} />
+          <Route path="/alerts/history" element={<AlertHistoryPage />} />
 
           {/* Performance */}
-          <Route path="/performance" handle={{ breadcrumb: 'nav.performance' }} element={<PerformanceDashboard />} />
+          <Route path="/performance" element={<PerformanceDashboard />} />
 
           {/* Reports */}
-          <Route path="/reports" handle={{ breadcrumb: 'nav.reports' }} element={<ReportsPage />} />
-          <Route path="/reports/history" handle={{ breadcrumb: 'nav.exportHistory' }} element={<DataExportPage />} />
+          <Route path="/reports" element={<ReportsPage />} />
+          <Route path="/reports/history" element={<DataExportPage />} />
 
           {/* Integrations */}
           <Route path="/integrations" element={<Navigate to="/integrations/webhooks" replace />} />
-          <Route path="/integrations/webhooks" handle={{ breadcrumb: 'nav.webhooks' }} element={<WebhooksPage />} />
-          <Route path="/integrations/health" handle={{ breadcrumb: 'nav.systemHealth' }} element={<SystemHealthPage />} />
+          <Route path="/integrations/webhooks" element={<WebhooksPage />} />
+          <Route path="/integrations/health" element={<SystemHealthPage />} />
 
           {/* Settings */}
           <Route path="/settings" element={<Navigate to="/settings/preferences" replace />} />
-          <Route path="/settings/preferences" handle={{ breadcrumb: 'nav.preferences' }} element={<PreferencesPage />} />
-          <Route path="/settings/sessions" handle={{ breadcrumb: 'nav.sessions' }} element={<SessionsPage />} />
-          <Route path="/settings/users" handle={{ breadcrumb: 'nav.users' }} element={<UsersPage />} />
+          <Route path="/settings/preferences" element={<PreferencesPage />} />
+          <Route path="/settings/sessions" element={<SessionsPage />} />
+          <Route path="/settings/users" element={<UsersPage />} />
 
           {/* Short aliases for E2E and legacy navigation */}
           <Route path="/webhooks" element={<Navigate to="/integrations/webhooks" replace />} />

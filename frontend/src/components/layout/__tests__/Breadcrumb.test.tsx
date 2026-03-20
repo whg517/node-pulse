@@ -10,7 +10,7 @@ import { Breadcrumb } from '../Breadcrumb'
 // We mock it here so we don't need a React Router data router context.
 
 const mockItems: Array<{ path: string; label: string }> = []
-vi.mock('../BreadcrumbContext', () => ({
+vi.mock('../useBreadcrumb', () => ({
   useBreadcrumb: () => ({
     items: mockItems,
     setDynamicLabel: vi.fn(),
