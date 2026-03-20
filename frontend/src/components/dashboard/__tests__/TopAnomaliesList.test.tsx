@@ -233,7 +233,7 @@ describe('TopAnomaliesList', () => {
       const listItem = screen.getByText('Critical-Node').closest('li')
       listItem?.click()
 
-      expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1')
+      expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1', { state: { breadcrumbLabel: 'Critical-Node' } })
     })
 
     it('should make list items clickable', () => {

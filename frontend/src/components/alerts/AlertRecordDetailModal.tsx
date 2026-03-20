@@ -109,7 +109,7 @@ export function AlertRecordDetailModal({
 
   const handleViewNodeDetails = () => {
     onClose()
-    navigate(`/nodes/${record.node_id}`)
+    navigate(`/nodes/${record.node_id}`, { state: { breadcrumbLabel: node?.name } })
   }
 
   return (

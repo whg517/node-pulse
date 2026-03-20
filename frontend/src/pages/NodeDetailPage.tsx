@@ -36,15 +36,17 @@ export default function NodeDetailPage() {
   const { node, nodeStatus, metrics, isLoading, error, isPolling } = useNodeDetail(id || '')
   const { setDynamicLabel, clearDynamicLabels } = useSetBreadcrumbLabel()
 
-  // Set dynamic breadcrumb label when node data loads
+  // Set dynamic breadcrumb label when node data loads.
+  // Guard: only set label when fetched node matches the current route param
+  // to prevent stale name flash when navigating between node detail pages.
   useEffect(() => {
-    if (node) {
+    if (node && node.id === id) {
       setDynamicLabel(0, node.name)
     }
     return () => {
       clearDynamicLabels()
     }
-  }, [node, setDynamicLabel, clearDynamicLabels])
+  }, [node, id, setDynamicLabel, clearDynamicLabels])
 
   // Historical data state
   const [timeRange, setTimeRange] = useState<TimeRange>('24h')

@@ -7,7 +7,7 @@
  * Responsive: sidebar overlay on mobile (<768px), fixed on desktop
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import type { ReactNode } from 'react'
 import { Sidebar } from './Sidebar'
 import { Header } from './Header'
@@ -79,7 +79,19 @@ export function AppLayout({ children, alertCount = 0 }: AppLayoutProps) {
             <div className="mb-4">
               <Breadcrumb />
             </div>
-            {children}
+            <Suspense
+              fallback={
+                <div className="flex items-center justify-center py-20">
+                  <div
+                    className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand)]"
+                    role="status"
+                    aria-label="Loading"
+                  />
+                </div>
+              }
+            >
+              {children}
+            </Suspense>
           </div>
         </BreadcrumbProvider>
 

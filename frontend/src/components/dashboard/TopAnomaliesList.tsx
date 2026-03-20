@@ -116,8 +116,8 @@ export const TopAnomaliesList = memo(function TopAnomaliesList({ nodes, metrics,
     .sort((a, b) => b.severityScore - a.severityScore)
     .slice(0, 5)
 
-  const handleNodeClick = (nodeId: string) => {
-    navigate(`/nodes/${nodeId}`)
+  const handleNodeClick = (nodeId: string, nodeName: string) => {
+    navigate(`/nodes/${nodeId}`, { state: { breadcrumbLabel: nodeName } })
   }
 
   if (isLoading) {
@@ -185,7 +185,7 @@ export const TopAnomaliesList = memo(function TopAnomaliesList({ nodes, metrics,
         {criticalAndWarning.map(({ node, metrics, healthStatus }) => (
           <li
             key={node.id}
-            onClick={() => handleNodeClick(node.id)}
+            onClick={() => handleNodeClick(node.id, node.name)}
             className="hover:bg-[var(--color-hover-overlay)] cursor-pointer transition-colors duration-150"
           >
             <div className="px-6 py-4">

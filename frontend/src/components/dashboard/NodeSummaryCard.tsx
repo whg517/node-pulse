@@ -74,7 +74,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
   const colors = HEALTH_COLORS[healthStatus] || HEALTH_COLORS.offline
 
   const handleClick = () => {
-    navigate(`/nodes/${node.id}`)
+    navigate(`/nodes/${node.id}`, { state: { breadcrumbLabel: node.name } })
   }
 
   const formatLastSeen = (timestamp: string | undefined): string => {

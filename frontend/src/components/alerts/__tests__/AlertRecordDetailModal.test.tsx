@@ -213,7 +213,7 @@ describe('AlertRecordDetailModal', () => {
     const viewNodeButton = screen.getByText('查看节点详情')
     fireEvent.click(viewNodeButton)
 
-    expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1')
+    expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1', { state: { breadcrumbLabel: 'Test Node 1' } })
     expect(onClose).toHaveBeenCalled()
   })
 

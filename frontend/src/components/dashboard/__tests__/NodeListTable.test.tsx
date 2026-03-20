@@ -148,7 +148,7 @@ describe('NodeListTable', () => {
       // Click second data row (skip header)
       rows[1].click()
 
-      expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1')
+      expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1', { state: { breadcrumbLabel: 'Beacon-CN-East-1' } })
     })
 
     it('should make rows clickable', () => {

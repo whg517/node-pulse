@@ -120,6 +120,7 @@ export function NodeTable({
                   <div className="flex flex-col">
                     <Link
                       to={`/nodes/${node.id}`}
+                      state={{ breadcrumbLabel: node.name }}
                       className="text-sm font-medium text-[var(--color-brand)] hover:text-[var(--color-brand-hover)]"
                     >
                       {node.name}

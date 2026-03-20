@@ -35,8 +35,8 @@ export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoa
   // Create a map of node_id to metrics for quick lookup
   const metricsMap = new Map(safeMetrics.map(m => [m.node_id, m]))
 
-  const handleRowClick = (nodeId: string) => {
-    navigate(`/nodes/${nodeId}`)
+  const handleRowClick = (nodeId: string, nodeName: string) => {
+    navigate(`/nodes/${nodeId}`, { state: { breadcrumbLabel: nodeName } })
   }
 
   if (isLoading) {
@@ -141,7 +141,7 @@ export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoa
               return (
                 <tr
                   key={node.id}
-                  onClick={() => handleRowClick(node.id)}
+                  onClick={() => handleRowClick(node.id, node.name)}
                   className="hover:bg-[var(--color-hover-overlay)] cursor-pointer transition-colors duration-150"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">

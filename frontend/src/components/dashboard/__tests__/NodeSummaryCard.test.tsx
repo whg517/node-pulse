@@ -72,7 +72,7 @@ describe('NodeSummaryCard', () => {
     )
     const card = screen.getByRole('button')
     fireEvent.click(card)
-    expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1')
+    expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1', { state: { breadcrumbLabel: 'Test Node' } })
   })
 
   it('navigates on Enter key', () => {
@@ -83,7 +83,7 @@ describe('NodeSummaryCard', () => {
     )
     const card = screen.getByRole('button')
     fireEvent.keyDown(card, { key: 'Enter' })
-    expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1')
+    expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1', { state: { breadcrumbLabel: 'Test Node' } })
   })
 
   it('navigates on Space key', () => {
@@ -94,7 +94,7 @@ describe('NodeSummaryCard', () => {
     )
     const card = screen.getByRole('button')
     fireEvent.keyDown(card, { key: ' ' })
-    expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1')
+    expect(mockNavigate).toHaveBeenCalledWith('/nodes/node-1', { state: { breadcrumbLabel: 'Test Node' } })
   })
 
   it('does not navigate on other keys', () => {

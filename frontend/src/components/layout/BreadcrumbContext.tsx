@@ -70,7 +70,11 @@ export function BreadcrumbProvider({ children }: { children: ReactNode }) {
     for (const segment of segments) {
       currentPath += `/${segment}`
       if (isIdSegment(segment)) {
-        breadcrumbItems.push({ path: currentPath, label: t('nav.details') })
+        // Prefer router-state label (immediate) over generic "Details"
+        const stateLabel = currentPath === location.pathname
+          ? (location.state as { breadcrumbLabel?: string } | null)?.breadcrumbLabel
+          : undefined
+        breadcrumbItems.push({ path: currentPath, label: stateLabel || t('nav.details') })
       } else {
         breadcrumbItems.push({ path: currentPath, label: t(getLabel(segment, currentPath)) })
       }
