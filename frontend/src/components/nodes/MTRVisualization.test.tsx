@@ -144,14 +144,18 @@ describe('MTRVisualization', () => {
   })
 
   describe('health status coloring', () => {
+    // Helper: jsdom can't parse CSS attribute selectors with nested brackets from CSS var classes,
+    // so we find listitems and check className strings directly
+    const findHopWithClass = (container: HTMLElement, cls: string) =>
+      Array.from(container.querySelectorAll('[role="listitem"]')).find(el => el.className.includes(cls))
+
     it('should apply green styling for healthy hops (< 5% loss)', () => {
       const data = createMockMTRResult({
         hops: [createMockHop({ lossRate: 2 })],
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      const hopElement = container.querySelector('[class*="border-[var(--color-healthy)]")')
-      expect(hopElement).toBeInTheDocument()
+      expect(findHopWithClass(container, 'border-[var(--color-healthy-bg)]')).toBeTruthy()
     })
 
     it('should apply yellow styling for degraded hops (5-20% loss)', () => {
@@ -160,8 +164,7 @@ describe('MTRVisualization', () => {
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      const hopElement = container.querySelector('[class*="border-[var(--color-warning)]")')
-      expect(hopElement).toBeInTheDocument()
+      expect(findHopWithClass(container, 'border-[var(--color-warning-bg)]')).toBeTruthy()
     })
 
     it('should apply red styling for problematic hops (> 20% loss)', () => {
@@ -170,8 +173,7 @@ describe('MTRVisualization', () => {
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      const hopElement = container.querySelector('[class*="border-[var(--color-critical)]")')
-      expect(hopElement).toBeInTheDocument()
+      expect(findHopWithClass(container, 'border-[var(--color-critical-bg)]')).toBeTruthy()
     })
 
     it('should display healthy badge for path with all healthy hops', () => {
@@ -492,7 +494,8 @@ describe('MTRVisualization', () => {
       const { container } = render(<MTRVisualization data={data} />)
 
       expect(screen.getByText('100.0%')).toBeInTheDocument()
-      expect(container.querySelector('[class*="border-[var(--color-critical)]")')).toBeInTheDocument()
+      const hopEl = Array.from(container.querySelectorAll('[role="listitem"]')).find(el => el.className.includes('border-[var(--color-critical-bg)]'))
+      expect(hopEl).toBeTruthy()
     })
 
     it('should handle single hop trace', () => {

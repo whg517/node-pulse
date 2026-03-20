@@ -55,14 +55,14 @@ export function SidebarItem({ icon, label, path, badge, isCollapsed }: SidebarIt
 
         {/* Badge - hidden when collapsed */}
         {!isCollapsed && badge !== undefined && badge > 0 && (
-          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-semibold text-white">
+          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--color-critical)] px-1.5 text-xs font-semibold text-white">
             {badge > 99 ? '99+' : badge}
           </span>
         )}
 
         {/* Badge indicator - shown when collapsed */}
         {isCollapsed && badge !== undefined && badge > 0 && (
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[var(--color-critical)]" />
         )}
       </NavLink>
 

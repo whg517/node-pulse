@@ -49,7 +49,7 @@ export function ErrorBanner({
         </div>
 
         {/* Error message */}
-        <div className="ml-3 flex-1 text-red-800 dark:text-red-300">
+        <div className="ml-3 flex-1 text-[var(--color-critical-text)]">
           <p className="text-sm font-medium">{errorMessage}</p>
         </div>
 
@@ -59,7 +59,7 @@ export function ErrorBanner({
             <button
               type="button"
               onClick={onRetry}
-              className={`inline-flex rounded-md p-1.5 ${statusClasses.critical.text} hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-red-500`}
+              className={`inline-flex rounded-md p-1.5 ${statusClasses.critical.text} hover:bg-[var(--color-critical-bg)] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[var(--color-critical)]`}
               aria-label="Retry loading data"
             >
               <svg

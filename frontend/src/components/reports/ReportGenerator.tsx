@@ -276,7 +276,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto p-4">
         <div className="min-h-full flex items-start justify-center py-8">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full">
+          <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-xl max-w-4xl w-full">
             <HealthReportPDF
               node={pdfReportData.node}
               metrics={pdfReportData.metrics}
@@ -296,8 +296,8 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Report Type */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('reports.reportType')} <span className="text-red-500">*</span>
+        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+          {t('reports.reportType')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
           {reportTypeOptions.map((option) => (
@@ -308,8 +308,8 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               disabled={loading}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 reportType === option.key
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? 'bg-[var(--color-brand)] text-white'
+                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)]'
               }`}
             >
               {option.label}
@@ -321,15 +321,15 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
       {/* Node Selection */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-            {t('reports.selectNodes')} <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-[var(--color-text-secondary)]">
+            {t('reports.selectNodes')} <span className="text-[var(--color-critical)]">*</span>
           </label>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={selectAllNodes}
               disabled={loading}
-              className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400"
+              className="text-xs text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] dark:text-[var(--color-brand)]"
             >
               {t('reports.selectAll')}
             </button>
@@ -343,10 +343,10 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
             </button>
           </div>
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        <div className="text-xs text-[var(--color-text-muted)] mb-2">
           {t('reports.selectedNodes')}: {selectedNodeIds.length} / {nodes.length}
         </div>
-        <div className="max-h-48 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-3 space-y-2 bg-white dark:bg-gray-800">
+        <div className="max-h-48 overflow-y-auto border border-[var(--color-input-border)] rounded-lg p-3 space-y-2 bg-[var(--color-bg-surface)]">
           {nodes.map((node) => (
             <label
               key={node.id}
@@ -357,26 +357,26 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
                 checked={selectedNodeIds.includes(node.id)}
                 onChange={() => toggleNode(node.id)}
                 disabled={loading}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
               />
-              <span className="text-sm text-gray-900 dark:text-gray-100">
+              <span className="text-sm text-[var(--color-text-primary)]">
                 {node.name}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
+              <span className="text-xs text-[var(--color-text-muted)]">
                 ({node.region})
               </span>
             </label>
           ))}
         </div>
         {errors.nodeIds && (
-          <p className="mt-1 text-sm text-red-600">{errors.nodeIds}</p>
+          <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.nodeIds}</p>
         )}
       </div>
 
       {/* Date Range */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('reports.dateRange')} <span className="text-red-500">*</span>
+        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+          {t('reports.dateRange')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <div className="flex flex-wrap gap-2 mb-2">
           {[
@@ -391,8 +391,8 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               disabled={loading}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 dateRange === option.value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? 'bg-[var(--color-brand)] text-white'
+                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)]'
               }`}
             >
               {option.label}
@@ -402,7 +402,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
         {dateRange === 'custom' && (
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                 {t('reports.startDate')}
               </label>
               <input
@@ -411,11 +411,11 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
                 onChange={(e) => setCustomStartDate(e.target.value)}
                 max={customEndDate || new Date().toISOString().split('T')[0]}
                 disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-lg bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
                 {t('reports.endDate')}
               </label>
               <input
@@ -425,20 +425,20 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
                 min={customStartDate}
                 max={new Date().toISOString().split('T')[0]}
                 disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-lg bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
               />
             </div>
           </div>
         )}
         {errors.dateRange && (
-          <p className="mt-1 text-sm text-red-600">{errors.dateRange}</p>
+          <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.dateRange}</p>
         )}
       </div>
 
       {/* Metrics Selection */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('reports.selectMetrics')} <span className="text-red-500">*</span>
+        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+          {t('reports.selectMetrics')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <div className="flex flex-wrap gap-2">
           {metricOptions.map((option) => (
@@ -449,8 +449,8 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               disabled={loading}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 selectedMetrics.includes(option.key)
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? 'bg-[var(--color-brand)] text-white'
+                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)]'
               }`}
             >
               {option.label}
@@ -458,14 +458,14 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
           ))}
         </div>
         {errors.metrics && (
-          <p className="mt-1 text-sm text-red-600">{errors.metrics}</p>
+          <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.metrics}</p>
         )}
       </div>
 
       {/* Export Format */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-          {t('reports.selectFormat')} <span className="text-red-500">*</span>
+        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+          {t('reports.selectFormat')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <div className="flex flex-wrap gap-2">
           {[
@@ -480,8 +480,8 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               disabled={loading}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 format === option.value
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? 'bg-[var(--color-brand)] text-white'
+                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)]'
               }`}
             >
               {option.label}
@@ -492,7 +492,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
 
       {/* Report Options */}
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
           {t('reports.reportOptions')}
         </label>
         <div className="space-y-2">
@@ -502,9 +502,9 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               checked={includeCharts}
               onChange={(e) => setIncludeCharts(e.target.checked)}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="text-sm text-[var(--color-text-secondary)]">
               {t('reports.includeCharts')}
             </span>
           </label>
@@ -514,9 +514,9 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
               checked={includeSummary}
               onChange={(e) => setIncludeSummary(e.target.checked)}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="text-sm text-[var(--color-text-secondary)]">
               {t('reports.includeSummary')}
             </span>
           </label>
@@ -528,7 +528,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGene
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 dark:disabled:bg-blue-800 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-150"
+          className="bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-[var(--color-brand-muted)] dark:disabled:bg-[var(--color-brand-muted)] text-white font-medium py-2 px-6 rounded-lg transition-colors duration-150"
         >
           {loading ? t('reports.generating') : t('reports.generateReport')}
         </button>

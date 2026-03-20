@@ -286,7 +286,7 @@ export default function NodeDetailPage() {
         <div className="flex items-center justify-center py-20">
           <div className="text-center">
             <div
-              className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
+              className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"
               role="status"
               aria-label={t('common.loading')}
             />
@@ -303,7 +303,7 @@ export default function NodeDetailPage() {
     return (
       <PageContainer>
         <div className="rounded-lg shadow-md p-6 max-w-md bg-[var(--color-bg-surface)]">
-          <div className="text-red-600 text-5xl mb-4" aria-hidden="true">
+          <div className="text-[var(--color-critical)] text-5xl mb-4" aria-hidden="true">
             ⚠️
           </div>
           <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
@@ -312,7 +312,7 @@ export default function NodeDetailPage() {
           <p className="text-[var(--color-text-secondary)] mb-4">{error.message}</p>
           <Link
             to="/dashboard"
-            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-block px-4 py-2 bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-hover)] transition-colors"
           >
             {t('common.back')}
           </Link>
@@ -331,7 +331,7 @@ export default function NodeDetailPage() {
           <p className="text-[var(--color-text-secondary)] mb-4">{t('errors.notFound')}</p>
           <Link
             to="/dashboard"
-            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="inline-block px-4 py-2 bg-[var(--color-brand)] text-white rounded-lg hover:bg-[var(--color-brand-hover)] transition-colors"
           >
             {t('common.back')}
           </Link>
@@ -351,19 +351,19 @@ export default function NodeDetailPage() {
             <div
               className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium ${
                 nodeStatus?.status === 'online'
-                  ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
+                  ? 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
                   : nodeStatus?.status === 'connecting'
-                  ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400'
-                  : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
+                  ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
+                  : 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
               }`}
             >
               <span
                 className={`w-2 h-2 rounded-full ${
                   nodeStatus?.status === 'online'
-                    ? 'bg-green-500'
+                    ? 'bg-[var(--color-healthy)]'
                     : nodeStatus?.status === 'connecting'
-                    ? 'bg-yellow-500'
-                    : 'bg-red-500'
+                    ? 'bg-[var(--color-warning)]'
+                    : 'bg-[var(--color-critical)]'
                 }`}
                 aria-hidden="true"
               />
@@ -376,14 +376,14 @@ export default function NodeDetailPage() {
                 aria-label={t('nodes.live')}
               >
                 <span className="relative flex h-3 w-3">
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-[var(--color-brand)]" />
                 </span>
                 <span>{t('nodes.live')}</span>
               </div>
             )}
 
             <button
-              className="ml-2 px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+              className="ml-2 px-3 py-1 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors"
               onClick={() => {
                 // Export PDF functionality would be implemented here
                 // TODO: Implement PDF export
@@ -435,7 +435,7 @@ export default function NodeDetailPage() {
                   node.tags.map((tag, index) => (
                     <span
                       key={index}
-                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--color-brand-muted)] text-[var(--color-brand)]"
                     >
                       {tag}
                     </span>
@@ -526,10 +526,10 @@ export default function NodeDetailPage() {
         <div className="space-y-6">
           {/* Error Message */}
           {historyError && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+            <div className="bg-[var(--color-critical-bg)] border border-[var(--color-critical-bg)] rounded-lg p-4">
               <div className="flex items-center">
                 <svg
-                  className="w-5 h-5 text-red-600 dark:text-red-400 mr-2"
+                  className="w-5 h-5 text-[var(--color-critical)] mr-2"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -542,13 +542,13 @@ export default function NodeDetailPage() {
                     d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
                   />
                 </svg>
-                <p className="text-red-800 dark:text-red-300">{historyError}</p>
+                <p className="text-[var(--color-critical-text)]">{historyError}</p>
                 <button
                   onClick={() => {
                     setHistoryError(null)
                     window.location.reload()
                   }}
-                  className="ml-auto px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                  className="ml-auto px-3 py-1 bg-[var(--color-critical)] text-white rounded hover:bg-[var(--color-critical)] hover:opacity-90 transition-colors text-sm"
                 >
                   {t('common.retry')}
                 </button>

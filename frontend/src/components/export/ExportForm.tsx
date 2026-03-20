@@ -144,7 +144,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
       {/* Node Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t('dataExport.nodes')} <span className="text-red-500">*</span>
+          {t('dataExport.nodes')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <div className="text-xs text-gray-500 mb-2">
           {t('dataExport.selectedNodes', { count: selectedNodeIds.length })}
@@ -160,7 +160,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
                 checked={selectedNodeIds.includes(node.id)}
                 onChange={() => toggleNode(node.id)}
                 disabled={loading}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
               />
               <span className="text-sm text-gray-900">
                 {node.name} ({node.ip})
@@ -169,7 +169,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
           ))}
         </div>
         {errors.nodeIds && (
-          <p className="mt-1 text-sm text-red-600" data-testid="node-error">
+          <p className="mt-1 text-sm text-[var(--color-critical)]" data-testid="node-error">
             {errors.nodeIds}
           </p>
         )}
@@ -178,7 +178,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
       {/* Time Range Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t('dataExport.timeRange')} <span className="text-red-500">*</span>
+          {t('dataExport.timeRange')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <div className="space-y-2">
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -189,7 +189,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               checked={timeRange === '7d'}
               onChange={() => setTimeRange('7d')}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300"
             />
             <span className="text-sm text-gray-900">{t('dataExport.last7Days')}</span>
           </label>
@@ -201,7 +201,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               checked={timeRange === '30d'}
               onChange={() => setTimeRange('30d')}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300"
             />
             <span className="text-sm text-gray-900">{t('dataExport.last30Days')}</span>
           </label>
@@ -213,7 +213,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               checked={timeRange === 'custom'}
               onChange={() => setTimeRange('custom')}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300"
             />
             <span className="text-sm text-gray-900">{t('dataExport.customRange')}</span>
           </label>
@@ -233,7 +233,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
                 onChange={(e) => setCustomStartDate(e.target.value)}
                 max={customEndDate || new Date().toISOString().split('T')[0]}
                 disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)]"
               />
             </div>
             <div>
@@ -248,20 +248,20 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
                 min={customStartDate}
                 max={new Date().toISOString().split('T')[0]}
                 disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)]"
               />
             </div>
           </div>
         )}
         {errors.timeRange && (
-          <p className="mt-1 text-sm text-red-600">{errors.timeRange}</p>
+          <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.timeRange}</p>
         )}
       </div>
 
       {/* Metric Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t('dataExport.metrics')} <span className="text-red-500">*</span>
+          {t('dataExport.metrics')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <div className="space-y-2">
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -270,7 +270,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               checked={selectedMetrics.includes('latency')}
               onChange={() => toggleMetric('latency')}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
             />
             <span className="text-sm text-gray-900">{t('dataExport.metricLatency')}</span>
           </label>
@@ -280,7 +280,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               checked={selectedMetrics.includes('packet_loss_rate')}
               onChange={() => toggleMetric('packet_loss_rate')}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
             />
             <span className="text-sm text-gray-900">{t('dataExport.metricPacketLoss')}</span>
           </label>
@@ -290,20 +290,20 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               checked={selectedMetrics.includes('jitter')}
               onChange={() => toggleMetric('jitter')}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
             />
             <span className="text-sm text-gray-900">{t('dataExport.metricJitter')}</span>
           </label>
         </div>
         {errors.metrics && (
-          <p className="mt-1 text-sm text-red-600">{errors.metrics}</p>
+          <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.metrics}</p>
         )}
       </div>
 
       {/* Format Selection */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          {t('dataExport.format')} <span className="text-red-500">*</span>
+          {t('dataExport.format')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <div className="space-y-2">
           <label className="flex items-center space-x-2 cursor-pointer">
@@ -314,7 +314,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               checked={format === 'csv'}
               onChange={() => setFormat('csv')}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300"
             />
             <span className="text-sm text-gray-900">CSV</span>
           </label>
@@ -326,7 +326,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               checked={format === 'excel'}
               onChange={() => setFormat('excel')}
               disabled={loading}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+              className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300"
             />
             <span className="text-sm text-gray-900">Excel</span>
           </label>
@@ -338,7 +338,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium py-2 px-6 rounded-md transition-colors duration-150"
+          className="bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] disabled:bg-[var(--color-brand-muted)] text-white font-medium py-2 px-6 rounded-md transition-colors duration-150"
         >
           {loading ? t('dataExport.exporting') : t('dataExport.export')}
         </button>

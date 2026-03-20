@@ -38,7 +38,7 @@ export const MIN_TOUCH_TARGET_SIZE = 44
  * Focus ring styles for accessibility
  */
 export const FOCUS_RING_STYLES = {
-  default: 'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2',
+  default: 'focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:ring-offset-2',
   dark: 'focus:ring-offset-slate-800',
 }
 
@@ -339,7 +339,7 @@ export const SR_ONLY = 'sr-only'
  */
 export const SKIP_LINK_CLASSES = `
   absolute left-4 top-0 z-50
-  px-4 py-2 bg-blue-600 text-white
+  px-4 py-2 bg-[var(--color-brand)] text-white
   transform -translate-y-full
   focus:translate-y-0
   transition-transform

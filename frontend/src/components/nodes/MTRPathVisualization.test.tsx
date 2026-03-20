@@ -33,28 +33,32 @@ describe('MTRPathVisualization', () => {
     expect(screen.getByText('mtr.noHopData')).toBeInTheDocument()
   })
 
+  // Helper: jsdom can't parse CSS attribute selectors with nested brackets from CSS var classes
+  const findHopWithClass = (container: HTMLElement, cls: string) =>
+    Array.from(container.querySelectorAll('[role="listitem"]')).find(el => el.className.includes(cls))
+
   it('applies safe styling', () => {
     const hops = [createMockHop({ lossRate: 0 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(container.querySelector('.border-emerald-300')).toBeInTheDocument()
+    expect(findHopWithClass(container, 'border-[var(--color-healthy-bg)]')).toBeTruthy()
   })
 
   it('applies critical styling for high loss', () => {
     const hops = [createMockHop({ lossRate: 15 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(container.querySelector('.border-red-300')).toBeInTheDocument()
+    expect(findHopWithClass(container, 'border-[var(--color-critical-bg)]')).toBeTruthy()
   })
 
   it('applies critical styling for high latency', () => {
     const hops = [createMockHop({ avgRTTMs: 250 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(container.querySelector('.border-red-300')).toBeInTheDocument()
+    expect(findHopWithClass(container, 'border-[var(--color-critical-bg)]')).toBeTruthy()
   })
 
   it('applies warning styling for jitter', () => {
     const hops = [createMockHop({ stdDevMs: 60 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(container.querySelector('.border-amber-300')).toBeInTheDocument()
+    expect(findHopWithClass(container, 'border-[var(--color-warning-bg)]')).toBeTruthy()
   })
 
   it('applies timeout styling', () => {

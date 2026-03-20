@@ -114,7 +114,7 @@ describe('ExportHistoryTable', () => {
       render(<ExportHistoryTable {...defaultProps} />)
 
       // Make sure all is selected
-      expect(screen.getByRole('button', { name: /all/i })).toHaveClass('bg-blue-600')
+      expect(screen.getByRole('button', { name: /all/i })).toHaveClass('bg-[var(--color-brand)]')
     })
   })
 

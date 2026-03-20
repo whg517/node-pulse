@@ -79,13 +79,13 @@ export function ConfirmDialog({
             <div
               className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${
                 variant === 'danger'
-                  ? 'bg-red-100 dark:bg-red-900/20'
-                  : 'bg-blue-100 dark:bg-blue-900/20'
+                  ? 'bg-[var(--color-critical-bg)]'
+                  : 'bg-[var(--color-brand-muted)]'
               }`}
             >
               {variant === 'danger' ? (
                 <svg
-                  className="h-6 w-6 text-red-600 dark:text-red-400"
+                  className="h-6 w-6 text-[var(--color-critical)]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -99,7 +99,7 @@ export function ConfirmDialog({
                 </svg>
               ) : (
                 <svg
-                  className="h-6 w-6 text-blue-600 dark:text-blue-400"
+                  className="h-6 w-6 text-[var(--color-brand)]"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"

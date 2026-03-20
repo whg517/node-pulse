@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react'
 import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
+import { useThemeColors } from '../../hooks/useThemeColors'
 
 export type HealthStatus = 'healthy' | 'warning' | 'critical' | 'offline'
 
@@ -25,22 +26,18 @@ export interface WorldMapProps {
   refreshInterval?: number
 }
 
-// Status color configuration
+// Status color configuration - will use theme colors dynamically
 const statusConfig = {
   healthy: {
-    color: '#059669', // emerald
     labelKey: 'status.healthy',
   },
   warning: {
-    color: '#d97706', // amber
     labelKey: 'status.warning',
   },
   critical: {
-    color: '#dc2626', // red
     labelKey: 'status.critical',
   },
   offline: {
-    color: '#9ca3af', // gray
     labelKey: 'status.offline',
   },
 }
@@ -76,11 +73,23 @@ export default function WorldMap({
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
+  const themeColors = useThemeColors()
 
   // Get status color
   const getStatusColor = useCallback((status: HealthStatus): string => {
-    return statusConfig[status]?.color || statusConfig.offline.color
-  }, [])
+    switch (status) {
+      case 'healthy':
+        return themeColors.healthy
+      case 'warning':
+        return themeColors.warning
+      case 'critical':
+        return themeColors.critical
+      case 'offline':
+        return themeColors.unknown
+      default:
+        return themeColors.unknown
+    }
+  }, [themeColors])
 
   // Get status label
   const getStatusLabel = useCallback(
@@ -228,7 +237,7 @@ export default function WorldMap({
             period: 4,
           },
           itemStyle: {
-            color: statusConfig.critical.color,
+            color: themeColors.critical,
             borderWidth: 2,
             borderColor: '#fff',
             shadowBlur: 10,
@@ -326,7 +335,7 @@ export default function WorldMap({
           aria-label={t('common.loading')}
         >
           <div className="flex flex-col items-center">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]" />
             <p className="mt-2 text-[var(--color-text-secondary)]">{t('common.loading')}</p>
           </div>
         </div>

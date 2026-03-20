@@ -31,7 +31,7 @@ export function LoadingSpinner({
       aria-label={label}
     >
       <div
-        className={`${sizeClasses[size]} animate-spin rounded-full border-b-2 border-blue-600`}
+        className={`${sizeClasses[size]} animate-spin rounded-full border-b-2 border-[var(--color-brand)]`}
       />
       <span className="sr-only">{label}</span>
     </div>

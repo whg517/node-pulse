@@ -14,7 +14,7 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
   return (
     <div
       className={`bg-white rounded-lg shadow p-6 border-l-4 ${
-        isHealthy ? 'border-green-500' : 'border-red-500'
+        isHealthy ? 'border-[var(--color-healthy)]' : 'border-[var(--color-critical)]'
       }`}
     >
       {/* Metric Name */}
@@ -29,8 +29,8 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
           <span
             className={`text-lg font-bold ${
               metric.current_p99 > metric.target_p99
-                ? 'text-red-600'
-                : 'text-green-600'
+                ? 'text-[var(--color-critical)]'
+                : 'text-[var(--color-healthy)]'
             }`}
           >
             {metric.current_p99.toFixed(0)} {metric.unit}
@@ -42,8 +42,8 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
           <span
             className={`text-lg font-bold ${
               metric.current_p95 > metric.target_p95
-                ? 'text-red-600'
-                : 'text-green-600'
+                ? 'text-[var(--color-critical)]'
+                : 'text-[var(--color-healthy)]'
             }`}
           >
             {metric.current_p95.toFixed(0)} {metric.unit}
@@ -64,10 +64,10 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
 
         {/* Anomaly Warning */}
         {!isHealthy && metric.anomaly && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <div className="mt-4 p-3 bg-[var(--color-critical-bg)] border border-[var(--color-critical-bg)] rounded-md">
             <div className="flex items-center">
               <svg
-                className="w-5 h-5 text-red-600 mr-2"
+                className="w-5 h-5 text-[var(--color-critical)] mr-2"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -77,7 +77,7 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="text-sm font-medium text-red-800">
+              <span className="text-sm font-medium text-[var(--color-critical-text)]">
                 {metric.anomaly}
               </span>
             </div>
@@ -90,8 +90,8 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
           <span
             className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
               isHealthy
-                ? 'bg-green-100 text-green-800'
-                : 'bg-red-100 text-red-800'
+                ? 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
+                : 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
             }`}
           >
             {isHealthy ? '健康' : '异常'}

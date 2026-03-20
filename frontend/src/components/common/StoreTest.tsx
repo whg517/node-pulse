@@ -113,8 +113,8 @@ export default function StoreTest() {
         </div>
       </div>
 
-      <div className="bg-blue-50 p-3 rounded border border-blue-200">
-        <p className="text-sm text-blue-800">
+      <div className="bg-[var(--color-brand-muted)] p-3 rounded border border-[var(--color-brand-muted)]">
+        <p className="text-sm text-[var(--color-brand)]">
           ✅ All stores are accessible and working correctly!
         </p>
       </div>

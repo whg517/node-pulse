@@ -64,7 +64,7 @@ export function AlertRecordsFilter({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="节点名称或指标类型"
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)]"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)]"
           />
         </div>
 
@@ -77,7 +77,7 @@ export function AlertRecordsFilter({
             id="node-filter"
             value={nodeId}
             onChange={(e) => setNodeId(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           >
             <option value="">全部节点</option>
             {nodes.map((node) => (
@@ -98,7 +98,7 @@ export function AlertRecordsFilter({
             type="datetime-local"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           />
         </div>
 
@@ -112,7 +112,7 @@ export function AlertRecordsFilter({
             type="datetime-local"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           />
         </div>
 
@@ -125,7 +125,7 @@ export function AlertRecordsFilter({
             id="level-filter"
             value={level}
             onChange={(e) => setLevel(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           >
             <option value="">全部级别</option>
             <option value="P0">P0</option>
@@ -143,7 +143,7 @@ export function AlertRecordsFilter({
             id="status-filter"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           >
             <option value="">全部状态</option>
             <option value="pending">未处理</option>
@@ -165,7 +165,7 @@ export function AlertRecordsFilter({
         <button
           type="button"
           onClick={handleApply}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-[var(--color-brand)] text-white rounded-md hover:bg-[var(--color-brand-hover)] transition-colors"
         >
           应用筛选
         </button>

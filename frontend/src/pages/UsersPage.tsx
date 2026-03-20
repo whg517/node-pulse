@@ -68,7 +68,7 @@ export default function UsersPage() {
       <PageContainer>
         <PageHeader title={t('settings.users')} />
         <div className="rounded-lg border p-8 text-center bg-[var(--color-bg-surface)] border-[var(--color-border)]">
-          <svg className="mx-auto h-12 w-12 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="mx-auto h-12 w-12 text-[var(--color-critical)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
           <h2 className="mt-4 text-xl font-semibold text-[var(--color-text-primary)]">
@@ -113,8 +113,8 @@ export default function UsersPage() {
 
   const getStatusStyles = (status: User['status']): string => {
     return status === 'active'
-      ? 'text-green-600 dark:text-green-400'
-      : 'text-red-600 dark:text-red-400'
+      ? 'text-[var(--color-healthy)]'
+      : 'text-[var(--color-critical)]'
   }
 
   return (
@@ -125,49 +125,49 @@ export default function UsersPage() {
         actions={
           <button
             type="button"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors"
+            className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors"
           >
             {t('settings.addUser')}
           </button>
         }
       />
 
-      <div className="rounded-lg border shadow-sm overflow-hidden bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+      <div className="rounded-lg border shadow-sm overflow-hidden bg-[var(--color-bg-surface)] border-[var(--color-border)]">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-900">
+          <table className="min-w-full divide-y divide-[var(--color-border)]">
+            <thead className="bg-[var(--color-bg-muted)]">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
                   {t('settings.username')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
                   {t('settings.email')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
                   {t('settings.role')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
                   {t('settings.status')}
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
                   {t('settings.actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-[var(--color-border)]">
               {users.map((u) => (
-                <tr key={u.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                <tr key={u.id} className="hover:bg-[var(--color-hover-overlay)]">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-[var(--color-text-primary)]">
                     {u.username}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
                     {u.email}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
                       value={u.role}
                       onChange={(e) => handleRoleChange(u.id, e.target.value as User['role'])}
-                      className="text-sm rounded-md border px-2 py-1 bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                      className="text-sm rounded-md border px-2 py-1 bg-[var(--color-input-bg)] border-[var(--color-input-border)] text-[var(--color-text-primary)]"
                       disabled={u.id === '1'}
                     >
                       <option value="admin">Admin</option>
@@ -184,8 +184,8 @@ export default function UsersPage() {
                       onClick={() => handleToggleStatus(u.id)}
                       className={`${
                         u.status === 'active'
-                          ? 'text-yellow-600 hover:text-yellow-900 dark:text-yellow-400'
-                          : 'text-green-600 hover:text-green-900 dark:text-green-400'
+                          ? 'text-[var(--color-warning)] hover:text-[var(--color-warning)] hover:opacity-80'
+                          : 'text-[var(--color-healthy)] hover:text-[var(--color-healthy)] hover:opacity-80'
                       }`}
                       disabled={u.id === '1'}
                     >
@@ -194,7 +194,7 @@ export default function UsersPage() {
                     <button
                       type="button"
                       onClick={() => handleDelete(u.id)}
-                      className="text-red-600 hover:text-red-900 dark:text-red-400"
+                      className="text-[var(--color-critical)] hover:text-[var(--color-critical)] hover:opacity-80"
                       disabled={u.id === '1'}
                     >
                       {t('settings.delete')}

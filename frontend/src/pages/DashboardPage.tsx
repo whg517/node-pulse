@@ -9,23 +9,15 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { useDashboard } from '../hooks/useDashboard'
+import { useThemeColors } from '../hooks/useThemeColors'
 import { PageContainer, ErrorBanner, ActionButton } from '../components/common'
 import { PageHeader } from '../components/layout/PageHeader'
-import { statusColors } from '../config/designTokens'
 import { NodeListTable } from '../components/dashboard/NodeListTable'
 import { TopAnomaliesList } from '../components/dashboard/TopAnomaliesList'
 import { MetricsSummaryCards } from '../components/dashboard/MetricsSummaryCards'
 import { NodeSummaryCard } from '../components/dashboard/NodeSummaryCard'
 import { LatencyTrendChart, PacketLossChart, ProbeSuccessGauge } from '../components/charts'
 import type { DataPoint } from '../components/dashboard/TrendChart'
-
-// Use design tokens for consistent color palette
-const HEALTH_COLORS = {
-  healthy: statusColors.healthy.main,
-  warning: statusColors.warning.main,
-  critical: statusColors.critical.main,
-  unknown: statusColors.unknown.main,
-}
 
 /**
  * Generate sample trend data for charts
@@ -49,6 +41,7 @@ function generateTrendData(baseValue: number, variance: number, points: number =
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const themeColors = useThemeColors()
   const { nodes, metrics, isLoading, error, refetch } = useDashboardData()
   const { stats, sortedByAnomaly } = useDashboard(nodes, metrics)
 
@@ -100,11 +93,11 @@ export default function DashboardPage() {
               </div>
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: `${HEALTH_COLORS.healthy}20` }}
+                style={{ backgroundColor: `${themeColors.healthy}20` }}
               >
                 <svg
                   className="w-6 h-6"
-                  style={{ color: HEALTH_COLORS.healthy }}
+                  style={{ color: themeColors.healthy }}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -141,9 +134,9 @@ export default function DashboardPage() {
                   className="text-2xl font-bold text-[var(--color-text-primary)]"
                   style={{
                     color: stats.anomalyRate > 10
-                      ? HEALTH_COLORS.critical
+                      ? themeColors.critical
                       : stats.anomalyRate > 5
-                        ? HEALTH_COLORS.warning
+                        ? themeColors.warning
                         : undefined,
                   }}
                 >
@@ -154,20 +147,20 @@ export default function DashboardPage() {
                 className="w-12 h-12 rounded-full flex items-center justify-center"
                 style={{
                   backgroundColor: stats.anomalyRate > 10
-                    ? `${HEALTH_COLORS.critical}20`
+                    ? `${themeColors.critical}20`
                     : stats.anomalyRate > 5
-                      ? `${HEALTH_COLORS.warning}20`
-                      : `${HEALTH_COLORS.unknown}20`,
+                      ? `${themeColors.warning}20`
+                      : `${themeColors.unknown}20`,
                 }}
               >
                 <svg
                   className="w-6 h-6"
                   style={{
                     color: stats.anomalyRate > 10
-                      ? HEALTH_COLORS.critical
+                      ? themeColors.critical
                       : stats.anomalyRate > 5
-                        ? HEALTH_COLORS.warning
-                        : HEALTH_COLORS.unknown,
+                        ? themeColors.warning
+                        : themeColors.unknown,
                   }}
                   fill="none"
                   viewBox="0 0 24 24"
@@ -184,9 +177,9 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-3 flex items-center text-xs">
-              <span style={{ color: HEALTH_COLORS.warning }}>{stats.warningNodes}</span>
+              <span style={{ color: themeColors.warning }}>{stats.warningNodes}</span>
               <span className="mx-1 text-[var(--color-border-strong)]">|</span>
-              <span style={{ color: HEALTH_COLORS.critical }}>{stats.criticalNodes}</span>
+              <span style={{ color: themeColors.critical }}>{stats.criticalNodes}</span>
               <span className="ml-1 text-[var(--color-text-muted)]">{t('dashboard.nodesRequiringAttention')}</span>
             </div>
           </div>
@@ -206,9 +199,9 @@ export default function DashboardPage() {
                   className="text-2xl font-bold text-[var(--color-text-primary)]"
                   style={{
                     color: stats.averageLatency > 200
-                      ? HEALTH_COLORS.critical
+                      ? themeColors.critical
                       : stats.averageLatency > 160
-                        ? HEALTH_COLORS.warning
+                        ? themeColors.warning
                         : undefined,
                   }}
                 >
@@ -217,10 +210,11 @@ export default function DashboardPage() {
               </div>
               <div
                 className="w-12 h-12 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: '#3b82f620' }}
+                style={{ backgroundColor: `${themeColors.brand}20` }}
               >
                 <svg
-                  className="w-6 h-6 text-blue-500"
+                  className="w-6 h-6"
+                  style={{ color: themeColors.brand }}
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -312,7 +306,7 @@ export default function DashboardPage() {
             </h3>
             <button
               onClick={() => navigate('/nodes')}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] text-sm font-medium"
             >
               {t('dashboard.viewAllNodes')} &rarr;
             </button>
@@ -351,7 +345,8 @@ export default function DashboardPage() {
       {!isLoading && nodes.length > 0 && (
         <div className="mt-6 text-center text-sm flex items-center justify-center text-[var(--color-text-muted)]">
           <svg
-            className="inline-block h-4 w-4 mr-1 text-blue-500"
+            className="inline-block h-4 w-4 mr-1"
+            style={{ color: themeColors.brand }}
             fill="none"
             viewBox="0 0 24 24"
             aria-hidden="true"

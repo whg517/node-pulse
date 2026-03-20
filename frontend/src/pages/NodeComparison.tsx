@@ -236,7 +236,7 @@ export default function NodeComparisonPage() {
 
           {isLoadingNodes ? (
             <div className="flex items-center justify-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand)]" />
               <span className="ml-3 text-[var(--color-text-secondary)]">
                 {t('common.loading')}
               </span>
@@ -255,7 +255,7 @@ export default function NodeComparisonPage() {
                       onClick={() => handleGroupByChange(option)}
                       className={`px-4 py-2 rounded font-medium transition-colors ${
                         groupBy === option
-                          ? 'bg-blue-600 text-white'
+                          ? 'bg-[var(--color-brand)] text-white'
                           : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
                       }`}
                     >
@@ -284,7 +284,7 @@ export default function NodeComparisonPage() {
                       disabled={
                         !selectedNodeIds.includes(node.node_id) && selectedNodeIds.length >= 5
                       }
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-gray-300 rounded"
                     />
                     <div className="ml-3 flex-1">
                       <div className="flex items-center justify-between">
@@ -305,10 +305,10 @@ export default function NodeComparisonPage() {
                           <span
                             className={`text-xs font-medium ${
                               node.status === 'online'
-                                ? 'text-green-600'
+                                ? 'text-[var(--color-healthy)]'
                                 : node.status === 'offline'
-                                ? 'text-red-600'
-                                : 'text-yellow-600'
+                                ? 'text-[var(--color-critical)]'
+                                : 'text-[var(--color-warning)]'
                             }`}
                           >
                             {t(`status.${node.status}`)}
@@ -324,7 +324,7 @@ export default function NodeComparisonPage() {
               <div className="mt-4 text-sm text-[var(--color-text-secondary)]">
                 {t('nodes.selectedCount', { count: selectedNodeIds.length, max: 5 })}
                 {selectedNodeIds.length > 0 && selectedNodeIds.length < 2 && (
-                  <span className="text-red-600 ml-2">({t('nodes.selectAtLeast', { count: 2 })})</span>
+                  <span className="text-[var(--color-critical)] ml-2">({t('nodes.selectAtLeast', { count: 2 })})</span>
                 )}
               </div>
             </>
@@ -343,7 +343,7 @@ export default function NodeComparisonPage() {
                 onClick={() => handleTimeRangeChange(range)}
                 className={`px-4 py-2 rounded font-medium transition-colors ${
                   timeRange === range
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-[var(--color-brand)] text-white'
                     : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
                 }`}
               >
@@ -354,7 +354,7 @@ export default function NodeComparisonPage() {
               onClick={() => handleTimeRangeChange('custom')}
               className={`px-4 py-2 rounded font-medium transition-colors ${
                 timeRange === 'custom'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[var(--color-brand)] text-white'
                   : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
             >
@@ -375,7 +375,7 @@ export default function NodeComparisonPage() {
                   onChange={(e) =>
                     handleCustomTimeRangeChange(e.target.value, customTimeRange?.end || '')
                   }
-                  className="w-full px-3 py-2 border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
                 />
               </div>
               <div>
@@ -388,7 +388,7 @@ export default function NodeComparisonPage() {
                   onChange={(e) =>
                     handleCustomTimeRangeChange(customTimeRange?.start || '', e.target.value)
                   }
-                  className="w-full px-3 py-2 border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
                 />
               </div>
             </div>
@@ -412,7 +412,7 @@ export default function NodeComparisonPage() {
                 }}
                 className={`px-4 py-2 rounded font-medium transition-colors ${
                   selectedMetrics.includes(metric.key)
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-[var(--color-brand)] text-white'
                     : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
                 }`}
               >
@@ -438,7 +438,7 @@ export default function NodeComparisonPage() {
               selectedNodeIds.length <= 5 &&
               selectedMetrics.length > 0 &&
               !isLoadingComparison
-                ? 'bg-blue-600 hover:bg-blue-700'
+                ? 'bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)]'
                 : 'bg-gray-300 dark:bg-gray-700 cursor-not-allowed'
             }`}
           >

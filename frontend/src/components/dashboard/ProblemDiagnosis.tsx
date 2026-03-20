@@ -43,7 +43,7 @@ export default function ProblemDiagnosis({
       labelZh: '节点本地故障',
       description: 'Issue detected on this specific node only',
       descriptionZh: '仅在此节点检测到问题',
-      color: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300',
+      color: 'bg-[var(--color-critical-bg)] border-[var(--color-critical-bg)] text-[var(--color-critical-text)]',
       icon: '⚠️',
     },
     cross_border_link: {
@@ -51,7 +51,7 @@ export default function ProblemDiagnosis({
       labelZh: '跨境链路问题',
       description: 'Issue affecting multiple nodes across regions',
       descriptionZh: '影响多个跨区域节点的问题',
-      color: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-800 dark:text-orange-300',
+      color: 'bg-[var(--color-warning-bg)] border-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
       icon: '🌍',
     },
     carrier_routing: {
@@ -59,7 +59,7 @@ export default function ProblemDiagnosis({
       labelZh: '运营商路由问题',
       description: 'Issue related to ISP routing changes',
       descriptionZh: '与ISP路由变更相关的问题',
-      color: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-300',
+      color: 'bg-[var(--color-warning-bg)] border-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
       icon: '🔀',
     },
     none: {
@@ -67,7 +67,7 @@ export default function ProblemDiagnosis({
       labelZh: '未检测到问题',
       description: 'All metrics are within normal ranges',
       descriptionZh: '所有指标均在正常范围内',
-      color: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300',
+      color: 'bg-[var(--color-healthy-bg)] border-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]',
       icon: '✓',
     },
   }
@@ -75,9 +75,9 @@ export default function ProblemDiagnosis({
   const config = problemConfig[problemType]
 
   const confidenceConfig = {
-    high: { label: 'High', labelZh: '高', color: 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' },
-    medium: { label: 'Medium', labelZh: '中', color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' },
-    low: { label: 'Low', labelZh: '低', color: 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' },
+    high: { label: 'High', labelZh: '高', color: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]' },
+    medium: { label: 'Medium', labelZh: '中', color: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]' },
+    low: { label: 'Low', labelZh: '低', color: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]' },
   }
 
   const conf = confidenceConfig[confidence]

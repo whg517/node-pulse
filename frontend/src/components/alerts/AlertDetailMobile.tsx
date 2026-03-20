@@ -59,9 +59,9 @@ function getStatusDisplayName(status: string): string {
  */
 function getStatusBadgeColor(status: string): string {
   const colors: Record<string, string> = {
-    pending: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-700',
-    in_progress: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700',
-    resolved: 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700',
+    pending: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)] border-[var(--color-critical-bg)]',
+    in_progress: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-bg)]',
+    resolved: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)] border-[var(--color-healthy-bg)]',
   }
   return colors[status] || colors.pending
 }
@@ -71,9 +71,9 @@ function getStatusBadgeColor(status: string): string {
  */
 function getLevelBadgeColor(level: string): string {
   const colors: Record<string, string> = {
-    P0: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-700',
-    P1: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-700',
-    P2: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700',
+    P0: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)] border-[var(--color-critical-bg)]',
+    P1: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-bg)]',
+    P2: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-bg)]',
   }
   return colors[level] || colors.P2
 }
@@ -132,7 +132,7 @@ function TimelineEvent({
     <div className="flex gap-3">
       {/* Timeline line */}
       <div className="flex flex-col items-center">
-        <div className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400" />
+        <div className="w-2 h-2 rounded-full bg-[var(--color-brand)]" />
         {!isLast && (
           <div className="w-0.5 flex-1 min-h-[24px] bg-gray-200 dark:bg-slate-700" />
         )}
@@ -196,7 +196,7 @@ function NoteInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         rows={3}
-        className="w-full px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--color-input-bg)] border-[var(--color-input-border)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)]"
+        className="w-full px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] bg-[var(--color-input-bg)] border-[var(--color-input-border)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)]"
         disabled={isSubmitting}
         aria-label="Add a note (press Ctrl+Enter or Cmd+Enter to submit)"
       />
@@ -207,7 +207,7 @@ function NoteInput({
         <button
           onClick={handleSubmit}
           disabled={!note.trim() || isSubmitting}
-          className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-[var(--color-brand)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-brand-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Adding...' : 'Add Note'}
         </button>
@@ -332,8 +332,8 @@ export function AlertDetailMobile({
         <div className="flex-1 overflow-y-auto">
           {/* Error Message */}
           {error && (
-            <div className="mx-4 mt-4 bg-red-50 border-l-4 border-red-400 p-4 rounded-md" role="alert">
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mx-4 mt-4 bg-[var(--color-critical-bg)] border-l-4 border-[var(--color-critical)] p-4 rounded-md" role="alert">
+              <p className="text-sm text-[var(--color-critical-text)]">{error}</p>
             </div>
           )}
           
@@ -380,7 +380,7 @@ export function AlertDetailMobile({
                     </p>
                     <button
                       onClick={handleViewNodeDetails}
-                      className="mt-2 text-sm text-blue-600 hover:text-blue-900 font-medium"
+                      className="mt-2 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
                     >
                       View Node Details →
                     </button>
@@ -463,7 +463,7 @@ export function AlertDetailMobile({
                     <button
                       onClick={() => handleStatusUpdate('in_progress')}
                       disabled={isUpdating}
-                      className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-yellow-500 dark:bg-yellow-600 text-white hover:bg-yellow-600 dark:hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-[var(--color-warning)] text-white hover:bg-[var(--color-warning-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isUpdating ? 'Updating...' : 'Acknowledge Alert'}
                     </button>
@@ -496,7 +496,7 @@ export function AlertDetailMobile({
                   <button
                     onClick={() => handleStatusUpdate('resolved')}
                     disabled={isUpdating}
-                    className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-green-500 dark:bg-green-600 text-white hover:bg-green-600 dark:hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-[var(--color-healthy)] text-white hover:bg-[var(--color-healthy-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isUpdating ? 'Updating...' : 'Resolve Alert'}
                   </button>

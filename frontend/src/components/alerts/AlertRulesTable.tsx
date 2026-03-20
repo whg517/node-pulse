@@ -31,11 +31,11 @@ export function AlertRulesTable({
   const getLevelBadgeColor = (level: string) => {
     switch (level) {
       case 'P0':
-        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+        return 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
       case 'P1':
-        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
+        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
       case 'P2':
-        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
       default:
         return 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'
     }
@@ -82,7 +82,7 @@ export function AlertRulesTable({
             <button
               type="button"
               onClick={() => onEdit('')}
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand)]"
             >
               {t('alerts.createRule')}
             </button>
@@ -140,7 +140,7 @@ export function AlertRulesTable({
                   {getNodeName(rule.nodeId)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${rule.enabled ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'}`}>
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${rule.enabled ? 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'}`}>
                     {rule.enabled ? t('status.enabled') : t('status.disabled')}
                   </span>
                 </td>
@@ -149,7 +149,7 @@ export function AlertRulesTable({
                     <button
                       type="button"
                       onClick={() => onToggleEnabled(rule.id, !rule.enabled)}
-                      className="text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
+                      className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] mr-4"
                       title={rule.enabled ? t('settings.disable') : t('settings.enable')}
                     >
                       {rule.enabled ? t('settings.disable') : t('settings.enable')}
@@ -164,7 +164,7 @@ export function AlertRulesTable({
                     <button
                       type="button"
                       onClick={() => onDelete(rule.id)}
-                      className="text-red-500 hover:text-red-400 dark:text-red-400 dark:hover:text-red-300"
+                      className="text-[var(--color-critical)] hover:text-[var(--color-critical)] hover:opacity-80"
                     >
                       {t('common.delete')}
                     </button>

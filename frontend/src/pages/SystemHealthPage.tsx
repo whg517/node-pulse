@@ -97,19 +97,19 @@ export default function SystemHealthPage() {
   const getStatusStyles = (status: HealthStatus['status']): { bg: string; text: string; dot: string } => {
     const styles = {
       healthy: {
-        bg: 'bg-green-100 dark:bg-green-900/30',
-        text: 'text-green-800 dark:text-green-400',
-        dot: 'bg-green-500',
+        bg: 'bg-[var(--color-healthy-bg)]',
+        text: 'text-[var(--color-healthy-text)]',
+        dot: 'bg-[var(--color-healthy)]',
       },
       degraded: {
-        bg: 'bg-yellow-100 dark:bg-yellow-900/30',
-        text: 'text-yellow-800 dark:text-yellow-400',
-        dot: 'bg-yellow-500',
+        bg: 'bg-[var(--color-warning-bg)]',
+        text: 'text-[var(--color-warning-text)]',
+        dot: 'bg-[var(--color-warning)]',
       },
       down: {
-        bg: 'bg-red-100 dark:bg-red-900/30',
-        text: 'text-red-800 dark:text-red-400',
-        dot: 'bg-red-500',
+        bg: 'bg-[var(--color-critical-bg)]',
+        text: 'text-[var(--color-critical-text)]',
+        dot: 'bg-[var(--color-critical)]',
       },
     }
     return styles[status]
@@ -117,9 +117,9 @@ export default function SystemHealthPage() {
 
   const getEventStyles = (type: SystemEvent['type']): string => {
     const styles = {
-      info: 'border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20',
-      warning: 'border-yellow-200 dark:border-yellow-800 bg-yellow-50 dark:bg-yellow-900/20',
-      error: 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20',
+      info: 'border-[var(--color-brand-muted)] bg-[var(--color-brand-muted)]',
+      warning: 'border-[var(--color-warning-bg)] bg-[var(--color-warning-bg)]',
+      error: 'border-[var(--color-critical-bg)] bg-[var(--color-critical-bg)]',
     }
     return styles[type]
   }
@@ -164,7 +164,7 @@ export default function SystemHealthPage() {
           return (
             <div
               key={service.name}
-              className="rounded-lg border p-4 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+              className="rounded-lg border border-[var(--color-border)] p-4 bg-[var(--color-bg-surface)]"
             >
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -195,13 +195,13 @@ export default function SystemHealthPage() {
       </div>
 
       {/* Recent Events */}
-      <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+        <div className="px-4 py-3 border-b border-[var(--color-border)]">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
             {t('integrations.recentEvents')}
           </h3>
         </div>
-        <div className="divide-y dark:divide-gray-700">
+        <div className="divide-y divide-[var(--color-border)]">
           {events.map((event) => (
             <div
               key={event.id}

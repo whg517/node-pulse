@@ -129,9 +129,9 @@ export default function LoginPage() {
   // Show loading while checking auth state
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-muted)]">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-blue-600">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-[var(--color-brand)]">
             <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
               Loading...
             </span>
@@ -143,7 +143,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-muted)] py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">Node Pulse</h2>
@@ -153,7 +153,7 @@ export default function LoginPage() {
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="username" className="block text-sm font-medium text-[var(--color-text-secondary)]">
                 Username
               </label>
               <input
@@ -163,20 +163,20 @@ export default function LoginPage() {
                 autoComplete="username"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 ${
+                className={`mt-1 block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] text-[var(--color-text-primary)] bg-[var(--color-bg-surface)] placeholder:text-[var(--color-text-muted)] ${
                   getFieldError('username')
-                    ? 'border-red-300 focus:border-red-500'
-                    : 'border-gray-300 focus:border-blue-500'
+                    ? 'border-[var(--color-critical)] focus:border-[var(--color-critical)]'
+                    : 'border-[var(--color-input-border)] focus:border-[var(--color-brand)]'
                 }`}
                 disabled={isLoading}
               />
               {getFieldError('username') && (
-                <p className="mt-1 text-sm text-red-600">{getFieldError('username')}</p>
+                <p className="mt-1 text-sm text-[var(--color-critical)]">{getFieldError('username')}</p>
               )}
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label htmlFor="password" className="block text-sm font-medium text-[var(--color-text-secondary)]">
                 Password
               </label>
               <div className="mt-1 relative">
@@ -187,17 +187,17 @@ export default function LoginPage() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className={`block w-full px-3 py-2 pr-12 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 placeholder-gray-400 ${
+                  className={`block w-full px-3 py-2 pr-12 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] text-[var(--color-text-primary)] bg-[var(--color-bg-surface)] placeholder:text-[var(--color-text-muted)] ${
                     getFieldError('password')
-                      ? 'border-red-300 focus:border-red-500'
-                      : 'border-gray-300 focus:border-blue-500'
+                      ? 'border-[var(--color-critical)] focus:border-[var(--color-critical)]'
+                      : 'border-[var(--color-input-border)] focus:border-[var(--color-brand)]'
                   }`}
                   disabled={isLoading}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] focus:outline-none"
                   tabIndex={-1}
                 >
                   {showPassword ? (
@@ -213,19 +213,19 @@ export default function LoginPage() {
                 </button>
               </div>
               {getFieldError('password') && (
-                <p className="mt-1 text-sm text-red-600">{getFieldError('password')}</p>
+                <p className="mt-1 text-sm text-[var(--color-critical)]">{getFieldError('password')}</p>
               )}
             </div>
           </div>
 
           {apiError && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-md">
+            <div className="bg-[var(--color-critical-bg)] border border-[var(--color-critical-bg)] text-[var(--color-critical-text)] px-4 py-3 rounded-md">
               <p className="text-sm">{apiError}</p>
             </div>
           )}
 
           {accountLockedMessage && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-400 px-4 py-3 rounded-md">
+            <div className="bg-[var(--color-warning-bg)] border border-[var(--color-warning-bg)] text-[var(--color-warning-text)] px-4 py-3 rounded-md">
               <p className="text-sm">{accountLockedMessage}</p>
             </div>
           )}
@@ -234,10 +234,10 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-base font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-200 ${
+              className={`w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-lg text-base font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand)] transition-all duration-200 ${
                 isLoading
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 hover:bg-blue-700 active:bg-blue-800'
+                  : 'bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] active:bg-[var(--color-brand-hover)]'
               }`}
             >
               {isLoading ? (

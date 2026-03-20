@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
+import { useThemeColors } from '../../hooks/useThemeColors'
 
 interface TooltipParam {
   name: string
@@ -74,25 +75,26 @@ export default function TrendChart({
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<ECharts | null>(null)
   const [localTimeRange, setLocalTimeRange] = useState<TimeRange>(timeRange)
+  const themeColors = useThemeColors()
 
   // Metric configuration
   const metricConfig = {
     latency_ms: {
       label: 'Latency',
       unit: 'ms',
-      color: '#3b82f6', // blue-500
+      color: themeColors.brand,
       yAxisLabel: 'Latency (ms)',
     },
     packet_loss_rate: {
       label: 'Packet Loss Rate',
       unit: '%',
-      color: '#ef4444', // red-500
+      color: themeColors.critical,
       yAxisLabel: 'Packet Loss Rate (%)',
     },
     jitter_ms: {
       label: 'Jitter',
       unit: 'ms',
-      color: '#8b5cf6', // purple-500
+      color: themeColors.unknown,
       yAxisLabel: 'Jitter (ms)',
     },
   }
@@ -175,12 +177,30 @@ export default function TrendChart({
         },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: `${config.color}80` },
-            { offset: 1, color: `${config.color}10` },
+            { offset: 0, color: `${config.color}CC` },
+            { offset: 1, color: `${config.color}33` },
           ]),
         },
       },
     ]
+
+    // Add baseline if enabled
+    if (showBaseline && baselineValue !== undefined) {
+      series.push({
+        name: 'Baseline',
+        type: 'line',
+        data: Array(data.length).fill(baselineValue),
+        lineStyle: {
+          color: themeColors.healthy,
+          width: 2,
+          type: 'dashed',
+        },
+        itemStyle: {
+          color: themeColors.healthy,
+        },
+        symbol: 'none',
+      })
+    }
 
     const option: EChartsOption = {
       title: {
@@ -254,26 +274,8 @@ export default function TrendChart({
       series,
     }
 
-    // Add baseline if enabled
-    if (showBaseline && baselineValue !== undefined) {
-      series.push({
-        name: 'Baseline',
-        type: 'line',
-        data: Array(data.length).fill(baselineValue),
-        lineStyle: {
-          color: '#10b981',
-          width: 2,
-          type: 'dashed',
-        },
-        itemStyle: {
-          color: '#10b981',
-        },
-        symbol: 'none',
-      })
-    }
-
     chartInstance.current.setOption(option, true)
-  }, [data, localTimeRange, config, showBaseline, baselineValue, getXAxisFormatter])
+  }, [data, localTimeRange, config, showBaseline, baselineValue, getXAxisFormatter, themeColors])
 
   // Handle window resize
   useEffect(() => {
@@ -306,7 +308,7 @@ export default function TrendChart({
               onClick={() => handleTimeRangeChange(option.value)}
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 localTimeRange === option.value
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-[var(--color-brand)] text-[var(--color-text-on-primary)]'
                   : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
               aria-pressed={localTimeRange === option.value}
@@ -331,7 +333,7 @@ export default function TrendChart({
           <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-surface)] bg-opacity-75 z-10">
             <div className="flex flex-col items-center">
               <div
-                className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
+                className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"
                 role="status"
                 aria-label="Loading chart data"
               />
@@ -380,7 +382,7 @@ export default function TrendChart({
           </div>
           <div className="flex items-center space-x-2">
             <div
-              className="w-4 h-1 bg-green-500"
+              className="w-4 h-1 bg-[var(--color-healthy)]"
               style={{ borderStyle: 'dashed', borderWidth: '2px' }}
               aria-hidden="true"
             />

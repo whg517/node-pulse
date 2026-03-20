@@ -151,7 +151,7 @@ export const TopAnomaliesList = memo(function TopAnomaliesList({ nodes, metrics,
         </div>
         <div className="text-center py-12">
           <svg
-            className="mx-auto h-12 w-12 text-green-400"
+            className="mx-auto h-12 w-12 text-[var(--color-healthy)]"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

@@ -105,7 +105,7 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
       {/* URL Input */}
       <div>
         <label htmlFor="url" className="block text-sm font-medium text-[var(--color-text-secondary)]">
-          {t('webhooks.webhookUrl')} <span className="text-red-500">*</span>
+          {t('webhooks.webhookUrl')} <span className="text-[var(--color-critical)]">*</span>
         </label>
         <input
           type="url"
@@ -114,11 +114,11 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://example.com/webhook"
           className={`mt-1 block w-full border ${
-            errors.url ? 'border-red-400 dark:border-red-500' : 'border-[var(--color-input-border)]'
-          } rounded-md shadow-sm py-2 px-3 bg-[var(--color-input-bg)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm`}
+            errors.url ? 'border-[var(--color-critical)]' : 'border-[var(--color-input-border)]'
+          } rounded-md shadow-sm py-2 px-3 bg-[var(--color-input-bg)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)] focus:outline-none focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] sm:text-sm`}
         />
         {errors.url && (
-          <p className="mt-2 text-sm text-red-500 dark:text-red-400">{errors.url}</p>
+          <p className="mt-2 text-sm text-[var(--color-critical)]">{errors.url}</p>
         )}
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
           {t('webhooks.urlHint')}
@@ -129,12 +129,12 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
       <div>
         <div className="flex justify-between items-center">
           <label htmlFor="eventFormat" className="block text-sm font-medium text-[var(--color-text-secondary)]">
-            {t('webhooks.eventFormat')} (JSON) <span className="text-red-500">*</span>
+            {t('webhooks.eventFormat')} (JSON) <span className="text-[var(--color-critical)]">*</span>
           </label>
           <button
             type="button"
             onClick={resetToDefault}
-            className="text-sm text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300"
+            className="text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)]"
           >
             {t('webhooks.resetToDefault')}
           </button>
@@ -145,12 +145,12 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
           onChange={(e) => setEventFormat(e.target.value)}
           rows={12}
           className={`mt-1 block w-full border ${
-            errors.eventFormat ? 'border-red-400 dark:border-red-500' : 'border-[var(--color-input-border)]'
-          } rounded-md shadow-sm py-2 px-3 font-mono text-xs bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-blue-500 focus:border-blue-500`}
+            errors.eventFormat ? 'border-[var(--color-critical)]' : 'border-[var(--color-input-border)]'
+          } rounded-md shadow-sm py-2 px-3 font-mono text-xs bg-[var(--color-input-bg)] text-[var(--color-text-primary)] focus:outline-none focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)]`}
           placeholder={JSON.stringify(DEFAULT_EVENT_FORMAT, null, 2)}
         />
         {errors.eventFormat && (
-          <p className="mt-2 text-sm text-red-500 dark:text-red-400">{errors.eventFormat}</p>
+          <p className="mt-2 text-sm text-[var(--color-critical)]">{errors.eventFormat}</p>
         )}
         <p className="mt-1 text-sm text-[var(--color-text-muted)]">
           {t('webhooks.formatHint')}
@@ -181,7 +181,7 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
             type="checkbox"
             checked={enabled}
             onChange={(e) => setEnabled(e.target.checked)}
-            className="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300 rounded"
+            className="focus:ring-[var(--color-brand)] h-4 w-4 text-[var(--color-brand)] border-gray-300 rounded"
           />
         </div>
         <div className="ml-3 text-sm">
@@ -200,14 +200,14 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
           type="button"
           onClick={onCancel}
           disabled={isSubmitting}
-          className="px-4 py-2 border border-[var(--color-border-strong)] rounded-md shadow-sm text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 border border-[var(--color-border-strong)] rounded-md shadow-sm text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {t('common.cancel')}
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand)] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? t('common.saving') : mode === 'create' ? t('webhooks.addWebhook') : t('webhooks.updateWebhook')}
         </button>
