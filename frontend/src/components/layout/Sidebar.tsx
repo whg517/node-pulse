@@ -112,9 +112,9 @@ export function Sidebar({ isCollapsed, isOpen, onToggle, alertCount = 0 }: Sideb
         `}
       >
         {/* Logo */}
-        <div className={`flex h-16 items-center border-b border-[var(--color-border)] ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
+        <div className={`flex h-16 items-center shadow-xs ${isCollapsed ? 'justify-center px-2' : 'px-4'}`}>
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-brand)]">
               <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
               </svg>
@@ -143,7 +143,7 @@ export function Sidebar({ isCollapsed, isOpen, onToggle, alertCount = 0 }: Sideb
         </nav>
 
         {/* Collapse toggle (desktop only) */}
-        <div className="hidden border-t border-[var(--color-border)] p-3 md:block">
+        <div className="hidden shadow-xs p-3 md:block">
           <button
             type="button"
             onClick={onToggle}

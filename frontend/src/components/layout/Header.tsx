@@ -77,7 +77,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-surface)] px-4">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between shadow-xs bg-[var(--color-bg-surface)] px-4">
       {/* Left section: Menu button + Logo */}
       <div className="flex items-center gap-4">
         {/* Mobile menu button */}
@@ -92,7 +92,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
 
         {/* Logo (visible on mobile when sidebar is hidden) */}
         <Link to="/dashboard" className="flex items-center gap-2 md:hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--color-brand)]">
             <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
             </svg>
@@ -136,8 +136,8 @@ export function Header({ onMenuToggle }: HeaderProps) {
             onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
             className="flex items-center gap-2 rounded-lg p-2 text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)]"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/40">
-              <UserIcon className="text-blue-600 dark:text-blue-300" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--color-brand-muted)]">
+              <UserIcon className="text-[var(--color-brand)]" />
             </div>
             <span className="hidden font-medium sm:block">{user?.username}</span>
             <ChevronDownIcon className={`transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
@@ -170,7 +170,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-[var(--color-hover-overlay)]"
+                className="flex w-full items-center gap-2 px-4 py-2 text-sm text-[var(--color-critical)] hover:bg-[var(--color-hover-overlay)]"
               >
                 <LogoutIcon />
                 {t('nav.logout')}

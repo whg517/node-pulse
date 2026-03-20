@@ -55,22 +55,22 @@ function getMetricColor(value: number, threshold: number): {
 } {
   if (value >= threshold) {
     return {
-      bg: 'bg-red-50 dark:bg-red-900/20',
-      text: 'text-red-700 dark:text-red-300',
-      icon: 'text-red-500 dark:text-red-400',
+      bg: 'bg-[var(--color-critical-bg)]',
+      text: 'text-[var(--color-critical-text)]',
+      icon: 'text-[var(--color-critical)]',
     }
   }
   if (value >= threshold * 0.8) {
     return {
-      bg: 'bg-yellow-50 dark:bg-yellow-900/20',
-      text: 'text-yellow-700 dark:text-yellow-300',
-      icon: 'text-yellow-500 dark:text-yellow-400',
+      bg: 'bg-[var(--color-warning-bg)]',
+      text: 'text-[var(--color-warning-text)]',
+      icon: 'text-[var(--color-warning)]',
     }
   }
   return {
-    bg: 'bg-green-50 dark:bg-green-900/20',
-    text: 'text-green-700 dark:text-green-300',
-    icon: 'text-green-500 dark:text-green-400',
+    bg: 'bg-[var(--color-healthy-bg)]',
+    text: 'text-[var(--color-healthy-text)]',
+    icon: 'text-[var(--color-healthy)]',
   }
 }
 

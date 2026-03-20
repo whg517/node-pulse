@@ -111,12 +111,12 @@ export function getStatusBadgeClasses(
   status: 'online' | 'offline' | 'connecting' | string
 ): string {
   const statusClasses: Record<string, string> = {
-    online: 'bg-green-100 text-green-800',
-    offline: 'bg-red-100 text-red-800',
-    connecting: 'bg-yellow-100 text-yellow-800',
+    online: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]',
+    offline: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]',
+    connecting: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
   }
 
-  return statusClasses[status] || 'bg-gray-100 text-gray-800'
+  return statusClasses[status] || 'bg-[var(--color-unknown-bg)] text-[var(--color-unknown-text)]'
 }
 
 /**
@@ -133,10 +133,10 @@ export function getStatusIndicatorClasses(
   status: 'online' | 'offline' | 'connecting' | string
 ): string {
   const indicatorClasses: Record<string, string> = {
-    online: 'bg-green-500',
-    offline: 'bg-red-500',
-    connecting: 'bg-yellow-500',
+    online: 'bg-[var(--color-healthy)]',
+    offline: 'bg-[var(--color-critical)]',
+    connecting: 'bg-[var(--color-warning)]',
   }
 
-  return indicatorClasses[status] || 'bg-gray-400'
+  return indicatorClasses[status] || 'bg-[var(--color-unknown)]'
 }

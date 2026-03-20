@@ -150,7 +150,7 @@ describe('MTRVisualization', () => {
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      const hopElement = container.querySelector('.border-green-300')
+      const hopElement = container.querySelector('[class*="border-[var(--color-healthy)]")')
       expect(hopElement).toBeInTheDocument()
     })
 
@@ -160,7 +160,7 @@ describe('MTRVisualization', () => {
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      const hopElement = container.querySelector('.border-yellow-300')
+      const hopElement = container.querySelector('[class*="border-[var(--color-warning)]")')
       expect(hopElement).toBeInTheDocument()
     })
 
@@ -170,7 +170,7 @@ describe('MTRVisualization', () => {
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      const hopElement = container.querySelector('.border-red-300')
+      const hopElement = container.querySelector('[class*="border-[var(--color-critical)]")')
       expect(hopElement).toBeInTheDocument()
     })
 
@@ -492,7 +492,7 @@ describe('MTRVisualization', () => {
       const { container } = render(<MTRVisualization data={data} />)
 
       expect(screen.getByText('100.0%')).toBeInTheDocument()
-      expect(container.querySelector('.border-red-300')).toBeInTheDocument()
+      expect(container.querySelector('[class*="border-[var(--color-critical)]")')).toBeInTheDocument()
     })
 
     it('should handle single hop trace', () => {

@@ -37,7 +37,7 @@ export function SidebarItem({ icon, label, path, badge, isCollapsed }: SidebarIt
         className={({ isActive }) =>
           `group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200
           ${isActive
-            ? 'bg-blue-600 text-white dark:bg-blue-900/50 dark:text-blue-300'
+            ? 'bg-[var(--color-brand-muted)] text-[var(--color-brand)]'
             : 'text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)] hover:text-[var(--color-text-primary)]'
           }
           ${isCollapsed ? 'justify-center px-2' : ''}`
@@ -72,7 +72,7 @@ export function SidebarItem({ icon, label, path, badge, isCollapsed }: SidebarIt
           <div className="rounded-md bg-slate-900 px-3 py-1.5 text-sm font-medium text-white shadow-lg">
             {t(label)}
             {badge !== undefined && badge > 0 && (
-              <span className="ml-2 text-blue-300">({badge > 99 ? '99+' : badge})</span>
+              <span className="ml-2 text-[var(--color-brand-subtle)]">({badge > 99 ? '99+' : badge})</span>
             )}
           </div>
           {/* Arrow pointing left */}
