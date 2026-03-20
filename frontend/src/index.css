@@ -3,18 +3,90 @@
 /* Enable class-based dark mode for manual toggling */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* =============================================================================
+   Semantic Color Variables
+   Components reference these names, not raw palette values.
+   Light values use gray-* scale; dark values use slate-* for OLED depth.
+   ============================================================================= */
 :root {
+  /* Backgrounds */
+  --color-bg-page:         #f9fafb;   /* gray-50 */
+  --color-bg-surface:      #ffffff;   /* white */
+  --color-bg-elevated:     #ffffff;   /* white — modals, dropdowns */
+  --color-bg-muted:        #f3f4f6;   /* gray-100 */
+  --color-bg-subtle:       #e5e7eb;   /* gray-200 */
+
+  /* Borders */
+  --color-border:          #e5e7eb;   /* gray-200 */
+  --color-border-strong:   #d1d5db;   /* gray-300 */
+
+  /* Text */
+  --color-text-primary:    #111827;   /* gray-900 */
+  --color-text-secondary:  #4b5563;   /* gray-600 */
+  --color-text-muted:      #6b7280;   /* gray-500 */
+  --color-text-placeholder:#9ca3af;   /* gray-400 */
+
+  /* Interactive */
+  --color-hover-overlay:   #f3f4f6;   /* gray-100 */
+  --color-active-overlay:  #e5e7eb;   /* gray-200 */
+
+  /* Input */
+  --color-input-bg:        #ffffff;
+  --color-input-border:    #d1d5db;   /* gray-300 */
+
+  /* Chart */
+  --color-chart-text:          #374151;               /* gray-700 */
+  --color-chart-axis:          #e5e7eb;               /* gray-200 */
+  --color-chart-grid:          #f3f4f6;               /* gray-100 */
+  --color-chart-tooltip-bg:    rgba(255,255,255,0.95);
+  --color-chart-tooltip-border:#e5e7eb;               /* gray-200 */
+  --color-chart-tooltip-text:  #374151;               /* gray-700 */
+
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-
   color: #213547;
   background-color: #ffffff;
-
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode overrides — uses slate-* for true OLED depth */
+.dark {
+  /* Backgrounds */
+  --color-bg-page:         #020617;   /* slate-950 */
+  --color-bg-surface:      #0f172a;   /* slate-900 */
+  --color-bg-elevated:     #1e293b;   /* slate-800 */
+  --color-bg-muted:        #1e293b;   /* slate-800 */
+  --color-bg-subtle:       #334155;   /* slate-700 */
+
+  /* Borders */
+  --color-border:          #1e293b;   /* slate-800 */
+  --color-border-strong:   #334155;   /* slate-700 */
+
+  /* Text */
+  --color-text-primary:    #f8fafc;   /* slate-50 */
+  --color-text-secondary:  #94a3b8;   /* slate-400 */
+  --color-text-muted:      #64748b;   /* slate-500 */
+  --color-text-placeholder:#475569;   /* slate-600 */
+
+  /* Interactive */
+  --color-hover-overlay:   #1e293b;   /* slate-800 */
+  --color-active-overlay:  #334155;   /* slate-700 */
+
+  /* Input */
+  --color-input-bg:        #1e293b;   /* slate-800 */
+  --color-input-border:    #475569;   /* slate-600 */
+
+  /* Chart */
+  --color-chart-text:          #e2e8f0;               /* slate-200 */
+  --color-chart-axis:          #475569;               /* slate-600 */
+  --color-chart-grid:          #1e293b;               /* slate-800 */
+  --color-chart-tooltip-bg:    rgba(15,23,42,0.95);   /* slate-900 */
+  --color-chart-tooltip-border:#334155;               /* slate-700 */
+  --color-chart-tooltip-text:  #f8fafc;               /* slate-50 */
 }
 
 a {

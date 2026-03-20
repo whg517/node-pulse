@@ -105,10 +105,10 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
     return (
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
+          <div key={i} className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6">
             <div className="animate-pulse">
-              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4"></div>
-              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+              <div className="h-4 bg-[var(--color-bg-muted)] rounded w-1/2 mb-4"></div>
+              <div className="h-8 bg-[var(--color-bg-muted)] rounded w-3/4"></div>
             </div>
           </div>
         ))}
@@ -119,7 +119,7 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
       {/* Average Latency Card */}
-      <div className={`${latencyColor.bg} rounded-lg shadow overflow-hidden dark:shadow-gray-900`}>
+      <div className={`${latencyColor.bg} rounded-lg shadow overflow-hidden`}>
         <div className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -158,14 +158,14 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
           </div>
         </div>
         <div className={`${latencyColor.bg} px-6 py-3`}>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-[var(--color-text-muted)]">
             Across {summary.totalNodes} {summary.totalNodes === 1 ? 'node' : 'nodes'}
           </div>
         </div>
       </div>
 
       {/* Average Packet Loss Card */}
-      <div className={`${packetLossColor.bg} rounded-lg shadow overflow-hidden dark:shadow-gray-900`}>
+      <div className={`${packetLossColor.bg} rounded-lg shadow overflow-hidden`}>
         <div className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -204,14 +204,14 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
           </div>
         </div>
         <div className={`${packetLossColor.bg} px-6 py-3`}>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-[var(--color-text-muted)]">
             Across {summary.totalNodes} {summary.totalNodes === 1 ? 'node' : 'nodes'}
           </div>
         </div>
       </div>
 
       {/* Average Jitter Card */}
-      <div className={`${jitterColor.bg} rounded-lg shadow overflow-hidden dark:shadow-gray-900`}>
+      <div className={`${jitterColor.bg} rounded-lg shadow overflow-hidden`}>
         <div className="p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -226,7 +226,7 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 />
               </svg>
             </div>
@@ -250,7 +250,7 @@ export const MetricsSummaryCards = memo(function MetricsSummaryCards({
           </div>
         </div>
         <div className={`${jitterColor.bg} px-6 py-3`}>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
+          <div className="text-xs text-[var(--color-text-muted)]">
             Across {summary.totalNodes} {summary.totalNodes === 1 ? 'node' : 'nodes'}
           </div>
         </div>

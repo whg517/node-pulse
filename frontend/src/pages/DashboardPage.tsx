@@ -63,6 +63,7 @@ export default function DashboardPage() {
       <PageHeader
         title={t('dashboard.title')}
         subtitle={t('dashboard.realTimeMetrics')}
+        showBreadcrumb={false}
         actions={
           <div className="flex items-center space-x-3">
             <ActionButton variant="secondary" onClick={() => refetch()}>
@@ -85,16 +86,16 @@ export default function DashboardPage() {
       {/* Health Overview Stats */}
       <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
         {/* Online Rate */}
-        <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
               {t('metrics.onlineRate')}
             </h3>
           </div>
           <div className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                <p className="text-2xl font-bold text-[var(--color-text-primary)]">
                   {stats.onlineRate.toFixed(1)}{t('units.percent')}
                 </p>
               </div>
@@ -120,7 +121,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="mt-3 flex items-center text-xs">
-              <span className="text-gray-400 dark:text-gray-500">
+              <span className="text-[var(--color-text-muted)]">
                 {stats.onlineNodes}/{stats.totalNodes} {t('status.online').toLowerCase()}
               </span>
             </div>
@@ -128,9 +129,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Anomaly Rate */}
-        <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
               {t('metrics.anomalyRate')}
             </h3>
           </div>
@@ -138,7 +139,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p
-                  className="text-2xl font-bold text-gray-900 dark:text-white"
+                  className="text-2xl font-bold text-[var(--color-text-primary)]"
                   style={{
                     color: stats.anomalyRate > 10
                       ? HEALTH_COLORS.critical
@@ -185,17 +186,17 @@ export default function DashboardPage() {
             </div>
             <div className="mt-3 flex items-center text-xs">
               <span style={{ color: HEALTH_COLORS.warning }}>{stats.warningNodes}</span>
-              <span className="mx-1 text-gray-300 dark:text-gray-600">|</span>
+              <span className="mx-1 text-[var(--color-border-strong)]">|</span>
               <span style={{ color: HEALTH_COLORS.critical }}>{stats.criticalNodes}</span>
-              <span className="ml-1 text-gray-400 dark:text-gray-500">{t('dashboard.nodesRequiringAttention')}</span>
+              <span className="ml-1 text-[var(--color-text-muted)]">{t('dashboard.nodesRequiringAttention')}</span>
             </div>
           </div>
         </div>
 
         {/* Average Latency */}
-        <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
               {t('metrics.avgLatency')}
             </h3>
           </div>
@@ -203,7 +204,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p
-                  className="text-2xl font-bold text-gray-900 dark:text-white"
+                  className="text-2xl font-bold text-[var(--color-text-primary)]"
                   style={{
                     color: stats.averageLatency > 200
                       ? HEALTH_COLORS.critical
@@ -239,9 +240,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Probe Success Rate Gauge */}
-        <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
               {t('dashboard.probeSuccessRate')}
             </h3>
           </div>
@@ -258,9 +259,9 @@ export default function DashboardPage() {
       {/* Charts Row */}
       <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Latency Trend Chart */}
-        <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
               {t('dashboard.latencyTrendChart')}
             </h3>
           </div>
@@ -276,9 +277,9 @@ export default function DashboardPage() {
         </div>
 
         {/* Packet Loss Chart */}
-        <div className="rounded-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
               {t('dashboard.packetLossChart')}
             </h3>
           </div>
@@ -296,7 +297,7 @@ export default function DashboardPage() {
 
       {/* Metrics Summary Cards */}
       <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">
+        <h3 className="text-lg font-semibold mb-4 text-[var(--color-text-primary)]">
           {t('dashboard.averageMetrics')}
         </h3>
         <MetricsSummaryCards metrics={metrics} isLoading={isLoading} />
@@ -307,7 +308,7 @@ export default function DashboardPage() {
         {/* Node Health Cards (2/3 width on large screens) */}
         <div className="lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
               {t('dashboard.nodeHealthOverview')}
             </h3>
             <button
@@ -329,7 +330,7 @@ export default function DashboardPage() {
               />
             ))}
             {topNodes.length === 0 && !isLoading && (
-              <div className="col-span-2 text-center py-8 text-gray-500 dark:text-gray-400">
+              <div className="col-span-2 text-center py-8 text-[var(--color-text-secondary)]">
                 {t('nodes.noNodes')}
               </div>
             )}
@@ -349,7 +350,7 @@ export default function DashboardPage() {
 
       {/* Auto-refresh indicator */}
       {!isLoading && nodes.length > 0 && (
-        <div className="mt-6 text-center text-sm flex items-center justify-center text-gray-500 dark:text-gray-400">
+        <div className="mt-6 text-center text-sm flex items-center justify-center text-[var(--color-text-muted)]">
           <svg
             className="inline-block h-4 w-4 mr-1 text-blue-500"
             fill="none"

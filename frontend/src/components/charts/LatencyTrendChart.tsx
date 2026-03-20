@@ -9,8 +9,11 @@ import { useEffect, useRef, useCallback } from 'react'
 import echarts, { graphic } from '../../lib/echarts-core'
 import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
-import { useTheme } from '../../hooks/useTheme'
 import type { DataPoint } from '../dashboard/TrendChart'
+
+function getCSSVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
 
 export interface LatencyTrendChartProps {
   data: DataPoint[]
@@ -50,12 +53,14 @@ export function LatencyTrendChart({
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
-  const { isDark } = useTheme()
 
   const getChartOptions = useCallback((): EChartsOption => {
-    const textColor = isDark ? '#e5e7eb' : '#374151'
-    const axisLineColor = isDark ? '#4b5563' : '#e5e7eb'
-    const splitLineColor = isDark ? '#374151' : '#f3f4f6'
+    const textColor = getCSSVar('--color-chart-text') || '#374151'
+    const axisLineColor = getCSSVar('--color-chart-axis') || '#e5e7eb'
+    const splitLineColor = getCSSVar('--color-chart-grid') || '#f3f4f6'
+    const tooltipBg = getCSSVar('--color-chart-tooltip-bg') || 'rgba(255,255,255,0.95)'
+    const tooltipBorder = getCSSVar('--color-chart-tooltip-border') || '#e5e7eb'
+    const tooltipText = getCSSVar('--color-chart-tooltip-text') || '#374151'
 
     const series: SeriesOption[] = [
       {
@@ -108,10 +113,10 @@ export function LatencyTrendChart({
       },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: isDark ? 'rgba(17, 24, 39, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-        borderColor: isDark ? '#374151' : '#e5e7eb',
+        backgroundColor: tooltipBg,
+        borderColor: tooltipBorder,
         textStyle: {
-          color: isDark ? '#f9fafb' : '#374151',
+          color: tooltipText,
         },
         formatter: (params: unknown) => {
           const items = params as Array<{ name: string; value: number; seriesName: string }>
@@ -163,7 +168,7 @@ export function LatencyTrendChart({
       },
       series,
     }
-  }, [data, isDark, showBaseline, baselineValue, t])
+  }, [data, showBaseline, baselineValue, t])
 
   // Initialize chart only once on mount
   useEffect(() => {

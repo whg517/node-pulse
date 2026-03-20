@@ -77,7 +77,7 @@ export default function SessionList({
 
   if (isLoading) {
     return (
-      <div className="bg-white dark:bg-slate-900 shadow rounded-lg p-6">
+      <div className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6">
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center space-x-4">
@@ -92,13 +92,13 @@ export default function SessionList({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-700 flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-slate-100">{t('sessions.activeSessions')}</h3>
+    <div className="bg-[var(--color-bg-surface)] shadow rounded-lg overflow-hidden border border-[var(--color-border)]">
+      <div className="px-6 py-4 border-b border-[var(--color-border)] flex justify-between items-center">
+        <h3 className="text-lg font-medium text-[var(--color-text-primary)]">{t('sessions.activeSessions')}</h3>
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="inline-flex items-center px-3 py-1.5 border border-gray-300 dark:border-slate-600 rounded-md text-sm font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+          className="inline-flex items-center px-3 py-1.5 border border-[var(--color-border-strong)] rounded-md text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
         >
           <svg
             className={`-ml-1 mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
@@ -118,32 +118,32 @@ export default function SessionList({
       </div>
 
       {sessions.length === 0 ? (
-        <div className="px-6 py-8 text-center text-gray-500 dark:text-slate-400">
+        <div className="px-6 py-8 text-center text-[var(--color-text-secondary)]">
           {t('sessions.noSessions')}
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-            <thead className="bg-gray-50 dark:bg-slate-700">
+          <table className="min-w-full divide-y divide-[var(--color-border)]">
+            <thead className="bg-[var(--color-bg-muted)]">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                   {t('sessions.device')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                   {t('sessions.ipAddress')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                   {t('sessions.created')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                   {t('sessions.expires')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                   {t('common.actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+            <tbody className="bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
               {sessions.map((session) => {
                 const isCurrent = session.session_id === currentSessionId
                 const isRevoking = revokingId === session.session_id
@@ -151,12 +151,12 @@ export default function SessionList({
                 const { browser, device } = parseUserAgent(session.user_agent || '')
 
                 return (
-                  <tr key={session.session_id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+                  <tr key={session.session_id} className="hover:bg-[var(--color-hover-overlay)]">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gray-100 dark:bg-slate-600 flex items-center justify-center">
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-[var(--color-bg-muted)] flex items-center justify-center">
                           <svg
-                            className="h-4 w-4 text-gray-600 dark:text-slate-300"
+                            className="h-4 w-4 text-[var(--color-text-secondary)]"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -171,26 +171,26 @@ export default function SessionList({
                         </div>
                         <div className="ml-4">
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                            <span className="text-sm font-medium text-[var(--color-text-primary)]">
                               {device}
                             </span>
                             {isCurrent && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" data-testid="current-session">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300" data-testid="current-session">
                                 {t('sessions.currentSession')}
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-gray-500 dark:text-slate-400">{browser}</span>
+                          <span className="text-xs text-[var(--color-text-muted)]">{browser}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
                       {session.ip_address || 'Unknown IP'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
                       {formatDateTime(session.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
                       {formatDateTime(session.expires_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -202,14 +202,14 @@ export default function SessionList({
                           <button
                             onClick={() => handleRevoke(session.session_id, isCurrent)}
                             disabled={isRevoking}
-                            className="inline-flex items-center px-2 py-1 border border-red-300 rounded text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none disabled:opacity-50"
+                            className="inline-flex items-center px-2 py-1 border border-red-300 dark:border-red-700 rounded text-xs font-medium text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 focus:outline-none disabled:opacity-50"
                           >
                             {isRevoking ? t('sessions.revoking') : t('sessions.yesRevoke')}
                           </button>
                           <button
                             onClick={() => setConfirmRevoke(null)}
                             disabled={isRevoking}
-                            className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-slate-600 rounded text-xs font-medium text-gray-700 dark:text-slate-300 bg-white dark:bg-slate-700 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none disabled:opacity-50"
+                            className="inline-flex items-center px-2 py-1 border border-[var(--color-border-strong)] rounded text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none disabled:opacity-50"
                           >
                             {t('common.cancel')}
                           </button>
@@ -220,8 +220,8 @@ export default function SessionList({
                           disabled={isRevoking || isLoading}
                           className={`inline-flex items-center px-3 py-1.5 border rounded text-xs font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
                             isCurrent
-                              ? 'border-red-300 text-red-700 bg-red-50 hover:bg-red-100 focus:ring-red-500'
-                              : 'border-gray-300 text-gray-700 bg-white hover:bg-gray-50 focus:ring-blue-500'
+                              ? 'border-red-300 dark:border-red-700 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 focus:ring-red-500'
+                              : 'border-[var(--color-border-strong)] text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:ring-blue-500'
                           }`}
                         >
                           {t('sessions.revoke')}

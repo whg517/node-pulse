@@ -28,7 +28,7 @@ export function PageHeader({
   title,
   subtitle,
   actions,
-  showBreadcrumb = false,
+  showBreadcrumb = true,
   className = '',
 }: PageHeaderProps) {
   return (
@@ -43,11 +43,11 @@ export function PageHeader({
       {/* Title and actions */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
             {title}
           </h1>
           {subtitle && (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
               {subtitle}
             </p>
           )}

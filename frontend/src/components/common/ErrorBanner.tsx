@@ -5,7 +5,6 @@
  * Used across all pages for consistent error presentation.
  */
 
-import { useTheme } from '../../hooks/useTheme'
 import { statusClasses } from '../../config/designTokens'
 
 export interface ErrorBannerProps {
@@ -25,8 +24,6 @@ export function ErrorBanner({
   retryText = 'common.retry',
   className = '',
 }: ErrorBannerProps) {
-  const { isDark } = useTheme()
-
   const errorMessage = typeof error === 'string' ? error : error.message
 
   return (
@@ -52,7 +49,7 @@ export function ErrorBanner({
         </div>
 
         {/* Error message */}
-        <div className={`ml-3 flex-1 ${isDark ? 'text-red-300' : 'text-red-800'}`}>
+        <div className="ml-3 flex-1 text-red-800 dark:text-red-300">
           <p className="text-sm font-medium">{errorMessage}</p>
         </div>
 

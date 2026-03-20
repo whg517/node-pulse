@@ -113,13 +113,13 @@ export const statusClasses = {
     ring: 'ring-red-500',
   },
   unknown: {
-    bg: 'bg-gray-500',
-    bgLight: 'bg-gray-100',
-    bgLightDark: 'dark:bg-gray-900/20',
-    text: 'text-gray-500',
-    textDark: 'text-gray-800',
-    border: 'border-gray-200',
-    ring: 'ring-gray-500',
+    bg: 'bg-slate-500',
+    bgLight: 'bg-slate-100',
+    bgLightDark: 'dark:bg-slate-800/50',
+    text: 'text-slate-500',
+    textDark: 'text-slate-800',
+    border: 'border-slate-200',
+    ring: 'ring-slate-500',
   },
 } as const
 
@@ -277,36 +277,38 @@ export const animation = {
 
 /**
  * Button variants
+ * Uses semantic CSS variables from index.css so dark mode is handled by CSS, not JS.
  */
 export const buttonVariants = {
   // Primary action button
   primary: 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed',
-  
+
   // Secondary action button
-  secondary: 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed',
-  
+  secondary: 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] border border-[var(--color-border-strong)] rounded-md hover:bg-[var(--color-hover-overlay)] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed',
+
   // Danger action button
   danger: 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed',
-  
+
   // Ghost button
-  ghost: 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed',
-  
+  ghost: 'inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-hover-overlay)] transition-colors duration-150 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed',
+
   // Icon button
-  icon: 'inline-flex items-center justify-center p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-150 focus:outline-none',
+  icon: 'inline-flex items-center justify-center p-2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] rounded-lg hover:bg-[var(--color-hover-overlay)] transition-colors duration-150 focus:outline-none',
 } as const
 
 /**
  * Card variants
+ * Uses semantic CSS variables so gray vs slate inconsistency is resolved in one place.
  */
 export const cardVariants = {
   // Standard card
-  default: 'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm',
-  
+  default: 'rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-sm',
+
   // Elevated card
-  elevated: 'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-md',
-  
+  elevated: 'rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-md',
+
   // Interactive card
-  interactive: 'rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer',
+  interactive: 'rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer',
 } as const
 
 // ============================================================================

@@ -6,22 +6,19 @@
 
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useTheme } from '../hooks/useTheme'
-
 export default function NotFoundPage() {
   const { t } = useTranslation()
-  const { isDark } = useTheme()
 
   return (
-    <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-950' : 'bg-gray-50'}`}>
+    <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-page)]">
       <div className="text-center px-4">
         <div className="mb-8">
           <span className="text-9xl font-bold text-blue-500">404</span>
         </div>
-        <h1 className={`text-3xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+        <h1 className="text-3xl font-bold mb-4 text-[var(--color-text-primary)]">
           {t('errors.pageNotFound')}
         </h1>
-        <p className={`text-lg mb-8 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+        <p className="text-lg mb-8 text-[var(--color-text-secondary)]">
           {t('errors.pageNotFoundDescription')}
         </p>
         <Link

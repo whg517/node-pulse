@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '../stores/authStore'
-import { useTheme } from '../hooks/useTheme'
 import { getAlertRecords, updateAlertRecordStatus, isValidStatusTransition } from '../api/alertRecords'
 import { fetchNodes } from '../api/nodes'
 import { exportData } from '../api/data'
@@ -27,7 +26,6 @@ type SortOrder = 'asc' | 'desc'
 
 export default function AlertRecordsPage() {
   const { t } = useTranslation()
-  const { isDark } = useTheme()
   const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
@@ -312,7 +310,7 @@ export default function AlertRecordsPage() {
         </div>
       ))}
 
-      <main className={isDark ? 'bg-slate-900' : 'bg-gray-50'}>
+      <main className="bg-[var(--color-bg-page)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <PageHeader
             title={t('alerts.alertHistory')}

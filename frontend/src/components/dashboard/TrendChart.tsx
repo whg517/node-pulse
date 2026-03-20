@@ -292,13 +292,13 @@ export default function TrendChart({
 
   return (
     <div
-      className={`trend-chart bg-white rounded-lg shadow-sm p-4 ${className}`}
+      className={`trend-chart bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-4 ${className}`}
       role="region"
       aria-label={`${config.label} trend chart`}
     >
       {/* Time Range Selector */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">{config.label} Trend</h3>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{config.label} Trend</h3>
         <div className="flex space-x-2" role="group" aria-label="Time range selector">
           {timeRangeOptions.map((option) => (
             <button
@@ -307,7 +307,7 @@ export default function TrendChart({
               className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                 localTimeRange === option.value
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
               aria-pressed={localTimeRange === option.value}
               disabled={isLoading}
@@ -328,14 +328,14 @@ export default function TrendChart({
       >
         {/* Loading Overlay */}
         {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+          <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-surface)] bg-opacity-75 z-10">
             <div className="flex flex-col items-center">
               <div
                 className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
                 role="status"
                 aria-label="Loading chart data"
               />
-              <p className="mt-2 text-gray-600">Loading chart data...</p>
+              <p className="mt-2 text-[var(--color-text-secondary)]">Loading chart data...</p>
             </div>
           </div>
         )}
@@ -345,7 +345,7 @@ export default function TrendChart({
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
               <svg
-                className="mx-auto h-12 w-12 text-gray-400"
+                className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -358,8 +358,8 @@ export default function TrendChart({
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No Data Available</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">No Data Available</h3>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                 No trend data available for the selected time range.
               </p>
             </div>
@@ -376,7 +376,7 @@ export default function TrendChart({
               style={{ backgroundColor: config.color }}
               aria-hidden="true"
             />
-            <span className="text-gray-700">{config.label}</span>
+            <span className="text-[var(--color-text-secondary)]">{config.label}</span>
           </div>
           <div className="flex items-center space-x-2">
             <div
@@ -384,7 +384,7 @@ export default function TrendChart({
               style={{ borderStyle: 'dashed', borderWidth: '2px' }}
               aria-hidden="true"
             />
-            <span className="text-gray-700">Baseline ({baselineValue} {config.unit})</span>
+            <span className="text-[var(--color-text-secondary)]">Baseline ({baselineValue} {config.unit})</span>
           </div>
         </div>
       )}

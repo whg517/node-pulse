@@ -6,7 +6,6 @@
  */
 
 import { useEffect } from 'react'
-import { useTheme } from '../../hooks/useTheme'
 import { buttonVariants } from '../../config/designTokens'
 
 export interface ConfirmDialogProps {
@@ -41,7 +40,6 @@ export function ConfirmDialog({
   loading = false,
   variant = 'danger',
 }: ConfirmDialogProps) {
-  const { isDark } = useTheme()
 
   // Close on Escape key
   useEffect(() => {
@@ -71,7 +69,7 @@ export function ConfirmDialog({
       {/* Dialog */}
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div
-          className={`w-full max-w-md transform overflow-hidden rounded-lg ${isDark ? 'bg-gray-800' : 'bg-white'} p-6 shadow-xl transition-all`}
+          className="w-full max-w-md transform overflow-hidden rounded-lg bg-[var(--color-bg-elevated)] p-6 shadow-xl transition-all"
           role="dialog"
           aria-modal="true"
           aria-labelledby="dialog-title"
@@ -81,17 +79,13 @@ export function ConfirmDialog({
             <div
               className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full ${
                 variant === 'danger'
-                  ? isDark
-                    ? 'bg-red-900/20'
-                    : 'bg-red-100'
-                  : isDark
-                    ? 'bg-blue-900/20'
-                    : 'bg-blue-100'
+                  ? 'bg-red-100 dark:bg-red-900/20'
+                  : 'bg-blue-100 dark:bg-blue-900/20'
               }`}
             >
               {variant === 'danger' ? (
                 <svg
-                  className={`h-6 w-6 ${isDark ? 'text-red-400' : 'text-red-600'}`}
+                  className="h-6 w-6 text-red-600 dark:text-red-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -105,7 +99,7 @@ export function ConfirmDialog({
                 </svg>
               ) : (
                 <svg
-                  className={`h-6 w-6 ${isDark ? 'text-blue-400' : 'text-blue-600'}`}
+                  className="h-6 w-6 text-blue-600 dark:text-blue-400"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -122,7 +116,7 @@ export function ConfirmDialog({
             <div>
               <h3
                 id="dialog-title"
-                className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+                className="text-lg font-semibold text-[var(--color-text-primary)]"
               >
                 {title}
               </h3>
@@ -131,7 +125,7 @@ export function ConfirmDialog({
 
           {/* Message */}
           <div className="mt-4">
-            <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+            <p className="text-sm text-[var(--color-text-secondary)]">
               {message}
             </p>
           </div>

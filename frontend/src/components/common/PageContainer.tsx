@@ -6,7 +6,6 @@
  */
 
 import type { ReactNode } from 'react'
-import { useTheme } from '../../hooks/useTheme'
 import { layout, spacing } from '../../config/designTokens'
 
 export interface PageContainerProps {
@@ -23,12 +22,10 @@ export function PageContainer({
   className = '',
   background = 'default',
 }: PageContainerProps) {
-  const { isDark } = useTheme()
-
-  // Background classes based on variant
+  // Background classes use CSS variables — no JS isDark branching needed
   const backgroundClasses = {
-    default: isDark ? 'bg-gray-950' : 'bg-gray-50',
-    white: isDark ? 'bg-gray-900' : 'bg-white',
+    default: 'bg-[var(--color-bg-page)]',
+    white: 'bg-[var(--color-bg-surface)]',
     transparent: 'bg-transparent',
   }
 

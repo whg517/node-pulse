@@ -9,7 +9,10 @@ import { useEffect, useRef, useCallback } from 'react'
 import echarts from '../../lib/echarts-core'
 import type { ECharts, EChartsOption } from '../../lib/echarts-core'
 import { useTranslation } from 'react-i18next'
-import { useTheme } from '../../hooks/useTheme'
+
+function getCSSVar(name: string): string {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+}
 
 export interface ProbeSuccessGaugeProps {
   value: number // 0-100 percentage
@@ -53,10 +56,10 @@ export function ProbeSuccessGauge({
   const chartRef = useRef<HTMLDivElement>(null)
   const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
-  const { isDark } = useTheme()
 
   const getChartOptions = useCallback((): EChartsOption => {
-    const textColor = isDark ? '#e5e7eb' : '#374151'
+    const textColor = getCSSVar('--color-chart-text') || '#374151'
+    const trackColor = getCSSVar('--color-chart-grid') || '#e5e7eb'
     const color = getColorForValue(value)
 
     return {
@@ -82,9 +85,7 @@ export function ProbeSuccessGauge({
           axisLine: {
             lineStyle: {
               width: 18,
-              color: isDark
-                ? [[1, '#374151']]
-                : [[1, '#e5e7eb']],
+              color: [[1, trackColor || '#e5e7eb']],
             },
           },
           axisTick: {
@@ -125,7 +126,7 @@ export function ProbeSuccessGauge({
         },
       ],
     }
-  }, [value, isDark, t])
+  }, [value, t])
 
   // Initialize chart only once on mount
   useEffect(() => {

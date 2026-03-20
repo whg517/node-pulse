@@ -31,13 +31,13 @@ export function AlertRulesTable({
   const getLevelBadgeColor = (level: string) => {
     switch (level) {
       case 'P0':
-        return 'bg-red-100 text-red-800'
+        return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
       case 'P1':
-        return 'bg-orange-100 text-orange-800'
+        return 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300'
       case 'P2':
-        return 'bg-yellow-100 text-yellow-800'
+        return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
       default:
-        return 'bg-gray-100 text-gray-800'
+        return 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'
     }
   }
 
@@ -60,7 +60,7 @@ export function AlertRulesTable({
     return (
       <div className="text-center py-12">
         <svg
-          className="mx-auto h-12 w-12 text-gray-400"
+          className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -73,8 +73,8 @@ export function AlertRulesTable({
             d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
-        <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-slate-100">{t('alerts.noRules')}</h3>
-        <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+        <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">{t('alerts.noRules')}</h3>
+        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
           {t('alerts.noRulesHint')}
         </p>
         {canEdit && (
@@ -93,54 +93,54 @@ export function AlertRulesTable({
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 shadow rounded-lg overflow-hidden">
+    <div className="bg-[var(--color-bg-surface)] shadow rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
-          <thead className="bg-gray-50 dark:bg-slate-700">
+        <table className="min-w-full divide-y divide-[var(--color-border)]">
+          <thead className="bg-[var(--color-bg-muted)]">
             <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                 {t('alerts.alertType')}
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                 {t('alerts.threshold')}
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                 {t('alerts.severity')}
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                 {t('nodes.title')}
               </th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                 {t('common.status')}
               </th>
               {canEdit && (
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                   {t('common.actions')}
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-white dark:bg-slate-800 divide-y divide-gray-200 dark:divide-slate-700">
+          <tbody className="bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
             {rules.map((rule) => (
-              <tr key={rule.id} className="hover:bg-gray-50 dark:hover:bg-slate-700">
+              <tr key={rule.id} className="hover:bg-[var(--color-hover-overlay)]">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900 dark:text-slate-100">
+                  <div className="text-sm font-medium text-[var(--color-text-primary)]">
                     {getMetricDisplayName(rule.metric)}
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900 dark:text-slate-100">{rule.threshold}</div>
+                  <div className="text-sm text-[var(--color-text-primary)]">{rule.threshold}</div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getLevelBadgeColor(rule.level)}`}>
                     {rule.level}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
                   {getNodeName(rule.nodeId)}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${rule.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${rule.enabled ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'}`}>
                     {rule.enabled ? t('status.enabled') : t('status.disabled')}
                   </span>
                 </td>
@@ -149,7 +149,7 @@ export function AlertRulesTable({
                     <button
                       type="button"
                       onClick={() => onToggleEnabled(rule.id, !rule.enabled)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-500 hover:text-blue-400 dark:text-blue-400 dark:hover:text-blue-300 mr-4"
                       title={rule.enabled ? t('settings.disable') : t('settings.enable')}
                     >
                       {rule.enabled ? t('settings.disable') : t('settings.enable')}
@@ -157,14 +157,14 @@ export function AlertRulesTable({
                     <button
                       type="button"
                       onClick={() => onEdit(rule.id)}
-                      className="text-indigo-600 hover:text-indigo-900 mr-4"
+                      className="text-indigo-500 hover:text-indigo-400 dark:text-indigo-400 dark:hover:text-indigo-300 mr-4"
                     >
                       {t('common.edit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete(rule.id)}
-                      className="text-red-600 hover:text-red-900"
+                      className="text-red-500 hover:text-red-400 dark:text-red-400 dark:hover:text-red-300"
                     >
                       {t('common.delete')}
                     </button>

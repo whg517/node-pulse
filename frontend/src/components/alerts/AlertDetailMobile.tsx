@@ -19,7 +19,6 @@ import { useState, useCallback } from 'react'
 import type { AlertRecordDTO, AlertRecordStatus } from '../../api/alertRecords'
 import type { NodeDTO } from '../../api/types'
 import { useTimezoneUtils } from '../../utils/timezone'
-import { useTheme } from '../../hooks/useTheme'
 
 // ============== Types ==============
 
@@ -56,45 +55,27 @@ function getStatusDisplayName(status: string): string {
 }
 
 /**
- * Get status badge color classes
+ * Get status badge color classes (Tailwind dark: prefix, no JS branching)
  */
-function getStatusBadgeColor(status: string, isDark: boolean): string {
-  const colors: Record<string, { light: string; dark: string }> = {
-    pending: {
-      light: 'bg-red-100 text-red-800 border-red-200',
-      dark: 'bg-red-900/50 text-red-300 border-red-700',
-    },
-    in_progress: {
-      light: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      dark: 'bg-yellow-900/50 text-yellow-300 border-yellow-700',
-    },
-    resolved: {
-      light: 'bg-green-100 text-green-800 border-green-200',
-      dark: 'bg-green-900/50 text-green-300 border-green-700',
-    },
+function getStatusBadgeColor(status: string): string {
+  const colors: Record<string, string> = {
+    pending: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-700',
+    in_progress: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700',
+    resolved: 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border-green-200 dark:border-green-700',
   }
-  return isDark ? colors[status]?.dark || colors.pending.dark : colors[status]?.light || colors.pending.light
+  return colors[status] || colors.pending
 }
 
 /**
- * Get level badge color classes
+ * Get level badge color classes (Tailwind dark: prefix, no JS branching)
  */
-function getLevelBadgeColor(level: string, isDark: boolean): string {
-  const colors: Record<string, { light: string; dark: string }> = {
-    P0: {
-      light: 'bg-red-100 text-red-800 border-red-200',
-      dark: 'bg-red-900/50 text-red-300 border-red-700',
-    },
-    P1: {
-      light: 'bg-orange-100 text-orange-800 border-orange-200',
-      dark: 'bg-orange-900/50 text-orange-300 border-orange-700',
-    },
-    P2: {
-      light: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      dark: 'bg-yellow-900/50 text-yellow-300 border-yellow-700',
-    },
+function getLevelBadgeColor(level: string): string {
+  const colors: Record<string, string> = {
+    P0: 'bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-700',
+    P1: 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-300 border-orange-200 dark:border-orange-700',
+    P2: 'bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700',
   }
-  return isDark ? colors[level]?.dark || colors.P2.dark : colors[level]?.light || colors.P2.light
+  return colors[level] || colors.P2
 }
 
 /**
@@ -114,9 +95,9 @@ function getMetricDisplayName(metric: string): string {
 /**
  * Status Badge Component
  */
-function StatusBadge({ status, isDark }: { status: string; isDark: boolean }) {
+function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusBadgeColor(status, isDark)}`}>
+    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getStatusBadgeColor(status)}`}>
       {getStatusDisplayName(status)}
     </span>
   )
@@ -125,9 +106,9 @@ function StatusBadge({ status, isDark }: { status: string; isDark: boolean }) {
 /**
  * Level Badge Component
  */
-function LevelBadge({ level, isDark }: { level: string; isDark: boolean }) {
+function LevelBadge({ level }: { level: string }) {
   return (
-    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getLevelBadgeColor(level, isDark)}`}>
+    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full border ${getLevelBadgeColor(level)}`}>
       {level}
     </span>
   )
@@ -141,36 +122,34 @@ function TimelineEvent({
   time,
   description,
   isLast,
-  isDark,
 }: {
   title: string
   time: string
   description?: string
   isLast: boolean
-  isDark: boolean
 }) {
   return (
     <div className="flex gap-3">
       {/* Timeline line */}
       <div className="flex flex-col items-center">
-        <div className={`w-2 h-2 rounded-full ${isDark ? 'bg-blue-400' : 'bg-blue-600'}`} />
+        <div className="w-2 h-2 rounded-full bg-blue-600 dark:bg-blue-400" />
         {!isLast && (
-          <div className={`w-0.5 flex-1 min-h-[24px] ${isDark ? 'bg-slate-700' : 'bg-gray-200'}`} />
+          <div className="w-0.5 flex-1 min-h-[24px] bg-gray-200 dark:bg-slate-700" />
         )}
       </div>
       
       {/* Content */}
       <div className="flex-1 pb-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className={`text-sm font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+          <span className="text-sm font-medium text-[var(--color-text-primary)]">
             {title}
           </span>
-          <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+          <span className="text-xs text-[var(--color-text-muted)]">
             {time}
           </span>
         </div>
         {description && (
-          <p className={`mt-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
             {description}
           </p>
         )}
@@ -185,12 +164,10 @@ function TimelineEvent({
 function NoteInput({
   onSubmit,
   isSubmitting,
-  isDark,
   placeholder = "Add a note...",
 }: {
   onSubmit: (note: string) => void
   isSubmitting: boolean
-  isDark: boolean
   placeholder?: string
 }) {
   const [note, setNote] = useState('')
@@ -210,7 +187,7 @@ function NoteInput({
   
   return (
     <div className="mt-4">
-      <label className={`block text-sm font-medium mb-2 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+      <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
         Add Note
       </label>
       <textarea
@@ -219,16 +196,12 @@ function NoteInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         rows={3}
-        className={`w-full px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-          isDark
-            ? 'bg-slate-700 border-slate-600 text-gray-100 placeholder-gray-500'
-            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-400'
-        }`}
+        className="w-full px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 bg-[var(--color-input-bg)] border-[var(--color-input-border)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)]"
         disabled={isSubmitting}
         aria-label="Add a note (press Ctrl+Enter or Cmd+Enter to submit)"
       />
       <div className="mt-2 flex justify-between items-center">
-        <p className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+        <p className="text-xs text-[var(--color-text-muted)]">
           Press Ctrl+Enter or Cmd+Enter to submit
         </p>
         <button
@@ -256,7 +229,6 @@ export function AlertDetailMobile({
   onClose,
   onStatusUpdate,
 }: AlertDetailMobileProps) {
-  const { isDark } = useTheme()
   const timezoneUtils = useTimezoneUtils()
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -336,26 +308,18 @@ export function AlertDetailMobile({
       />
       
       {/* Modal Content */}
-      <div
-        className={`relative flex flex-col h-full w-full ${
-          isDark ? 'bg-slate-900' : 'bg-white'
-        }`}
-      >
+      <div className="relative flex flex-col h-full w-full bg-[var(--color-bg-surface)]">
         {/* Header */}
-        <div className={`flex items-center justify-between px-4 py-3 border-b ${
-          isDark ? 'border-slate-700 bg-slate-800' : 'border-gray-200 bg-white'
-        }`}>
+        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)]">
           <h2
             id="alert-detail-title"
-            className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}
+            className="text-lg font-semibold text-[var(--color-text-primary)]"
           >
             Alert Details
           </h2>
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg transition-colors ${
-              isDark ? 'hover:bg-slate-700 text-gray-400' : 'hover:bg-gray-100 text-gray-500'
-            }`}
+            className="p-2 rounded-lg transition-colors text-[var(--color-text-muted)] hover:bg-[var(--color-hover-overlay)]"
             aria-label="Close alert details"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -376,12 +340,10 @@ export function AlertDetailMobile({
           <div className="p-4 space-y-6">
             {/* Alert ID */}
             <section aria-labelledby="alert-id-label">
-              <h3 id="alert-id-label" className={`text-xs font-medium uppercase tracking-wider mb-1 ${
-                isDark ? 'text-gray-500' : 'text-gray-400'
-              }`}>
+              <h3 id="alert-id-label" className="text-xs font-medium uppercase tracking-wider mb-1 text-[var(--color-text-muted)]">
                 Alert ID
               </h3>
-              <p className={`text-sm font-mono break-all ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+              <p className="text-sm font-mono break-all text-[var(--color-text-secondary)]">
                 {record.id}
               </p>
             </section>
@@ -389,39 +351,31 @@ export function AlertDetailMobile({
             {/* Status and Level */}
             <section aria-labelledby="status-level-label" className="flex gap-3">
               <div>
-                <h3 id="status-level-label" className={`text-xs font-medium uppercase tracking-wider mb-2 ${
-                  isDark ? 'text-gray-500' : 'text-gray-400'
-                }`}>
+                <h3 id="status-level-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-[var(--color-text-muted)]">
                   Status
                 </h3>
-                <StatusBadge status={record.status} isDark={isDark} />
+                <StatusBadge status={record.status} />
               </div>
               <div>
-                <h3 className={`text-xs font-medium uppercase tracking-wider mb-2 ${
-                  isDark ? 'text-gray-500' : 'text-gray-400'
-                }`}>
+                <h3 className="text-xs font-medium uppercase tracking-wider mb-2 text-[var(--color-text-muted)]">
                   Level
                 </h3>
-                <LevelBadge level={record.level} isDark={isDark} />
+                <LevelBadge level={record.level} />
               </div>
             </section>
             
             {/* Node Information */}
             <section aria-labelledby="node-label">
-              <h3 id="node-label" className={`text-xs font-medium uppercase tracking-wider mb-2 ${
-                isDark ? 'text-gray-500' : 'text-gray-400'
-              }`}>
+              <h3 id="node-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-[var(--color-text-muted)]">
                 Node
               </h3>
-              <div className={`p-3 rounded-lg border ${
-                isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'
-              }`}>
-                <p className={`text-sm font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              <div className="p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-muted)]">
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">
                   {node?.name || record.node_id}
                 </p>
                 {node && (
                   <>
-                    <p className={`text-xs mt-1 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
+                    <p className="text-xs mt-1 text-[var(--color-text-muted)]">
                       IP: {node.ip}
                     </p>
                     <button
@@ -437,15 +391,11 @@ export function AlertDetailMobile({
             
             {/* Metric Information */}
             <section aria-labelledby="metric-label">
-              <h3 id="metric-label" className={`text-xs font-medium uppercase tracking-wider mb-2 ${
-                isDark ? 'text-gray-500' : 'text-gray-400'
-              }`}>
+              <h3 id="metric-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-[var(--color-text-muted)]">
                 Metric
               </h3>
-              <div className={`p-3 rounded-lg border ${
-                isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'
-              }`}>
-                <p className={`text-sm font-medium ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>
+              <div className="p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-muted)]">
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">
                   {getMetricDisplayName(record.metric)}
                 </p>
               </div>
@@ -453,14 +403,10 @@ export function AlertDetailMobile({
             
             {/* Timeline - Shared UTC View */}
             <section aria-labelledby="timeline-label">
-              <h3 id="timeline-label" className={`text-xs font-medium uppercase tracking-wider mb-3 ${
-                isDark ? 'text-gray-500' : 'text-gray-400'
-              }`}>
+              <h3 id="timeline-label" className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--color-text-muted)]">
                 Timeline (UTC)
               </h3>
-              <div className={`p-4 rounded-lg border ${
-                isDark ? 'bg-slate-800 border-slate-700' : 'bg-gray-50 border-gray-200'
-              }`}>
+              <div className="p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-muted)]">
                 <div className="space-y-0">
                   {timelineEvents.map((event, index) => (
                     <TimelineEvent
@@ -469,7 +415,6 @@ export function AlertDetailMobile({
                       time={event.time}
                       description={event.description}
                       isLast={index === timelineEvents.length - 1}
-                      isDark={isDark}
                     />
                   ))}
                 </div>
@@ -479,28 +424,24 @@ export function AlertDetailMobile({
             {/* Notes Section */}
             {notes.length > 0 && (
               <section aria-labelledby="notes-label">
-                <h3 id="notes-label" className={`text-xs font-medium uppercase tracking-wider mb-3 ${
-                  isDark ? 'text-gray-500' : 'text-gray-400'
-                }`}>
+                <h3 id="notes-label" className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--color-text-muted)]">
                   Notes ({notes.length})
                 </h3>
                 <div className="space-y-3">
                   {notes.map((note) => (
                     <div
                       key={note.id}
-                      className={`p-3 rounded-lg border ${
-                        isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-gray-200'
-                      }`}
+                      className="p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className={`text-sm font-medium ${isDark ? 'text-gray-200' : 'text-gray-900'}`}>
+                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
                           {note.userName}
                         </span>
-                        <span className={`text-xs ${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                        <span className="text-xs text-[var(--color-text-muted)]">
                           {timezoneUtils.formatRelative(note.createdAt)}
                         </span>
                       </div>
-                      <p className={`text-sm whitespace-pre-wrap ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
+                      <p className="text-sm whitespace-pre-wrap text-[var(--color-text-secondary)]">
                         {note.content}
                       </p>
                     </div>
@@ -511,10 +452,8 @@ export function AlertDetailMobile({
             
             {/* Status Update Actions */}
             {canEdit && record.status !== 'resolved' && (
-              <section aria-labelledby="actions-label" className="pt-4 border-t border-gray-200 dark:border-slate-700">
-                <h3 id="actions-label" className={`text-sm font-medium mb-3 ${
-                  isDark ? 'text-gray-200' : 'text-gray-900'
-                }`}>
+              <section aria-labelledby="actions-label" className="pt-4 border-t border-[var(--color-border)]">
+                <h3 id="actions-label" className="text-sm font-medium mb-3 text-[var(--color-text-primary)]">
                   Update Status
                 </h3>
                 
@@ -524,11 +463,7 @@ export function AlertDetailMobile({
                     <button
                       onClick={() => handleStatusUpdate('in_progress')}
                       disabled={isUpdating}
-                      className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                        isDark
-                          ? 'bg-yellow-600 text-white hover:bg-yellow-700'
-                          : 'bg-yellow-500 text-white hover:bg-yellow-600'
-                      } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-yellow-500 dark:bg-yellow-600 text-white hover:bg-yellow-600 dark:hover:bg-yellow-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isUpdating ? 'Updating...' : 'Acknowledge Alert'}
                     </button>
@@ -538,11 +473,7 @@ export function AlertDetailMobile({
                   <button
                     onClick={() => setShowNoteInput(!showNoteInput)}
                     disabled={isUpdating}
-                    className={`w-full py-3 px-4 rounded-lg font-medium transition-colors border ${
-                      isDark
-                        ? 'bg-slate-800 border-slate-600 text-gray-200 hover:bg-slate-700'
-                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className="w-full py-3 px-4 rounded-lg font-medium transition-colors border border-[var(--color-border-strong)] bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)] disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {showNoteInput ? 'Cancel' : 'Add Note'}
                   </button>
@@ -553,12 +484,10 @@ export function AlertDetailMobile({
                         if (record.status === 'pending') {
                           handleStatusUpdate('in_progress', note)
                         } else {
-                          // Just add note without status change
                           handleStatusUpdate(record.status, note)
                         }
                       }}
                       isSubmitting={isUpdating}
-                      isDark={isDark}
                       placeholder="Add a note about this alert..."
                     />
                   )}
@@ -567,11 +496,7 @@ export function AlertDetailMobile({
                   <button
                     onClick={() => handleStatusUpdate('resolved')}
                     disabled={isUpdating}
-                    className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
-                      isDark
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-green-500 text-white hover:bg-green-600'
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
+                    className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-green-500 dark:bg-green-600 text-white hover:bg-green-600 dark:hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isUpdating ? 'Updating...' : 'Resolve Alert'}
                   </button>

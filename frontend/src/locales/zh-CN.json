@@ -21,7 +21,11 @@
     "details": "详情",
     "sessions": "会话",
     "preferences": "偏好设置",
-    "health": "系统健康"
+    "health": "系统健康",
+    "systemHealth": "系统健康",
+    "webhooks": "Webhooks",
+    "performance": "性能分析",
+    "users": "用户管理"
   },
   "common": {
     "loading": "加载中...",

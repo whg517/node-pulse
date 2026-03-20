@@ -34,35 +34,35 @@ export default function PreferencesPage() {
       />
 
       <div>
-        <div className="rounded-lg border shadow-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+        <div className="rounded-lg border shadow-sm bg-[var(--color-bg-surface)] border-[var(--color-border)]">
           {/* Timezone Setting */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
+          <div className="p-6 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-medium mb-2 text-[var(--color-text-primary)]">
               {t('settings.timezone')}
             </h3>
-            <p className="text-sm mb-3 text-gray-500 dark:text-gray-400">
+            <p className="text-sm mb-3 text-[var(--color-text-muted)]">
               {t('settings.timezoneDescription')}
             </p>
             <TimezoneSelector showDisplayMode size="md" />
           </div>
 
           {/* Language Setting */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
+          <div className="p-6 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-medium mb-2 text-[var(--color-text-primary)]">
               {t('settings.language')}
             </h3>
-            <p className="text-sm mb-3 text-gray-500 dark:text-gray-400">
+            <p className="text-sm mb-3 text-[var(--color-text-muted)]">
               {t('settings.languageDescription')}
             </p>
             <LanguageSwitcher variant="buttons" size="md" />
           </div>
 
           {/* Theme Setting */}
-          <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="text-sm font-medium mb-2 text-gray-700 dark:text-gray-200">
+          <div className="p-6 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-medium mb-2 text-[var(--color-text-primary)]">
               {t('settings.theme')}
             </h3>
-            <p className="text-sm mb-3 text-gray-500 dark:text-gray-400">
+            <p className="text-sm mb-3 text-[var(--color-text-muted)]">
               {t('settings.themeDescription')}
             </p>
             <div className="flex items-center gap-4">

@@ -673,13 +673,13 @@ export default function ComparisonChart({
 
   return (
     <div
-      className={`comparison-chart bg-white rounded-lg shadow-sm p-4 ${className}`}
+      className={`comparison-chart bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-4 ${className}`}
       role="region"
       aria-label={`${config.label} comparison chart`}
     >
       {/* Comparison Mode Toggle */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">{config.label} Comparison</h3>
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{config.label} Comparison</h3>
         <div className="flex items-center space-x-4">
           {/* Mode Toggle */}
           <div className="flex items-center space-x-2" role="group" aria-label="Comparison mode selector">
@@ -688,7 +688,7 @@ export default function ComparisonChart({
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                 localMode === 'node'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
               aria-pressed={localMode === 'node'}
               disabled={isLoading}
@@ -700,7 +700,7 @@ export default function ComparisonChart({
               className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
                 localMode === 'timeRange'
                   ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
               }`}
               aria-pressed={localMode === 'timeRange'}
               disabled={isLoading}
@@ -713,7 +713,7 @@ export default function ComparisonChart({
           <button
             onClick={handleExportPdf}
             disabled={isLoading}
-            className="flex items-center space-x-2 px-3 py-1.5 rounded text-sm font-medium transition-colors bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+            className="flex items-center space-x-2 px-3 py-1.5 rounded text-sm font-medium transition-colors bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)] disabled:opacity-50"
             aria-label="Export chart as PDF"
             title="Export as PDF"
           >
@@ -727,11 +727,11 @@ export default function ComparisonChart({
 
       {/* Time Range Comparison Mode - Dual Time Range Selectors */}
       {localMode === 'timeRange' && (
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg" role="group" aria-label="Time range selection">
+        <div className="mb-4 p-4 bg-[var(--color-bg-muted)] rounded-lg" role="group" aria-label="Time range selection">
           <div className="grid grid-cols-2 gap-6">
             {/* Baseline Time Range */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2" id="baseline-label">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2" id="baseline-label">
                 Baseline Period
               </label>
               <div className="space-y-2">
@@ -743,7 +743,7 @@ export default function ComparisonChart({
                       className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                         customBaselineTimeRange === range
                           ? 'bg-green-600 text-white'
-                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                          : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'
                       }`}
                       aria-pressed={customBaselineTimeRange === range}
                       disabled={isLoading}
@@ -763,7 +763,7 @@ export default function ComparisonChart({
                         onChange={(e) => setBaselineStart(e.target.value ? new Date(e.target.value).toISOString() : '')}
                         max={baselineEnd || new Date().toISOString().split('T')[0]}
                         disabled={isLoading}
-                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-green-500 focus:border-green-500 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
                       />
                     </div>
                     <div>
@@ -776,7 +776,7 @@ export default function ComparisonChart({
                         min={baselineStart}
                         max={new Date().toISOString().split('T')[0]}
                         disabled={isLoading}
-                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-green-500 focus:border-green-500"
+                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-green-500 focus:border-green-500 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
                       />
                     </div>
                   </div>
@@ -786,7 +786,7 @@ export default function ComparisonChart({
 
             {/* Current Time Range */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2" id="current-label">
+              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2" id="current-label">
                 Current Period
               </label>
               <div className="space-y-2">
@@ -798,7 +798,7 @@ export default function ComparisonChart({
                       className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
                         customCurrentTimeRange === range
                           ? 'bg-blue-600 text-white'
-                          : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                          : 'bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:bg-[var(--color-bg-muted)]'
                       }`}
                       aria-pressed={customCurrentTimeRange === range}
                       disabled={isLoading}
@@ -818,7 +818,7 @@ export default function ComparisonChart({
                         onChange={(e) => setCurrentStart(e.target.value ? new Date(e.target.value).toISOString() : '')}
                         max={currentEnd || new Date().toISOString().split('T')[0]}
                         disabled={isLoading}
-                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
                       />
                     </div>
                     <div>
@@ -831,7 +831,7 @@ export default function ComparisonChart({
                         min={currentStart}
                         max={new Date().toISOString().split('T')[0]}
                         disabled={isLoading}
-                        className="w-full px-2 py-1 text-xs border border-gray-300 rounded focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-2 py-1 text-xs border border-[var(--color-border)] rounded focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]"
                       />
                     </div>
                   </div>
@@ -852,8 +852,8 @@ export default function ComparisonChart({
                 onClick={() => handleTimeRangeChange(option.value)}
                 className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
                   localTimeRange === option.value
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    ? 'bg-blue-600 text-[var(--color-text-on-primary)]'
+                    : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
                 }`}
                 aria-pressed={localTimeRange === option.value}
                 disabled={isLoading}
@@ -867,34 +867,34 @@ export default function ComparisonChart({
 
       {/* Statistics Panel - Node Comparison Mode */}
       {localMode === 'node' && showStatistics && overallStats && nodes && nodes.length > 0 && (
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg" role="region" aria-label="Node comparison statistics">
+        <div className="mb-4 p-3 bg-[var(--color-bg-muted)] rounded-lg" role="region" aria-label="Node comparison statistics">
           <div className="grid grid-cols-5 gap-4 text-center">
             <div>
-              <div className="text-sm text-gray-600">Average</div>
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-sm text-[var(--color-text-secondary)]">Average</div>
+              <div className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {overallStats.avg.toFixed(2)} {config.unit}
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-600">Maximum</div>
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-sm text-[var(--color-text-secondary)]">Maximum</div>
+              <div className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {overallStats.max.toFixed(2)} {config.unit}
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-600">Minimum</div>
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-sm text-[var(--color-text-secondary)]">Minimum</div>
+              <div className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {overallStats.min.toFixed(2)} {config.unit}
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-600">Difference</div>
-              <div className="text-lg font-semibold text-gray-900">
+              <div className="text-sm text-[var(--color-text-secondary)]">Difference</div>
+              <div className="text-lg font-semibold text-[var(--color-text-primary)]">
                 {overallStats.diff.toFixed(2)} {config.unit}
               </div>
             </div>
             <div>
-              <div className="text-sm text-gray-600">Diff %</div>
+              <div className="text-sm text-[var(--color-text-secondary)]">Diff %</div>
               <div className={`text-lg font-semibold ${
                 overallStats.diffPercent > config.criticalThreshold * 100
                   ? 'text-red-600'
@@ -907,24 +907,24 @@ export default function ComparisonChart({
             </div>
           </div>
           {showPercentileStats && nodes.length > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-200">
-              <div className="text-sm font-medium text-gray-700 mb-2">Percentile Statistics</div>
+            <div className="mt-3 pt-3 border-t border-[var(--color-border)]">
+              <div className="text-sm font-medium text-[var(--color-text-secondary)] mb-2">Percentile Statistics</div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="text-sm text-gray-600">P50 (Median)</div>
-                  <div className="text-lg font-semibold text-gray-900">
+                  <div className="text-sm text-[var(--color-text-secondary)]">P50 (Median)</div>
+                  <div className="text-lg font-semibold text-[var(--color-text-primary)]">
                     {calculateStatisticalSummary(nodes[0].data)?.median.toFixed(2) || '0.00'} {config.unit}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600">P95</div>
-                  <div className="text-lg font-semibold text-gray-900">
+                  <div className="text-sm text-[var(--color-text-secondary)]">P95</div>
+                  <div className="text-lg font-semibold text-[var(--color-text-primary)]">
                     {calculateStatisticalSummary(nodes[0].data)?.p95.toFixed(2) || '0.00'} {config.unit}
                   </div>
                 </div>
                 <div>
-                  <div className="text-sm text-gray-600">P99</div>
-                  <div className="text-lg font-semibold text-gray-900">
+                  <div className="text-sm text-[var(--color-text-secondary)]">P99</div>
+                  <div className="text-lg font-semibold text-[var(--color-text-primary)]">
                     {calculateStatisticalSummary(nodes[0].data)?.p99.toFixed(2) || '0.00'} {config.unit}
                   </div>
                 </div>
@@ -936,39 +936,39 @@ export default function ComparisonChart({
 
       {/* Statistics Panel - Time Range Comparison Mode */}
       {localMode === 'timeRange' && showStatistics && timeRangeStatistics && (
-        <div className="mb-4 p-4 bg-gray-50 rounded-lg" role="region" aria-label="Time range comparison statistics">
+        <div className="mb-4 p-4 bg-[var(--color-bg-muted)] rounded-lg" role="region" aria-label="Time range comparison statistics">
           <div className="grid grid-cols-2 gap-6">
             {/* Baseline Statistics */}
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Baseline Period</h4>
+              <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">Baseline Period</h4>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Average:</span>
-                  <span className="text-base font-semibold text-gray-900">
+                  <span className="text-sm text-[var(--color-text-secondary)]">Average:</span>
+                  <span className="text-base font-semibold text-[var(--color-text-primary)]">
                     {timeRangeStatistics.baseline.avg.toFixed(2)} {config.unit}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">P50 (Median):</span>
-                  <span className="text-base font-semibold text-gray-900">
+                  <span className="text-sm text-[var(--color-text-secondary)]">P50 (Median):</span>
+                  <span className="text-base font-semibold text-[var(--color-text-primary)]">
                     {timeRangeStatistics.baseline.median.toFixed(2)} {config.unit}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">P95:</span>
-                  <span className="text-base font-semibold text-gray-900">
+                  <span className="text-sm text-[var(--color-text-secondary)]">P95:</span>
+                  <span className="text-base font-semibold text-[var(--color-text-primary)]">
                     {timeRangeStatistics.baseline.p95.toFixed(2)} {config.unit}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">P99:</span>
-                  <span className="text-base font-semibold text-gray-900">
+                  <span className="text-sm text-[var(--color-text-secondary)]">P99:</span>
+                  <span className="text-base font-semibold text-[var(--color-text-primary)]">
                     {timeRangeStatistics.baseline.p99.toFixed(2)} {config.unit}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Min - Max:</span>
-                  <span className="text-base font-semibold text-gray-900">
+                  <span className="text-sm text-[var(--color-text-secondary)]">Min - Max:</span>
+                  <span className="text-base font-semibold text-[var(--color-text-primary)]">
                     {timeRangeStatistics.baseline.min.toFixed(2)} - {timeRangeStatistics.baseline.max.toFixed(2)} {config.unit}
                   </span>
                 </div>
@@ -977,63 +977,63 @@ export default function ComparisonChart({
 
             {/* Current Statistics with Percentage Change */}
             <div>
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Current Period</h4>
+              <h4 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-3">Current Period</h4>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Average:</span>
+                  <span className="text-sm text-[var(--color-text-secondary)]">Average:</span>
                   <div className="text-right">
-                    <span className="text-base font-semibold text-gray-900 mr-2">
+                    <span className="text-base font-semibold text-[var(--color-text-primary)] mr-2">
                       {timeRangeStatistics.current.avg.toFixed(2)} {config.unit}
                     </span>
                     <span className={`text-xs font-medium ${
-                      timeRangeStatistics.changes.avg > 0 ? 'text-red-600' : timeRangeStatistics.changes.avg < 0 ? 'text-green-600' : 'text-gray-600'
+                      timeRangeStatistics.changes.avg > 0 ? 'text-red-600' : timeRangeStatistics.changes.avg < 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'
                     }`}>
                       {timeRangeStatistics.changes.avg > 0 ? '↑' : timeRangeStatistics.changes.avg < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.avg).toFixed(1)}%
                     </span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">P50 (Median):</span>
+                  <span className="text-sm text-[var(--color-text-secondary)]">P50 (Median):</span>
                   <div className="text-right">
-                    <span className="text-base font-semibold text-gray-900 mr-2">
+                    <span className="text-base font-semibold text-[var(--color-text-primary)] mr-2">
                       {timeRangeStatistics.current.median.toFixed(2)} {config.unit}
                     </span>
                     <span className={`text-xs font-medium ${
-                      timeRangeStatistics.changes.median > 0 ? 'text-red-600' : timeRangeStatistics.changes.median < 0 ? 'text-green-600' : 'text-gray-600'
+                      timeRangeStatistics.changes.median > 0 ? 'text-red-600' : timeRangeStatistics.changes.median < 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'
                     }`}>
                       {timeRangeStatistics.changes.median > 0 ? '↑' : timeRangeStatistics.changes.median < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.median).toFixed(1)}%
                     </span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">P95:</span>
+                  <span className="text-sm text-[var(--color-text-secondary)]">P95:</span>
                   <div className="text-right">
-                    <span className="text-base font-semibold text-gray-900 mr-2">
+                    <span className="text-base font-semibold text-[var(--color-text-primary)] mr-2">
                       {timeRangeStatistics.current.p95.toFixed(2)} {config.unit}
                     </span>
                     <span className={`text-xs font-medium ${
-                      timeRangeStatistics.changes.p95 > 0 ? 'text-red-600' : timeRangeStatistics.changes.p95 < 0 ? 'text-green-600' : 'text-gray-600'
+                      timeRangeStatistics.changes.p95 > 0 ? 'text-red-600' : timeRangeStatistics.changes.p95 < 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'
                     }`}>
                       {timeRangeStatistics.changes.p95 > 0 ? '↑' : timeRangeStatistics.changes.p95 < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.p95).toFixed(1)}%
                     </span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">P99:</span>
+                  <span className="text-sm text-[var(--color-text-secondary)]">P99:</span>
                   <div className="text-right">
-                    <span className="text-base font-semibold text-gray-900 mr-2">
+                    <span className="text-base font-semibold text-[var(--color-text-primary)] mr-2">
                       {timeRangeStatistics.current.p99.toFixed(2)} {config.unit}
                     </span>
                     <span className={`text-xs font-medium ${
-                      timeRangeStatistics.changes.p99 > 0 ? 'text-red-600' : timeRangeStatistics.changes.p99 < 0 ? 'text-green-600' : 'text-gray-600'
+                      timeRangeStatistics.changes.p99 > 0 ? 'text-red-600' : timeRangeStatistics.changes.p99 < 0 ? 'text-green-600' : 'text-[var(--color-text-muted)]'
                     }`}>
                       {timeRangeStatistics.changes.p99 > 0 ? '↑' : timeRangeStatistics.changes.p99 < 0 ? '↓' : '•'} {Math.abs(timeRangeStatistics.changes.p99).toFixed(1)}%
                     </span>
                   </div>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Min - Max:</span>
-                  <span className="text-base font-semibold text-gray-900">
+                  <span className="text-sm text-[var(--color-text-secondary)]">Min - Max:</span>
+                  <span className="text-base font-semibold text-[var(--color-text-primary)]">
                     {timeRangeStatistics.current.min.toFixed(2)} - {timeRangeStatistics.current.max.toFixed(2)} {config.unit}
                   </span>
                 </div>
@@ -1048,7 +1048,7 @@ export default function ComparisonChart({
         {/* Loading Overlay */}
         {isLoading && (
           <div
-            className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10"
+            className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-surface)] bg-opacity-75 z-10"
             role="status"
             aria-label="Loading chart data"
           >
@@ -1056,7 +1056,7 @@ export default function ComparisonChart({
               <div
                 className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
               />
-              <p className="mt-2 text-gray-600">Loading chart data...</p>
+              <p className="mt-2 text-[var(--color-text-secondary)]">Loading chart data...</p>
             </div>
           </div>
         )}
@@ -1086,8 +1086,8 @@ export default function ComparisonChart({
                   d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                 />
               </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No Data Available</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">No Data Available</h3>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
                 No comparison data available for the selected time range.
               </p>
             </div>

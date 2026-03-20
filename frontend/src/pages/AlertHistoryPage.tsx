@@ -160,12 +160,12 @@ export default function AlertHistoryPage() {
       )}
 
       {/* Filters */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6 border border-gray-200 dark:border-gray-700">
-        <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t('alertHistory.filters')}</h3>
+      <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-6 mb-6 border border-[var(--color-border)]">
+        <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">{t('alertHistory.filters')}</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           {/* Node Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
               {t('alertHistory.node')}
             </label>
             <select
@@ -173,7 +173,7 @@ export default function AlertHistoryPage() {
               onChange={(e) =>
                 handleFilterChange('node_id', e.target.value || undefined)
               }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
             >
               <option value="">{t('alertHistory.allNodes')}</option>
               {nodes.map((node) => (
@@ -186,7 +186,7 @@ export default function AlertHistoryPage() {
 
           {/* Level Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
               {t('alertHistory.level')}
             </label>
             <select
@@ -197,7 +197,7 @@ export default function AlertHistoryPage() {
                   (e.target.value as AlertLevel) || undefined
                 )
               }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
             >
               <option value="">{t('alertHistory.allLevels')}</option>
               <option value="P0">{t('alertHistory.p0Critical')}</option>
@@ -208,7 +208,7 @@ export default function AlertHistoryPage() {
 
           {/* Status Filter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
               {t('common.status')}
             </label>
             <select
@@ -219,7 +219,7 @@ export default function AlertHistoryPage() {
                   (e.target.value as AlertRecordStatus) || undefined
                 )
               }
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-blue-500 focus:border-blue-500 bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
             >
               <option value="">{t('alertHistory.allStatuses')}</option>
               <option value="pending">{t('alertHistory.pending')}</option>
@@ -240,7 +240,7 @@ export default function AlertHistoryPage() {
             <button
               type="button"
               onClick={clearFilters}
-              className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md hover:bg-gray-300 dark:hover:bg-gray-500 transition-colors"
+              className="px-4 py-2 bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-bg-subtle)] transition-colors"
             >
               {t('alertHistory.clear')}
             </button>
@@ -249,7 +249,7 @@ export default function AlertHistoryPage() {
       </div>
 
       {/* Alert Records Table */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+      <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm overflow-hidden border border-[var(--color-border)]">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div
@@ -261,7 +261,7 @@ export default function AlertHistoryPage() {
         ) : records.length === 0 ? (
           <div className="text-center py-12">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -273,8 +273,8 @@ export default function AlertHistoryPage() {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">{t('alertHistory.noAlerts')}</h3>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">{t('alertHistory.noAlerts')}</h3>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
               {Object.keys(filters).length > 0
                 ? t('alertHistory.noAlertsFiltered')
                 : t('alertHistory.noAlertsEmpty')}
@@ -282,41 +282,41 @@ export default function AlertHistoryPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
+            <table className="min-w-full divide-y divide-[var(--color-border)]">
+              <thead className="bg-[var(--color-bg-muted)]">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                     {t('alertHistory.time')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                     {t('alertHistory.node')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                     {t('alertHistory.metric')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                     {t('alertHistory.level')}
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                     {t('common.status')}
                   </th>
                   {canEdit && (
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
                       {t('common.actions')}
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
                 {records.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                  <tr key={record.id} className="hover:bg-[var(--color-hover-overlay)]">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-primary)]">
                       {formatDateTime(record.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-primary)]">
                       {getNodeName(record.node_id)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-primary)]">
                       {formatMetric(record.metric)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -346,7 +346,7 @@ export default function AlertHistoryPage() {
       {/* Pagination */}
       {!isLoading && records.length > 0 && (
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-gray-700 dark:text-gray-300">
+          <div className="text-sm text-[var(--color-text-secondary)]">
             {t('alertHistory.showingPage', { page })}
           </div>
           <div className="flex space-x-2">
@@ -354,7 +354,7 @@ export default function AlertHistoryPage() {
               type="button"
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-gray-900 dark:text-gray-100"
+              className="px-4 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-border-strong)] rounded-md hover:bg-[var(--color-hover-overlay)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)]"
             >
               {t('common.previous')}
             </button>
@@ -362,7 +362,7 @@ export default function AlertHistoryPage() {
               type="button"
               onClick={() => setPage((p) => p + 1)}
               disabled={records.length < pageSize}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 disabled:bg-gray-100 dark:disabled:bg-gray-800 disabled:cursor-not-allowed text-gray-900 dark:text-gray-100"
+              className="px-4 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-border-strong)] rounded-md hover:bg-[var(--color-hover-overlay)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)]"
             >
               {t('common.next')}
             </button>
@@ -462,7 +462,7 @@ function StatusActions({
 
   if (currentStatus === 'resolved') {
     return (
-      <span className="text-sm text-gray-500 dark:text-gray-400">Completed</span>
+      <span className="text-sm text-[var(--color-text-muted)]">Completed</span>
     )
   }
 

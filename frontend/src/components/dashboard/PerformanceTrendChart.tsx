@@ -282,10 +282,10 @@ export function PerformanceTrendChart({
   if (isLoading) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-50 rounded-lg ${className}`}
+        className={`flex items-center justify-center bg-[var(--color-bg-muted)] rounded-lg ${className}`}
         style={{ height }}
       >
-        <div className="text-gray-500">加载中...</div>
+        <div className="text-[var(--color-text-muted)]">加载中...</div>
       </div>
     )
   }
@@ -293,10 +293,10 @@ export function PerformanceTrendChart({
   if (!trendData || trendData.length === 0) {
     return (
       <div
-        className={`flex items-center justify-center bg-gray-50 rounded-lg ${className}`}
+        className={`flex items-center justify-center bg-[var(--color-bg-muted)] rounded-lg ${className}`}
         style={{ height }}
       >
-        <div className="text-gray-500">暂无趋势数据</div>
+        <div className="text-[var(--color-text-muted)]">暂无趋势数据</div>
       </div>
     )
   }

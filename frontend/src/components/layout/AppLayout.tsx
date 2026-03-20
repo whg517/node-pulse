@@ -54,7 +54,7 @@ export function AppLayout({ children, alertCount = 0 }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen bg-[var(--color-bg-page)]">
       {/* Sidebar */}
       <Sidebar
         isCollapsed={isSidebarCollapsed}
@@ -77,7 +77,7 @@ export function AppLayout({ children, alertCount = 0 }: AppLayoutProps) {
         </main>
 
         {/* Footer (optional) */}
-        <footer className="border-t border-gray-200 bg-white py-4 text-center text-sm text-gray-500 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-400">
+        <footer className="border-t border-[var(--color-border)] bg-[var(--color-bg-surface)] py-4 text-center text-sm text-[var(--color-text-muted)]">
           NodePulse - Network Monitoring System
         </footer>
       </div>

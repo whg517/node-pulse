@@ -21,7 +21,11 @@
     "details": "Details",
     "sessions": "Sessions",
     "preferences": "Preferences",
-    "health": "System Health"
+    "health": "System Health",
+    "systemHealth": "System Health",
+    "webhooks": "Webhooks",
+    "performance": "Performance",
+    "users": "Users"
   },
   "common": {
     "loading": "Loading...",

@@ -310,12 +310,12 @@ export default function WorldMap({
   if (isLoading) {
     return (
       <div
-        className={`world-map bg-white rounded-lg shadow-sm p-4 ${className}`}
+        className={`world-map bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-4 ${className}`}
         role="region"
         aria-label={t('dashboard.nodeDistribution')}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
             {t('dashboard.nodeDistribution')}
           </h3>
         </div>
@@ -327,7 +327,7 @@ export default function WorldMap({
         >
           <div className="flex flex-col items-center">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-            <p className="mt-2 text-gray-600">{t('common.loading')}</p>
+            <p className="mt-2 text-[var(--color-text-secondary)]">{t('common.loading')}</p>
           </div>
         </div>
       </div>
@@ -338,12 +338,12 @@ export default function WorldMap({
   if (!nodes || nodes.length === 0) {
     return (
       <div
-        className={`world-map bg-white rounded-lg shadow-sm p-4 ${className}`}
+        className={`world-map bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-4 ${className}`}
         role="region"
         aria-label={t('dashboard.nodeDistribution')}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">
+          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
             {t('dashboard.nodeDistribution')}
           </h3>
         </div>
@@ -355,7 +355,7 @@ export default function WorldMap({
         >
           <div className="text-center">
             <svg
-              className="mx-auto h-12 w-12 text-gray-400"
+              className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -368,8 +368,8 @@ export default function WorldMap({
                 d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <h3 className="mt-2 text-sm font-medium text-gray-900">{t('nodes.noNodes')}</h3>
-            <p className="mt-1 text-sm text-gray-500">{t('dashboard.noData')}</p>
+            <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">{t('nodes.noNodes')}</h3>
+            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">{t('dashboard.noData')}</p>
           </div>
         </div>
       </div>
@@ -386,16 +386,16 @@ export default function WorldMap({
 
   return (
     <div
-      className={`world-map bg-white rounded-lg shadow-sm p-4 ${className}`}
+      className={`world-map bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-4 ${className}`}
       role="region"
       aria-label={t('dashboard.nodeDistribution')}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-900">
+        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
           {t('dashboard.nodeDistribution')}
         </h3>
-        <div className="text-sm text-gray-500">
+        <div className="text-sm text-[var(--color-text-muted)]">
           {nodes.length} {t('metrics.totalNodes').toLowerCase()}
         </div>
       </div>
@@ -419,7 +419,7 @@ export default function WorldMap({
               style={{ backgroundColor: getStatusColor(status as HealthStatus) }}
               aria-hidden="true"
             />
-            <span className="text-gray-700">
+            <span className="text-[var(--color-text-secondary)]">
               {getStatusLabel(status as HealthStatus)} ({count})
             </span>
           </div>

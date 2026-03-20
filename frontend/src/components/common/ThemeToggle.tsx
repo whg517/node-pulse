@@ -103,8 +103,7 @@ export function ThemeToggle({
       <button
         type="button"
         onClick={toggleTheme}
-        className={`rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200
-          dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700
+        className={`rounded-lg bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]
           transition-colors duration-200 ${buttonSizeClasses[size]} ${className}`}
         title={isDark ? t('settings.lightMode') : t('settings.darkMode')}
         aria-label={isDark ? t('settings.lightMode') : t('settings.darkMode')}
@@ -126,7 +125,7 @@ export function ThemeToggle({
 
   return (
     <div className={`relative ${className}`}>
-      <div className="flex items-center gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
+      <div className="flex items-center gap-1 rounded-lg bg-[var(--color-bg-muted)] p-1">
         {themeOptions.map((option) => (
           <button
             key={option.value}
@@ -134,8 +133,8 @@ export function ThemeToggle({
             onClick={() => setTheme(option.value)}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors
               ${theme === option.value
-                ? 'bg-white text-gray-900 shadow dark:bg-gray-700 dark:text-white'
-                : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                ? 'bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] shadow'
+                : 'text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]'
               }`}
             title={option.label}
             aria-label={option.label}

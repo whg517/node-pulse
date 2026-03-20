@@ -51,11 +51,11 @@ export function AlertRecordsFilter({
   }
 
   return (
-    <div className="bg-white shadow rounded-lg p-6 mb-6">
+    <div className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6 mb-6 border border-[var(--color-border)]">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Search Input */}
         <div>
-          <label htmlFor="search-input" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="search-input" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
             搜索
           </label>
           <input
@@ -64,20 +64,20 @@ export function AlertRecordsFilter({
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="节点名称或指标类型"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)]"
           />
         </div>
 
         {/* Node Selection */}
         <div>
-          <label htmlFor="node-filter" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="node-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
             节点
           </label>
           <select
             id="node-filter"
             value={nodeId}
             onChange={(e) => setNodeId(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           >
             <option value="">全部节点</option>
             {nodes.map((node) => (
@@ -90,7 +90,7 @@ export function AlertRecordsFilter({
 
         {/* Time Range - Start */}
         <div>
-          <label htmlFor="start-time" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="start-time" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
             开始时间
           </label>
           <input
@@ -98,13 +98,13 @@ export function AlertRecordsFilter({
             type="datetime-local"
             value={startTime}
             onChange={(e) => setStartTime(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           />
         </div>
 
         {/* Time Range - End */}
         <div>
-          <label htmlFor="end-time" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="end-time" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
             结束时间
           </label>
           <input
@@ -112,20 +112,20 @@ export function AlertRecordsFilter({
             type="datetime-local"
             value={endTime}
             onChange={(e) => setEndTime(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           />
         </div>
 
         {/* Alert Level */}
         <div>
-          <label htmlFor="level-filter" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="level-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
             告警级别
           </label>
           <select
             id="level-filter"
             value={level}
             onChange={(e) => setLevel(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           >
             <option value="">全部级别</option>
             <option value="P0">P0</option>
@@ -136,14 +136,14 @@ export function AlertRecordsFilter({
 
         {/* Status */}
         <div>
-          <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="status-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
             处理状态
           </label>
           <select
             id="status-filter"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
           >
             <option value="">全部状态</option>
             <option value="pending">未处理</option>
@@ -158,7 +158,7 @@ export function AlertRecordsFilter({
         <button
           type="button"
           onClick={handleReset}
-          className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          className="px-4 py-2 bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-bg-subtle)] transition-colors"
         >
           重置筛选
         </button>

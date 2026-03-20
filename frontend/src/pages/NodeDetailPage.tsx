@@ -1,8 +1,8 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Breadcrumb } from '../components/layout/Breadcrumb'
 import { useNodeDetail } from '../hooks/useNodeDetail'
-import { useTheme } from '../hooks/useTheme'
 import { useTimezone } from '../hooks/useTimezone'
 import MetricCard from '../components/dashboard/MetricCard'
 import ProblemDiagnosis, {
@@ -29,7 +29,6 @@ import { fetchHistory } from '../api/data'
  */
 export default function NodeDetailPage() {
   const { t } = useTranslation()
-  const { isDark } = useTheme()
   const { formatTime } = useTimezone()
   const { id } = useParams<{ id: string }>()
   const { node, nodeStatus, metrics, isLoading, error, isPolling } = useNodeDetail(id || '')
@@ -270,14 +269,14 @@ export default function NodeDetailPage() {
 
   if (isLoading) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-page)]">
         <div className="text-center">
           <div
             className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"
             role="status"
             aria-label={t('common.loading')}
           />
-          <p className={`mt-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+          <p className="mt-4 text-[var(--color-text-secondary)]">
             {t('common.loading')}
           </p>
         </div>
@@ -287,15 +286,15 @@ export default function NodeDetailPage() {
 
   if (error) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6 max-w-md`}>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-page)]">
+        <div className="rounded-lg shadow-md p-6 max-w-md bg-[var(--color-bg-surface)]">
           <div className="text-red-600 text-5xl mb-4" aria-hidden="true">
             ⚠️
           </div>
-          <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
+          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
             {t('errors.failedToLoad')}
           </h2>
-          <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mb-4`}>{error.message}</p>
+          <p className="text-[var(--color-text-secondary)] mb-4">{error.message}</p>
           <Link
             to="/dashboard"
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -309,12 +308,12 @@ export default function NodeDetailPage() {
 
   if (!node) {
     return (
-      <div className={`min-h-screen flex items-center justify-center ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
-        <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6 max-w-md`}>
-          <h2 className={`text-xl font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-2`}>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--color-bg-page)]">
+        <div className="rounded-lg shadow-md p-6 max-w-md bg-[var(--color-bg-surface)]">
+          <h2 className="text-xl font-semibold text-[var(--color-text-primary)] mb-2">
             {t('errors.nodeNotFound')}
           </h2>
-          <p className={`${isDark ? 'text-gray-400' : 'text-gray-600'} mb-4`}>{t('errors.notFound')}</p>
+          <p className="text-[var(--color-text-secondary)] mb-4">{t('errors.notFound')}</p>
           <Link
             to="/dashboard"
             className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -327,37 +326,20 @@ export default function NodeDetailPage() {
   }
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gray-50'}`}>
+    <div className="min-h-screen bg-[var(--color-bg-page)]">
       {/* Header */}
-      <header className={`${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white shadow-sm'} border-b`}>
+      <header className="border-b border-[var(--color-border)] bg-[var(--color-bg-surface)] shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="mb-3">
+            <Breadcrumb />
+          </div>
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <Link
-                to="/dashboard"
-                className={`${isDark ? 'text-gray-400 hover:text-gray-200' : 'text-gray-600 hover:text-gray-900'} transition-colors`}
-                aria-label={t('common.back')}
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M10 19l-7-7m0 0l7-7m-7 7h18"
-                  />
-                </svg>
-              </Link>
               <div>
-                <h1 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">
                   {node.name}
                 </h1>
-                <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{node.ip}</p>
+                <p className="text-sm text-[var(--color-text-secondary)]">{node.ip}</p>
               </div>
             </div>
 
@@ -386,7 +368,7 @@ export default function NodeDetailPage() {
 
               {isPolling && (
                 <div
-                  className={`flex items-center space-x-1 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                  className="flex items-center space-x-1 text-sm text-[var(--color-text-secondary)]"
                   aria-label={t('nodes.live')}
                 >
                   <span className="relative flex h-3 w-3">
@@ -414,37 +396,37 @@ export default function NodeDetailPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="space-y-6">
           {/* Node Information */}
-          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6`}>
-            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+          <div className="rounded-lg shadow-sm p-6 bg-[var(--color-bg-surface)]">
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
               {t('nodes.nodeInfo')}
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div>
-                <dt className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <dt className="text-sm font-medium text-[var(--color-text-secondary)]">
                   {t('nodes.region')}
                 </dt>
-                <dd className={`mt-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <dd className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
                   {node.region}
                 </dd>
               </div>
               <div>
-                <dt className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <dt className="text-sm font-medium text-[var(--color-text-secondary)]">
                   {t('nodes.ipAddress')}
                 </dt>
-                <dd className={`mt-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} font-mono`}>
+                <dd className="mt-1 text-lg font-semibold text-[var(--color-text-primary)] font-mono">
                   {node.ip}
                 </dd>
               </div>
               <div>
-                <dt className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <dt className="text-sm font-medium text-[var(--color-text-secondary)]">
                   {t('nodes.lastHeartbeat')}
                 </dt>
-                <dd className={`mt-1 text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                <dd className="mt-1 text-lg font-semibold text-[var(--color-text-primary)]">
                   {formatTimestamp(nodeStatus?.last_heartbeat)}
                 </dd>
               </div>
               <div>
-                <dt className={`text-sm font-medium ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <dt className="text-sm font-medium text-[var(--color-text-secondary)]">
                   {t('nodes.tags')}
                 </dt>
                 <dd className="mt-1 flex flex-wrap gap-2">
@@ -458,7 +440,7 @@ export default function NodeDetailPage() {
                       </span>
                     ))
                   ) : (
-                    <span className={`${isDark ? 'text-gray-500' : 'text-gray-400'}`}>
+                    <span className="text-[var(--color-text-muted)]">
                       {t('nodes.noTags')}
                     </span>
                   )}
@@ -611,8 +593,8 @@ export default function NodeDetailPage() {
           </div>
 
           {/* Problem Diagnosis */}
-          <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-sm p-6`}>
-            <h2 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+          <div className="rounded-lg shadow-sm p-6 bg-[var(--color-bg-surface)]">
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
               {t('nodes.problemDiagnosis')}
             </h2>
             <ProblemDiagnosis
@@ -625,7 +607,7 @@ export default function NodeDetailPage() {
               }
               isExpanded={false}
             />
-            <p className={`mt-4 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'} italic`}>
+            <p className="mt-4 text-sm text-[var(--color-text-secondary)] italic">
               {t('nodes.diagnosisNote')}
             </p>
           </div>

@@ -35,10 +35,16 @@ const routeLabels: Record<string, string> = {
   records: 'nav.alertRecords',
   history: 'nav.alertHistory',
   comparison: 'nav.comparison',
-  webhooks: 'nav.integrations',
+  integrations: 'nav.integrations',
+  webhooks: 'nav.webhooks',
+  health: 'nav.systemHealth',
+  reports: 'nav.reports',
   export: 'nav.export',
-  performance: 'nav.reports',
+  performance: 'nav.performance',
+  settings: 'nav.settings',
+  preferences: 'nav.preferences',
   sessions: 'nav.sessions',
+  users: 'nav.users',
 }
 
 interface BreadcrumbItem {
@@ -100,16 +106,16 @@ export function Breadcrumb() {
       {items.map((item, index) => (
         <div key={item.path} className="flex items-center gap-1">
           {index > 0 && (
-            <ChevronRightIcon className="text-gray-400 dark:text-gray-500" />
+            <ChevronRightIcon className="text-[var(--color-text-muted)]" />
           )}
           {item.isLast ? (
-            <span className="font-medium text-gray-900 dark:text-gray-100">
+            <span className="font-medium text-[var(--color-text-primary)]">
               {index === 0 ? <HomeIcon /> : t(item.label)}
             </span>
           ) : (
             <Link
               to={item.path}
-              className="flex items-center text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              className="flex items-center text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] transition-colors"
             >
               {index === 0 ? <HomeIcon /> : t(item.label)}
             </Link>

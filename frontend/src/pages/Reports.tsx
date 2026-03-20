@@ -10,7 +10,6 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useTheme } from '../hooks/useTheme'
 import { useExportStore } from '../stores/exportStore'
 import { fetchNodes } from '../api/nodes'
 import { ReportGenerator, NodeComparisonTable, type ReportConfig, type NodeComparisonData } from '../components/reports'
@@ -22,7 +21,6 @@ import type { CreateExportRequest } from '../types/export'
 
 export default function ReportsPage() {
   const { t } = useTranslation()
-  const { isDark } = useTheme()
 
   const {
     createExport,
@@ -162,8 +160,8 @@ export default function ReportsPage() {
         {!isLoading && !error && (
           <div className="space-y-8">
             {/* Report Generator Form */}
-            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6`}>
-              <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+            <div className="rounded-lg shadow-md p-6 bg-[var(--color-bg-surface)]">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 {t('reports.generateReport')}
               </h3>
               <ReportGenerator
@@ -174,8 +172,8 @@ export default function ReportsPage() {
             </div>
 
             {/* Node Comparison Table */}
-            <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6`}>
-              <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+            <div className="rounded-lg shadow-md p-6 bg-[var(--color-bg-surface)]">
+              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                 {t('nodes.comparison')}
               </h3>
               <NodeComparisonTable nodes={comparisonData} highlightDifferences={true} />
@@ -183,8 +181,8 @@ export default function ReportsPage() {
 
             {/* Active Exports */}
             {currentExports.length > 0 && (
-              <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6`}>
-                <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+              <div className="rounded-lg shadow-md p-6 bg-[var(--color-bg-surface)]">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                   {t('reports.download')}
                 </h3>
                 <div className="space-y-4">
@@ -201,8 +199,8 @@ export default function ReportsPage() {
 
             {/* Export History */}
             {exportHistory.length > 0 && (
-              <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-md p-6`}>
-                <h3 className={`text-lg font-semibold ${isDark ? 'text-white' : 'text-gray-900'} mb-4`}>
+              <div className="rounded-lg shadow-md p-6 bg-[var(--color-bg-surface)]">
+                <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
                   {t('reports.exportHistory')}
                 </h3>
                 <ExportHistoryTable
