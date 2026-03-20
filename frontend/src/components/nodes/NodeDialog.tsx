@@ -171,7 +171,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
           <div>
             <label
               htmlFor="name"
-              className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1"
+              className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
             >
               {t('nodes.nodeName')} <span className="text-[var(--color-critical)]">*</span>
             </label>
@@ -182,7 +182,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               value={formData.name}
               onChange={handleChange}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-gray-100 dark:disabled:bg-slate-600"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)]"
               placeholder="e.g., Production Server 1"
             />
             {errors.name && (
@@ -194,7 +194,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
           <div>
             <label
               htmlFor="ip"
-              className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1"
+              className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
             >
               {t('nodes.ipAddress')} <span className="text-[var(--color-critical)]">*</span>
             </label>
@@ -205,7 +205,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               value={formData.ip}
               onChange={handleChange}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-gray-100 dark:disabled:bg-slate-600 font-mono"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)] font-mono"
               placeholder="e.g., 192.168.1.100"
             />
             {errors.ip && (
@@ -217,7 +217,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
           <div>
             <label
               htmlFor="region"
-              className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1"
+              className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
             >
               {t('nodes.region')} <span className="text-[var(--color-critical)]">*</span>
             </label>
@@ -228,7 +228,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               value={formData.region}
               onChange={handleChange}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-gray-100 dark:disabled:bg-slate-600"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)]"
               placeholder="e.g., us-east-1"
             />
             {errors.region && (
@@ -240,7 +240,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
           <div>
             <label
               htmlFor="tags"
-              className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1"
+              className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
             >
               {t('nodes.tags')}
             </label>
@@ -251,7 +251,7 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
               onChange={handleChange}
               disabled={isSubmitting}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 placeholder-gray-400 dark:placeholder-slate-500 focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-gray-100 dark:disabled:bg-slate-600"
+              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)]"
               placeholder="e.g., production, critical, backend (comma-separated)"
             />
             <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">

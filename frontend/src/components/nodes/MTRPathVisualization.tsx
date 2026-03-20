@@ -94,9 +94,9 @@ const riskStatusConfig: Record<
     shadowColor: 'shadow-sm',
   },
   timeout: {
-    borderColor: 'border-gray-300',
-    bgColor: 'bg-gray-50',
-    textColor: 'text-gray-800',
+    borderColor: 'border-[var(--color-border)]',
+    bgColor: 'bg-[var(--color-bg-muted)]',
+    textColor: 'text-[var(--color-text-primary)]',
     badgeBgColor: 'bg-gray-100',
     badgeTextColor: 'text-gray-700',
     indicatorColor: 'bg-gray-400',

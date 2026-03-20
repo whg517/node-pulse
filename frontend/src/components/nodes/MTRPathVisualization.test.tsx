@@ -64,7 +64,7 @@ describe('MTRPathVisualization', () => {
   it('applies timeout styling', () => {
     const hops = [createMockHop({ lossRate: 100, sent: 10, received: 0 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(container.querySelector('.border-gray-300')).toBeInTheDocument()
+    expect(container.querySelector('[class*="border-[var(--color-border)]"]')).toBeTruthy()
   })
 
   it('calls onHopClick when clicked', () => {
