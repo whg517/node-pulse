@@ -50,6 +50,11 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	router.Use(middleware.ErrorHandler())
 	router.Use(middleware.RateLimitMiddleware())
 
+	// Apply distributed tracing middleware (otelgin creates a span per request;
+	// TraceIDMiddleware injects the trace ID into the response header and log prefix).
+	router.Use(middleware.OtelGinMiddleware("pulse"))
+	router.Use(middleware.TraceIDMiddleware())
+
 	// Get JWT configuration from environment or use defaults
 	jwtPrivateKey := getEnvOrDefault("PULSE_JWT_PRIVATE_KEY", "")
 	jwtPublicKey := getEnvOrDefault("PULSE_JWT_PUBLIC_KEY", "")

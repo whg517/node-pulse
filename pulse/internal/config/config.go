@@ -19,15 +19,38 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	Server    ServerConfig    `yaml:"server"`
-	DB        DatabaseConfig  `yaml:"database"`
-	Cleanup   CleanupConfig   `yaml:"cleanup"`
-	Log       LogConfig       `yaml:"log"`
-	CORS      CORSConfig      `yaml:"cors"`
-	Admin     AdminConfig     `yaml:"admin"`
-	Session   SessionConfig   `yaml:"session"`
-	JWT       JWTConfig       `yaml:"jwt"`
-	RateLimit RateLimitConfig `yaml:"rate_limit"`
+	Server     ServerConfig     `yaml:"server"`
+	DB         DatabaseConfig   `yaml:"database"`
+	Cleanup    CleanupConfig    `yaml:"cleanup"`
+	Log        LogConfig        `yaml:"log"`
+	CORS       CORSConfig       `yaml:"cors"`
+	Admin      AdminConfig      `yaml:"admin"`
+	Session    SessionConfig    `yaml:"session"`
+	JWT        JWTConfig        `yaml:"jwt"`
+	RateLimit  RateLimitConfig  `yaml:"rate_limit"`
+	Telemetry  TelemetryConfig  `yaml:"telemetry"`
+}
+
+// TelemetryConfig holds OpenTelemetry / distributed-tracing configuration.
+type TelemetryConfig struct {
+	// Enabled controls whether distributed tracing is active.
+	Enabled bool `yaml:"enabled"`
+
+	// ServiceName is the logical service name reported in traces (default: "pulse").
+	ServiceName string `yaml:"service_name"`
+
+	// ServiceVersion is the deployed version string (default: "unknown").
+	ServiceVersion string `yaml:"service_version"`
+
+	// Environment is the deployment environment, e.g. "production", "staging", "development".
+	Environment string `yaml:"environment"`
+
+	// OTLPEndpoint is the gRPC address of an OTLP-compatible collector,
+	// e.g. "localhost:4317".  When empty, traces are written to stdout.
+	OTLPEndpoint string `yaml:"otlp_endpoint"`
+
+	// SamplingRate controls what fraction of requests are traced (0.0 – 1.0, default 1.0).
+	SamplingRate float64 `yaml:"sampling_rate"`
 }
 
 // ServerConfig holds server configuration
@@ -336,6 +359,14 @@ func defaultConfig() *Config {
 			RefreshMaxPerDay:    200, // 200 refresh attempts per day per token
 			APIKeyMaxPerMinute:  11,  // 11 API key exchanges per minute per key
 		},
+		Telemetry: TelemetryConfig{
+			Enabled:        false,         // opt-in; set PULSE_TELEMETRY_ENABLED=true to activate
+			ServiceName:    "pulse",
+			ServiceVersion: "unknown",
+			Environment:    "development",
+			OTLPEndpoint:   "",            // empty → stdout exporter (dev/debug)
+			SamplingRate:   1.0,           // trace every request by default
+		},
 	}
 }
 
@@ -521,6 +552,28 @@ func mergeFromEnv(cfg *Config) *Config {
 		cfg.Session.CookieSecure = cfg.IsProduction()
 	}
 
+	// Telemetry configuration
+	if v := os.Getenv("PULSE_TELEMETRY_ENABLED"); v != "" {
+		cfg.Telemetry.Enabled = parseBool(v, cfg.Telemetry.Enabled)
+	}
+	if v := os.Getenv("PULSE_TELEMETRY_SERVICE_NAME"); v != "" {
+		cfg.Telemetry.ServiceName = v
+	}
+	if v := os.Getenv("PULSE_TELEMETRY_SERVICE_VERSION"); v != "" {
+		cfg.Telemetry.ServiceVersion = v
+	}
+	if v := os.Getenv("PULSE_TELEMETRY_ENVIRONMENT"); v != "" {
+		cfg.Telemetry.Environment = v
+	}
+	if v := os.Getenv("PULSE_TELEMETRY_OTLP_ENDPOINT"); v != "" {
+		cfg.Telemetry.OTLPEndpoint = v
+	}
+	if v := os.Getenv("PULSE_TELEMETRY_SAMPLING_RATE"); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 1 {
+			cfg.Telemetry.SamplingRate = f
+		}
+	}
+
 	return cfg
 }
 
@@ -552,6 +605,9 @@ func (c *Config) Validate() error {
 	}
 	if err := c.RateLimit.Validate(); err != nil {
 		return fmt.Errorf("rate_limit config invalid: %w", err)
+	}
+	if err := c.Telemetry.Validate(); err != nil {
+		return fmt.Errorf("telemetry config invalid: %w", err)
 	}
 	return nil
 }
@@ -743,6 +799,14 @@ func (c *RateLimitConfig) Validate() error {
 	if c.RefreshMaxPerDay < c.RefreshMaxPerMinute {
 		return fmt.Errorf("rate_limit refresh_max_per_day (%d) must be >= refresh_max_per_minute (%d)",
 			c.RefreshMaxPerDay, c.RefreshMaxPerMinute)
+	}
+	return nil
+}
+
+// Validate validates telemetry configuration.
+func (c *TelemetryConfig) Validate() error {
+	if c.SamplingRate < 0 || c.SamplingRate > 1 {
+		return fmt.Errorf("telemetry sampling_rate must be between 0.0 and 1.0, got %f", c.SamplingRate)
 	}
 	return nil
 }
