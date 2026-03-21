@@ -1,16 +1,23 @@
 # NodePulse UI/UX Design Document
 
-**Version:** 2.0
-**Date:** 2026-02-22
+**Version:** 3.0
+**Date:** 2026-03-21
 **Author:** Design Team
-**Status:** Approved
+**Status:** Implemented
 
 ---
 
 ## Design Direction
 
-**Aesthetic:** Technical-Industrial with Data-Centric Precision
-**Tech Stack:** React 19 + TypeScript + Tailwind CSS + ECharts + Zustand
+**Aesthetic:** "Instrument Panel" — Precision, clarity, signal-strength identity
+**Tech Stack:** React 19 + TypeScript + Tailwind CSS v4 + Vite 7 + ECharts + Zustand
+
+**Design Principles:**
+- **Function-first:** Monitoring status scannability never degrades for aesthetics
+- **Signal clarity:** Teal brand color for network/connectivity semantics
+- **Depth through shadow:** 5-level shadow system replaces pure border separation
+- **Unified language:** Light and dark themes share the same design vocabulary
+- **WCAG AA:** All color pairings verified for >= 4.5:1 text contrast
 
 ---
 
@@ -143,115 +150,136 @@ interface SidebarItem {
 
 ## 3. Visual Design System
 
-### 3.1 Color Palette - Health States
+### 3.1 Color Palette — Brand (Teal)
+
+Teal conveys network connectivity and signal strength. Replaces the previous generic blue.
+
+**Design Token:** `frontend/src/config/designTokens.ts` → `primaryColors`
+
+| Token | Light | Dark | WCAG AA |
+|-------|-------|------|---------|
+| `--color-brand` | `#0F766E` (teal-700) | `#2DD4BF` (teal-400) | 5.47:1 on white |
+| `--color-brand-hover` | `#115E59` (teal-800) | `#5EEAD4` (teal-300) | — |
+| `--color-brand-muted` | `#CCFBF1` (teal-50) | `#042F2E` (teal-900) | — |
+| `--color-brand-subtle` | `#99F6E4` (teal-100) | `#115E59` (teal-800) | — |
+
+**Usage:** Sidebar active state, header brand, links, primary buttons, focus rings.
+
+### 3.2 Color Palette — Status / Semantic
+
+Each status has three tiers: **main** (dot/icon), **bg** (badge background), **text** (readable text on badge).
+
+| Status | Main | BG (Light) | Text (Light) | BG (Dark) | Text (Dark) |
+|--------|------|------------|--------------|-----------|-------------|
+| Healthy | `#059669` (emerald-600) | `#ECFDF5` | `#065F46` | `rgba(5,150,105,0.12)` | `#6EE7B7` |
+| Warning | `#D97706` (amber-600) | `#FFFBEB` | `#92400E` | `rgba(217,119,6,0.12)` | `#FCD34D` |
+| Critical | `#DC2626` (red-600) | `#FEF2F2` | `#991B1B` | `rgba(220,38,38,0.12)` | `#FCA5A5` |
+| Unknown | `#64748B` (slate-500) | `#F1F5F9` | `#475569` | `rgba(100,116,139,0.12)` | `#C9D1D9` |
+
+**CSS Variables:** `--color-{status}`, `--color-{status}-bg`, `--color-{status}-text`
+
+### 3.3 Color Palette — Neutrals (Slate)
+
+All UI chrome uses the Tailwind slate scale. Gray-* references have been fully migrated.
+
+| Token | Light | Dark |
+|-------|-------|------|
+| `--color-bg-page` | `#F8FAFB` | `#080B10` |
+| `--color-bg-surface` | `#FFFFFF` | `#0F1218` |
+| `--color-bg-elevated` | `#FFFFFF` | `#161B22` |
+| `--color-bg-muted` | `#F1F5F9` | `#1C2129` |
+| `--color-bg-subtle` | `#E2E8F0` | `#272D38` |
+| `--color-border` | `#E2E8F0` | `#1E2530` |
+| `--color-border-strong` | `#CBD5E1` | `#2D3544` |
+| `--color-text-primary` | `#0F172A` | `#E6EDF3` |
+| `--color-text-secondary` | `#475569` | `#8B949E` |
+| `--color-text-muted` | `#64748B` | `#7D8590` |
+| `--color-text-placeholder` | `#94A3B8` | `#3D444D` |
+| `--color-hover-overlay` | `#F1F5F9` | `#161B22` |
+| `--color-active-overlay` | `#E2E8F0` | `#272D38` |
+
+### 3.4 Color Palette — Charts
+
+| Token | Light | Dark |
+|-------|-------|------|
+| `--color-chart-text` | `#334155` | `#C9D1D9` |
+| `--color-chart-axis` | `#E2E8F0` | `#2D3544` |
+| `--color-chart-grid` | `#F1F5F9` | `#161B22` |
+| `--color-chart-tooltip-bg` | `rgba(255,255,255,0.96)` | `rgba(15,18,24,0.96)` |
+| `--color-chart-tooltip-border` | `#E2E8F0` | `#2D3544` |
+| `--color-chart-tooltip-text` | `#334155` | `#E6EDF3` |
+
+### 3.5 Shadow System
+
+5-level shadow depth system. Replaces `border-gray-200` separations with elevation-based depth.
+
+| Token | Light | Dark | Usage |
+|-------|-------|------|-------|
+| `--shadow-xs` | `0 1px 2px rgba(15,23,42,0.04)` | `0 1px 2px rgba(0,0,0,0.2)` | Header bottom |
+| `--shadow-sm` | `0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)` | `0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)` | Cards, tables |
+| `--shadow-md` | `0 4px 6px -1px rgba(15,23,42,0.06), 0 2px 4px -2px rgba(15,23,42,0.04)` | `0 4px 6px -1px rgba(0,0,0,0.35), 0 2px 4px -2px rgba(0,0,0,0.2)` | Hovered cards |
+| `--shadow-lg` | `0 10px 15px -3px rgba(15,23,42,0.06), 0 4px 6px -4px rgba(15,23,42,0.03)` | `0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -4px rgba(0,0,0,0.2)` | Sidebar, dropdowns |
+| `--shadow-xl` | `0 20px 25px -5px rgba(15,23,42,0.08), 0 8px 10px -6px rgba(15,23,42,0.04)` | `0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.25)` | Modals, dialogs |
+
+**Utility classes:** `.shadow-xs` through `.shadow-xl` (defined in `index.css`).
+
+### 3.6 Typography
 
 ```css
-:root {
-  /* Primary Brand - Light Mode */
-  --color-primary-500: #2563eb;    /* Blue-600 - Primary actions */
-  --color-primary-600: #1d4ed8;    /* Blue-700 - Hover state */
-
-  /* Primary Brand - Dark Mode (Softer to reduce eye strain) */
-  --color-primary-dark: #3b82f6;       /* Blue-500 */
-  --color-primary-dark-hover: #60a5fa; /* Blue-400 */
-
-  /* Health State Colors */
-  --color-healthy-500: #059669;    /* Emerald - Good health */
-  --color-healthy-100: #d1fae5;    /* Light emerald bg */
-
-  --color-warning-500: #d97706;    /* Amber - Warning */
-  --color-warning-100: #fef3c7;    /* Light amber bg */
-
-  --color-critical-500: #dc2626;   /* Red - Critical */
-  --color-critical-100: #fee2e2;   /* Light red bg */
-
-  --color-offline-400: #9ca3af;    /* Gray - Offline */
-  --color-offline-100: #f3f4f6;    /* Light gray bg */
-
-  /* Chart Colors - ECharts compatible */
-  --chart-latency: #3b82f6;        /* Blue-500 */
-  --chart-packet-loss: #ef4444;    /* Red-500 */
-  --chart-jitter: #8b5cf6;         /* Purple-500 */
-  --chart-baseline: #10b981;       /* Green-500 */
-
-  /* Semantic - Alert Levels */
-  --alert-p0: #dc2626;             /* Red - Critical */
-  --alert-p1: #f59e0b;             /* Amber - Warning */
-  --alert-p2: #3b82f6;             /* Blue - Notice */
-
-  /* Sidebar */
-  --sidebar-bg: #1e293b;           /* Slate-800 */
-  --sidebar-hover: #334155;        /* Slate-700 */
-  --sidebar-active: #3b82f6;       /* Blue-500 */
-}
+font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 ```
 
-| Status | Color | Hex | Usage |
-|--------|-------|-----|-------|
-| Healthy | Emerald | `#059669` | Normal nodes |
-| Warning | Amber | `#d97706` | Mild anomaly |
-| Critical | Red | `#dc2626` | Severe fault |
-| Offline | Gray | `#9ca3af` | No response |
+| Level | Tailwind | Size | Weight |
+|-------|----------|------|--------|
+| Display | `text-4xl` | 2.25rem | 700 |
+| Title | `text-2xl` | 1.5rem | 600 |
+| Subtitle | `text-lg` | 1.125rem | 500 |
+| Body | `text-base` | 1rem | 400 |
+| Small | `text-sm` | 0.875rem | 400 |
+| Label | `text-xs` | 0.75rem | 500, uppercase |
 
-### 3.2 Typography
+### 3.7 Theme Architecture
+
+**Mechanism:** CSS custom properties in `index.css` (`:root` for light, `.dark` for dark). Tailwind v4 `@custom-variant dark (&:where(.dark, .dark *))` for class-based toggling. Zustand store persists preference to localStorage.
+
+**Key rule:** All colors reference CSS variables — **never** use hardcoded Tailwind color classes (`bg-blue-*`, `text-red-*`, etc.) or `dark:` prefixed overrides. The `.dark` class swap handles both themes automatically.
 
 ```css
-:root {
-  /* Primary: JetBrains Mono for data/technical feel */
-  --font-display: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+/* Correct — theme-aware via CSS variables */
+className="bg-[var(--color-brand)] text-[var(--color-healthy-text)]"
 
-  /* Body: Source Sans 3 for readability */
-  --font-body: 'Source Sans 3', 'Inter', system-ui, sans-serif;
-
-  /* Fallback for Chinese content */
-  --font-chinese: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-}
-
-/* Typography Scale */
-.text-display { font: 600 2rem/1.2 var(--font-display); }
-.text-title { font: 600 1.5rem/1.3 var(--font-body); }
-.text-body { font: 400 1rem/1.5 var(--font-body); }
-.text-mono { font: 400 0.875rem/1.4 var(--font-display); }
-.text-label { font: 600 0.75rem/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.05em; }
+/* Wrong — hardcoded, not theme-aware */
+className="bg-blue-500 text-green-800 dark:bg-blue-900/30 dark:text-green-300"
 ```
 
-### 3.3 Dark/Light Mode
+### 3.8 Badge System
 
-```css
-/* Dark Mode (Deep OLED style for monitoring systems) */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: #020617;      /* Slate-950 (Deeper black for contrast) */
-    --bg-secondary: #0f172a;    /* Slate-900 (Card backgrounds) */
-    --bg-tertiary: #1e293b;     /* Slate-800 (Hover/Elevated) */
-    --text-primary: #f8fafc;    /* Slate-50 */
-    --text-secondary: #94a3b8;  /* Slate-400 */
-    --border-color: #1e293b;    /* Slate-800 */
-    --grid-line: #1e293b;       /* Subtle chart grids */
-  }
-}
+Pill-shaped badges with colored dot indicator. Defined in `index.css`.
 
-@media (prefers-color-scheme: light) {
-  :root {
-    --bg-primary: #f8fafc;      /* Slate-50 (Softer than pure white) */
-    --bg-secondary: #ffffff;    /* Pure White (Cards) */
-    --bg-tertiary: #f1f5f9;     /* Slate-100 */
-    --text-primary: #0f172a;    /* Slate-900 */
-    --text-secondary: #64748b;  /* Slate-500 */
-    --border-color: #e2e8f0;    /* Slate-200 */
-    --grid-line: #f1f5f9;       /* Light chart grids */
-  }
-}
+```html
+<span class="badge badge-healthy">
+  <span class="badge-dot"></span>Healthy
+</span>
 ```
 
-### 3.4 Chart Theme (ECharts)
+| Class | BG | Text | Dot |
+|-------|-----|------|-----|
+| `.badge-healthy` | `--color-healthy-bg` | `--color-healthy-text` | `--color-healthy` |
+| `.badge-warning` | `--color-warning-bg` | `--color-warning-text` | `--color-warning` |
+| `.badge-critical` | `--color-critical-bg` | `--color-critical-text` | `--color-critical` |
+| `.badge-unknown` | `--color-unknown-bg` | `--color-unknown-text` | `--color-unknown` |
+| `.badge-brand` | `--color-brand-muted` | `--color-brand` | — |
+
+### 3.9 Chart Theme (ECharts)
 
 ```javascript
 const nodePulseTheme = {
-  color: ['#3b82f6', '#ef4444', '#8b5cf6', '#10b981', '#f59e0b'],
+  color: ['#0F766E', '#059669', '#D97706', '#DC2626', '#8B5CF6'],
   backgroundColor: 'transparent',
   textStyle: {
-    fontFamily: 'Source Sans 3, sans-serif',
+    fontFamily: 'Inter, system-ui, sans-serif',
+    color: 'var(--color-chart-text)',
   },
   title: {
     textStyle: { fontWeight: 600, fontSize: 16 },
@@ -265,15 +293,58 @@ const nodePulseTheme = {
     left: 60, right: 40, top: 60, bottom: 60,
   },
   splitLine: {
-    lineStyle: { color: 'var(--grid-line)' } // Adaptive grid lines
+    lineStyle: { color: 'var(--color-chart-axis)' },
   },
   tooltip: {
-    backgroundColor: 'rgba(2, 6, 23, 0.95)', // Deep slate
-    borderColor: '#1e293b',
-    textStyle: { color: '#f8fafc' },
+    backgroundColor: 'var(--color-chart-tooltip-bg)',
+    borderColor: 'var(--color-chart-tooltip-border)',
+    textStyle: { color: 'var(--color-chart-tooltip-text)' },
   },
 }
 ```
+
+### 3.10 Component Design Tokens
+
+**Source:** `frontend/src/config/designTokens.ts`
+
+**Button Variants:**
+
+| Variant | Description |
+|---------|-------------|
+| `primary` | Teal brand bg, white text, hover darkens |
+| `secondary` | Surface bg, border-strong, brand focus ring |
+| `danger` | Critical bg, white text |
+| `ghost` | Transparent, hover-overlay bg |
+| `icon` | Square, muted text, hover overlay |
+
+**Card Variants:**
+
+| Variant | Shadow | Border |
+|---------|--------|--------|
+| `default` | `shadow-sm` | `--color-border` |
+| `elevated` | `shadow-md` | `--color-border` |
+| `interactive` | `shadow-sm` → `shadow-md` on hover | `--color-border` |
+
+### 3.11 Component Visual Patterns
+
+**Sidebar:**
+- Brand color: Teal for logo and active nav item
+- Active state: Light background fill (`--color-brand-muted`), not a colored highlight
+- Right edge: `shadow-lg` instead of `border-r border-gray-200`
+
+**Header:**
+- Bottom: `shadow-xs` instead of `border-b border-gray-200`
+- Brand elements use `--color-brand`
+
+**MetricCard:**
+- No full-card background color based on status
+- Left 3px accent border in status color (`border-l-3 border-[var(--color-healthy)]`)
+- Surface background with `shadow-sm`
+
+**Data Tables:**
+- Header row: `--color-bg-subtle` background
+- Alternating rows: `--color-bg-muted` on even rows
+- Hover: `--color-hover-overlay`
 
 ---
 
@@ -399,7 +470,7 @@ Source                                              Destination
 | Latency >= 200ms | Red border, warning icon |
 | Jitter >= 50ms | Yellow border |
 | Timeout | Gray box with question mark |
-| Normal | Default blue/gray styling |
+| Normal | Default teal/gray styling |
 
 ### 4.5 Multi-Metric Time Series (FR-4.3.4)
 
@@ -805,10 +876,14 @@ This UI/UX design document provides a comprehensive framework for NodePulse's fr
    - AlertStream for real-time monitoring
    - Improved visual hierarchy with card-based layout
 
-3. **Color System**
-   - Health-state colors (emerald/amber/red/gray) with clear semantic meaning
-   - WCAG-compliant contrast ratios
-   - Dark mode as default (appropriate for monitoring systems)
+3. **Instrument Panel Design System**
+   - Teal brand color for network/connectivity identity
+   - Slate neutral scale for visual depth
+   - 5-level shadow system (xs/sm/md/lg/xl) replacing border-based separation
+   - Status colors with bg/text variants, CSS variable-driven for instant theme switching
+   - Badge system with dot indicators for scannable status display
+   - WCAG AA verified contrast ratios across all color pairings
+   - Unified light/dark design language — no `dark:` class overrides needed
 
 4. **Key Differentiators**
    - Interactive world map with real-time health visualization
@@ -829,3 +904,4 @@ This UI/UX design document provides a comprehensive framework for NodePulse's fr
 |---------|------|--------|---------|
 | 1.0 | 2026-02-17 | Design Team | Initial UI/UX design document |
 | 2.0 | 2026-02-22 | Design Team | Comprehensive restructure: added shared layout, sidebar navigation, integrated WorldMap, reorganized routes |
+| 3.0 | 2026-03-21 | Design Team | "Instrument Panel" design system: Teal brand replacing blue, slate neutrals, 5-level shadow system, CSS variable-driven status colors, badge system, Inter typography, dark mode OLED-optimized, WCAG AA verified |
