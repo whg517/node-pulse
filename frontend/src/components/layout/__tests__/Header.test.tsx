@@ -87,7 +87,6 @@ describe('Header', () => {
         <Header {...defaultProps} />
       </MemoryRouter>
     )
-    const userBtn = screen.getAllByRole('button').find(b => b.className.includes('rounded-full') || b.getAttribute('aria-label')?.includes('user'))
     // Find button containing username
     const userMenuButton = screen.getByText('testuser').closest('button') ??
       screen.getAllByRole('button')[screen.getAllByRole('button').length - 1]

@@ -102,7 +102,7 @@ func TestCleanupTask_Integration(t *testing.T) {
 		SlowThresholdMs: 30000,
 	}
 
-	task, err := cleanup.NewCleanupTask(cfg, pool, nil)
+	task, err := cleanup.NewCleanupTask(cfg, pool)
 	require.NoError(t, err)
 	require.NotNil(t, task)
 
@@ -152,7 +152,7 @@ func TestCleanupTask_ZeroRows_Integration(t *testing.T) {
 		RetentionDays:   7,
 	}
 
-	task, err := cleanup.NewCleanupTask(cfg, pool, nil)
+	task, err := cleanup.NewCleanupTask(cfg, pool)
 	require.NoError(t, err)
 
 	// Execute cleanup - should succeed even with no data to delete
@@ -221,7 +221,7 @@ func TestCleanupTask_CustomRetention_Integration(t *testing.T) {
 		RetentionDays:   7,
 	}
 
-	task, err := cleanup.NewCleanupTask(cfg, pool, nil)
+	task, err := cleanup.NewCleanupTask(cfg, pool)
 	require.NoError(t, err)
 
 	err = task.Execute(ctx)

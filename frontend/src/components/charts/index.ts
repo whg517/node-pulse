@@ -6,4 +6,4 @@
 
 export { LatencyTrendChart, type LatencyTrendChartProps } from './LatencyTrendChart'
 export { PacketLossChart, type PacketLossChartProps } from './PacketLossChart'
-export { ProbeSuccessGauge, type ProbeSuccessGaugeProps, GAUGE_COLORS } from './ProbeSuccessGauge'
+export { ProbeSuccessGauge, type ProbeSuccessGaugeProps } from './ProbeSuccessGauge'
