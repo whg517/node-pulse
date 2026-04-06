@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { useExportStore } from '../exportStore'
 import * as exportApi from '../../api/export'
 import type { ExportTask } from '../../types/export'

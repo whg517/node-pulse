@@ -181,5 +181,4 @@ export function ProbeSuccessGauge({
   )
 }
 
-// Export empty for backward compatibility
-export const GAUGE_COLORS: Record<string, never> = {}
+
