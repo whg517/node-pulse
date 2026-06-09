@@ -34,8 +34,14 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
  */
 function ProtectedLayout() {
   const alertRecords = useAlertsStore((state) => state.alertRecords)
+  const fetchAlertRecords = useAlertsStore((state) => state.fetchAlertRecords)
   // Count unresolved alerts for badge
   const alertCount = alertRecords.filter((r) => r.status !== 'resolved').length
+
+  // Fetch alert records once on mount so the sidebar badge is populated
+  useEffect(() => {
+    fetchAlertRecords().catch(() => {})
+  }, [fetchAlertRecords])
 
   return (
     <ProtectedRoute>

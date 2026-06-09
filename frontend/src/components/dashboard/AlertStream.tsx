@@ -53,7 +53,7 @@ export const AlertStream = memo(function AlertStream({ maxItems = 10, className 
   const alertRecords = useAlertsStore((state) => state.alertRecords)
 
   useEffect(() => {
-    const handleNotificationClick = (alertId: string) => navigate(`/alerts?highlight=${alertId}`)
+    const handleNotificationClick = (alertId: string) => navigate(`/alerts/records?highlight=${alertId}`)
     NotificationService.initialize(handleNotificationClick)
     return () => NotificationService.destroy()
   }, [navigate])
@@ -76,7 +76,7 @@ export const AlertStream = memo(function AlertStream({ maxItems = 10, className 
     return safeRecords.filter((record) => record.status !== 'resolved').sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, maxItems)
   }, [alertRecords, maxItems])
 
-  const handleAlertClick = (alertId: string) => navigate(`/alerts?highlight=${alertId}`)
+  const handleAlertClick = (alertId: string) => navigate(`/alerts/records?highlight=${alertId}`)
 
   if (isLoading) {
     return (<div className={`rounded-lg border border-[var(--color-border)] shadow-sm overflow-hidden bg-[var(--color-bg-surface)] ${className}`}><div className="px-4 py-3 border-b border-[var(--color-border)]"><div className="animate-pulse"><div className="h-5 rounded w-32 bg-[var(--color-bg-muted)]"></div></div></div><div className="p-3 space-y-2 max-h-96 overflow-y-auto">{[...Array(5)].map((_, i) => (<div key={i} className="h-16 rounded animate-pulse bg-[var(--color-bg-muted)]"></div>))}</div></div>)

@@ -41,7 +41,14 @@ vi.mock('react-i18next', () => ({
         'dashboard.latencyTrendChart': 'Network Latency Trend',
         'dashboard.packetLossChart': 'Packet Loss Rate',
         'dashboard.probeSuccessRate': 'Probe Success Rate',
+        'dashboard.nodeDistribution': 'Node Distribution',
+        'dashboard.noData': 'No data',
         'dashboard.nodesRequiringAttention': 'nodes requiring attention',
+        'common.status': 'Status',
+        'alerts.activeAlerts': 'Active Alerts',
+        'alerts.noActiveAlerts': 'No active alerts',
+        'alerts.allSystemsNormal': 'All systems normal',
+        'alerts.viewAllAlerts': 'View all alerts',
         'metrics.onlineRate': 'Online Rate',
         'metrics.anomalyRate': 'Anomaly Rate',
         'metrics.avgLatency': 'Avg Latency',
@@ -93,6 +100,38 @@ vi.mock('../hooks/useDashboardData', () => ({
 
 vi.mock('../hooks/useDashboard', () => ({
   useDashboard: vi.fn(),
+}))
+
+vi.mock('../hooks/useDashboardHistory', () => ({
+  useDashboardHistory: vi.fn(() => ({
+    latencyTrend: [],
+    packetLossTrend: [],
+    isLoading: false,
+  })),
+}))
+
+const { mockFetchAlertRecords } = vi.hoisted(() => ({
+  mockFetchAlertRecords: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('../stores/alertsStore', () => ({
+  useAlertsStore: (selector: (s: { fetchAlertRecords: typeof mockFetchAlertRecords; alertRecords: unknown[] }) => unknown) =>
+    selector({
+      fetchAlertRecords: mockFetchAlertRecords,
+      alertRecords: [],
+    }),
+}))
+
+vi.mock('../components/dashboard/WorldMap', () => ({
+  default: function WorldMapMock() {
+    return <div data-testid="world-map-mock">WorldMap</div>
+  },
+}))
+
+vi.mock('../components/dashboard/AlertStream', () => ({
+  AlertStream: function AlertStreamMock() {
+    return <div data-testid="alert-stream-mock">AlertStream</div>
+  },
 }))
 
 vi.mock('react-router-dom', async () => {

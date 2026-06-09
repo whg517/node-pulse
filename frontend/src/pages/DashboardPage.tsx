@@ -2,51 +2,74 @@
  * Dashboard Page
  *
  * Enhanced dashboard with node health overview, real-time metrics,
- * charts, and quick action buttons.
+ * world map, alert stream, charts from historical API, and quick actions.
  */
 
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useDashboardData } from '../hooks/useDashboardData'
 import { useDashboard } from '../hooks/useDashboard'
+import { useDashboardHistory } from '../hooks/useDashboardHistory'
 import { useThemeColors } from '../hooks/useThemeColors'
 import { PageContainer, ErrorBanner, ActionButton } from '../components/common'
 import { PageHeader } from '../components/layout/PageHeader'
 import { NodeListTable } from '../components/dashboard/NodeListTable'
-import { TopAnomaliesList } from '../components/dashboard/TopAnomaliesList'
+import { AlertStream } from '../components/dashboard/AlertStream'
 import { MetricsSummaryCards } from '../components/dashboard/MetricsSummaryCards'
 import { NodeSummaryCard } from '../components/dashboard/NodeSummaryCard'
+import WorldMap from '../components/dashboard/WorldMap'
 import { LatencyTrendChart, PacketLossChart, ProbeSuccessGauge } from '../components/charts'
-import type { DataPoint } from '../components/dashboard/TrendChart'
-
-/**
- * Generate sample trend data for charts
- * Note: In production, this data would come from the API
- */
-function generateTrendData(baseValue: number, variance: number, points: number = 24): DataPoint[] {
-  const now = new Date('2026-01-01T00:00:00Z')
-  const data: DataPoint[] = []
-  for (let i = points - 1; i >= 0; i--) {
-    const timestamp = new Date(now.getTime() - i * 3600000) // hourly data
-    const phase = (points - i) / points * Math.PI * 2
-    const value = baseValue + Math.sin(phase) * (variance * 0.5)
-    data.push({
-      timestamp: timestamp.toISOString(),
-      value: Math.max(0, value),
-    })
-  }
-  return data
-}
+import type { NodeLocation } from '../components/dashboard/WorldMap'
+import { useAlertsStore } from '../stores/alertsStore'
+import { estimateRegionBaseCoordinates, scatterAroundBase } from '../utils/regionCoordinates'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
   const themeColors = useThemeColors()
   const { nodes, metrics, isLoading, error, refetch } = useDashboardData()
-  const { stats, sortedByAnomaly } = useDashboard(nodes, metrics)
+  const { stats, sortedByAnomaly, nodeHealthSummaries } = useDashboard(nodes, metrics)
+  const fetchAlertRecords = useAlertsStore((s) => s.fetchAlertRecords)
 
-  const latencyTrendData = generateTrendData(stats.averageLatency, 20)
-  const packetLossTrendData = generateTrendData(stats.averagePacketLoss, 2)
+  const [historyRefreshToken, setHistoryRefreshToken] = useState(0)
+
+  const nodeIdsForHistory = useMemo(() => nodes.map((n) => n.id), [nodes])
+  const { latencyTrend, packetLossTrend, isLoading: historyLoading } = useDashboardHistory(
+    nodeIdsForHistory,
+    historyRefreshToken
+  )
+
+  useEffect(() => {
+    void fetchAlertRecords()
+  }, [fetchAlertRecords])
+
+  const handleRefetch = useCallback(async () => {
+    await refetch()
+    setHistoryRefreshToken((n) => n + 1)
+    void fetchAlertRecords()
+  }, [refetch, fetchAlertRecords])
+
+  const nodeMapLocations = useMemo((): NodeLocation[] => {
+    return nodeHealthSummaries.map(({ node, metrics: nodeMetrics, healthStatus }) => {
+      const base = estimateRegionBaseCoordinates(node.region)
+      const { lat, lng } = scatterAroundBase(base, node.id)
+      return {
+        id: node.id,
+        name: node.name,
+        lat,
+        lng,
+        region: node.region,
+        healthStatus,
+        avgLatency: nodeMetrics?.latency_ms ?? 0,
+        packetLoss: nodeMetrics?.packet_loss_rate ?? 0,
+      }
+    })
+  }, [nodeHealthSummaries])
+
+  const chartsLoading = isLoading || historyLoading
+  const latencyBaseline =
+    stats.averageLatency > 0 ? stats.averageLatency : 100
 
   // Get top 6 nodes for display
   const topNodes = sortedByAnomaly.slice(0, 6)
@@ -58,7 +81,7 @@ export default function DashboardPage() {
         subtitle={t('dashboard.realTimeMetrics')}
         actions={
           <div className="flex items-center space-x-3">
-            <ActionButton variant="secondary" onClick={() => refetch()}>
+            <ActionButton variant="secondary" onClick={() => void handleRefetch()}>
               <svg className="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
               </svg>
@@ -72,8 +95,18 @@ export default function DashboardPage() {
       />
 
       {error && (
-        <ErrorBanner error={error} onRetry={refetch} className="mb-6" />
+        <ErrorBanner error={error} onRetry={() => void handleRefetch()} className="mb-6" />
       )}
+
+      {/* World map — node distribution (UI design §4.1–4.2) */}
+      <div className="mb-8">
+        <WorldMap
+          nodes={nodeMapLocations}
+          height="420px"
+          isLoading={isLoading}
+          onNodeClick={(nodeId) => navigate(`/nodes/${nodeId}`)}
+        />
+      </div>
 
       {/* Health Overview Stats */}
       <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -249,9 +282,8 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Charts Row */}
+      {/* Charts Row — last 24h cluster average from /data/history */}
       <div className="mb-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Latency Trend Chart */}
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
           <div className="px-4 py-3 border-b border-[var(--color-border)]">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
@@ -260,16 +292,15 @@ export default function DashboardPage() {
           </div>
           <div className="p-4">
             <LatencyTrendChart
-              data={latencyTrendData}
+              data={latencyTrend}
               height="250px"
-              isLoading={isLoading}
+              isLoading={chartsLoading}
               showBaseline
-              baselineValue={100}
+              baselineValue={latencyBaseline}
             />
           </div>
         </div>
 
-        {/* Packet Loss Chart */}
         <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
           <div className="px-4 py-3 border-b border-[var(--color-border)]">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
@@ -278,9 +309,9 @@ export default function DashboardPage() {
           </div>
           <div className="p-4">
             <PacketLossChart
-              data={packetLossTrendData}
+              data={packetLossTrend}
               height="250px"
-              isLoading={isLoading}
+              isLoading={chartsLoading}
               warningThreshold={3}
               criticalThreshold={5}
             />
@@ -296,15 +327,15 @@ export default function DashboardPage() {
         <MetricsSummaryCards metrics={metrics} isLoading={isLoading} />
       </div>
 
-      {/* Main Content Grid */}
+      {/* Node health cards + alert stream (UI design §4.1) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Node Health Cards (2/3 width on large screens) */}
         <div className="lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
               {t('dashboard.nodeHealthOverview')}
             </h3>
             <button
+              type="button"
               onClick={() => navigate('/nodes')}
               className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] text-sm font-medium"
             >
@@ -330,9 +361,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Top Anomalies List (1/3 width on large screens) */}
         <div className="lg:col-span-1">
-          <TopAnomaliesList nodes={nodes} metrics={metrics} isLoading={isLoading} />
+          <AlertStream isLoading={isLoading} />
         </div>
       </div>
 

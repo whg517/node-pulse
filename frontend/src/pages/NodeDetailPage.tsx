@@ -1,4 +1,4 @@
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageContainer } from '../components/common/PageContainer'
@@ -16,6 +16,7 @@ import TrendChart, {
   type DataPoint,
 } from '../components/dashboard/TrendChart'
 import { fetchHistory } from '../api/data'
+import MTRVisualization from '../components/nodes/MTRVisualization'
 
 /**
  * NodeDetailPage component
@@ -33,6 +34,7 @@ export default function NodeDetailPage() {
   const { t } = useTranslation()
   const { formatTime } = useTimezone()
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { node, nodeStatus, metrics, isLoading, error, isPolling } = useNodeDetail(id || '')
   const { setDynamicLabel, clearDynamicLabels } = useSetBreadcrumbLabel()
 
@@ -386,12 +388,9 @@ export default function NodeDetailPage() {
 
             <button
               className="ml-2 px-3 py-1 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg transition-colors"
-              onClick={() => {
-                // Export PDF functionality would be implemented here
-                // TODO: Implement PDF export
-              }}
+              onClick={() => navigate(`/reports?nodeId=${id}`)}
             >
-              {t('nodes.exportPdf')}
+              {t('nodes.viewDiagnosticReport')}
             </button>
           </div>
         }
@@ -613,6 +612,14 @@ export default function NodeDetailPage() {
           <p className="mt-4 text-sm text-[var(--color-text-secondary)] italic">
             {t('nodes.diagnosisNote')}
           </p>
+        </div>
+
+        <div className="rounded-lg shadow-sm p-6 bg-[var(--color-bg-surface)]">
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
+            {t('mtr.title')}
+          </h2>
+          <MTRVisualization />
+          <p className="mt-3 text-sm text-[var(--color-text-secondary)]">{t('nodes.mtrBackendNote')}</p>
         </div>
       </div>
     </PageContainer>

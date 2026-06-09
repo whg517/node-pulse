@@ -183,6 +183,7 @@
     "problemDiagnosis": "问题诊断",
     "live": "实时",
     "exportPdf": "导出PDF",
+    "viewDiagnosticReport": "查看诊断报告",
     "noTags": "无标签",
     "selectNodes": "选择节点",
     "selectNodesRange": "选择2-5个节点进行比较",
@@ -215,6 +216,13 @@
     "low": "低",
     "noProblem": "未检测到问题",
     "diagnosisNote": "注意：当前诊断使用客户端分析节点指标。更高级的诊断引擎将提供跨节点比较、历史模式分析和路由路径检测，以实现更准确的问题定位。",
+    "serverDiagnosisTitle": "跨节点诊断（服务端）",
+    "serverDiagnosisSubtitle": "基于最近一小时的聚合指标（缓存/数据库）。需至少三个已选节点且有近期数据。",
+    "serverDiagnosisLoading": "正在运行服务端诊断…",
+    "serverDiagnosisAfterCompare": "点击「对比节点」加载图表；若已选至少三个节点，将在对比成功后自动请求服务端诊断。",
+    "serverDiagnosisSelectThree": "请至少选择三个节点以启用服务端跨节点诊断。",
+    "mtrBackendNote": "逐跳 MTR 将在 Pulse 从 Beacon 暴露 MTR 探测结果后出现（当前指标 API 尚不包含）。",
+    "diagnosisNodesAnalyzed": "参与分析的节点数：{{count}}",
     "management": "节点管理",
     "managementDescription": "管理监控节点。从您的监控基础架构中添加、编辑或删除节点。",
     "deleteTitle": "删除节点",
@@ -665,5 +673,8 @@
     "maxResponseTime": "最大响应时间",
     "criticalAnomalies": "检测到 {{count}} 个严重异常",
     "warningAnomalies": "检测到 {{count}} 个警告"
+  },
+  "charts": {
+    "saveAsImage": "保存为图片"
   }
 }

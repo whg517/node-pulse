@@ -30,14 +30,16 @@ interface ReportGeneratorProps {
   nodes: NodeDTO[]
   onSubmit: (config: ReportConfig) => Promise<void>
   loading?: boolean
+  /** Pre-select these node IDs when the component first mounts */
+  defaultNodeIds?: string[]
 }
 
-export function ReportGenerator({ nodes, onSubmit, loading = false }: ReportGeneratorProps) {
+export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeIds }: ReportGeneratorProps) {
   const { t } = useTranslation()
 
   // Form state
   const [reportType, setReportType] = useState<ReportType>('health')
-  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([])
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>(defaultNodeIds ?? [])
   const [dateRange, setDateRange] = useState<DateRange>('7d')
   const [customStartDate, setCustomStartDate] = useState('')
   const [customEndDate, setCustomEndDate] = useState('')

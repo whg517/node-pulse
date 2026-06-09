@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { fetchMetrics, fetchHistory, exportData, getComparisonData } from '../data'
+import { fetchMetrics, fetchHistory, exportData, getComparisonData, fetchDiagnosis } from '../data'
 import { apiClient } from '../client'
 
 vi.mock('../client', () => ({
@@ -190,6 +190,34 @@ describe('Data API', () => {
       const call = vi.mocked(apiClient).mock.calls[0][0] as string
       expect(call).toContain('start_time=')
       expect(call).toContain('end_time=')
+    })
+  })
+
+  describe('fetchDiagnosis', () => {
+    it('rejects when fewer than 3 node IDs', async () => {
+      await expect(fetchDiagnosis(['a', 'b'])).rejects.toThrow('at least 3')
+    })
+
+    it('requests diagnosis with repeated node_ids query params', async () => {
+      vi.mocked(apiClient).mockResolvedValueOnce({
+        data: {
+          problem_type: 'unknown',
+          confidence: 'low',
+          analysis: { nodes_analyzed: 3 },
+          recommendation: 'ok',
+          timestamp: '2024-01-01T00:00:00Z',
+        },
+        message: 'Diagnosis completed',
+        timestamp: '2024-01-01T00:00:00Z',
+      })
+
+      await fetchDiagnosis(['n1', 'n2', 'n3'])
+
+      const call = vi.mocked(apiClient).mock.calls[0][0] as string
+      expect(call).toContain('/api/v1/data/diagnosis')
+      expect(call).toContain('node_ids=n1')
+      expect(call).toContain('node_ids=n2')
+      expect(call).toContain('node_ids=n3')
     })
   })
 })

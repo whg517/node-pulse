@@ -244,3 +244,42 @@ export async function getComparisonData(
     `/api/v1/data/comparison?${params}`
   )
 }
+
+/**
+ * Pulse `/data/diagnosis` — multi-node statistical diagnosis (requires ≥3 nodes with cache/DB data).
+ */
+export interface DiagnosisResultDTO {
+  problem_type: string
+  confidence: string
+  analysis: {
+    nodes_analyzed: number
+    affected_nodes?: string[]
+    regions_analyzed?: string[]
+    metrics?: Record<string, unknown>
+    regional_comparison?: Record<string, unknown>
+  }
+  recommendation: string
+  timestamp: string
+}
+
+export interface DiagnosisApiResponse {
+  data: DiagnosisResultDTO
+  message: string
+  timestamp: string
+}
+
+/**
+ * Fetch cross-node diagnosis for the given node IDs (minimum 3).
+ */
+export async function fetchDiagnosis(
+  nodeIds: string[]
+): Promise<DiagnosisApiResponse> {
+  if (nodeIds.length < 3) {
+    throw new Error('Diagnosis requires at least 3 node IDs')
+  }
+  const params = new URLSearchParams()
+  nodeIds.forEach((id) => params.append('node_ids', id))
+  return apiClient<DiagnosisApiResponse>(
+    `/api/v1/data/diagnosis?${params}`
+  )
+}

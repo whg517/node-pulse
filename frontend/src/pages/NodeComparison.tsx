@@ -3,9 +3,12 @@ import { useTranslation } from 'react-i18next'
 import { fetchNodes } from '../api/nodes'
 import { PageContainer, ErrorBanner } from '../components/common'
 import { PageHeader } from '../components/layout/PageHeader'
-import { getComparisonData } from '../api/data'
+import { getComparisonData, fetchDiagnosis } from '../api/data'
+import type { DiagnosisResultDTO } from '../api/data'
 import type { NodeDTO } from '../api/types'
 import ComparisonChart from '../components/dashboard/ComparisonChart'
+import ProblemDiagnosis from '../components/dashboard/ProblemDiagnosis'
+import type { ProblemType, ConfidenceLevel } from '../components/dashboard/ProblemDiagnosis'
 import type {
   NodeComparisonData,
   MetricType,
@@ -26,6 +29,24 @@ const ISP_TAGS = [
   'OVH',
   'Hetzner',
 ] as const
+
+function mapApiProblemToUi(problemType: string): ProblemType {
+  switch (problemType) {
+    case 'node_local_failure':
+      return 'node_local'
+    case 'cross_border_link':
+      return 'cross_border_link'
+    case 'isp_routing':
+      return 'carrier_routing'
+    default:
+      return 'none'
+  }
+}
+
+function mapApiConfidence(c: string): ConfidenceLevel {
+  if (c === 'high' || c === 'medium' || c === 'low') return c
+  return 'medium'
+}
 
 /**
  * NodeComparison Page
@@ -59,9 +80,20 @@ export default function NodeComparisonPage() {
   const [isLoadingNodes, setIsLoadingNodes] = useState(true)
   const [isLoadingComparison, setIsLoadingComparison] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResultDTO | null>(null)
+  const [diagnosisLoading, setDiagnosisLoading] = useState(false)
+  const [diagnosisError, setDiagnosisError] = useState<string | null>(null)
 
   // Destructure store state for cleaner access
   const { selectedNodeIds, selectedMetrics, timeRange, customTimeRange, groupBy } = storeComparison
+
+  useEffect(() => {
+    if (selectedNodeIds.length < 3) {
+      setDiagnosisResult(null)
+      setDiagnosisError(null)
+      setDiagnosisLoading(false)
+    }
+  }, [selectedNodeIds])
 
   // Load available nodes on mount
   useEffect(() => {
@@ -177,6 +209,8 @@ export default function NodeComparisonPage() {
     try {
       setIsLoadingComparison(true)
       setError(null)
+      setDiagnosisResult(null)
+      setDiagnosisError(null)
 
       const { start_time, end_time } = getTimeRangeParams()
 
@@ -200,6 +234,22 @@ export default function NodeComparisonPage() {
       )
 
       setComparisonData(transformedData)
+
+      if (selectedNodeIds.length >= 3) {
+        setDiagnosisLoading(true)
+        try {
+          const diagRes = await fetchDiagnosis(selectedNodeIds)
+          setDiagnosisResult(diagRes.data)
+          setDiagnosisError(null)
+        } catch (diagErr) {
+          setDiagnosisResult(null)
+          const message =
+            diagErr instanceof Error ? diagErr.message : String(diagErr)
+          setDiagnosisError(message)
+        } finally {
+          setDiagnosisLoading(false)
+        }
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : t('errors.failedToLoad')
       setError(message)
@@ -327,6 +377,18 @@ export default function NodeComparisonPage() {
                   <span className="text-[var(--color-critical)] ml-2">({t('nodes.selectAtLeast', { count: 2 })})</span>
                 )}
               </div>
+
+              {/* Diagnosis hint: show when 1-2 nodes selected */}
+              {selectedNodeIds.length >= 1 && selectedNodeIds.length < 3 && (
+                <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-muted)] px-4 py-3">
+                  <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-text-secondary)]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                  </svg>
+                  <span className="text-sm text-[var(--color-text-secondary)]">
+                    {t('nodes.serverDiagnosisSelectThree')}
+                  </span>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -445,6 +507,42 @@ export default function NodeComparisonPage() {
             {isLoadingComparison ? t('common.loading') : t('nodes.compareNodes')}
           </button>
         </div>
+
+        {selectedNodeIds.length >= 3 && (
+          <div className="rounded-lg shadow-sm p-6 mb-6 bg-[var(--color-bg-surface)] border border-[var(--color-border)]">
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">
+              {t('nodes.serverDiagnosisTitle')}
+            </h2>
+            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
+              {t('nodes.serverDiagnosisSubtitle')}
+            </p>
+            {diagnosisLoading && (
+              <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+                <div
+                  className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-brand)] border-t-transparent"
+                  aria-hidden
+                />
+                <span>{t('nodes.serverDiagnosisLoading')}</span>
+              </div>
+            )}
+            {!diagnosisLoading && diagnosisError && (
+              <ErrorBanner error={new Error(diagnosisError)} className="mb-2" />
+            )}
+            {!diagnosisLoading && diagnosisResult && (
+              <ProblemDiagnosis
+                problemType={mapApiProblemToUi(diagnosisResult.problem_type)}
+                confidence={mapApiConfidence(diagnosisResult.confidence)}
+                details={`${diagnosisResult.recommendation}\n\n${t('nodes.diagnosisNodesAnalyzed', { count: diagnosisResult.analysis?.nodes_analyzed ?? 0 })}`}
+                isExpanded={false}
+              />
+            )}
+            {!diagnosisLoading && !diagnosisError && !diagnosisResult && !comparisonData && (
+              <p className="text-sm text-[var(--color-text-muted)]">
+                {t('nodes.serverDiagnosisAfterCompare')}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Comparison Chart */}
         {comparisonData && comparisonData.length > 0 && (

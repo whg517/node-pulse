@@ -10,8 +10,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 import { useExportStore } from '../stores/exportStore'
 import { fetchNodes } from '../api/nodes'
+import { fetchMetrics } from '../api/data'
 import { ReportGenerator, NodeComparisonTable, type ReportConfig, type NodeComparisonData } from '../components/reports'
 import { ExportStatusCard, ExportHistoryTable } from '../components/export'
 import { PageContainer } from '../components/common'
@@ -21,6 +23,10 @@ import type { CreateExportRequest } from '../types/export'
 
 export default function ReportsPage() {
   const { t } = useTranslation()
+  const [searchParams] = useSearchParams()
+  // Pre-select node when navigated from NodeDetailPage (?nodeId=<id>)
+  const preselectedNodeId = searchParams.get('nodeId')
+  const defaultNodeIds = preselectedNodeId ? [preselectedNodeId] : undefined
 
   const {
     createExport,
@@ -43,17 +49,40 @@ export default function ReportsPage() {
       const response = await fetchNodes()
       const nodesArray = response.data.nodes || []
       setNodes(nodesArray)
-      // Initialize comparison data with all nodes
+
+      const slice = nodesArray.slice(0, 5)
+      const metricsByNode = new Map<
+        string,
+        { latency_ms: number; packet_loss_rate: number; jitter_ms: number }
+      >()
+      if (slice.length > 0) {
+        try {
+          const mr = await fetchMetrics(slice.map((n) => n.id))
+          for (const m of mr.data) {
+            metricsByNode.set(m.node_id, {
+              latency_ms: m.latency_ms,
+              packet_loss_rate: m.packet_loss_rate,
+              jitter_ms: m.jitter_ms,
+            })
+          }
+        } catch {
+          // Leave map empty; table still lists nodes without live metrics
+        }
+      }
+
       setComparisonData(
-        nodesArray.slice(0, 5).map((node) => ({
-          nodeId: node.id,
-          nodeName: node.name,
-          region: node.region,
-          status: node.status as 'online' | 'offline' | 'connecting',
-          latency: Math.random() * 100 + 20, // Placeholder - would come from API
-          packetLoss: Math.random() * 2, // Placeholder
-          jitter: Math.random() * 30, // Placeholder
-        }))
+        slice.map((node) => {
+          const m = metricsByNode.get(node.id)
+          return {
+            nodeId: node.id,
+            nodeName: node.name,
+            region: node.region,
+            status: node.status as 'online' | 'offline' | 'connecting',
+            latency: m?.latency_ms,
+            packetLoss: m?.packet_loss_rate,
+            jitter: m?.jitter_ms,
+          }
+        })
       )
     } catch (err) {
       setError(err as Error)
@@ -167,6 +196,7 @@ export default function ReportsPage() {
                 nodes={nodes}
                 onSubmit={handleReportSubmit}
                 loading={exportLoading}
+                defaultNodeIds={defaultNodeIds}
               />
             </div>
 

@@ -60,6 +60,13 @@ export function PacketLossChart({
 
     return {
       backgroundColor: 'transparent',
+      toolbox: {
+        feature: {
+          saveAsImage: { title: t('charts.saveAsImage'), pixelRatio: 2 },
+        },
+        right: 40,
+        top: 8,
+      },
       grid: {
         left: 60,
         right: 40,

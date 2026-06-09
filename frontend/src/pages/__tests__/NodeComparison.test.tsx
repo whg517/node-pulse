@@ -38,6 +38,11 @@ vi.mock('react-i18next', () => ({
         'common.error': 'Error',
         'errors.failedToLoad': 'Failed to load nodes',
         'reports.selectMetrics': 'Select at least one metric',
+        'nodes.serverDiagnosisTitle': 'Cross-node diagnosis (server)',
+        'nodes.serverDiagnosisSubtitle': 'Uses aggregated metrics from the last hour.',
+        'nodes.serverDiagnosisLoading': 'Running server diagnosis…',
+        'nodes.serverDiagnosisAfterCompare': 'After you compare with three or more nodes, server diagnosis runs automatically.',
+        'nodes.diagnosisNodesAnalyzed': 'Nodes analyzed: {{count}}',
       }
       return translations[key] || key
     },
@@ -57,6 +62,49 @@ vi.mock('../../hooks/useTheme', () => ({
 // Mock the nodes API
 vi.mock('../../api/nodes', () => ({
   fetchNodes: vi.fn(),
+}))
+
+vi.mock('../../api/data', () => ({
+  getComparisonData: vi.fn().mockResolvedValue({
+    data: {
+      time_range: { start: '2024-01-01T00:00:00Z', end: '2024-01-02T00:00:00Z' },
+      nodes: [
+        {
+          node_id: 'node-1',
+          name: 'Node 1',
+          region: 'us-east',
+          isp: 'AWS',
+          metrics: { latency_ms: { data_points: [] } },
+        },
+        {
+          node_id: 'node-2',
+          name: 'Node 2',
+          region: 'eu-west',
+          isp: 'GCP',
+          metrics: { latency_ms: { data_points: [] } },
+        },
+        {
+          node_id: 'node-3',
+          name: 'Node 3',
+          region: 'ap-south',
+          isp: 'Azure',
+          metrics: { latency_ms: { data_points: [] } },
+        },
+      ],
+      statistics: {},
+    },
+  }),
+  fetchDiagnosis: vi.fn().mockResolvedValue({
+    data: {
+      problem_type: 'unknown',
+      confidence: 'low',
+      analysis: { nodes_analyzed: 3 },
+      recommendation: 'No significant anomaly.',
+      timestamp: '2024-01-01T00:00:00Z',
+    },
+    message: 'Diagnosis completed',
+    timestamp: '2024-01-01T00:00:00Z',
+  }),
 }))
 
 // Mock ComparisonChart component

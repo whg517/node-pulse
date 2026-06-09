@@ -184,6 +184,7 @@
     "problemDiagnosis": "Problem Diagnosis",
     "live": "Live",
     "exportPdf": "Export PDF",
+    "viewDiagnosticReport": "View Diagnostic Report",
     "noTags": "No tags",
     "selectNodes": "Select Nodes",
     "selectNodesRange": "Select 2-5 nodes to compare",
@@ -216,6 +217,13 @@
     "low": "Low",
     "noProblem": "No issues detected",
     "diagnosisNote": "Note: Current diagnosis uses client-side analysis of node metrics. A more advanced diagnosis engine will provide cross-node comparison, historical pattern analysis, and routing path detection for more accurate problem localization.",
+    "serverDiagnosisTitle": "Cross-node diagnosis (server)",
+    "serverDiagnosisSubtitle": "Uses aggregated metrics from the last hour (cache/DB). Requires at least three selected nodes with recent data.",
+    "serverDiagnosisLoading": "Running server diagnosis…",
+    "serverDiagnosisAfterCompare": "Click \"Compare Nodes\" to load charts; with three or more nodes selected, server diagnosis runs automatically afterward.",
+    "serverDiagnosisSelectThree": "Select at least three nodes to enable server-side cross-node diagnosis.",
+    "mtrBackendNote": "Per-hop MTR will appear here when Pulse exposes MTR probe results from beacons (not available in the current metrics API).",
+    "diagnosisNodesAnalyzed": "Nodes analyzed: {{count}}",
     "management": "Node Management",
     "managementDescription": "Manage monitoring nodes. Add, edit, or remove nodes from your monitoring infrastructure.",
     "deleteTitle": "Delete Node",
@@ -671,5 +679,8 @@
     "maxResponseTime": "Max Response Time",
     "criticalAnomalies": "Detected {{count}} critical anomalies",
     "warningAnomalies": "Detected {{count}} warnings"
+  },
+  "charts": {
+    "saveAsImage": "Save as Image"
   }
 }
