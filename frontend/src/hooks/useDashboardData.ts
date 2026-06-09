@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { fetchNodes, fetchMetrics } from '../api'
 import type { NodeDTO, MetricsDTO } from '../api/types'
 import { deepEqual } from '../utils/deepEqual'
+import { useDashboardStore } from '../stores/dashboardStore'
 
 export interface DashboardData {
   nodes: NodeDTO[]
@@ -15,19 +16,14 @@ export interface UseDashboardDataResult extends DashboardData {
   refetch: () => Promise<void>
 }
 
-const BASE_POLLING_INTERVAL_MS = 5000
 const MAX_BACKOFF_INTERVAL_MS = 60000
 
 /**
  * Custom hook for managing dashboard data
  *
  * Fetches node and metrics data on mount.
+ * Reads refreshInterval and autoRefresh from dashboardStore.
  * Handles loading states, errors, and cleanup on unmount.
- *
- * @returns Dashboard data with refetch function
- *
- * @example
- * const { nodes, metrics, isLoading, error, refetch } = useDashboardData()
  */
 export function useDashboardData(): UseDashboardDataResult {
   const [data, setData] = useState<DashboardData>({
@@ -37,6 +33,9 @@ export function useDashboardData(): UseDashboardDataResult {
     error: null,
     isPolling: false,
   })
+
+  const refreshInterval = useDashboardStore((s) => s.refreshInterval)
+  const autoRefresh = useDashboardStore((s) => s.autoRefresh)
 
   const isMountedRef = useRef(true)
   const pollingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -52,9 +51,10 @@ export function useDashboardData(): UseDashboardDataResult {
   }, [])
 
   const getNextPollDelay = useCallback(() => {
+    const baseMs = refreshInterval * 1000
     const backoffFactor = 2 ** Math.min(consecutiveFailuresRef.current, 4)
-    return Math.min(BASE_POLLING_INTERVAL_MS * backoffFactor, MAX_BACKOFF_INTERVAL_MS)
-  }, [])
+    return Math.min(baseMs * backoffFactor, MAX_BACKOFF_INTERVAL_MS)
+  }, [refreshInterval])
 
   const fetchData = useCallback(async () => {
     if (!isMountedRef.current) return
@@ -116,7 +116,7 @@ export function useDashboardData(): UseDashboardDataResult {
 
   const scheduleNextPoll = useCallback(() => {
     clearPollingTimer()
-    if (!isMountedRef.current || document.visibilityState === 'hidden') {
+    if (!isMountedRef.current || !autoRefresh || document.visibilityState === 'hidden') {
       return
     }
 
@@ -126,7 +126,7 @@ export function useDashboardData(): UseDashboardDataResult {
         scheduleNextPoll()
       })
     }, delay)
-  }, [clearPollingTimer, fetchData, getNextPollDelay])
+  }, [autoRefresh, clearPollingTimer, fetchData, getNextPollDelay])
 
   useEffect(() => {
     isMountedRef.current = true

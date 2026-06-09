@@ -87,6 +87,8 @@ export function Sidebar({ isCollapsed, isOpen, onToggle, alertCount = 0 }: Sideb
   const navItems: NavItem[] = [
     { icon: <DashboardIcon />, label: 'nav.dashboard', path: '/dashboard' },
     { icon: <NodesIcon />, label: 'nav.nodes', path: '/nodes' },
+    { icon: <NodesIcon />, label: 'nav.probes', path: '/nodes/probes' },
+    { icon: <NodesIcon />, label: 'nav.beaconConfig', path: '/beacons/config' },
     { icon: <AlertsIcon />, label: 'nav.alerts', path: '/alerts', badge: alertCount },
     { icon: <ReportsIcon />, label: 'nav.reports', path: '/reports' },
     { icon: <IntegrationsIcon />, label: 'nav.integrations', path: '/integrations/webhooks' },

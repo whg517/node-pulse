@@ -22,6 +22,7 @@ import WorldMap from '../components/dashboard/WorldMap'
 import { LatencyTrendChart, PacketLossChart, ProbeSuccessGauge } from '../components/charts'
 import type { NodeLocation } from '../components/dashboard/WorldMap'
 import { useAlertsStore } from '../stores/alertsStore'
+import { useDashboardStore } from '../stores/dashboardStore'
 import { estimateRegionBaseCoordinates, scatterAroundBase } from '../utils/regionCoordinates'
 
 export default function DashboardPage() {
@@ -31,6 +32,10 @@ export default function DashboardPage() {
   const { nodes, metrics, isLoading, error, refetch } = useDashboardData()
   const { stats, sortedByAnomaly, nodeHealthSummaries } = useDashboard(nodes, metrics)
   const fetchAlertRecords = useAlertsStore((s) => s.fetchAlertRecords)
+  const refreshInterval = useDashboardStore((s) => s.refreshInterval)
+  const setRefreshInterval = useDashboardStore((s) => s.setRefreshInterval)
+  const autoRefresh = useDashboardStore((s) => s.autoRefresh)
+  const toggleAutoRefresh = useDashboardStore((s) => s.toggleAutoRefresh)
 
   const [historyRefreshToken, setHistoryRefreshToken] = useState(0)
 
@@ -81,6 +86,31 @@ export default function DashboardPage() {
         subtitle={t('dashboard.realTimeMetrics')}
         actions={
           <div className="flex items-center space-x-3">
+            <div className="flex items-center gap-1.5 text-sm">
+              <label htmlFor="refresh-interval" className="text-[var(--color-text-secondary)] whitespace-nowrap">
+                {t('dashboard.autoRefreshLabel')}:
+              </label>
+              <select
+                id="refresh-interval"
+                value={autoRefresh ? refreshInterval : 0}
+                onChange={(e) => {
+                  const val = Number(e.target.value)
+                  if (val === 0) {
+                    if (autoRefresh) toggleAutoRefresh()
+                  } else {
+                    if (!autoRefresh) toggleAutoRefresh()
+                    setRefreshInterval(val)
+                  }
+                }}
+                className="rounded-md border px-2 py-1 text-xs bg-[var(--color-input-bg)] border-[var(--color-input-border)] text-[var(--color-text-primary)]"
+              >
+                <option value={5}>5s</option>
+                <option value={10}>10s</option>
+                <option value={30}>30s</option>
+                <option value={60}>60s</option>
+                <option value={0}>{t('dashboard.refreshOff')}</option>
+              </select>
+            </div>
             <ActionButton variant="secondary" onClick={() => void handleRefetch()}>
               <svg className="-ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

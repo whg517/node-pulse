@@ -15,6 +15,8 @@ const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const NodeDetailPage = lazy(() => import('./pages/NodeDetailPage'))
 const NodeComparisonPage = lazy(() => import('./pages/NodeComparison'))
 const NodeManagementPage = lazy(() => import('./pages/NodeManagementPage'))
+const ProbeManagementPage = lazy(() => import('./pages/ProbeManagementPage'))
+const BeaconConfigPage = lazy(() => import('./pages/BeaconConfigPage'))
 const AlertRulesPage = lazy(() => import('./pages/AlertRulesPage'))
 const AlertRecordsPage = lazy(() => import('./pages/AlertRecordsPage'))
 const AlertHistoryPage = lazy(() => import('./pages/AlertHistoryPage'))
@@ -95,6 +97,8 @@ function App() {
           <Route path="/nodes" element={<NodeManagementPage />} />
           <Route path="/nodes/:id" element={<NodeDetailPage />} />
           <Route path="/nodes/comparison" element={<NodeComparisonPage />} />
+          <Route path="/nodes/probes" element={<ProbeManagementPage />} />
+          <Route path="/beacons/config" element={<BeaconConfigPage />} />
 
           {/* Alerts */}
           <Route path="/alerts" element={<Navigate to="/alerts/rules" replace />} />

@@ -1,134 +1,134 @@
-/**
- * System Health Page
- *
- * System health monitoring and integration status.
- * Route: /integrations/health
- */
-
-import { useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PageContainer, ActionButton } from '../components/common'
+import { PageContainer, ActionButton, LoadingSpinner } from '../components/common'
 import { PageHeader } from '../components/layout/PageHeader'
-interface HealthStatus {
+import { fetchSystemHealth } from '../api/health'
+import type { HealthCheckResponse } from '../api/health'
+
+type ServiceStatus = 'healthy' | 'degraded' | 'unhealthy' | 'down'
+
+interface ServiceHealth {
   name: string
-  status: 'healthy' | 'degraded' | 'down'
-  responseTime?: number
-  uptime?: string
-  lastCheck: string
-  message?: string
+  key: string
+  status: ServiceStatus
+  detail: string
 }
 
-// TODO: Replace mock data with real API calls to /api/v1/health/services
-// Mock health data (placeholder until backend API is implemented)
-const mockHealthData: HealthStatus[] = [
-  {
-    name: 'API Server',
-    status: 'healthy',
-    responseTime: 45,
-    uptime: '99.98%',
-    lastCheck: '2026-01-01T00:00:00Z',
-  },
-  {
+function mapCheckStatus(checkValue: string): ServiceStatus {
+  const v = checkValue.toLowerCase()
+  if (v === 'ok' || v === 'healthy') return 'healthy'
+  if (v.startsWith('error') || v === 'unhealthy') return 'down'
+  if (v === 'degraded' || v === 'stale' || v === 'full') return 'degraded'
+  if (v === 'disabled' || v === 'nodata') return 'degraded'
+  return 'healthy'
+}
+
+function parseHealthResponse(data: HealthCheckResponse): ServiceHealth[] {
+  const services: ServiceHealth[] = []
+
+  services.push({
     name: 'Database (PostgreSQL)',
-    status: 'healthy',
-    responseTime: 12,
-    uptime: '99.99%',
-    lastCheck: '2026-01-01T00:00:00Z',
-  },
-  {
-    name: 'Cache Layer',
-    status: 'healthy',
-    responseTime: 2,
-    uptime: '100%',
-    lastCheck: '2026-01-01T00:00:00Z',
-  },
-  {
+    key: 'database',
+    status: mapCheckStatus(data.checks.database),
+    detail: data.checks.database,
+  })
+
+  services.push({
     name: 'Alert Engine',
-    status: 'healthy',
-    responseTime: 8,
-    uptime: '99.95%',
-    lastCheck: '2026-01-01T00:00:00Z',
-  },
-]
+    key: 'alert_engine',
+    status: mapCheckStatus(data.checks.alert_engine),
+    detail: data.checks.alert_engine,
+  })
 
-interface SystemEvent {
-  id: string
-  type: 'info' | 'warning' | 'error'
-  message: string
-  timestamp: string
+  services.push({
+    name: 'Webhook Delivery',
+    key: 'webhook_delivery',
+    status: mapCheckStatus(data.checks.webhook_delivery),
+    detail: data.checks.webhook_delivery,
+  })
+
+  services.push({
+    name: 'Alert Suppression',
+    key: 'alert_suppression',
+    status: mapCheckStatus(data.checks.alert_suppression),
+    detail: data.checks.alert_suppression,
+  })
+
+  return services
 }
-
-const mockEvents: SystemEvent[] = [
-  {
-    id: '1',
-    type: 'info',
-    message: 'System health check completed successfully',
-    timestamp: '2026-01-01T00:00:00Z',
-  },
-  {
-    id: '2',
-    type: 'warning',
-    message: 'High memory usage detected on API server (85%)',
-    timestamp: '2025-12-31T23:00:00Z',
-  },
-  {
-    id: '3',
-    type: 'info',
-    message: 'Database backup completed',
-    timestamp: '2025-12-31T22:00:00Z',
-  },
-]
 
 export default function SystemHealthPage() {
   const { t } = useTranslation()
-  const [healthData] = useState<HealthStatus[]>(mockHealthData)
-  const [events] = useState<SystemEvent[]>(mockEvents)
-  const [isLoading, setIsLoading] = useState(false)
-  const [lastRefresh, setLastRefresh] = useState(new Date('2026-01-01T00:00:00Z'))
+  const [healthData, setHealthData] = useState<HealthCheckResponse | null>(null)
+  const [services, setServices] = useState<ServiceHealth[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date())
+  const mountedRef = useRef(true)
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  const handleRefresh = async () => {
-    setIsLoading(true)
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-    setLastRefresh(new Date('2026-01-01T00:00:00Z'))
-    setIsLoading(false)
-  }
-
-  const getStatusStyles = (status: HealthStatus['status']): { bg: string; text: string; dot: string } => {
-    const styles = {
-      healthy: {
-        bg: 'bg-[var(--color-healthy-bg)]',
-        text: 'text-[var(--color-healthy-text)]',
-        dot: 'bg-[var(--color-healthy)]',
-      },
-      degraded: {
-        bg: 'bg-[var(--color-warning-bg)]',
-        text: 'text-[var(--color-warning-text)]',
-        dot: 'bg-[var(--color-warning)]',
-      },
-      down: {
-        bg: 'bg-[var(--color-critical-bg)]',
-        text: 'text-[var(--color-critical-text)]',
-        dot: 'bg-[var(--color-critical)]',
-      },
+  const loadHealth = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      setError(null)
+      const data = await fetchSystemHealth()
+      if (!mountedRef.current) return
+      setHealthData(data)
+      setServices(parseHealthResponse(data))
+      setLastRefresh(new Date())
+    } catch (err) {
+      if (mountedRef.current) {
+        setError(err instanceof Error ? err.message : String(err))
+      }
+    } finally {
+      if (mountedRef.current) setIsLoading(false)
     }
-    return styles[status]
-  }
+  }, [])
 
-  const getEventStyles = (type: SystemEvent['type']): string => {
-    const styles = {
-      info: 'border-[var(--color-brand-muted)] bg-[var(--color-brand-muted)]',
-      warning: 'border-[var(--color-warning-bg)] bg-[var(--color-warning-bg)]',
-      error: 'border-[var(--color-critical-bg)] bg-[var(--color-critical-bg)]',
+  useEffect(() => {
+    mountedRef.current = true
+    void loadHealth()
+
+    const poll = () => {
+      pollingRef.current = setTimeout(async () => {
+        try {
+          const data = await fetchSystemHealth()
+          if (mountedRef.current) {
+            setHealthData(data)
+            setServices(parseHealthResponse(data))
+            setLastRefresh(new Date())
+          }
+        } catch { /* ignore polling errors */ }
+        if (mountedRef.current) poll()
+      }, 15_000)
     }
-    return styles[type]
+    poll()
+
+    return () => {
+      mountedRef.current = false
+      if (pollingRef.current) clearTimeout(pollingRef.current)
+    }
+  }, [loadHealth])
+
+  const getStatusColor = (status: ServiceStatus) => {
+    switch (status) {
+      case 'healthy':
+        return { bg: 'bg-[var(--color-healthy-bg)]', text: 'text-[var(--color-healthy-text)]', dot: 'bg-[var(--color-healthy)]' }
+      case 'degraded':
+        return { bg: 'bg-[var(--color-warning-bg)]', text: 'text-[var(--color-warning-text)]', dot: 'bg-[var(--color-warning)]' }
+      case 'down':
+      case 'unhealthy':
+        return { bg: 'bg-[var(--color-critical-bg)]', text: 'text-[var(--color-critical-text)]', dot: 'bg-[var(--color-critical)]' }
+    }
   }
 
-  const overallStatus = healthData.every((h) => h.status === 'healthy')
-    ? 'healthy'
-    : healthData.some((h) => h.status === 'down')
+  const overallStatus: ServiceStatus = services.some((s) => s.status === 'down' || s.status === 'unhealthy')
     ? 'down'
-    : 'degraded'
+    : services.some((s) => s.status === 'degraded')
+      ? 'degraded'
+      : 'healthy'
+
+  const overallColor = getStatusColor(overallStatus)
 
   return (
     <PageContainer>
@@ -140,85 +140,141 @@ export default function SystemHealthPage() {
             <span className="text-sm text-[var(--color-text-secondary)]">
               {t('integrations.lastRefresh')}: {lastRefresh.toLocaleTimeString()}
             </span>
-            <ActionButton onClick={handleRefresh} disabled={isLoading}>
+            <ActionButton onClick={() => void loadHealth()} disabled={isLoading}>
               {isLoading ? t('common.refreshing') : t('common.refresh')}
             </ActionButton>
           </div>
         }
       />
 
+      {error && (
+        <div className="mb-6 rounded-lg border border-[var(--color-critical)] bg-[var(--color-critical-bg)] px-4 py-3 text-sm text-[var(--color-critical)]">
+          {error}
+        </div>
+      )}
+
       {/* Overall Status */}
-      <div className={`mb-6 p-4 rounded-lg border ${getStatusStyles(overallStatus).bg} border-current`}>
+      <div className={`mb-6 p-4 rounded-lg border ${overallColor.bg} border-current`}>
         <div className="flex items-center gap-3">
-          <div className={`w-4 h-4 rounded-full ${getStatusStyles(overallStatus).dot} ${overallStatus === 'degraded' ? 'animate-pulse' : ''}`} />
-          <span className={`text-lg font-semibold ${getStatusStyles(overallStatus).text}`}>
-            {overallStatus === 'healthy' ? t('integrations.allSystemsOperational') : overallStatus === 'degraded' ? t('integrations.someSystemsDegraded') : t('integrations.someSystemsDown')}
+          <div className={`w-4 h-4 rounded-full ${overallColor.dot} ${overallStatus === 'degraded' ? 'animate-pulse' : ''}`} />
+          <span className={`text-lg font-semibold ${overallColor.text}`}>
+            {overallStatus === 'healthy'
+              ? t('integrations.allSystemsOperational')
+              : overallStatus === 'degraded'
+                ? t('integrations.someSystemsDegraded')
+                : t('integrations.someSystemsDown')}
           </span>
+          {healthData && (
+            <span className="ml-auto text-xs text-[var(--color-text-muted)]">
+              {new Date(healthData.timestamp).toLocaleString()}
+            </span>
+          )}
         </div>
       </div>
 
-      {/* Health Status Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {healthData.map((service) => {
-          const statusStyles = getStatusStyles(service.status)
-          return (
-            <div
-              key={service.name}
-              className="rounded-lg border border-[var(--color-border)] p-4 bg-[var(--color-bg-surface)]"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {service.name}
-                </h3>
-                <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${statusStyles.bg} ${statusStyles.text}`}>
-                  <span className={`w-2 h-2 rounded-full ${statusStyles.dot}`} />
-                  {service.status.toUpperCase()}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">{t('integrations.responseTime')}:</span>
-                  <span className="ml-2 font-medium text-[var(--color-text-primary)]">
-                    {service.responseTime}ms
+      {/* Service Health Grid */}
+      {isLoading && !healthData ? (
+        <div className="flex justify-center py-12">
+          <LoadingSpinner />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          {services.map((service) => {
+            const color = getStatusColor(service.status)
+            return (
+              <div
+                key={service.key}
+                className="rounded-lg border border-[var(--color-border)] p-4 bg-[var(--color-bg-surface)]"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                    {service.name}
+                  </h3>
+                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${color.bg} ${color.text}`}>
+                    <span className={`w-2 h-2 rounded-full ${color.dot}`} />
+                    {service.status.toUpperCase()}
                   </span>
                 </div>
-                <div>
-                  <span className="text-[var(--color-text-secondary)]">{t('integrations.uptime')}:</span>
-                  <span className="ml-2 font-medium text-[var(--color-text-primary)]">
-                    {service.uptime}
-                  </span>
+                <div className="text-sm text-[var(--color-text-secondary)]">
+                  {service.detail}
                 </div>
               </div>
-            </div>
-          )
-        })}
-      </div>
+            )
+          })}
+        </div>
+      )}
 
-      {/* Recent Events */}
-      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
-        <div className="px-4 py-3 border-b border-[var(--color-border)]">
-          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            {t('integrations.recentEvents')}
-          </h3>
-        </div>
-        <div className="divide-y divide-[var(--color-border)]">
-          {events.map((event) => (
-            <div
-              key={event.id}
-              className={`p-4 border-l-4 ${getEventStyles(event.type)}`}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-[var(--color-text-primary)]">
-                  {event.message}
-                </p>
-                <span className="text-xs text-[var(--color-text-muted)]">
-                  {new Date(event.timestamp).toLocaleString()}
-                </span>
+      {/* {t('integrations.alertSystemDetails')} */}
+      {healthData?.alert_system && (
+        <div className="mb-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+              {t('integrations.alertSystemDetails')}
+            </h3>
+          </div>
+          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            {/* Alert Engine */}
+            <div>
+              <div className="font-medium text-[var(--color-text-primary)] mb-1">Alert Engine</div>
+              <div className="text-[var(--color-text-secondary)]">
+                Status: {healthData.alert_system.alert_engine.status} · Cached rules: {healthData.alert_system.alert_engine.cached_rules}
+              </div>
+              <div className="text-xs text-[var(--color-text-muted)] mt-1">
+                Channel: {healthData.alert_system.alert_engine.metric_channel_depth}/{healthData.alert_system.alert_engine.metric_channel_capacity}
               </div>
             </div>
-          ))}
+            {/* Webhook Delivery */}
+            <div>
+              <div className="font-medium text-[var(--color-text-primary)] mb-1">Webhook Delivery</div>
+              <div className="text-[var(--color-text-secondary)]">
+                Status: {healthData.alert_system.webhook_delivery.status} · Success rate: {healthData.alert_system.webhook_delivery.success_rate.toFixed(1)}%
+              </div>
+              <div className="text-xs text-[var(--color-text-muted)] mt-1">
+                Total: {healthData.alert_system.webhook_delivery.total_count} · Success: {healthData.alert_system.webhook_delivery.success_count}
+              </div>
+            </div>
+            {/* Alert Suppression */}
+            <div>
+              <div className="font-medium text-[var(--color-text-primary)] mb-1">Alert Suppression</div>
+              <div className="text-[var(--color-text-secondary)]">
+                Status: {healthData.alert_system.alert_suppression.status} · Active suppressions: {healthData.alert_system.alert_suppression.active_suppression_count}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* {t('integrations.schedulerTasks')} */}
+      {healthData?.scheduler && (
+        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
+          <div className="px-4 py-3 border-b border-[var(--color-border)]">
+            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+              {t('integrations.schedulerTasks')}
+              <span className={`ml-2 text-xs ${healthData.scheduler.running ? 'text-[var(--color-healthy)]' : 'text-[var(--color-critical)]'}`}>
+                {healthData.scheduler.running ? t('integrations.running') : t('integrations.stopped')}
+              </span>
+            </h3>
+          </div>
+          <div className="divide-y divide-[var(--color-border)]">
+            {Object.entries(healthData.scheduler.tasks).map(([name, task]) => (
+              <div key={name} className="p-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-[var(--color-text-primary)]">{name}</span>
+                  <span className={`text-xs ${task.is_running ? 'text-[var(--color-healthy)]' : 'text-[var(--color-text-muted)]'}`}>
+                    {task.is_running ? t('integrations.running') : t('integrations.idle')} · {task.run_count}
+                  </span>
+                </div>
+                <div className="mt-1 text-xs text-[var(--color-text-muted)]">
+                  {task.last_run ? new Date(task.last_run).toLocaleString() : t('reports.never')}
+                  {task.last_error && (
+                    <span className="ml-2 text-[var(--color-critical)]">Error: {task.last_error}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </PageContainer>
   )
 }
