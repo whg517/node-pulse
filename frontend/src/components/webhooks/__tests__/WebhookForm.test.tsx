@@ -14,9 +14,9 @@ describe('WebhookForm', () => {
       />
     )
 
-    expect(screen.getByLabelText( /webhooks\.webhookUrl/i )).toBeInTheDocument()
-    expect(screen.getByLabelText( /webhooks\.eventFormat/i )).toBeInTheDocument()
-    expect(screen.getByLabelText('status.enabled')).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Webhook URL/i })).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Event Format/i })).toBeInTheDocument()
+    expect(screen.getByRole('switch', { name: /Enabled/i })).toBeInTheDocument()
   })
 
   it('validates HTTPS URL - rejects HTTP', async () => {
@@ -29,13 +29,13 @@ describe('WebhookForm', () => {
       />
     )
 
-    const urlInput = screen.getByLabelText( /webhooks\.webhookUrl/i )
+    const urlInput = screen.getByRole('textbox', { name: /Webhook URL/i })
     fireEvent.change(urlInput, { target: { value: 'http://example.com/webhook' } })
 
-    const submitButton = screen.getByText('webhooks.addWebhook')
+    const submitButton = screen.getByText('Add Webhook')
     fireEvent.click(submitButton)
 
-    expect(await screen.findByText(/webhooks\.errorUrlHttps/i)).toBeInTheDocument()
+    expect(await screen.findByText(/URL must use HTTPS protocol for security/i)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
@@ -49,13 +49,13 @@ describe('WebhookForm', () => {
       />
     )
 
-    const eventFormatTextarea = screen.getByLabelText( /webhooks\.eventFormat/i )
+    const eventFormatTextarea = screen.getByRole('textbox', { name: /Event Format/i })
     fireEvent.change(eventFormatTextarea, { target: { value: '{ invalid json' } })
 
-    const submitButton = screen.getByText('webhooks.addWebhook')
+    const submitButton = screen.getByText('Add Webhook')
     fireEvent.click(submitButton)
 
-    expect(await screen.findByText(/webhooks\.errorFormatInvalid/i)).toBeInTheDocument()
+    expect(await screen.findByText(/Invalid JSON format/i)).toBeInTheDocument()
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
@@ -69,10 +69,10 @@ describe('WebhookForm', () => {
       />
     )
 
-    const urlInput = screen.getByLabelText( /webhooks\.webhookUrl/i )
+    const urlInput = screen.getByRole('textbox', { name: /Webhook URL/i })
     fireEvent.change(urlInput, { target: { value: 'https://example.com/webhook' } })
 
-    const submitButton = screen.getByText('webhooks.addWebhook')
+    const submitButton = screen.getByText('Add Webhook')
     fireEvent.click(submitButton)
 
     await waitFor(() => {
@@ -101,11 +101,11 @@ describe('WebhookForm', () => {
       />
     )
 
-    const urlInput = screen.getByLabelText( /webhooks\.webhookUrl/i ) as HTMLInputElement
-    const enabledCheckbox = screen.getByLabelText('status.enabled') as HTMLInputElement
-
+    const urlInput = screen.getByRole('textbox', { name: /Webhook URL/i }) as HTMLInputElement
     expect(urlInput.value).toBe('https://example.com/webhook')
-    expect(enabledCheckbox.checked).toBe(false)
+
+    const switchEl = screen.getByRole('switch', { name: /Enabled/i })
+    expect(switchEl).toHaveAttribute('aria-checked', 'false')
   })
 
   it('calls onCancel when cancel button clicked', () => {
@@ -118,7 +118,7 @@ describe('WebhookForm', () => {
       />
     )
 
-    const cancelButton = screen.getByText('common.cancel')
+    const cancelButton = screen.getByText('Cancel')
     fireEvent.click(cancelButton)
 
     expect(onCancel).toHaveBeenCalled()
@@ -133,10 +133,10 @@ describe('WebhookForm', () => {
       />
     )
 
-    const resetButton = screen.getByText('webhooks.resetToDefault')
+    const resetButton = screen.getByText('Reset to Default')
     fireEvent.click(resetButton)
 
-    const eventFormatTextarea = screen.getByLabelText( /webhooks\.eventFormat/i ) as HTMLTextAreaElement
+    const eventFormatTextarea = screen.getByRole('textbox', { name: /Event Format/i }) as HTMLTextAreaElement
     const value = eventFormatTextarea.value
     expect(value).toContain('"version"')
     expect(value).toContain('"1.0"')

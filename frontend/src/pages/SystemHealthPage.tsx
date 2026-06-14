@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PageContainer, ActionButton, LoadingSpinner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
-import { fetchSystemHealth } from '../api/health'
-import type { HealthCheckResponse } from '../api/health'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { fetchSystemHealth } from '@/api/health'
+import type { HealthCheckResponse } from '@/api/health'
 
 type ServiceStatus = 'healthy' | 'degraded' | 'unhealthy' | 'down'
 
@@ -24,37 +26,12 @@ function mapCheckStatus(checkValue: string): ServiceStatus {
 }
 
 function parseHealthResponse(data: HealthCheckResponse): ServiceHealth[] {
-  const services: ServiceHealth[] = []
-
-  services.push({
-    name: 'Database (PostgreSQL)',
-    key: 'database',
-    status: mapCheckStatus(data.checks.database),
-    detail: data.checks.database,
-  })
-
-  services.push({
-    name: 'Alert Engine',
-    key: 'alert_engine',
-    status: mapCheckStatus(data.checks.alert_engine),
-    detail: data.checks.alert_engine,
-  })
-
-  services.push({
-    name: 'Webhook Delivery',
-    key: 'webhook_delivery',
-    status: mapCheckStatus(data.checks.webhook_delivery),
-    detail: data.checks.webhook_delivery,
-  })
-
-  services.push({
-    name: 'Alert Suppression',
-    key: 'alert_suppression',
-    status: mapCheckStatus(data.checks.alert_suppression),
-    detail: data.checks.alert_suppression,
-  })
-
-  return services
+  return [
+    { name: 'Database (PostgreSQL)', key: 'database', status: mapCheckStatus(data.checks.database), detail: data.checks.database },
+    { name: 'Alert Engine', key: 'alert_engine', status: mapCheckStatus(data.checks.alert_engine), detail: data.checks.alert_engine },
+    { name: 'Webhook Delivery', key: 'webhook_delivery', status: mapCheckStatus(data.checks.webhook_delivery), detail: data.checks.webhook_delivery },
+    { name: 'Alert Suppression', key: 'alert_suppression', status: mapCheckStatus(data.checks.alert_suppression), detail: data.checks.alert_suppression },
+  ]
 }
 
 export default function SystemHealthPage() {
@@ -77,9 +54,7 @@ export default function SystemHealthPage() {
       setServices(parseHealthResponse(data))
       setLastRefresh(new Date())
     } catch (err) {
-      if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : String(err))
-      }
+      if (mountedRef.current) setError(err instanceof Error ? err.message : String(err))
     } finally {
       if (mountedRef.current) setIsLoading(false)
     }
@@ -88,86 +63,64 @@ export default function SystemHealthPage() {
   useEffect(() => {
     mountedRef.current = true
     void loadHealth()
-
     const poll = () => {
       pollingRef.current = setTimeout(async () => {
         try {
           const data = await fetchSystemHealth()
-          if (mountedRef.current) {
-            setHealthData(data)
-            setServices(parseHealthResponse(data))
-            setLastRefresh(new Date())
-          }
+          if (mountedRef.current) { setHealthData(data); setServices(parseHealthResponse(data)); setLastRefresh(new Date()) }
         } catch { /* ignore polling errors */ }
         if (mountedRef.current) poll()
       }, 15_000)
     }
     poll()
-
-    return () => {
-      mountedRef.current = false
-      if (pollingRef.current) clearTimeout(pollingRef.current)
-    }
+    return () => { mountedRef.current = false; if (pollingRef.current) clearTimeout(pollingRef.current) }
   }, [loadHealth])
 
-  const getStatusColor = (status: ServiceStatus) => {
-    switch (status) {
-      case 'healthy':
-        return { bg: 'bg-[var(--color-healthy-bg)]', text: 'text-[var(--color-healthy-text)]', dot: 'bg-[var(--color-healthy)]' }
-      case 'degraded':
-        return { bg: 'bg-[var(--color-warning-bg)]', text: 'text-[var(--color-warning-text)]', dot: 'bg-[var(--color-warning)]' }
-      case 'down':
-      case 'unhealthy':
-        return { bg: 'bg-[var(--color-critical-bg)]', text: 'text-[var(--color-critical-text)]', dot: 'bg-[var(--color-critical)]' }
-    }
+  const statusVariant = (status: ServiceStatus): 'default' | 'secondary' | 'destructive' => {
+    if (status === 'healthy') return 'default'
+    if (status === 'degraded') return 'secondary'
+    return 'destructive'
   }
 
   const overallStatus: ServiceStatus = services.some((s) => s.status === 'down' || s.status === 'unhealthy')
-    ? 'down'
-    : services.some((s) => s.status === 'degraded')
-      ? 'degraded'
-      : 'healthy'
+    ? 'down' : services.some((s) => s.status === 'degraded') ? 'degraded' : 'healthy'
 
-  const overallColor = getStatusColor(overallStatus)
+  const overallClasses = overallStatus === 'healthy'
+    ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-950 dark:border-green-800 dark:text-green-400'
+    : overallStatus === 'degraded'
+    ? 'bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-950 dark:border-yellow-800 dark:text-yellow-400'
+    : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-950 dark:border-red-800 dark:text-red-400'
 
   return (
-    <PageContainer>
+    <div className="space-y-6">
       <PageHeader
         title={t('integrations.systemHealth')}
         subtitle={t('integrations.systemHealthDescription')}
         actions={
-          <div className="flex flex-shrink-0 items-center gap-3">
-            <span className="text-sm text-[var(--color-text-secondary)]">
-              {t('integrations.lastRefresh')}: {lastRefresh.toLocaleTimeString()}
-            </span>
-            <ActionButton onClick={() => void loadHealth()} disabled={isLoading}>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">{t('integrations.lastRefresh')}: {lastRefresh.toLocaleTimeString()}</span>
+            <Button variant="outline" size="sm" onClick={() => void loadHealth()} disabled={isLoading}>
               {isLoading ? t('common.refreshing') : t('common.refresh')}
-            </ActionButton>
+            </Button>
           </div>
         }
       />
 
-      {error && (
-        <div className="mb-6 rounded-lg border border-[var(--color-critical)] bg-[var(--color-critical-bg)] px-4 py-3 text-sm text-[var(--color-critical)]">
-          {error}
-        </div>
-      )}
+      {error && <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
 
       {/* Overall Status */}
-      <div className={`mb-6 p-4 rounded-lg border ${overallColor.bg} border-current`}>
+      <div className={`p-4 rounded-lg border ${overallClasses}`}>
         <div className="flex items-center gap-3">
-          <div className={`w-4 h-4 rounded-full ${overallColor.dot} ${overallStatus === 'degraded' ? 'animate-pulse' : ''}`} />
-          <span className={`text-lg font-semibold ${overallColor.text}`}>
-            {overallStatus === 'healthy'
-              ? t('integrations.allSystemsOperational')
-              : overallStatus === 'degraded'
-                ? t('integrations.someSystemsDegraded')
-                : t('integrations.someSystemsDown')}
+          <div className={`w-4 h-4 rounded-full ${
+            overallStatus === 'healthy' ? 'bg-green-500' : overallStatus === 'degraded' ? 'bg-yellow-500 animate-pulse' : 'bg-red-500'
+          }`} />
+          <span className="text-lg font-semibold">
+            {overallStatus === 'healthy' ? t('integrations.allSystemsOperational')
+              : overallStatus === 'degraded' ? t('integrations.someSystemsDegraded')
+              : t('integrations.someSystemsDown')}
           </span>
           {healthData && (
-            <span className="ml-auto text-xs text-[var(--color-text-muted)]">
-              {new Date(healthData.timestamp).toLocaleString()}
-            </span>
+            <span className="ml-auto text-xs text-muted-foreground">{new Date(healthData.timestamp).toLocaleString()}</span>
           )}
         </div>
       </div>
@@ -175,106 +128,92 @@ export default function SystemHealthPage() {
       {/* Service Health Grid */}
       {isLoading && !healthData ? (
         <div className="flex justify-center py-12">
-          <LoadingSpinner />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {services.map((service) => {
-            const color = getStatusColor(service.status)
-            return (
-              <div
-                key={service.key}
-                className="rounded-lg border border-[var(--color-border)] p-4 bg-[var(--color-bg-surface)]"
-              >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {services.map((service) => (
+            <Card key={service.key}>
+              <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-                    {service.name}
-                  </h3>
-                  <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${color.bg} ${color.text}`}>
-                    <span className={`w-2 h-2 rounded-full ${color.dot}`} />
-                    {service.status.toUpperCase()}
-                  </span>
+                  <h3 className="text-sm font-semibold">{service.name}</h3>
+                  <Badge variant={statusVariant(service.status)}>{service.status.toUpperCase()}</Badge>
                 </div>
-                <div className="text-sm text-[var(--color-text-secondary)]">
-                  {service.detail}
-                </div>
-              </div>
-            )
-          })}
+                <div className="text-sm text-muted-foreground">{service.detail}</div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
 
-      {/* {t('integrations.alertSystemDetails')} */}
+      {/* Alert System Details */}
       {healthData?.alert_system && (
-        <div className="mb-6 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
-          <div className="px-4 py-3 border-b border-[var(--color-border)]">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-              {t('integrations.alertSystemDetails')}
-            </h3>
-          </div>
-          <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            {/* Alert Engine */}
-            <div>
-              <div className="font-medium text-[var(--color-text-primary)] mb-1">Alert Engine</div>
-              <div className="text-[var(--color-text-secondary)]">
-                Status: {healthData.alert_system.alert_engine.status} · Cached rules: {healthData.alert_system.alert_engine.cached_rules}
+        <Card>
+          <CardContent className="p-0">
+            <div className="px-4 py-3 border-b">
+              <h3 className="text-sm font-semibold">{t('integrations.alertSystemDetails')}</h3>
+            </div>
+            <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="font-medium mb-1">Alert Engine</div>
+                <div className="text-muted-foreground">
+                  Status: {healthData.alert_system.alert_engine.status} · Cached rules: {healthData.alert_system.alert_engine.cached_rules}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Channel: {healthData.alert_system.alert_engine.metric_channel_depth}/{healthData.alert_system.alert_engine.metric_channel_capacity}
+                </div>
               </div>
-              <div className="text-xs text-[var(--color-text-muted)] mt-1">
-                Channel: {healthData.alert_system.alert_engine.metric_channel_depth}/{healthData.alert_system.alert_engine.metric_channel_capacity}
+              <div>
+                <div className="font-medium mb-1">Webhook Delivery</div>
+                <div className="text-muted-foreground">
+                  Status: {healthData.alert_system.webhook_delivery.status} · Success rate: {healthData.alert_system.webhook_delivery.success_rate.toFixed(1)}%
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">
+                  Total: {healthData.alert_system.webhook_delivery.total_count} · Success: {healthData.alert_system.webhook_delivery.success_count}
+                </div>
+              </div>
+              <div>
+                <div className="font-medium mb-1">Alert Suppression</div>
+                <div className="text-muted-foreground">
+                  Status: {healthData.alert_system.alert_suppression.status} · Active suppressions: {healthData.alert_system.alert_suppression.active_suppression_count}
+                </div>
               </div>
             </div>
-            {/* Webhook Delivery */}
-            <div>
-              <div className="font-medium text-[var(--color-text-primary)] mb-1">Webhook Delivery</div>
-              <div className="text-[var(--color-text-secondary)]">
-                Status: {healthData.alert_system.webhook_delivery.status} · Success rate: {healthData.alert_system.webhook_delivery.success_rate.toFixed(1)}%
-              </div>
-              <div className="text-xs text-[var(--color-text-muted)] mt-1">
-                Total: {healthData.alert_system.webhook_delivery.total_count} · Success: {healthData.alert_system.webhook_delivery.success_count}
-              </div>
-            </div>
-            {/* Alert Suppression */}
-            <div>
-              <div className="font-medium text-[var(--color-text-primary)] mb-1">Alert Suppression</div>
-              <div className="text-[var(--color-text-secondary)]">
-                Status: {healthData.alert_system.alert_suppression.status} · Active suppressions: {healthData.alert_system.alert_suppression.active_suppression_count}
-              </div>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       )}
 
-      {/* {t('integrations.schedulerTasks')} */}
+      {/* Scheduler Tasks */}
       {healthData?.scheduler && (
-        <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
-          <div className="px-4 py-3 border-b border-[var(--color-border)]">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-              {t('integrations.schedulerTasks')}
-              <span className={`ml-2 text-xs ${healthData.scheduler.running ? 'text-[var(--color-healthy)]' : 'text-[var(--color-critical)]'}`}>
-                {healthData.scheduler.running ? t('integrations.running') : t('integrations.stopped')}
-              </span>
-            </h3>
-          </div>
-          <div className="divide-y divide-[var(--color-border)]">
-            {Object.entries(healthData.scheduler.tasks).map(([name, task]) => (
-              <div key={name} className="p-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium text-[var(--color-text-primary)]">{name}</span>
-                  <span className={`text-xs ${task.is_running ? 'text-[var(--color-healthy)]' : 'text-[var(--color-text-muted)]'}`}>
-                    {task.is_running ? t('integrations.running') : t('integrations.idle')} · {task.run_count}
-                  </span>
+        <Card>
+          <CardContent className="p-0">
+            <div className="px-4 py-3 border-b">
+              <h3 className="text-sm font-semibold">
+                {t('integrations.schedulerTasks')}
+                <span className={`ml-2 text-xs ${healthData.scheduler.running ? 'text-green-600' : 'text-destructive'}`}>
+                  {healthData.scheduler.running ? t('integrations.running') : t('integrations.stopped')}
+                </span>
+              </h3>
+            </div>
+            <div className="divide-y">
+              {Object.entries(healthData.scheduler.tasks).map(([name, task]) => (
+                <div key={name} className="p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{name}</span>
+                    <span className={`text-xs ${task.is_running ? 'text-green-600' : 'text-muted-foreground'}`}>
+                      {task.is_running ? t('integrations.running') : t('integrations.idle')} · {task.run_count}
+                    </span>
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {task.last_run ? new Date(task.last_run).toLocaleString() : t('reports.never')}
+                    {task.last_error && <span className="ml-2 text-destructive">Error: {task.last_error}</span>}
+                  </div>
                 </div>
-                <div className="mt-1 text-xs text-[var(--color-text-muted)]">
-                  {task.last_run ? new Date(task.last_run).toLocaleString() : t('reports.never')}
-                  {task.last_error && (
-                    <span className="ml-2 text-[var(--color-critical)]">Error: {task.last_error}</span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
-    </PageContainer>
+    </div>
   )
 }

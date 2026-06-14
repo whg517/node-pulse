@@ -1,237 +1,152 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { usePerformanceData } from '../hooks/usePerformanceData'
-import { PerformanceMetricCard } from '../components/common/PerformanceMetricCard'
-import { SystemHealthIndicator } from '../components/common/SystemHealthIndicator'
-import { PerformanceTrendChart } from '../components/dashboard/PerformanceTrendChart'
-import { ToastNotification } from '../components/ToastNotification'
-import { PageContainer, ActionButton, ErrorBanner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
+import { usePerformanceData } from '@/hooks/usePerformanceData'
+import { PerformanceMetricCard } from '@/components/common/PerformanceMetricCard'
+import { SystemHealthIndicator } from '@/components/common/SystemHealthIndicator'
+import { PerformanceTrendChart } from '@/components/dashboard/PerformanceTrendChart'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
 
 export default function PerformanceDashboard() {
   const { t } = useTranslation()
 
-  // Performance data state
-  const {
-    data,
-    isLoading,
-    error,
-    refetch,
-    isPolling,
-  } = usePerformanceData({
-    pollingInterval: 60000, // 60 seconds
-    enablePolling: true,
-    timeRange: '24h',
+  const { data, isLoading, error, refetch, isPolling } = usePerformanceData({
+    pollingInterval: 60000, enablePolling: true, timeRange: '24h',
   })
 
-  // Toast notification state
   const [toast, setToast] = useState<{
-    show: boolean
-    id: string
-    type: 'success' | 'error' | 'warning' | 'info'
-    title: string
-    message?: string
-  }>({
-    show: false,
-    id: '',
-    type: 'success',
-    title: '',
-  })
+    show: boolean; type: 'success' | 'error' | 'warning' | 'info'; title: string; message?: string
+  }>({ show: false, type: 'success', title: '' })
 
-  // Show toast notification
-  const showToast = (
-    type: 'success' | 'error' | 'warning' | 'info',
-    title: string,
-    message?: string
-  ) => {
-    const id = Date.now().toString()
-    setToast({ show: true, id, type, title, message })
-    setTimeout(() => {
-      setToast((prev) => ({ ...prev, show: false }))
-    }, 5000) // Show for 5 seconds
+  const showToast = (type: 'success' | 'error' | 'warning' | 'info', title: string, message?: string) => {
+    setToast({ show: true, type, title, message })
+    setTimeout(() => setToast((prev) => ({ ...prev, show: false })), 5000)
   }
 
-  // Handle manual refresh
   const handleRefresh = async () => {
     await refetch()
     showToast('success', t('performance.dataRefreshed'))
   }
 
-  // Handle toast close
-  const handleToastClose = (_id: string) => {
-    setToast((prev) => ({ ...prev, show: false }))
-  }
-
-  // Show toast when anomalies are detected
   useEffect(() => {
     let timeoutId: number | undefined
-
-    if (data && data.anomalies && data.anomalies.length > 0) {
-      // Find P0 (critical) anomalies first
-      const criticalAnomalies = data.anomalies.filter((a) => a.severity === 'P0')
-      const warningAnomalies = data.anomalies.filter((a) => a.severity === 'P1')
-
-      if (criticalAnomalies.length > 0) {
-        timeoutId = window.setTimeout(() => {
-          showToast(
-            'error',
-            t('performance.criticalAnomalies', { count: criticalAnomalies.length }),
-            criticalAnomalies[0].message
-          )
-        }, 0)
-      } else if (warningAnomalies.length > 0) {
-        timeoutId = window.setTimeout(() => {
-          showToast(
-            'warning',
-            t('performance.warningAnomalies', { count: warningAnomalies.length }),
-            warningAnomalies[0].message
-          )
-        }, 0)
-      }
+    if (data?.anomalies?.length) {
+      const critical = data.anomalies.filter((a) => a.severity === 'P0')
+      const warning = data.anomalies.filter((a) => a.severity === 'P1')
+      if (critical.length > 0) timeoutId = window.setTimeout(() => showToast('error', t('performance.criticalAnomalies', { count: critical.length }), critical[0].message), 0)
+      else if (warning.length > 0) timeoutId = window.setTimeout(() => showToast('warning', t('performance.warningAnomalies', { count: warning.length }), warning[0].message), 0)
     }
-
-    return () => {
-      if (timeoutId !== undefined) {
-        window.clearTimeout(timeoutId)
-      }
-    }
+    return () => { if (timeoutId !== undefined) window.clearTimeout(timeoutId) }
   }, [data, t])
 
   return (
-    <PageContainer>
+    <div className="space-y-6">
       <PageHeader
         title={t('performance.title')}
         subtitle={isPolling ? t('performance.realtimeUpdating') : t('performance.updatesPaused')}
         actions={
-          <div className="flex items-center space-x-6">
-            {/* System Health Indicator */}
-            {data && (
-              <SystemHealthIndicator health={data.system_health} />
-            )}
-
-            {/* Refresh Button */}
-            <ActionButton onClick={handleRefresh} disabled={isLoading}>
+          <div className="flex items-center gap-4">
+            {data && <SystemHealthIndicator health={data.system_health} />}
+            <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading}>
               {isLoading ? t('common.refreshing') : t('common.refresh')}
-            </ActionButton>
+            </Button>
           </div>
         }
       />
 
-      {/* Error State */}
       {error && (
-        <ErrorBanner error={error} onRetry={refetch} />
-      )}
-
-      {/* Loading State */}
-      {isLoading && !data && (
-        <div className="text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"></div>
-          <p className="mt-4 text-[var(--color-text-secondary)]">{t('performance.loadingData')}</p>
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error.message}
+          <Button variant="link" size="sm" onClick={refetch}>Retry</Button>
         </div>
       )}
 
-      {/* Performance Content */}
+      {isLoading && !data && (
+        <div className="flex justify-center py-12">
+          <div className="text-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
+            <p className="mt-4 text-muted-foreground">{t('performance.loadingData')}</p>
+          </div>
+        </div>
+      )}
+
       {data && (
         <div className="space-y-8">
-          {/* Performance Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {data.metrics.map((metric) => (
               <PerformanceMetricCard key={metric.metric_name} metric={metric} />
             ))}
           </div>
 
-          {/* Trend Chart */}
-          <div className="bg-[var(--color-bg-surface)] rounded-lg shadow p-6 border border-[var(--color-border)]">
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">{t('performance.trendChart')}</h3>
-            <PerformanceTrendChart
-              trendData={data.trend_data}
-              targetP99={data.metrics[0]?.target_p99}
-              targetP95={data.metrics[0]?.target_p95}
-              height="400px"
-              isLoading={isLoading}
-            />
-          </div>
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="text-lg font-semibold mb-4">{t('performance.trendChart')}</h3>
+              <PerformanceTrendChart trendData={data.trend_data} targetP99={data.metrics[0]?.target_p99} targetP95={data.metrics[0]?.target_p95} height="400px" isLoading={isLoading} />
+            </CardContent>
+          </Card>
 
-          {/* Anomalies Section */}
           {data.anomalies && data.anomalies.length > 0 && (
-            <div className="bg-[var(--color-bg-surface)] rounded-lg shadow p-6 border border-[var(--color-border)]">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-                {t('performance.anomalies')} ({data.anomalies.length})
-              </h3>
-              <div className="space-y-3">
-                {data.anomalies.map((anomaly, index) => (
-                  <div
-                    key={index}
-                    className={`p-4 rounded-md border-l-4 ${
-                      anomaly.severity === 'P0'
-                        ? 'bg-[var(--color-critical-bg)] border-[var(--color-critical)]'
-                        : 'bg-[var(--color-warning-bg)] border-[var(--color-warning)]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
-                              anomaly.severity === 'P0'
-                                ? 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
-                                : 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
-                            }`}
-                          >
-                            {anomaly.severity}
-                          </span>
-                          <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                            {anomaly.metric_name}
-                          </span>
-                        </div>
-                        <p className="text-sm text-[var(--color-text-secondary)] mt-1">{anomaly.message}</p>
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">{t('performance.anomalies')} ({data.anomalies.length})</h3>
+                <div className="space-y-3">
+                  {data.anomalies.map((anomaly, index) => (
+                    <div key={index} className={`p-4 rounded-md border-l-4 ${anomaly.severity === 'P0' ? 'bg-destructive/10 border-l-destructive' : 'bg-yellow-50 border-l-yellow-500 dark:bg-yellow-950'}`}>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={anomaly.severity === 'P0' ? 'destructive' : 'secondary'}>{anomaly.severity}</Badge>
+                        <span className="text-sm font-medium">{anomaly.metric_name}</span>
                       </div>
+                      <p className="text-sm text-muted-foreground mt-1">{anomaly.message}</p>
                     </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
 
-          {/* Summary Statistics */}
           {data.summary && (
-            <div className="bg-[var(--color-bg-surface)] rounded-lg shadow p-6 border border-[var(--color-border)]">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">{t('performance.summary')}</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-[var(--color-brand)]">
-                    {data.summary.total_requests.toLocaleString()}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold mb-4">{t('performance.summary')}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-primary">{data.summary.total_requests.toLocaleString()}</div>
+                    <div className="text-sm text-muted-foreground mt-1">{t('performance.totalRequests')}</div>
                   </div>
-                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.totalRequests')}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-[var(--color-healthy)]">
-                    {data.summary.avg_response_time.toFixed(2)} ms
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-600">{data.summary.avg_response_time.toFixed(2)} ms</div>
+                    <div className="text-sm text-muted-foreground mt-1">{t('performance.avgResponseTime')}</div>
                   </div>
-                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.avgResponseTime')}</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600">
-                    {data.summary.max_response_time.toFixed(2)} ms
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-purple-600">{data.summary.max_response_time.toFixed(2)} ms</div>
+                    <div className="text-sm text-muted-foreground mt-1">{t('performance.maxResponseTime')}</div>
                   </div>
-                  <div className="text-sm text-[var(--color-text-secondary)] mt-1">{t('performance.maxResponseTime')}</div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           )}
         </div>
       )}
 
-      {/* Toast Notification */}
+      {/* Toast */}
       {toast.show && (
-        <ToastNotification
-          id={toast.id}
-          type={toast.type}
-          title={toast.title}
-          message={toast.message}
-          onClose={handleToastClose}
-        />
+        <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg border shadow-lg ${
+          toast.type === 'success' ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-950 dark:text-green-400'
+          : toast.type === 'error' ? 'bg-destructive/10 border-destructive/30 text-destructive'
+          : toast.type === 'warning' ? 'bg-yellow-50 border-yellow-200 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-400'
+          : 'bg-muted border text-foreground'
+        }`}>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-sm">{toast.title}</h3>
+              {toast.message && <p className="text-sm mt-1">{toast.message}</p>}
+            </div>
+            <button onClick={() => setToast((p) => ({ ...p, show: false }))} className="opacity-60 hover:opacity-100">✕</button>
+          </div>
+        </div>
       )}
-    </PageContainer>
+    </div>
   )
 }

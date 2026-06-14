@@ -1,15 +1,35 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAlertsStore } from '../stores/alertsStore'
-import { useAuthStore } from '../stores/authStore'
-import { useSettingsStore, type AlertRoutingRule } from '../stores/settingsStore'
-import { fetchNodes } from '../api/nodes'
-import type { AlertRule } from '../stores/types'
-import type { NodeDTO, CreateAlertRuleRequest } from '../api/types'
-import { PageContainer, ErrorBanner, ConfirmDialog, ActionButton, LoadingSpinner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
-import { AlertRulesTable } from '../components/alerts/AlertRulesTable'
-import { AlertRuleDialog } from '../components/alerts/AlertRuleDialog'
+import { useAlertsStore } from '@/stores/alertsStore'
+import { useAuthStore } from '@/stores/authStore'
+import { useSettingsStore, type AlertRoutingRule } from '@/stores/settingsStore'
+import { fetchNodes } from '@/api/nodes'
+import type { AlertRule } from '@/stores/types'
+import type { NodeDTO, CreateAlertRuleRequest } from '@/api/types'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { AlertRulesTable } from '@/components/alerts/AlertRulesTable'
+import { AlertRuleDialog } from '@/components/alerts/AlertRuleDialog'
 
 type TabId = 'rules' | 'routing'
 
@@ -19,7 +39,7 @@ export default function AlertRulesPage() {
   const { alertRules, fetchAlertRules, addAlertRule, updateAlertRule, removeAlertRule } = useAlertsStore()
   const { routingRules, addRoutingRule, updateRoutingRule, deleteRoutingRule } = useSettingsStore()
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [nodes, setNodes] = useState<NodeDTO[]>([])
   const [activeTab, setActiveTab] = useState<TabId>('rules')
 
@@ -41,28 +61,18 @@ export default function AlertRulesPage() {
 
   const canEdit = user?.role === 'admin' || user?.role === 'operator'
 
-  const loadNodes = useCallback(async () => {
-    try {
-      const response = await fetchNodes()
-      setNodes(response.data.nodes || [])
-    } catch (err) {
-      console.error('Failed to load nodes:', err)
-      throw err
-    }
-  }, [])
-
   const loadData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      await Promise.all([fetchAlertRules(), loadNodes()])
+      const [, nodesRes] = await Promise.all([fetchAlertRules(), fetchNodes()])
+      setNodes(nodesRes.data.nodes || [])
     } catch (err) {
-      setError(err as Error)
-      console.error('Failed to load data:', err)
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setIsLoading(false)
     }
-  }, [fetchAlertRules, loadNodes])
+  }, [fetchAlertRules])
 
   useEffect(() => {
     void loadData()
@@ -90,7 +100,6 @@ export default function AlertRulesPage() {
 
   const confirmDelete = async () => {
     if (!ruleToDelete) return
-
     try {
       await removeAlertRule(ruleToDelete)
       setDeleteConfirmOpen(false)
@@ -156,27 +165,23 @@ export default function AlertRulesPage() {
   ]
 
   return (
-    <PageContainer>
+    <div className="space-y-6">
       <PageHeader
         title={t('alerts.rulesTitle')}
         subtitle={activeTab === 'rules' ? t('alerts.rulesDescription') : t('alerts.routingDescription')}
         actions={
           canEdit && (
             activeTab === 'rules' ? (
-              <ActionButton onClick={handleCreate}>
-                {t('alerts.createRule')}
-              </ActionButton>
+              <Button onClick={handleCreate}>{t('alerts.createRule')}</Button>
             ) : (
-              <ActionButton onClick={() => setShowRoutingDialog(true)}>
-                {t('alerts.createRoutingRule')}
-              </ActionButton>
+              <Button onClick={() => setShowRoutingDialog(true)}>{t('alerts.createRoutingRule')}</Button>
             )
           )
         }
       />
 
       {/* Tabs */}
-      <div className="mb-6 border-b border-[var(--color-border)]">
+      <div className="border-b">
         <nav className="flex gap-6">
           {tabs.map((tab) => (
             <button
@@ -185,8 +190,8 @@ export default function AlertRulesPage() {
               onClick={() => setActiveTab(tab.id)}
               className={`pb-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'border-[var(--color-brand)] text-[var(--color-brand)]'
-                  : 'border-transparent text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)]'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
               }`}
             >
               {tab.label}
@@ -195,23 +200,19 @@ export default function AlertRulesPage() {
         </nav>
       </div>
 
-      {/* Error State */}
       {error && (
-        <ErrorBanner
-          error={error}
-          onRetry={loadData}
-          className="mb-6"
-        />
-      )}
-
-      {/* Loading State */}
-      {isLoading && !error && (
-        <div className="py-12">
-          <LoadingSpinner />
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+          <Button variant="link" size="sm" onClick={loadData}>Retry</Button>
         </div>
       )}
 
-      {/* Alert Rules Tab */}
+      {isLoading && !error && (
+        <div className="flex justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      )}
+
       {!isLoading && !error && activeTab === 'rules' && (
         <AlertRulesTable
           rules={alertRules}
@@ -223,50 +224,46 @@ export default function AlertRulesPage() {
         />
       )}
 
-      {/* Routing Rules Tab */}
       {!isLoading && !error && activeTab === 'routing' && (
         <div>
           {routingRules.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-sm text-[var(--color-text-secondary)]">{t('alerts.noRoutingRules')}</p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-1">{t('alerts.noRoutingRulesHint')}</p>
-            </div>
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-sm text-muted-foreground">{t('alerts.noRoutingRules')}</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('alerts.noRoutingRulesHint')}</p>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
-              {routingRules.map((rule) => (
-                <div key={rule.id} className="px-4 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={rule.enabled}
-                      onChange={(e) => updateRoutingRule(rule.id, { enabled: e.target.checked })}
-                      className="h-4 w-4 rounded border-[var(--color-input-border)] text-[var(--color-brand)]"
-                    />
-                    <div>
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">{rule.name}</p>
-                      <p className="text-xs text-[var(--color-text-muted)]">
-                        {rule.conditions.metric && `${t('alerts.whenMetric')}: ${rule.conditions.metric}`}
-                        {rule.conditions.severity && ` · ${t('alerts.whenSeverity')}: ${rule.conditions.severity}`}
-                        {' · '}{t('alerts.notifyVia')}: {rule.action.type}
-                        {rule.action.target && ` → ${rule.action.target}`}
-                      </p>
+            <Card>
+              <CardContent className="p-0 divide-y">
+                {routingRules.map((rule) => (
+                  <div key={rule.id} className="px-4 py-3 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Switch
+                        checked={rule.enabled}
+                        onCheckedChange={(checked) => updateRoutingRule(rule.id, { enabled: checked })}
+                      />
+                      <div>
+                        <p className="text-sm font-medium">{rule.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {rule.conditions.metric && `${t('alerts.whenMetric')}: ${rule.conditions.metric}`}
+                          {rule.conditions.severity && ` · ${t('alerts.whenSeverity')}: ${rule.conditions.severity}`}
+                          {' · '}{t('alerts.notifyVia')}: {rule.action.type}
+                          {rule.action.target && ` → ${rule.action.target}`}
+                        </p>
+                      </div>
                     </div>
+                    <Button variant="link" size="sm" className="text-destructive" onClick={() => deleteRoutingRule(rule.id)}>
+                      {t('common.delete')}
+                    </Button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => deleteRoutingRule(rule.id)}
-                    className="text-xs text-[var(--color-critical)] hover:opacity-80"
-                  >
-                    {t('common.delete')}
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </CardContent>
+            </Card>
           )}
         </div>
       )}
 
-      {/* Create/Edit Alert Rule Dialog */}
       {dialogOpen && (
         <AlertRuleDialog
           mode={dialogMode}
@@ -274,130 +271,102 @@ export default function AlertRulesPage() {
           nodes={nodes}
           onSubmit={handleSubmit}
           onCancel={() => setDialogOpen(false)}
+          open={dialogOpen}
         />
       )}
 
       {/* Routing Rule Dialog */}
-      {showRoutingDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setShowRoutingDialog(false)}>
-          <div className="w-full max-w-md rounded-lg bg-[var(--color-bg-surface)] shadow-xl p-6" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-              {t('alerts.createRoutingRule')}
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  {t('common.name')}
-                </label>
-                <input
-                  type="text"
-                  value={routingForm.name}
-                  onChange={(e) => setRoutingForm({ ...routingForm, name: e.target.value })}
-                  className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                    {t('alerts.whenMetric')}
-                  </label>
-                  <select
-                    value={routingForm.metric}
-                    onChange={(e) => setRoutingForm({ ...routingForm, metric: e.target.value })}
-                    className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                  >
-                    <option value="">-</option>
-                    <option value="latency">{t('metrics.latency')}</option>
-                    <option value="packet_loss">{t('metrics.packetLoss')}</option>
-                    <option value="jitter">{t('metrics.jitter')}</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                    {t('alerts.whenSeverity')}
-                  </label>
-                  <select
-                    value={routingForm.severity}
-                    onChange={(e) => setRoutingForm({ ...routingForm, severity: e.target.value })}
-                    className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                  >
-                    <option value="">-</option>
-                    <option value="critical">{t('alerts.critical')}</option>
-                    <option value="warning">{t('alerts.warning')}</option>
-                    <option value="info">{t('alerts.info')}</option>
-                  </select>
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  {t('alerts.notifyVia')}
-                </label>
+      <Dialog open={showRoutingDialog} onOpenChange={(o) => { if (!o) setShowRoutingDialog(false) }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t('alerts.createRoutingRule')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('common.name')}</Label>
+              <Input
+                value={routingForm.name}
+                onChange={(e) => setRoutingForm({ ...routingForm, name: e.target.value })}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{t('alerts.whenMetric')}</Label>
                 <select
-                  value={routingForm.actionType}
-                  onChange={(e) => setRoutingForm({ ...routingForm, actionType: e.target.value as 'webhook' | 'email' })}
-                  className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                  value={routingForm.metric}
+                  onChange={(e) => setRoutingForm({ ...routingForm, metric: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  <option value="webhook">{t('alerts.webhook')}</option>
-                  <option value="email">{t('alerts.ruleEmail')}</option>
+                  <option value="">-</option>
+                  <option value="latency">{t('metrics.latency')}</option>
+                  <option value="packet_loss">{t('metrics.packetLoss')}</option>
+                  <option value="jitter">{t('metrics.jitter')}</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  {t('alerts.routeTo')}
-                </label>
-                <input
-                  type="text"
-                  value={routingForm.actionTarget}
-                  onChange={(e) => setRoutingForm({ ...routingForm, actionTarget: e.target.value })}
-                  placeholder={routingForm.actionType === 'email' ? 'user@example.com' : 'Webhook URL or ID'}
-                  className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
-                />
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={routingForm.enabled}
-                  onChange={(e) => setRoutingForm({ ...routingForm, enabled: e.target.checked })}
-                  className="h-4 w-4 rounded border-[var(--color-input-border)] text-[var(--color-brand)]"
-                />
-                <label className="text-sm text-[var(--color-text-secondary)]">{t('status.enabled')}</label>
+              <div className="space-y-2">
+                <Label>{t('alerts.whenSeverity')}</Label>
+                <select
+                  value={routingForm.severity}
+                  onChange={(e) => setRoutingForm({ ...routingForm, severity: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">-</option>
+                  <option value="critical">{t('alerts.critical')}</option>
+                  <option value="warning">{t('alerts.warning')}</option>
+                  <option value="info">{t('alerts.info')}</option>
+                </select>
               </div>
             </div>
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowRoutingDialog(false)}
-                className="px-4 py-2 text-sm font-medium rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)]"
+            <div className="space-y-2">
+              <Label>{t('alerts.notifyVia')}</Label>
+              <select
+                value={routingForm.actionType}
+                onChange={(e) => setRoutingForm({ ...routingForm, actionType: e.target.value as 'webhook' | 'email' })}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
-                {t('common.cancel')}
-              </button>
-              <button
-                type="button"
-                onClick={handleCreateRoutingRule}
-                disabled={!routingForm.name.trim()}
-                className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg disabled:opacity-50"
-              >
-                {t('common.create')}
-              </button>
+                <option value="webhook">{t('alerts.webhook')}</option>
+                <option value="email">{t('alerts.ruleEmail')}</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('alerts.routeTo')}</Label>
+              <Input
+                value={routingForm.actionTarget}
+                onChange={(e) => setRoutingForm({ ...routingForm, actionTarget: e.target.value })}
+                placeholder={routingForm.actionType === 'email' ? 'user@example.com' : 'Webhook URL or ID'}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch
+                checked={routingForm.enabled}
+                onCheckedChange={(checked) => setRoutingForm({ ...routingForm, enabled: checked })}
+              />
+              <Label>{t('status.enabled')}</Label>
             </div>
           </div>
-        </div>
-      )}
+          <div className="mt-4 flex justify-end gap-3">
+            <Button variant="outline" onClick={() => setShowRoutingDialog(false)}>{t('common.cancel')}</Button>
+            <Button onClick={handleCreateRoutingRule} disabled={!routingForm.name.trim()}>{t('common.create')}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        title={t('alerts.deleteTitle')}
-        message={t('alerts.deleteMessage')}
-        confirmText={t('common.delete')}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          setDeleteConfirmOpen(false)
-          setRuleToDelete(undefined)
-        }}
-        loading={false}
-        variant="danger"
-      />
-    </PageContainer>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={(open) => !open && setDeleteConfirmOpen(false)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('alerts.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('alerts.deleteMessage')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setRuleToDelete(undefined) }}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   )
 }

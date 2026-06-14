@@ -16,13 +16,13 @@ describe('SystemHealthIndicator', () => {
   it('applies green border for healthy', () => {
     const { container } = render(<SystemHealthIndicator health="healthy" />)
     const indicator = container.querySelector('.rounded-full.border-4')
-    expect(indicator?.className).toContain('border-[var(--color-healthy)]')
+    expect(indicator?.className).toContain('border-healthy')
   })
 
   it('applies red border for unhealthy', () => {
     const { container } = render(<SystemHealthIndicator health="unhealthy" />)
     const indicator = container.querySelector('.rounded-full.border-4')
-    expect(indicator?.className).toContain('border-[var(--color-critical)]')
+    expect(indicator?.className).toContain('border-destructive')
   })
 
   it('applies custom className', () => {
@@ -36,12 +36,12 @@ describe('SystemHealthIndicator', () => {
   it('renders inner pulse circle for healthy', () => {
     const { container } = render(<SystemHealthIndicator health="healthy" />)
     const inner = container.querySelector('.animate-pulse')
-    expect(inner?.className).toContain('bg-[var(--color-healthy)]')
+    expect(inner?.className).toContain('bg-healthy')
   })
 
   it('renders inner pulse circle for unhealthy', () => {
     const { container } = render(<SystemHealthIndicator health="unhealthy" />)
     const inner = container.querySelector('.animate-pulse')
-    expect(inner?.className).toContain('bg-[var(--color-critical)]')
+    expect(inner?.className).toContain('bg-destructive')
   })
 })

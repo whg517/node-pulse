@@ -1,237 +1,151 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/jetbrains-mono";
 
-/* Enable class-based dark mode for manual toggling */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* =============================================================================
-   NodePulse Design System — "Instrument Panel"
-   Precision, clarity, signal-strength identity.
-   Teal brand for network connectivity semantics.
-   Slate neutrals for visual depth. WCAG AA compliant.
-   ============================================================================= */
-
 :root {
-  /* ---- Backgrounds ---- */
-  --color-bg-page:         #F8FAFB;   /* slate-50 */
-  --color-bg-surface:      #FFFFFF;   /* white — cards, panels */
-  --color-bg-elevated:     #FFFFFF;   /* white — modals, dropdowns */
-  --color-bg-muted:        #F1F5F9;   /* slate-100 — table headers, code blocks */
-  --color-bg-subtle:       #E2E8F0;   /* slate-200 — hover fills, dividers */
-
-  /* ---- Borders ---- */
-  --color-border:          #E2E8F0;   /* slate-200 */
-  --color-border-strong:   #CBD5E1;   /* slate-300 — inputs, emphasis */
-
-  /* ---- Text ---- */
-  --color-text-primary:    #0F172A;   /* slate-900 */
-  --color-text-secondary:  #475569;   /* slate-600 */
-  --color-text-muted:      #64748B;   /* slate-500 */
-  --color-text-placeholder:#94A3B8;   /* slate-400 */
-
-  /* ---- Interactive ---- */
-  --color-hover-overlay:   #F1F5F9;   /* slate-100 */
-  --color-active-overlay:  #E2E8F0;   /* slate-200 */
-
-  /* ---- Input ---- */
-  --color-input-bg:        #FFFFFF;
-  --color-input-border:    #CBD5E1;   /* slate-300 */
-
-  /* ---- Chart ---- */
-  --color-chart-text:          #334155;               /* slate-700 */
-  --color-chart-axis:          #E2E8F0;               /* slate-200 */
-  --color-chart-grid:          #F1F5F9;               /* slate-100 */
-  --color-chart-tooltip-bg:    rgba(255, 255, 255, 0.96);
-  --color-chart-tooltip-border:#E2E8F0;               /* slate-200 */
-  --color-chart-tooltip-text:  #334155;               /* slate-700 */
-
-  /* ---- Brand (Teal) ---- */
-  /* teal-700 for WCAG AA on white (5.47:1) */
-  --color-brand:              #0F766E;
-  --color-brand-hover:        #115E59;
-  --color-brand-muted:        #CCFBF1;   /* teal-50 */
-  --color-brand-subtle:       #99F6E4;   /* teal-100 */
-
-  /* ---- Shadows ---- */
-  --shadow-xs:  0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-sm:  0 1px 3px rgba(15, 23, 42, 0.06), 0 1px 2px rgba(15, 23, 42, 0.04);
-  --shadow-md:  0 4px 6px -1px rgba(15, 23, 42, 0.06), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
-  --shadow-lg:  0 10px 15px -3px rgba(15, 23, 42, 0.06), 0 4px 6px -4px rgba(15, 23, 42, 0.03);
-  --shadow-xl:  0 20px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
-
-  /* ---- Status / Semantic ---- */
-  --color-healthy:            #059669;   /* emerald-600 */
-  --color-healthy-bg:         #ECFDF5;   /* emerald-50 */
-  --color-healthy-text:       #065F46;   /* emerald-800 */
-
-  --color-warning:            #D97706;   /* amber-600 */
-  --color-warning-bg:         #FFFBEB;   /* amber-50 */
-  --color-warning-text:       #92400E;   /* amber-800 */
-
-  --color-critical:           #DC2626;   /* red-600 */
-  --color-critical-bg:        #FEF2F2;   /* red-50 */
-  --color-critical-text:      #991B1B;   /* red-800 */
-
-  --color-unknown:            #64748B;   /* slate-500 */
-  --color-unknown-bg:         #F1F5F9;   /* slate-100 */
-  --color-unknown-text:       #475569;   /* slate-600 */
-
-  /* ---- Base ---- */
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
-  line-height: 1.5;
-  font-weight: 400;
-  color: var(--color-text-primary);
-  background-color: var(--color-bg-page);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  --background: oklch(0.975 0.005 260);
+  --foreground: oklch(0.145 0.015 260);
+  --card: oklch(0.99 0.003 260);
+  --card-foreground: oklch(0.145 0.015 260);
+  --popover: oklch(0.99 0.003 260);
+  --popover-foreground: oklch(0.145 0.015 260);
+  --primary: oklch(0.45 0.18 260);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.955 0.01 260);
+  --secondary-foreground: oklch(0.25 0.02 260);
+  --muted: oklch(0.955 0.01 260);
+  --muted-foreground: oklch(0.5 0.02 260);
+  --accent: oklch(0.94 0.02 260);
+  --accent-foreground: oklch(0.25 0.02 260);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.91 0.01 260);
+  --input: oklch(0.91 0.01 260);
+  --ring: oklch(0.55 0.15 260);
+  --chart-1: oklch(0.55 0.2 260);
+  --chart-2: oklch(0.6 0.15 160);
+  --chart-3: oklch(0.65 0.15 45);
+  --chart-4: oklch(0.6 0.2 310);
+  --chart-5: oklch(0.65 0.2 20);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.965 0.008 260);
+  --sidebar-foreground: oklch(0.145 0.015 260);
+  --sidebar-primary: oklch(0.45 0.18 260);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.94 0.02 260);
+  --sidebar-accent-foreground: oklch(0.25 0.02 260);
+  --sidebar-border: oklch(0.91 0.01 260);
+  --sidebar-ring: oklch(0.55 0.15 260);
 }
 
-/* Dark mode overrides — OLED-optimized with GitHub-inspired warmth */
 .dark {
-  /* ---- Backgrounds ---- */
-  --color-bg-page:         #080B10;   /* deeper than slate-950 */
-  --color-bg-surface:      #0F1218;   /* custom dark */
-  --color-bg-elevated:     #161B22;   /* GitHub-dark inspired */
-  --color-bg-muted:        #1C2129;
-  --color-bg-subtle:       #272D38;
-
-  /* ---- Borders ---- */
-  --color-border:          #1E2530;
-  --color-border-strong:   #2D3544;
-
-  /* ---- Text ---- */
-  --color-text-primary:    #E6EDF3;   /* warm off-white */
-  --color-text-secondary:  #8B949E;   /* desaturated blue-gray */
-  --color-text-muted:      #7D8590;   /* lightened for WCAG AA (4.65:1 on surface) */
-  --color-text-placeholder:#3D444D;
-
-  /* ---- Interactive ---- */
-  --color-hover-overlay:   #161B22;
-  --color-active-overlay:  #272D38;
-
-  /* ---- Input ---- */
-  --color-input-bg:        #161B22;
-  --color-input-border:    #2D3544;
-
-  /* ---- Chart ---- */
-  --color-chart-text:          #C9D1D9;
-  --color-chart-axis:          #2D3544;
-  --color-chart-grid:          #161B22;
-  --color-chart-tooltip-bg:    rgba(15, 18, 24, 0.96);
-  --color-chart-tooltip-border:#2D3544;
-  --color-chart-tooltip-text:  #E6EDF3;
-
-  /* ---- Brand (Teal — lighter for dark) ---- */
-  --color-brand:              #2DD4BF;   /* teal-400 */
-  --color-brand-hover:        #5EEAD4;   /* teal-300 */
-  --color-brand-muted:        #042F2E;   /* teal-900 */
-  --color-brand-subtle:       #115E59;   /* teal-800 */
-
-  /* ---- Shadows (darker, more diffuse) ---- */
-  --shadow-xs:  0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md:  0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
-  --shadow-lg:  0 10px 15px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
-  --shadow-xl:  0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.25);
-
-  /* ---- Status / Semantic (brighter for dark bg) ---- */
-  --color-healthy:            #34D399;                     /* emerald-400 */
-  --color-healthy-bg:         rgba(5, 150, 105, 0.12);
-  --color-healthy-text:       #6EE7B7;                     /* emerald-300 */
-
-  --color-warning:            #FBBF24;                     /* amber-400 */
-  --color-warning-bg:         rgba(217, 119, 6, 0.12);
-  --color-warning-text:       #FCD34D;                     /* amber-300 */
-
-  --color-critical:           #F87171;                     /* red-400 */
-  --color-critical-bg:        rgba(220, 38, 38, 0.12);
-  --color-critical-text:      #FCA5A5;                     /* red-300 */
-
-  --color-unknown:            #8B949E;
-  --color-unknown-bg:         rgba(100, 116, 139, 0.12);
-  --color-unknown-text:       #C9D1D9;
+  --background: oklch(0.16 0.015 260);
+  --foreground: oklch(0.93 0.01 260);
+  --card: oklch(0.21 0.018 260);
+  --card-foreground: oklch(0.93 0.01 260);
+  --popover: oklch(0.21 0.018 260);
+  --popover-foreground: oklch(0.93 0.01 260);
+  --primary: oklch(0.65 0.2 260);
+  --primary-foreground: oklch(0.16 0.015 260);
+  --secondary: oklch(0.27 0.02 260);
+  --secondary-foreground: oklch(0.93 0.01 260);
+  --muted: oklch(0.27 0.02 260);
+  --muted-foreground: oklch(0.65 0.02 260);
+  --accent: oklch(0.3 0.025 260);
+  --accent-foreground: oklch(0.93 0.01 260);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(0.3 0.02 260);
+  --input: oklch(0.3 0.02 260);
+  --ring: oklch(0.55 0.15 260);
+  --chart-1: oklch(0.6 0.22 260);
+  --chart-2: oklch(0.65 0.17 160);
+  --chart-3: oklch(0.7 0.16 45);
+  --chart-4: oklch(0.65 0.22 310);
+  --chart-5: oklch(0.7 0.22 20);
+  --sidebar: oklch(0.18 0.018 260);
+  --sidebar-foreground: oklch(0.93 0.01 260);
+  --sidebar-primary: oklch(0.65 0.2 260);
+  --sidebar-primary-foreground: oklch(0.16 0.015 260);
+  --sidebar-accent: oklch(0.3 0.025 260);
+  --sidebar-accent-foreground: oklch(0.93 0.01 260);
+  --sidebar-border: oklch(0.3 0.02 260);
+  --sidebar-ring: oklch(0.55 0.15 260);
 }
 
-/* =============================================================================
-   Print Stylesheet — force light colors for PDF output
-   ============================================================================= */
 @media print {
   :root, .dark {
-    --color-bg-page: #FFFFFF;
-    --color-bg-surface: #FFFFFF;
-    --color-text-primary: #111827;
-    --color-brand: #0F766E;
-    --color-healthy: #059669;
-    --color-healthy-bg: #ECFDF5;
-    --color-healthy-text: #065F46;
-    --color-warning: #D97706;
-    --color-warning-bg: #FFFBEB;
-    --color-warning-text: #92400E;
-    --color-critical: #DC2626;
-    --color-critical-bg: #FEF2F2;
-    --color-critical-text: #991B1B;
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
+    --primary: oklch(0.205 0 0);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.145 0 0);
   }
 }
 
-/* =============================================================================
-   Utility Classes
-   ============================================================================= */
+@theme inline {
+  --font-heading: var(--font-mono);
+  --font-mono: 'JetBrains Mono Variable', monospace;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
 
-/* Shadow utilities */
-.shadow-xs { box-shadow: var(--shadow-xs); }
-.shadow-sm { box-shadow: var(--shadow-sm); }
-.shadow-md { box-shadow: var(--shadow-md); }
-.shadow-lg { box-shadow: var(--shadow-lg); }
-.shadow-xl { box-shadow: var(--shadow-xl); }
+  /* Status semantic tokens */
+  --color-healthy: var(--chart-2);
+  --color-healthy-text: var(--chart-2);
+  --color-healthy-bg: color-mix(in oklch, var(--chart-2), transparent 90%);
+  --color-healthy-hover: color-mix(in oklch, var(--chart-2), transparent 85%);
+  --color-warning: var(--chart-4);
+  --color-warning-text: var(--chart-4);
+  --color-warning-bg: color-mix(in oklch, var(--chart-4), transparent 90%);
+  --color-warning-hover: color-mix(in oklch, var(--chart-4), transparent 85%);
 
-/* Badge system */
-.badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.125rem 0.625rem;
-  border-radius: 9999px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1.25rem;
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-.badge-dot {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 9999px;
-  flex-shrink: 0;
-}
-
-.badge-healthy { background-color: var(--color-healthy-bg); color: var(--color-healthy-text); }
-.badge-healthy .badge-dot { background-color: var(--color-healthy); }
-
-.badge-warning { background-color: var(--color-warning-bg); color: var(--color-warning-text); }
-.badge-warning .badge-dot { background-color: var(--color-warning); }
-
-.badge-critical { background-color: var(--color-critical-bg); color: var(--color-critical-text); }
-.badge-critical .badge-dot { background-color: var(--color-critical); }
-
-.badge-unknown { background-color: var(--color-unknown-bg); color: var(--color-unknown-text); }
-.badge-unknown .badge-dot { background-color: var(--color-unknown); }
-
-.badge-brand { background-color: var(--color-brand-muted); color: var(--color-brand); }
-
-/* Links — use brand color */
-a {
-  font-weight: 500;
-  color: var(--color-brand);
-  text-decoration: inherit;
-}
-a:hover {
-  color: var(--color-brand-hover);
-}
-
-/* Base */
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-mono;
+  }
 }

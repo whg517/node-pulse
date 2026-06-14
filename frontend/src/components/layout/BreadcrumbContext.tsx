@@ -92,7 +92,7 @@ export function BreadcrumbProvider({ children }: { children: ReactNode }) {
     }
 
     return breadcrumbItems
-  }, [location.pathname, t, currentLabels])
+  }, [location.pathname, location.state, t, currentLabels])
 
   const setDynamicLabel = useCallback((offset: number, label: string) => {
     setDynamicLabels((prev) => ({

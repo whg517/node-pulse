@@ -15,28 +15,28 @@ import type { HealthStatus } from '../../utils/healthStatus'
 // Color palette — CSS variables handle both light and dark themes
 const HEALTH_COLORS = {
   healthy: {
-    bg: 'bg-[var(--color-healthy-bg)]',
-    text: 'text-[var(--color-healthy-text)]',
-    dot: 'bg-[var(--color-healthy)]',
-    border: 'border-[var(--color-healthy-bg)]',
+    bg: 'bg-healthy-bg',
+    text: 'text-healthy-text',
+    dot: 'bg-healthy',
+    border: 'border-healthy-bg',
   },
   warning: {
-    bg: 'bg-[var(--color-warning-bg)]',
-    text: 'text-[var(--color-warning-text)]',
-    dot: 'bg-[var(--color-warning)]',
-    border: 'border-[var(--color-warning-bg)]',
+    bg: 'bg-warning-bg',
+    text: 'text-warning-text',
+    dot: 'bg-warning',
+    border: 'border-warning-bg',
   },
   critical: {
-    bg: 'bg-[var(--color-critical-bg)]',
-    text: 'text-[var(--color-critical-text)]',
-    dot: 'bg-[var(--color-critical)]',
-    border: 'border-[var(--color-critical-bg)]',
+    bg: 'bg-destructive/10',
+    text: 'text-destructive',
+    dot: 'bg-destructive',
+    border: 'border-destructive/10',
   },
   offline: {
-    bg: 'bg-[var(--color-unknown-bg)]',
-    text: 'text-[var(--color-unknown-text)]',
-    dot: 'bg-[var(--color-unknown)]',
-    border: 'border-[var(--color-border)]',
+    bg: 'bg-muted',
+    text: 'text-muted-foreground',
+    dot: 'bg-muted-foreground',
+    border: 'border-border',
   },
 } as const
 
@@ -100,7 +100,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
       onClick={handleClick}
       className={`
         node-summary-card
-        bg-[var(--color-bg-muted)]
+        bg-muted
         rounded-lg border
         ${colors.border}
         p-4 cursor-pointer
@@ -124,7 +124,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
             className={`w-3 h-3 rounded-full ${colors.dot}`}
             aria-hidden="true"
           />
-          <h4 className="font-semibold text-[var(--color-text-primary)] truncate">
+          <h4 className="font-semibold text-foreground truncate">
             {node.name}
           </h4>
         </div>
@@ -139,7 +139,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
       </div>
 
       {/* Region */}
-      <div className="text-sm text-[var(--color-text-secondary)] mb-2">
+      <div className="text-sm text-muted-foreground mb-2">
         <span className="font-medium">{t('nodes.region')}:</span> {node.region}
       </div>
 
@@ -149,7 +149,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
           {latency !== undefined && (
             <div className="flex items-center space-x-1">
               <svg
-                className="w-4 h-4 text-[var(--color-text-muted)]"
+                className="w-4 h-4 text-muted-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -162,7 +162,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
                   d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <span className="text-[var(--color-text-secondary)]">
+              <span className="text-muted-foreground">
                 {latency.toFixed(0)}{t('units.ms')}
               </span>
             </div>
@@ -170,7 +170,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
           {packetLoss !== undefined && (
             <div className="flex items-center space-x-1">
               <svg
-                className="w-4 h-4 text-[var(--color-text-muted)]"
+                className="w-4 h-4 text-muted-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -183,7 +183,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
                   d="M13 10V3L4 14h7v7l9-11h-7z"
                 />
               </svg>
-              <span className="text-[var(--color-text-secondary)]">
+              <span className="text-muted-foreground">
                 {packetLoss.toFixed(1)}{t('units.percent')}
               </span>
             </div>
@@ -192,7 +192,7 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
       )}
 
       {/* Last seen */}
-      <div className="mt-3 pt-3 border-t border-[var(--color-border)] text-xs text-[var(--color-text-muted)]">
+      <div className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground">
         <span>{t('nodes.lastSeen')}:</span>{' '}
         <span>{formatLastSeen(lastSeen)}</span>
       </div>
@@ -203,13 +203,13 @@ export const NodeSummaryCard = memo(function NodeSummaryCard({
           {node.tags.slice(0, 3).map((tag) => (
             <span
               key={tag}
-              className="px-2 py-0.5 bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] text-xs rounded"
+              className="px-2 py-0.5 bg-muted text-muted-foreground text-xs rounded"
             >
               {tag}
             </span>
           ))}
           {node.tags.length > 3 && (
-            <span className="text-xs text-[var(--color-text-muted)]">
+            <span className="text-xs text-muted-foreground">
               +{node.tags.length - 3}
             </span>
           )}

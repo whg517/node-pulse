@@ -37,8 +37,8 @@ export function NodeComparisonTable({ nodes, highlightDifferences = true }: Node
 
   if (nodes.length === 0) {
     return (
-      <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-6 text-center">
-        <p className="text-[var(--color-text-muted)]">{t('nodes.noNodes')}</p>
+      <div className="bg-card rounded-lg shadow-sm p-6 text-center">
+        <p className="text-muted-foreground">{t('nodes.noNodes')}</p>
       </div>
     )
   }
@@ -81,11 +81,11 @@ export function NodeComparisonTable({ nodes, highlightDifferences = true }: Node
     if (best === worst) return ''
 
     if (isLowerBetter) {
-      if (value === best) return 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
-      if (value === worst) return 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
+      if (value === best) return 'bg-healthy-bg text-healthy-text'
+      if (value === worst) return 'bg-destructive/10 text-destructive'
     } else {
-      if (value === best) return 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
-      if (value === worst) return 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
+      if (value === best) return 'bg-healthy-bg text-healthy-text'
+      if (value === worst) return 'bg-destructive/10 text-destructive'
     }
     return ''
   }
@@ -124,40 +124,40 @@ export function NodeComparisonTable({ nodes, highlightDifferences = true }: Node
   }
 
   return (
-    <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-card rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-[var(--color-border)]">
-          <thead className="bg-[var(--color-bg-muted)]">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t('nodes.nodeName')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t('nodes.region')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t('common.status')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t('metrics.latency')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t('metrics.packetLoss')}
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+              <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 {t('metrics.jitter')}
               </th>
             </tr>
           </thead>
-          <tbody className="bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
+          <tbody className="bg-card divide-y divide-border">
             {nodes.map((node) => (
-              <tr key={node.nodeId} className="hover:bg-[var(--color-hover-overlay)]">
+              <tr key={node.nodeId} className="hover:bg-accent/10">
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                  <span className="text-sm font-medium text-foreground">
                     {node.nodeName}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-muted)]">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                   {node.region}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -181,14 +181,14 @@ export function NodeComparisonTable({ nodes, highlightDifferences = true }: Node
                       className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: getStatusIndicatorColor(getLatencyStatus(node.latency)) }}
                     />
-                    <span className="text-sm font-mono text-[var(--color-text-primary)]">
+                    <span className="text-sm font-mono text-foreground">
                       {node.latency !== undefined ? `${node.latency.toFixed(1)} ms` : 'N/A'}
                     </span>
                     {highlightDifferences && node.latency === bestLatency && bestLatency !== worstLatency && (
-                      <span className="text-xs text-[var(--color-healthy)]">Best</span>
+                      <span className="text-xs text-healthy">Best</span>
                     )}
                     {highlightDifferences && node.latency === worstLatency && bestLatency !== worstLatency && (
-                      <span className="text-xs text-[var(--color-critical)]">Worst</span>
+                      <span className="text-xs text-destructive">Worst</span>
                     )}
                   </div>
                 </td>
@@ -198,14 +198,14 @@ export function NodeComparisonTable({ nodes, highlightDifferences = true }: Node
                       className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: getStatusIndicatorColor(getPacketLossStatus(node.packetLoss)) }}
                     />
-                    <span className="text-sm font-mono text-[var(--color-text-primary)]">
+                    <span className="text-sm font-mono text-foreground">
                       {node.packetLoss !== undefined ? `${node.packetLoss.toFixed(2)}%` : 'N/A'}
                     </span>
                     {highlightDifferences && node.packetLoss === bestPacketLoss && bestPacketLoss !== worstPacketLoss && (
-                      <span className="text-xs text-[var(--color-healthy)]">Best</span>
+                      <span className="text-xs text-healthy">Best</span>
                     )}
                     {highlightDifferences && node.packetLoss === worstPacketLoss && bestPacketLoss !== worstPacketLoss && (
-                      <span className="text-xs text-[var(--color-critical)]">Worst</span>
+                      <span className="text-xs text-destructive">Worst</span>
                     )}
                   </div>
                 </td>
@@ -215,14 +215,14 @@ export function NodeComparisonTable({ nodes, highlightDifferences = true }: Node
                       className="w-2 h-2 rounded-full"
                       style={{ backgroundColor: getStatusIndicatorColor(getJitterStatus(node.jitter)) }}
                     />
-                    <span className="text-sm font-mono text-[var(--color-text-primary)]">
+                    <span className="text-sm font-mono text-foreground">
                       {node.jitter !== undefined ? `${node.jitter.toFixed(1)} ms` : 'N/A'}
                     </span>
                     {highlightDifferences && node.jitter === bestJitter && bestJitter !== worstJitter && (
-                      <span className="text-xs text-[var(--color-healthy)]">Best</span>
+                      <span className="text-xs text-healthy">Best</span>
                     )}
                     {highlightDifferences && node.jitter === worstJitter && bestJitter !== worstJitter && (
-                      <span className="text-xs text-[var(--color-critical)]">Worst</span>
+                      <span className="text-xs text-destructive">Worst</span>
                     )}
                   </div>
                 </td>
@@ -234,17 +234,17 @@ export function NodeComparisonTable({ nodes, highlightDifferences = true }: Node
 
       {/* Legend */}
       {highlightDifferences && (
-        <div className="px-6 py-3 bg-[var(--color-bg-muted)] border-t border-[var(--color-border)]">
-          <div className="flex items-center space-x-4 text-xs text-[var(--color-text-muted)]">
+        <div className="px-6 py-3 bg-muted border-t border-border">
+          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
             <div className="flex items-center space-x-1">
-              <span className="w-3 h-3 rounded bg-[var(--color-healthy-bg)]" />
+              <span className="w-3 h-3 rounded bg-healthy-bg" />
               <span>{t('metrics.good')}</span>
             </div>
             <div className="flex items-center space-x-1">
-              <span className="w-3 h-3 rounded bg-[var(--color-critical-bg)]" />
+              <span className="w-3 h-3 rounded bg-destructive/10" />
               <span>{t('status.warning')}</span>
             </div>
-            <span className="text-[var(--color-border)]">|</span>
+            <span className="text-border">|</span>
             <span>{t('nodes.comparison')} - {t('nodes.selectedCount', { count: nodes.length, max: 5 })}</span>
           </div>
         </div>

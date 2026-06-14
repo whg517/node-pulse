@@ -97,7 +97,7 @@ describe('NodeListTable', () => {
 
       // node-1 has metrics, should show health status
       // node-2 has no metrics, should show offline
-      const healthStatuses = screen.getAllByText(/健康|离线|预警|异常/)
+      const healthStatuses = screen.getAllByText(/Healthy|Offline|Warning|Critical/)
       expect(healthStatuses.length).toBeGreaterThan(0)
     })
 
@@ -105,7 +105,7 @@ describe('NodeListTable', () => {
       renderWithRouter(<NodeListTable nodes={mockNodes} metrics={mockMetrics} />)
 
       // node-2 has no metrics
-      expect(screen.getByText('离线')).toBeInTheDocument()
+      expect(screen.getAllByText('Offline').length).toBeGreaterThan(0)
     })
   })
 

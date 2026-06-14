@@ -68,8 +68,8 @@ describe('NodeTable', () => {
         />
       )
 
-      expect(screen.getByText('nodes.noNodes')).toBeInTheDocument()
-      expect(screen.getByText('nodes.noNodesConfigured')).toBeInTheDocument()
+      expect(screen.getByText('No nodes found')).toBeInTheDocument()
+      expect(screen.getByText('No nodes are currently configured.')).toBeInTheDocument()
     })
 
     it('shows different empty state message for editable users', () => {
@@ -81,8 +81,8 @@ describe('NodeTable', () => {
         />
       )
 
-      expect(screen.getByText('nodes.noNodes')).toBeInTheDocument()
-      expect(screen.getByText('nodes.noNodesHint')).toBeInTheDocument()
+      expect(screen.getByText('No nodes found')).toBeInTheDocument()
+      expect(screen.getByText('Get started by adding a new node to monitor.')).toBeInTheDocument()
     })
 
     it('does not show action buttons in empty state when canEdit is false', () => {
@@ -108,12 +108,12 @@ describe('NodeTable', () => {
         />
       )
 
-      expect(screen.getByText('nodes.nodeName')).toBeInTheDocument()
-      expect(screen.getByText('common.status')).toBeInTheDocument()
-      expect(screen.getByText('nodes.region')).toBeInTheDocument()
-      expect(screen.getByText('nodes.tags')).toBeInTheDocument()
-      expect(screen.getByText('nodes.createdAt')).toBeInTheDocument()
-      expect(screen.getByText('common.actions')).toBeInTheDocument()
+      expect(screen.getByText('Name')).toBeInTheDocument()
+      expect(screen.getByText('Status')).toBeInTheDocument()
+      expect(screen.getByText('Region')).toBeInTheDocument()
+      expect(screen.getByText('Tags')).toBeInTheDocument()
+      expect(screen.getByText('Created At')).toBeInTheDocument()
+      expect(screen.getByText('Actions')).toBeInTheDocument()
     })
 
     it('renders all nodes', () => {
@@ -199,7 +199,7 @@ describe('NodeTable', () => {
 
       const onlineBadge = screen.getByText('online')
       expect(onlineBadge).toBeInTheDocument()
-      expect(onlineBadge).toHaveClass('bg-[var(--color-healthy-bg)]', 'text-[var(--color-healthy-text)]')
+      expect(onlineBadge).toHaveClass('bg-healthy-bg', 'text-healthy-text')
     })
 
     it('renders offline status badge correctly', () => {
@@ -213,7 +213,7 @@ describe('NodeTable', () => {
 
       const offlineBadge = screen.getByText('offline')
       expect(offlineBadge).toBeInTheDocument()
-      expect(offlineBadge).toHaveClass('bg-[var(--color-critical-bg)]', 'text-[var(--color-critical-text)]')
+      expect(offlineBadge).toHaveClass('bg-destructive/10', 'text-destructive')
     })
 
     it('renders connecting status badge correctly', () => {
@@ -227,7 +227,7 @@ describe('NodeTable', () => {
 
       const connectingBadge = screen.getByText('connecting')
       expect(connectingBadge).toBeInTheDocument()
-      expect(connectingBadge).toHaveClass('bg-[var(--color-warning-bg)]', 'text-[var(--color-warning-text)]')
+      expect(connectingBadge).toHaveClass('bg-warning-bg', 'text-warning-text')
     })
   })
 
@@ -269,9 +269,9 @@ describe('NodeTable', () => {
         />
       )
 
-      expect(screen.getByText('common.actions')).toBeInTheDocument()
-      expect(screen.getAllByText('common.edit')).toHaveLength(3)
-      expect(screen.getAllByText('common.delete')).toHaveLength(3)
+      expect(screen.getByText('Actions')).toBeInTheDocument()
+      expect(screen.getAllByText('Edit')).toHaveLength(3)
+      expect(screen.getAllByText('Delete')).toHaveLength(3)
     })
 
     it('does not show actions column when canEdit is false', () => {
@@ -300,7 +300,7 @@ describe('NodeTable', () => {
         />
       )
 
-      const editButtons = screen.getAllByText('common.edit')
+      const editButtons = screen.getAllByText('Edit')
       editButtons[0].click()
 
       expect(onEdit).toHaveBeenCalledWith('node-1')
@@ -318,7 +318,7 @@ describe('NodeTable', () => {
         />
       )
 
-      const deleteButtons = screen.getAllByText('common.delete')
+      const deleteButtons = screen.getAllByText('Delete')
       deleteButtons[1].click()
 
       expect(onDelete).toHaveBeenCalledWith('node-2')
@@ -334,7 +334,7 @@ describe('NodeTable', () => {
         />
       )
 
-      const editButtons = screen.getAllByText('common.edit')
+      const editButtons = screen.getAllByText('Edit')
       expect(() => editButtons[0].click()).not.toThrow()
     })
 
@@ -348,7 +348,7 @@ describe('NodeTable', () => {
         />
       )
 
-      const deleteButtons = screen.getAllByText('common.delete')
+      const deleteButtons = screen.getAllByText('Delete')
       expect(() => deleteButtons[0].click()).not.toThrow()
     })
   })

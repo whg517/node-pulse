@@ -1,25 +1,16 @@
 import { useCallback, useEffect, useState, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore } from '../stores/authStore'
-import { getAlertRecords, updateAlertRecordStatus, isValidStatusTransition } from '../api/alertRecords'
-import { fetchNodes } from '../api/nodes'
-import { exportData } from '../api/data'
-import type { AlertRecordDTO, AlertRecordFilters, AlertRecordStatus } from '../api/alertRecords'
-import type { NodeDTO } from '../api/types'
-import { AlertRecordsTable } from '../components/alerts/AlertRecordsTable'
-import { AlertRecordsFilter } from '../components/alerts/AlertRecordsFilter'
-import { AlertRecordDetailModal } from '../components/alerts/AlertRecordDetailModal'
-import { PageContainer, ErrorBanner, LoadingSpinner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
-
-type ToastType = 'success' | 'error' | 'warning' | 'info'
-
-interface Toast {
-  id: string
-  type: ToastType
-  title: string
-  message?: string
-}
+import { useAuthStore } from '@/stores/authStore'
+import { getAlertRecords, updateAlertRecordStatus, isValidStatusTransition } from '@/api/alertRecords'
+import { fetchNodes } from '@/api/nodes'
+import { exportData } from '@/api/data'
+import type { AlertRecordDTO, AlertRecordFilters, AlertRecordStatus } from '@/api/alertRecords'
+import type { NodeDTO } from '@/api/types'
+import { AlertRecordsTable } from '@/components/alerts/AlertRecordsTable'
+import { AlertRecordsFilter } from '@/components/alerts/AlertRecordsFilter'
+import { AlertRecordDetailModal } from '@/components/alerts/AlertRecordDetailModal'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { Button } from '@/components/ui/button'
 
 type SortField = 'timestamp' | 'level' | 'status' | null
 type SortOrder = 'asc' | 'desc'
@@ -28,49 +19,28 @@ export default function AlertRecordsPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [records, setRecords] = useState<AlertRecordDTO[]>([])
   const [nodes, setNodes] = useState<NodeDTO[]>([])
-  const [allRecords, setAllRecords] = useState<AlertRecordDTO[]>([]) // For client-side sorting/filtering
+  const [allRecords, setAllRecords] = useState<AlertRecordDTO[]>([])
 
-  // Pagination state
   const [page, setPage] = useState(0)
   const [pageSize] = useState(20)
   const [totalCount, setTotalCount] = useState(0)
 
-  // Filter state
   const [filters, setFilters] = useState<AlertRecordFilters>({})
   const [searchQuery, setSearchQuery] = useState('')
 
-  // Sorting state
   const [sortField, setSortField] = useState<SortField>(null)
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
-  // Modal state
   const [selectedRecord, setSelectedRecord] = useState<AlertRecordDTO | null>(null)
 
-  // Toast state
-  const [toasts, setToasts] = useState<Toast[]>([])
-
-  // Refs for cleanup
   const isMounted = useRef(true)
-
-  // Check if user can edit (admin or operator)
   const canEdit = user?.role === 'admin' || user?.role === 'operator'
-
-  // Keyboard shortcuts
-  const showToast = useCallback((type: ToastType, title: string, message?: string) => {
-    const id = Date.now().toString()
-    setToasts((prev) => [...prev, { id, type, title, message }])
-  }, [])
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id))
-  }, [])
 
   const loadNodes = useCallback(async () => {
     if (nodes.length > 0) return nodes
-
     try {
       const response = await fetchNodes()
       if (isMounted.current) {
@@ -88,9 +58,8 @@ export default function AlertRecordsPage() {
     setIsLoading(true)
     setError(null)
     try {
-      // Fetch alert records and nodes
       const [recordsResponse] = await Promise.all([
-        getAlertRecords({ ...filters, limit: 100, offset: page * pageSize }), // Backend max limit is 100
+        getAlertRecords({ ...filters, limit: 100, offset: page * pageSize }),
         loadNodes(),
       ])
 
@@ -99,10 +68,8 @@ export default function AlertRecordsPage() {
       const fetchedRecords = recordsResponse.data || []
       setAllRecords(fetchedRecords)
 
-      // Apply sorting and search
       let processedRecords = [...fetchedRecords]
 
-      // Apply search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase()
         processedRecords = processedRecords.filter((record) => {
@@ -113,15 +80,13 @@ export default function AlertRecordsPage() {
         })
       }
 
-      // Apply sorting
       if (sortField) {
         processedRecords.sort((a, b) => {
           let comparison = 0
           switch (sortField) {
-            case 'timestamp': {
+            case 'timestamp':
               comparison = new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
               break
-            }
             case 'level': {
               const levelOrder = { P0: 3, P1: 2, P2: 1 }
               comparison = levelOrder[a.level] - levelOrder[b.level]
@@ -137,50 +102,35 @@ export default function AlertRecordsPage() {
         })
       }
 
-      // Apply pagination
       const startIndex = page * pageSize
-      const endIndex = startIndex + pageSize
-      const paginatedRecords = processedRecords.slice(startIndex, endIndex)
+      const paginatedRecords = processedRecords.slice(startIndex, startIndex + pageSize)
 
       setRecords(paginatedRecords)
       setTotalCount(processedRecords.length)
     } catch (err) {
-      if (isMounted.current) {
-        setError(err as Error)
-        console.error('Failed to load data:', err)
-      }
+      if (isMounted.current) setError(err instanceof Error ? err.message : String(err))
     } finally {
-      if (isMounted.current) {
-        setIsLoading(false)
-      }
+      if (isMounted.current) setIsLoading(false)
     }
   }, [filters, loadNodes, nodes, page, pageSize, searchQuery, sortField, sortOrder])
 
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && selectedRecord) {
-        setSelectedRecord(null)
-      }
-      if ((e.key === 'r' || e.key === 'R') && !selectedRecord) {
-        void loadData()
-        showToast('success', 'Refreshed', 'Alert records have been refreshed')
-      }
+      if (e.key === 'Escape' && selectedRecord) setSelectedRecord(null)
+      if ((e.key === 'r' || e.key === 'R') && !selectedRecord) void loadData()
     }
-
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [loadData, selectedRecord, showToast])
+  }, [loadData, selectedRecord])
 
   useEffect(() => {
     void loadData()
-    return () => {
-      isMounted.current = false
-    }
+    return () => { isMounted.current = false }
   }, [loadData])
 
   const handleFilterChange = (newFilters: AlertRecordFilters) => {
     setFilters(newFilters)
-    setPage(0) // Reset to first page when filters change
+    setPage(0)
   }
 
   const handleResetFilters = () => {
@@ -191,195 +141,96 @@ export default function AlertRecordsPage() {
     setSortOrder('desc')
   }
 
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query)
-    setPage(0)
-  }
-
   const handleSort = (field: SortField) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortOrder('desc')
-    }
+    if (sortField === field) setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortOrder('desc') }
     setPage(0)
-  }
-
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage)
-  }
-
-  const handleViewDetail = (record: AlertRecordDTO) => {
-    setSelectedRecord(record)
-  }
-
-  const handleCloseModal = () => {
-    setSelectedRecord(null)
   }
 
   const handleStatusUpdate = async (id: string, newStatus: AlertRecordStatus) => {
-    // Find current record to validate transition
     const record = allRecords.find((r) => r.id === id)
-    if (!record) {
-      showToast('error', 'Error', 'Alert record not found')
-      return
-    }
-
-    // Validate status transition
-    if (!isValidStatusTransition(record.status, newStatus)) {
-      showToast(
-        'error',
-        'Invalid Status Transition',
-        `Cannot change status from "${record.status}" to "${newStatus}"`
-      )
-      return
-    }
-
+    if (!record) return
+    if (!isValidStatusTransition(record.status, newStatus)) return
     try {
       await updateAlertRecordStatus(id, newStatus)
-      showToast('success', 'Status Updated', `Alert record status changed to ${newStatus}`)
       setSelectedRecord(null)
       await loadData()
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to update status'
-      showToast('error', 'Update Failed', errorMessage)
-      console.error('Failed to update alert record status:', error)
-      throw error
+    } catch {
+      throw new Error('Failed to update status')
     }
   }
 
   const handleExportCSV = async () => {
     try {
-      // Generate time range for export (last 7 days)
       const endTime = new Date().toISOString()
       const startTime = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-
-      // Get node IDs from current filters or all nodes
       const nodeIds = filters.node_id ? [filters.node_id] : nodes.map((n) => n.id)
-
-      const response = await exportData({
-        node_ids: nodeIds,
-        start_time: startTime,
-        end_time: endTime,
-        format: 'csv',
-      })
-
-      // Open download URL in new tab
+      const response = await exportData({ node_ids: nodeIds, start_time: startTime, end_time: endTime, format: 'csv' })
       window.open(response.data.download_url, '_blank')
-      showToast('success', 'Export Started', 'Your CSV file is being prepared')
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to export data'
-      showToast('error', 'Export Failed', errorMessage)
       console.error('Failed to export data:', error)
     }
   }
 
   return (
-    <PageContainer>
-      {/* Toast Notifications */}
-      {toasts.map((toast) => (
-        <div
-          key={toast.id}
-          className={`fixed top-4 right-4 z-50 p-4 rounded-lg border shadow-lg transition-all duration-300 ${
-            toast.type === 'success'
-              ? 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)] border-[var(--color-healthy-bg)]'
-              : toast.type === 'error'
-              ? 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)] border-[var(--color-critical-bg)]'
-              : toast.type === 'warning'
-              ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-bg)]'
-              : 'bg-[var(--color-brand-muted)] text-[var(--color-brand)] border-[var(--color-brand-muted)]'
-          }`}
-          role="alert"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm">{toast.title}</h3>
-              {toast.message && <p className="text-sm mt-1">{toast.message}</p>}
-            </div>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="ml-4 text-current opacity-60 hover:opacity-100"
-              aria-label="Close notification"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+    <div className="space-y-6">
+      <PageHeader
+        title={t('alerts.alertHistory')}
+        subtitle={t('alerts.viewManageHistory')}
+        actions={
+          <Button variant="outline" onClick={handleExportCSV}>
+            {t('common.export')} CSV
+          </Button>
+        }
+      />
+
+      {error && (
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+          <Button variant="link" size="sm" onClick={loadData}>Retry</Button>
         </div>
-      ))}
+      )}
 
-      <main className="bg-[var(--color-bg-page)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <PageHeader
-            title={t('alerts.alertHistory')}
-            subtitle={t('alerts.viewManageHistory')}
-            actions={
-              <button
-                type="button"
-                onClick={handleExportCSV}
-                className="px-4 py-2 bg-[var(--color-healthy)] hover:bg-[var(--color-healthy)] hover:opacity-90 text-white rounded-md transition-colors"
-              >
-                {t('common.export')} CSV
-              </button>
-            }
-          />
+      <AlertRecordsFilter
+        filters={filters}
+        nodes={nodes}
+        searchQuery={searchQuery}
+        onFilterChange={handleFilterChange}
+        onSearchChange={setSearchQuery}
+        onReset={handleResetFilters}
+      />
 
-          {/* Error State */}
-          {error && (
-            <ErrorBanner
-              error={error}
-              onRetry={loadData}
-              className="mb-6"
-            />
-          )}
-
-          {/* Filters */}
-          <AlertRecordsFilter
-            filters={filters}
-            nodes={nodes}
-            searchQuery={searchQuery}
-            onFilterChange={handleFilterChange}
-            onSearchChange={handleSearchChange}
-            onReset={handleResetFilters}
-          />
-
-          {/* Loading State */}
-          {isLoading && !error && (
-            <div className="py-12">
-              <LoadingSpinner />
-            </div>
-          )}
-
-          {/* Content */}
-          {!isLoading && !error && (
-            <AlertRecordsTable
-              records={records}
-              nodes={nodes}
-              onViewDetail={handleViewDetail}
-              page={page}
-              pageSize={pageSize}
-              totalCount={totalCount}
-              onPageChange={handlePageChange}
-              sortField={sortField}
-              sortOrder={sortOrder}
-              onSort={handleSort}
-            />
-          )}
-
-          {/* Detail Modal */}
-          {selectedRecord && (
-            <AlertRecordDetailModal
-              record={selectedRecord}
-              nodes={nodes}
-              canEdit={canEdit}
-              onClose={handleCloseModal}
-              onStatusUpdate={handleStatusUpdate}
-            />
-          )}
+      {isLoading && !error && (
+        <div className="flex justify-center py-12">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
-      </main>
-    </PageContainer>
+      )}
+
+      {!isLoading && !error && (
+        <AlertRecordsTable
+          records={records}
+          nodes={nodes}
+          onViewDetail={setSelectedRecord}
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPage}
+          sortField={sortField}
+          sortOrder={sortOrder}
+          onSort={handleSort}
+        />
+      )}
+
+      {selectedRecord && (
+        <AlertRecordDetailModal
+          record={selectedRecord}
+          nodes={nodes}
+          canEdit={canEdit}
+          open={!!selectedRecord}
+          onClose={() => setSelectedRecord(null)}
+          onStatusUpdate={handleStatusUpdate}
+        />
+      )}
+    </div>
   )
 }

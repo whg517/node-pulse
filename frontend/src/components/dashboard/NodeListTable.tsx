@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { HealthStatusBadge } from './HealthStatusBadge'
 import { determineHealthStatus } from '../../utils/healthStatus'
 import { memoCompare } from '../../utils/deepEqual'
@@ -12,27 +13,13 @@ interface NodeListTableProps {
   isLoading?: boolean
 }
 
-/**
- * NodeListTable Component
- *
- * Displays a table of all monitoring nodes with their health status.
- * Supports clicking on rows to navigate to node detail pages.
- *
- * @param nodes - Array of nodes to display
- * @param metrics - Array of metrics for health determination
- * @param isLoading - Optional loading state
- *
- * @example
- * <NodeListTable nodes={nodes} metrics={metrics} />
- */
 export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoading }: NodeListTableProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation()
 
-  // Defensive check: ensure nodes and metrics are arrays
   const safeNodes = Array.isArray(nodes) ? nodes : []
   const safeMetrics = Array.isArray(metrics) ? metrics : []
 
-  // Create a map of node_id to metrics for quick lookup
   const metricsMap = new Map(safeMetrics.map(m => [m.node_id, m]))
 
   const handleRowClick = (nodeId: string, nodeName: string) => {
@@ -41,12 +28,12 @@ export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoa
 
   if (isLoading) {
     return (
-      <div className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6">
+      <div className="bg-card shadow rounded-lg p-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-[var(--color-bg-muted)] rounded w-1/4 mb-4"></div>
+          <div className="h-8 bg-muted rounded w-1/4 mb-4"></div>
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-12 bg-[var(--color-bg-muted)] rounded"></div>
+              <div key={i} className="h-12 bg-muted rounded"></div>
             ))}
           </div>
         </div>
@@ -56,85 +43,45 @@ export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoa
 
   if (safeNodes.length === 0) {
     return (
-      <div className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6">
-        <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">Node List</h3>
+      <div className="bg-card shadow rounded-lg p-6">
+        <h3 className="text-lg font-medium text-foreground mb-4">{t('dashboard.nodeList')}</h3>
         <div className="text-center py-12">
-          <svg
-            className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            aria-hidden="true"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-            />
+          <svg className="mx-auto h-12 w-12 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">No nodes</h3>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-            No monitoring nodes configured yet. Get started by adding your first node.
-          </p>
+          <h3 className="mt-2 text-sm font-medium text-foreground">{t('dashboard.noNodes')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.noNodesDescription')}</p>
         </div>
       </div>
     )
   }
 
   return (
-    <div className="bg-[var(--color-bg-surface)] shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-[var(--color-border)]">
-        <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Node List</h3>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-          Overview of all monitoring nodes and their health status
-        </p>
+    <div className="bg-card shadow rounded-lg overflow-hidden">
+      <div className="px-6 py-4 border-b border-border">
+        <h3 className="text-lg font-medium text-foreground">{t('dashboard.nodeList')}</h3>
+        <p className="mt-1 text-sm text-muted-foreground">{t('dashboard.nodeListDescription')}</p>
       </div>
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-[var(--color-border)]">
-          <thead className="bg-[var(--color-bg-muted)]">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
-              >
-                Node Name
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
-              >
-                IP Address
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
-              >
-                Region
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
-              >
-                Status
-              </th>
-              <th
-                scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
-              >
-                Health
-              </th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('dashboard.nodeName')}</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('nodes.ipAddress')}</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('nodes.region')}</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('dashboard.status')}</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">{t('dashboard.health')}</th>
             </tr>
           </thead>
-          <tbody className="bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
+          <tbody className="bg-card divide-y divide-border">
             {safeNodes.map(node => {
-              const metrics = metricsMap.get(node.id)
-              const healthStatus = metrics
+              const nodeMetrics = metricsMap.get(node.id)
+              const healthStatus = nodeMetrics
                 ? determineHealthStatus({
-                    latency_ms: metrics.latency_ms,
-                    packet_loss_rate: metrics.packet_loss_rate,
-                    jitter_ms: metrics.jitter_ms,
-                    last_heartbeat: metrics.timestamp,
+                    latency_ms: nodeMetrics.latency_ms,
+                    packet_loss_rate: nodeMetrics.packet_loss_rate,
+                    jitter_ms: nodeMetrics.jitter_ms,
+                    last_heartbeat: nodeMetrics.timestamp,
                   })
                 : 'offline'
 
@@ -142,35 +89,21 @@ export const NodeListTable = memo(function NodeListTable({ nodes, metrics, isLoa
                 <tr
                   key={node.id}
                   onClick={() => handleRowClick(node.id, node.name)}
-                  className="hover:bg-[var(--color-hover-overlay)] cursor-pointer transition-colors duration-150"
+                  className="hover:bg-accent/10 cursor-pointer transition-colors duration-150"
                 >
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div>
-                        <div className="text-sm font-medium text-[var(--color-text-primary)]">
-                          {node.name}
-                        </div>
-                        <div className="text-sm text-[var(--color-text-muted)]">{node.id}</div>
-                      </div>
-                    </div>
+                    <div className="text-sm font-medium text-foreground">{node.name}</div>
+                    <div className="text-sm text-muted-foreground">{node.id}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-[var(--color-text-primary)]">{node.ip}</div>
+                    <div className="text-sm text-foreground">{node.ip}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-[var(--color-brand-muted)] text-[var(--color-brand)]">
-                      {node.region}
-                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">{node.region}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        node.status === 'online'
-                          ? 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
-                          : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)]'
-                      }`}
-                    >
-                      {node.status === 'online' ? 'Online' : 'Offline'}
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${node.status === 'online' ? 'bg-healthy-bg text-healthy-text' : 'bg-muted text-muted-foreground'}`}>
+                      {node.status === 'online' ? t('dashboard.online') : t('dashboard.offline')}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

@@ -1,24 +1,15 @@
-import { useEffect, useRef } from 'react'
-import echarts from '../../lib/echarts-core'
-import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
-import type { MetricTrendData } from '../../api/performance'
-import { useThemeColors } from '../../hooks/useThemeColors'
-
-interface TooltipParam {
-  name: string
-  value: number
-  seriesName: string
-}
-
-function normalizeTooltipParams(params: unknown): TooltipParam[] {
-  if (!Array.isArray(params)) {
-    return []
-  }
-
-  return params.filter((param): param is TooltipParam => {
-    return typeof param === 'object' && param !== null && 'name' in param && 'value' in param && 'seriesName' in param
-  })
-}
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import type { MetricTrendData } from '@/api/performance'
 
 interface PerformanceTrendChartProps {
   trendData: MetricTrendData[]
@@ -29,10 +20,6 @@ interface PerformanceTrendChartProps {
   isLoading?: boolean
 }
 
-/**
- * PerformanceTrendChart displays performance metrics trends over time
- * with P99 and P95 lines, plus target value reference lines.
- */
 export function PerformanceTrendChart({
   trendData,
   targetP99,
@@ -41,267 +28,65 @@ export function PerformanceTrendChart({
   className = '',
   isLoading = false,
 }: PerformanceTrendChartProps) {
-  const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<ECharts | null>(null)
-  const themeColors = useThemeColors()
-
-  // Initialize chart
-  useEffect(() => {
-    if (!chartRef.current) return
-
-    // Initialize ECharts instance
-    chartInstance.current = echarts.init(chartRef.current)
-
-    // Cleanup on unmount
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.dispose()
-        chartInstance.current = null
-      }
-    }
-  }, [])
-
-  // Update chart when data changes
-  useEffect(() => {
-    if (!chartInstance.current || !trendData || trendData.length === 0) return
-
-    // Prepare series data for each metric
-    const series: SeriesOption[] = []
-
-    // Color palette for different metrics
-    const colors = [themeColors.brand, themeColors.healthy, themeColors.warning]
-
-    trendData.forEach((metric, index) => {
-      if (!metric.data_points || metric.data_points.length === 0) return
-
-      const color = colors[index % colors.length]
-
-      // Extract P99 and P95 values
-      const p99Values = metric.data_points.map((dp) => dp.p99)
-      const p95Values = metric.data_points.map((dp) => dp.p95)
-
-      // Add P99 line
-      series.push({
-        name: `${metric.metric_name} P99`,
-        type: 'line',
-        data: p99Values,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 6,
-        lineStyle: {
-          width: 2,
-          color,
-        },
-        itemStyle: {
-          color,
-        },
-      })
-
-      // Add P95 line (dashed)
-      series.push({
-        name: `${metric.metric_name} P95`,
-        type: 'line',
-        data: p95Values,
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 6,
-        lineStyle: {
-          width: 2,
-          type: 'dashed',
-          color,
-        },
-        itemStyle: {
-          color,
-        },
-      })
-    })
-
-    // Add target reference lines if provided
-    if (targetP99 !== undefined) {
-      series.push({
-        name: 'P99 目标值',
-        type: 'line',
-        data: trendData[0]?.data_points?.map(() => targetP99) || [],
-        lineStyle: {
-          width: 2,
-          type: 'dashed',
-          color: themeColors.healthy,
-        },
-        itemStyle: {
-          opacity: 0,
-        },
-        markLine: {
-          silent: true,
-          lineStyle: {
-            color: themeColors.healthy,
-            width: 2,
-            type: 'dashed',
-          },
-          label: {
-            formatter: 'P99 目标',
-            position: 'end',
-          },
-        },
-      })
-    }
-
-    if (targetP95 !== undefined) {
-      series.push({
-        name: 'P95 目标值',
-        type: 'line',
-        data: trendData[0]?.data_points?.map(() => targetP95) || [],
-        lineStyle: {
-          width: 2,
-          type: 'dashed',
-          color: themeColors.healthy,
-        },
-        itemStyle: {
-          opacity: 0,
-        },
-        markLine: {
-          silent: true,
-          lineStyle: {
-            color: themeColors.healthy,
-            width: 2,
-            type: 'dashed',
-          },
-          label: {
-            formatter: 'P95 目标',
-            position: 'end',
-          },
-        },
-      })
-    }
-
-    // Use first metric's timestamps for X-axis
-    const xAxisData =
-      trendData[0]?.data_points?.map((dp) => {
-        const date = new Date(dp.timestamp)
-        return date.toLocaleTimeString('zh-CN', {
-          hour: '2-digit',
-          minute: '2-digit',
-          month: '2-digit',
-          day: '2-digit',
-        })
-      }) || []
-
-    // Build legend data from series names
-    const legendData = series
-      .map((s) => s.name)
-      .filter((name): name is string => name !== undefined)
-
-    const option: EChartsOption = {
-      title: {
-        text: '性能趋势',
-        left: 'center',
-        textStyle: {
-          fontSize: 16,
-          fontWeight: 'bold',
-        },
-      },
-      tooltip: {
-        trigger: 'axis',
-        formatter: (params: unknown) => {
-          const tooltipParams = normalizeTooltipParams(params)
-          if (tooltipParams.length === 0) return ''
-
-          const date = new Date(tooltipParams[0].name)
-
-          let tooltip = `<div style="font-weight: bold; margin-bottom: 8px;">
-            ${date.toLocaleString('zh-CN')}
-          </div>`
-
-          tooltipParams.forEach((param) => {
-            tooltip += `<div style="display: flex; justify-content: space-between; gap: 16px;">
-              <span>${param.seriesName}:</span>
-              <span style="font-weight: bold;">${param.value.toFixed(2)} ms</span>
-            </div>`
-          })
-
-          return tooltip
-        },
-      },
-      legend: {
-        data: legendData as string[],
-        top: 30,
-        type: 'scroll' as const,
-      },
-      grid: {
-        left: '3%',
-        right: '4%',
-        bottom: '3%',
-        top: 80,
-        containLabel: true,
-      },
-      xAxis: {
-        type: 'category',
-        data: xAxisData,
-        boundaryGap: false,
-        axisLabel: {
-          rotate: 45,
-          fontSize: 10,
-        },
-      },
-      yAxis: {
-        type: 'value',
-        name: '响应时间 (ms)',
-        axisLabel: {
-          formatter: '{value} ms',
-        },
-      },
-      series,
-      dataZoom: [
-        {
-          type: 'inside',
-          start: 0,
-          end: 100,
-        },
-        {
-          type: 'slider',
-          start: 0,
-          end: 100,
-          height: 20,
-          bottom: 10,
-        },
-      ],
-    }
-
-    chartInstance.current.setOption(option)
-  }, [trendData, targetP99, targetP95])
-
-  // Resize chart on window resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (chartInstance.current) {
-        chartInstance.current.resize()
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
+  const chartData = trendData.flatMap((td) =>
+    td.data_points.map((d) => ({
+      ...d,
+      time: new Date(d.timestamp).toLocaleString([], {
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    }))
+  )
 
   if (isLoading) {
     return (
-      <div
-        className={`flex items-center justify-center bg-[var(--color-bg-muted)] rounded-lg ${className}`}
-        style={{ height }}
-      >
-        <div className="text-[var(--color-text-muted)]">加载中...</div>
-      </div>
+      <Card className={className}>
+        <CardContent className="flex items-center justify-center py-20 text-muted-foreground">
+          Loading...
+        </CardContent>
+      </Card>
     )
   }
 
-  if (!trendData || trendData.length === 0) {
-    return (
-      <div
-        className={`flex items-center justify-center bg-[var(--color-bg-muted)] rounded-lg ${className}`}
-        style={{ height }}
-      >
-        <div className="text-[var(--color-text-muted)]">暂无趋势数据</div>
-      </div>
-    )
-  }
-
-  return <div ref={chartRef} className={className} style={{ height }} />
+  return (
+    <Card className={className}>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium">Performance Trend</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {chartData.length === 0 ? (
+          <div className="flex items-center justify-center text-muted-foreground text-sm" style={{ height }}>
+            No data available
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={parseInt(height) || 400} minWidth={0}>
+            <LineChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="time" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+              <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" unit="ms" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--popover)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  fontSize: 12,
+                }}
+              />
+              {targetP95 && (
+                <ReferenceLine y={targetP95} stroke="var(--chart-3)" strokeDasharray="6 3" label={{ value: `P95 ${targetP95}ms`, fontSize: 10 }} />
+              )}
+              {targetP99 && (
+                <ReferenceLine y={targetP99} stroke="var(--destructive)" strokeDasharray="6 3" label={{ value: `P99 ${targetP99}ms`, fontSize: 10 }} />
+              )}
+              <Line type="monotone" dataKey="avg" stroke="var(--chart-1)" strokeWidth={2} dot={false} name="Avg" />
+              <Line type="monotone" dataKey="p95" stroke="var(--chart-3)" strokeWidth={1.5} dot={false} strokeDasharray="4 2" name="P95" />
+              <Line type="monotone" dataKey="p99" stroke="var(--destructive)" strokeWidth={1.5} dot={false} strokeDasharray="4 2" name="P99" />
+            </LineChart>
+          </ResponsiveContainer>
+        )}
+      </CardContent>
+    </Card>
+  )
 }

@@ -159,7 +159,20 @@
     "healthDistribution": "Health Distribution",
     "averageMetrics": "Average Metrics",
     "nodesRequiringAttention": "Nodes Requiring Attention",
-    "allSystemsNormal": "All systems normal"
+    "allSystemsNormal": "All systems normal",
+    "nodeList": "Node List",
+    "nodeListDescription": "Overview of all monitoring nodes and their health status",
+    "nodeName": "Node Name",
+    "ipAddress": "IP Address",
+    "region": "Region",
+    "status": "Status",
+    "health": "Health",
+    "online": "Online",
+    "offline": "Offline",
+    "noNodes": "No nodes",
+    "noNodesDescription": "No monitoring nodes configured yet. Get started by adding your first node.",
+    "acrossNodes": "Across {{count}} nodes",
+    "acrossNodes_one": "Across {{count}} node"
   },
   "nodes": {
     "title": "Nodes",

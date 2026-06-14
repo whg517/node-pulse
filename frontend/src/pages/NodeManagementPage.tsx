@@ -1,19 +1,22 @@
-/**
- * Node Management Page
- *
- * Provides full CRUD operations for managing monitoring nodes.
- * Uses standardized layout components for consistent UI.
- */
-
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore } from '../stores/authStore'
-import { fetchNodes, createNode, updateNode, deleteNode } from '../api/nodes'
-import { PageContainer, ErrorBanner, ConfirmDialog, ActionButton, LoadingSpinner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
-import { NodeTable } from '../components/nodes/NodeTable'
-import { NodeDialog } from '../components/nodes/NodeDialog'
-import type { NodeDTO, CreateNodeRequest, UpdateNodeRequest } from '../api/types'
+import { useAuthStore } from '@/stores/authStore'
+import { fetchNodes, createNode, updateNode, deleteNode } from '@/api/nodes'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { NodeTable } from '@/components/nodes/NodeTable'
+import { NodeDialog } from '@/components/nodes/NodeDialog'
+import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import type { NodeDTO, CreateNodeRequest, UpdateNodeRequest } from '@/api/types'
 
 export default function NodeManagementPage() {
   const { t } = useTranslation()
@@ -21,21 +24,16 @@ export default function NodeManagementPage() {
   const [nodes, setNodes] = useState<NodeDTO[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
-
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
-  const [selectedNode, setSelectedNode] = useState<NodeDTO | undefined>(undefined)
+  const [selectedNode, setSelectedNode] = useState<NodeDTO | undefined>()
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [nodeToDelete, setNodeToDelete] = useState<string | undefined>(undefined)
+  const [nodeToDelete, setNodeToDelete] = useState<string>()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Check if user can edit (admin only)
   const canEdit = user?.role === 'admin'
 
-  useEffect(() => {
-    loadNodes()
-  }, [])
+  useEffect(() => { loadNodes() }, [])
 
   const loadNodes = async () => {
     setIsLoading(true)
@@ -45,7 +43,6 @@ export default function NodeManagementPage() {
       setNodes(response.data.nodes || [])
     } catch (err) {
       setError(err as Error)
-      console.error('Failed to load nodes:', err)
     } finally {
       setIsLoading(false)
     }
@@ -73,16 +70,13 @@ export default function NodeManagementPage() {
 
   const confirmDelete = async () => {
     if (!nodeToDelete) return
-
     setIsSubmitting(true)
     try {
       await deleteNode(nodeToDelete)
       setDeleteConfirmOpen(false)
       setNodeToDelete(undefined)
       await loadNodes()
-    } catch (error) {
-      console.error('Failed to delete node:', error)
-    } finally {
+    } catch { /* handled by UI */ } finally {
       setIsSubmitting(false)
     }
   }
@@ -97,79 +91,54 @@ export default function NodeManagementPage() {
       }
       setDialogOpen(false)
       await loadNodes()
-    } catch (error) {
-      console.error('Failed to submit node:', error)
-      throw error
     } finally {
       setIsSubmitting(false)
     }
   }
 
   return (
-    <PageContainer>
+    <div className="space-y-6">
       <PageHeader
         title={t('nodes.management')}
         subtitle={t('nodes.managementDescription')}
-        actions={
-          canEdit && (
-            <ActionButton onClick={handleCreate}>
-              {t('nodes.addNode')}
-            </ActionButton>
-          )
-        }
+        actions={canEdit ? <Button onClick={handleCreate}>{t('nodes.addNode')}</Button> : undefined}
       />
 
-      {/* Error State */}
       {error && (
-        <ErrorBanner
-          error={error}
-          onRetry={loadNodes}
-          className="mb-6"
-        />
-      )}
-
-      {/* Loading State */}
-      {isLoading && !error && (
-        <div className="py-12">
-          <LoadingSpinner />
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error.message}
+          <Button variant="link" size="sm" onClick={loadNodes} className="ml-2">Retry</Button>
         </div>
       )}
 
-      {/* Nodes Table */}
+      {isLoading && !error && (
+        <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
+      )}
+
       {!isLoading && !error && (
-        <NodeTable
-          nodes={nodes}
-          isLoading={false}
-          canEdit={canEdit}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+        <NodeTable nodes={nodes} isLoading={false} canEdit={canEdit} onEdit={handleEdit} onDelete={handleDelete} />
       )}
 
-      {/* Create/Edit Dialog */}
       {dialogOpen && (
-        <NodeDialog
-          mode={dialogMode}
-          node={selectedNode}
-          onSubmit={handleSubmit}
-          onCancel={() => setDialogOpen(false)}
-        />
+        <NodeDialog mode={dialogMode} node={selectedNode} open={dialogOpen} onSubmit={handleSubmit} onCancel={() => setDialogOpen(false)} />
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        title={t('nodes.deleteTitle')}
-        message={t('nodes.deleteMessage')}
-        confirmText={t('common.delete')}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          setDeleteConfirmOpen(false)
-          setNodeToDelete(undefined)
-        }}
-        loading={isSubmitting}
-        variant="danger"
-      />
-    </PageContainer>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('nodes.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('nodes.deleteMessage')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setNodeToDelete(undefined) }}>
+              {t('common.cancel')}
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   )
 }

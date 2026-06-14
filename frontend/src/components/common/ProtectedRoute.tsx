@@ -76,15 +76,15 @@ class AuthErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="min-h-screen flex items-center justify-center bg-muted/50">
           <div className="text-center max-w-md px-4">
-            <div className="bg-[var(--color-critical-bg)] border border-[var(--color-critical-bg)] text-[var(--color-critical-text)] px-4 py-3 rounded-md mb-4">
+            <div className="bg-destructive/10 border border-destructive/10 text-destructive px-4 py-3 rounded-md mb-4">
               <p className="text-sm font-medium">Something went wrong</p>
               <p className="text-sm mt-1">The page encountered an error. You can try refreshing.</p>
             </div>
             <button
               onClick={() => window.location.reload()}
-              className="px-4 py-2 bg-[var(--color-brand)] text-white rounded-md hover:bg-[var(--color-brand-hover)] transition-colors"
+              className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/85 transition-colors"
             >
               Refresh Page
             </button>
@@ -120,14 +120,14 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   // Prevents content flash and premature redirects
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-muted/50">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-[var(--color-brand)]">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-primary">
             <span className="!absolute !-m-px !h-px !w-px !overflow-hidden !whitespace-nowrap !border-0 !p-0 ![clip:rect(0,0,0,0)]">
               Loading...
             </span>
           </div>
-          <p className="mt-4 text-gray-600">Restoring session...</p>
+          <p className="mt-4 text-muted-foreground">Restoring session...</p>
         </div>
       </div>
     )
@@ -141,9 +141,9 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       clearAuth()
 
       return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="min-h-screen flex items-center justify-center bg-muted/50">
           <div className="text-center max-w-md">
-            <div className="bg-[var(--color-critical-bg)] border border-[var(--color-critical-bg)] text-[var(--color-critical-text)] px-4 py-3 rounded-md">
+            <div className="bg-destructive/10 border border-destructive/10 text-destructive px-4 py-3 rounded-md">
               <p className="text-sm">Authentication error detected. Please log in again.</p>
             </div>
             <button
@@ -151,7 +151,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
                 clearAuth()
                 window.location.href = '/login'
               }}
-              className="mt-4 px-4 py-2 bg-[var(--color-brand)] text-white rounded-md hover:bg-[var(--color-brand-hover)]"
+              className="mt-4 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/85"
             >
               Go to Login
             </button>

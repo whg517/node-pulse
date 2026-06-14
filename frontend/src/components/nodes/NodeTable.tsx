@@ -27,10 +27,10 @@ export function NodeTable({
   const { t } = useTranslation()
   if (isLoading) {
     return (
-      <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-6">
+      <div className="bg-card rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-center py-12">
           <div
-            className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"
+            className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"
             role="status"
             aria-label="Loading nodes"
           />
@@ -41,10 +41,10 @@ export function NodeTable({
 
   if (nodes.length === 0) {
     return (
-      <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-6">
+      <div className="bg-card rounded-lg shadow-sm p-6">
         <div className="text-center py-12">
           <svg
-            className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
+            className="mx-auto h-12 w-12 text-muted-foreground"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -56,8 +56,8 @@ export function NodeTable({
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">{t('nodes.noNodes')}</h3>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+          <h3 className="mt-2 text-sm font-medium text-foreground">{t('nodes.noNodes')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             {canEdit
               ? t('nodes.noNodesHint')
               : t('nodes.noNodesConfigured')}
@@ -68,70 +68,70 @@ export function NodeTable({
   }
 
   return (
-    <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm overflow-hidden">
+    <div className="bg-card rounded-lg shadow-sm overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-[var(--color-border)]">
-          <thead className="bg-[var(--color-bg-muted)]">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             <tr>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
               >
                 {t('nodes.nodeName')}
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
               >
                 {t('common.status')}
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
               >
                 {t('nodes.region')}
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
               >
                 {t('nodes.tags')}
               </th>
               <th
                 scope="col"
-                className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
+                className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
               >
                 {t('nodes.createdAt')}
               </th>
               {canEdit && (
                 <th
                   scope="col"
-                  className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider"
+                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider"
                 >
                   {t('common.actions')}
                 </th>
               )}
             </tr>
           </thead>
-          <tbody className="bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
+          <tbody className="bg-card divide-y divide-border">
             {nodes.map((node) => (
-              <tr key={node.id} className="hover:bg-[var(--color-hover-overlay)]">
+              <tr key={node.id} className="hover:bg-accent/10">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex flex-col">
                     <Link
                       to={`/nodes/${node.id}`}
                       state={{ breadcrumbLabel: node.name }}
-                      className="text-sm font-medium text-[var(--color-brand)] hover:text-[var(--color-brand-hover)]"
+                      className="text-sm font-medium text-primary hover:text-primary"
                     >
                       {node.name}
                     </Link>
-                    <span className="text-xs text-[var(--color-text-muted)] font-mono">{node.ip}</span>
+                    <span className="text-xs text-muted-foreground font-mono">{node.ip}</span>
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <NodeStatusBadge status={node.status} />
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-primary)]">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                   {node.region}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
@@ -140,17 +140,17 @@ export function NodeTable({
                       node.tags.map((tag, index) => (
                         <span
                           key={index}
-                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--color-brand-muted)] text-[var(--color-brand)]"
+                          className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary/10 text-primary"
                         >
                           {tag}
                         </span>
                       ))
                     ) : (
-                      <span className="text-sm text-[var(--color-text-muted)]">—</span>
+                      <span className="text-sm text-muted-foreground">—</span>
                     )}
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                   {formatDate(node.created_at)}
                 </td>
                 {canEdit && (
@@ -158,14 +158,14 @@ export function NodeTable({
                     <button
                       type="button"
                       onClick={() => onEdit?.(node.id)}
-                      className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] mr-4"
+                      className="text-primary hover:text-primary mr-4"
                     >
                       {t('common.edit')}
                     </button>
                     <button
                       type="button"
                       onClick={() => onDelete?.(node.id)}
-                      className="text-[var(--color-critical)] hover:text-[var(--color-critical)] hover:opacity-80"
+                      className="text-destructive hover:text-destructive hover:opacity-80"
                     >
                       {t('common.delete')}
                     </button>
@@ -186,19 +186,19 @@ export function NodeTable({
 function NodeStatusBadge({ status }: { status?: NodeDTO['status'] }) {
   const statusConfig = {
     online: {
-      bgColor: 'bg-[var(--color-healthy-bg)]',
-      textColor: 'text-[var(--color-healthy-text)]',
-      dotColor: 'bg-[var(--color-healthy)]',
+      bgColor: 'bg-healthy-bg',
+      textColor: 'text-healthy-text',
+      dotColor: 'bg-healthy',
     },
     offline: {
-      bgColor: 'bg-[var(--color-critical-bg)]',
-      textColor: 'text-[var(--color-critical-text)]',
-      dotColor: 'bg-[var(--color-critical)]',
+      bgColor: 'bg-destructive/10',
+      textColor: 'text-destructive',
+      dotColor: 'bg-destructive',
     },
     connecting: {
-      bgColor: 'bg-[var(--color-warning-bg)]',
-      textColor: 'text-[var(--color-warning-text)]',
-      dotColor: 'bg-[var(--color-warning)]',
+      bgColor: 'bg-warning-bg',
+      textColor: 'text-warning-text',
+      dotColor: 'bg-warning',
     },
   }
 
@@ -207,8 +207,8 @@ function NodeStatusBadge({ status }: { status?: NodeDTO['status'] }) {
   // Handle unknown or missing status
   if (!config) {
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300">
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-500 mr-1.5" aria-hidden="true" />
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-muted dark:bg-accent/50 text-foreground/80 dark:text-muted-foreground">
+        <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground mr-1.5" aria-hidden="true" />
         {status || 'unknown'}
       </span>
     )

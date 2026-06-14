@@ -42,11 +42,11 @@ describe('AlertRulesTable', () => {
       />
     )
 
-    expect(screen.getByText('metrics.latency')).toBeInTheDocument()
+    expect(screen.getByText('Latency')).toBeInTheDocument()
     expect(screen.getByText('100')).toBeInTheDocument()
     expect(screen.getByText('P1')).toBeInTheDocument()
     expect(screen.getByText('Node 1')).toBeInTheDocument()
-    expect(screen.getByText('status.enabled')).toBeInTheDocument()
+    expect(screen.getByText('Enabled')).toBeInTheDocument()
   })
 
   it('renders empty state when no rules', () => {
@@ -61,8 +61,8 @@ describe('AlertRulesTable', () => {
       />
     )
 
-    expect(screen.getByText('alerts.noRules')).toBeInTheDocument()
-    expect(screen.getByText('alerts.noRulesHint')).toBeInTheDocument()
+    expect(screen.getByText('No alert rules')).toBeInTheDocument()
+    expect(screen.getByText('Get started by creating a new alert rule.')).toBeInTheDocument()
   })
 
   it('hides action buttons when user cannot edit', () => {
@@ -94,7 +94,7 @@ describe('AlertRulesTable', () => {
       />
     )
 
-    const editButtons = screen.getAllByText('common.edit')
+    const editButtons = screen.getAllByText('Edit')
     fireEvent.click(editButtons[0])
 
     expect(onEdit).toHaveBeenCalledWith('rule-1')
@@ -113,7 +113,7 @@ describe('AlertRulesTable', () => {
       />
     )
 
-    const deleteButtons = screen.getAllByText('common.delete')
+    const deleteButtons = screen.getAllByText('Delete')
     fireEvent.click(deleteButtons[0])
 
     expect(onDelete).toHaveBeenCalledWith('rule-1')
@@ -132,6 +132,6 @@ describe('AlertRulesTable', () => {
     )
 
     // Rule 2 is global (nodeId is null)
-    expect(screen.getByText('alerts.global')).toBeInTheDocument()
+    expect(screen.getByText('Global')).toBeInTheDocument()
   })
 })

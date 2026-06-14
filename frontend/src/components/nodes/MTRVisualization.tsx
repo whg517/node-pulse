@@ -72,28 +72,28 @@ const healthStatusConfig: Record<
   }
 > = {
   healthy: {
-    borderColor: 'border-[var(--color-healthy-bg)]',
-    bgColor: 'bg-[var(--color-healthy-bg)]',
-    textColor: 'text-[var(--color-healthy-text)]',
-    badgeBgColor: 'bg-[var(--color-healthy-bg)]',
-    badgeTextColor: 'text-[var(--color-healthy-text)]',
-    dotColor: 'bg-[var(--color-healthy)]',
+    borderColor: 'border-healthy-bg',
+    bgColor: 'bg-healthy-bg',
+    textColor: 'text-healthy-text',
+    badgeBgColor: 'bg-healthy-bg',
+    badgeTextColor: 'text-healthy-text',
+    dotColor: 'bg-healthy',
   },
   degraded: {
-    borderColor: 'border-[var(--color-warning-bg)]',
-    bgColor: 'bg-[var(--color-warning-bg)]',
-    textColor: 'text-[var(--color-warning-text)]',
-    badgeBgColor: 'bg-[var(--color-warning-bg)]',
-    badgeTextColor: 'text-[var(--color-warning-text)]',
-    dotColor: 'bg-[var(--color-warning)]',
+    borderColor: 'border-warning-bg',
+    bgColor: 'bg-warning-bg',
+    textColor: 'text-warning-text',
+    badgeBgColor: 'bg-warning-bg',
+    badgeTextColor: 'text-warning-text',
+    dotColor: 'bg-warning',
   },
   problematic: {
-    borderColor: 'border-[var(--color-critical-bg)]',
-    bgColor: 'bg-[var(--color-critical-bg)]',
-    textColor: 'text-[var(--color-critical-text)]',
-    badgeBgColor: 'bg-[var(--color-critical-bg)]',
-    badgeTextColor: 'text-[var(--color-critical-text)]',
-    dotColor: 'bg-[var(--color-critical)]',
+    borderColor: 'border-destructive/10',
+    bgColor: 'bg-destructive/10',
+    textColor: 'text-destructive',
+    badgeBgColor: 'bg-destructive/10',
+    badgeTextColor: 'text-destructive',
+    dotColor: 'bg-destructive',
   },
 }
 
@@ -172,20 +172,20 @@ export default function MTRVisualization({
   if (isLoading) {
     return (
       <div
-        className={`mtr-visualization bg-white rounded-lg shadow-sm p-4 ${className}`}
+        className={`mtr-visualization bg-background rounded-lg shadow-sm p-4 ${className}`}
         role="region"
         aria-label={t('mtr.title')}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{t('mtr.title')}</h3>
+          <h3 className="text-lg font-semibold text-foreground">{t('mtr.title')}</h3>
         </div>
         <div
           className="flex flex-col items-center justify-center py-12"
           role="status"
           aria-label={t('common.loading')}
         >
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]" />
-          <p className="mt-3 text-gray-600">{t('mtr.running')}</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+          <p className="mt-3 text-muted-foreground">{t('mtr.running')}</p>
         </div>
       </div>
     )
@@ -195,16 +195,16 @@ export default function MTRVisualization({
   if (!data) {
     return (
       <div
-        className={`mtr-visualization bg-white rounded-lg shadow-sm p-4 ${className}`}
+        className={`mtr-visualization bg-background rounded-lg shadow-sm p-4 ${className}`}
         role="region"
         aria-label={t('mtr.title')}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{t('mtr.title')}</h3>
+          <h3 className="text-lg font-semibold text-foreground">{t('mtr.title')}</h3>
         </div>
         <div className="flex flex-col items-center justify-center py-12 text-center" role="img" aria-label={t('mtr.noData')}>
           <svg
-            className="h-12 w-12 text-gray-400 mb-3"
+            className="h-12 w-12 text-muted-foreground mb-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -217,7 +217,7 @@ export default function MTRVisualization({
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
             />
           </svg>
-          <p className="text-gray-500">{t('mtr.noData')}</p>
+          <p className="text-muted-foreground">{t('mtr.noData')}</p>
         </div>
       </div>
     )
@@ -228,12 +228,12 @@ export default function MTRVisualization({
     const errorMessage = error || data.errorMessage
     return (
       <div
-        className={`mtr-visualization bg-white rounded-lg shadow-sm p-4 ${className}`}
+        className={`mtr-visualization bg-background rounded-lg shadow-sm p-4 ${className}`}
         role="region"
         aria-label={t('mtr.title')}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">{t('mtr.title')}</h3>
+          <h3 className="text-lg font-semibold text-foreground">{t('mtr.title')}</h3>
         </div>
         <div
           className="flex flex-col items-center justify-center py-12 text-center"
@@ -241,7 +241,7 @@ export default function MTRVisualization({
           aria-label={t('mtr.error')}
         >
           <svg
-            className="h-12 w-12 text-[var(--color-critical)] mb-3"
+            className="h-12 w-12 text-destructive mb-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -254,9 +254,9 @@ export default function MTRVisualization({
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          <p className="text-[var(--color-critical)] font-medium mb-1">{t('mtr.error')}</p>
+          <p className="text-destructive font-medium mb-1">{t('mtr.error')}</p>
           {errorMessage && (
-            <p className="text-gray-500 text-sm">{errorMessage}</p>
+            <p className="text-muted-foreground text-sm">{errorMessage}</p>
           )}
         </div>
       </div>
@@ -268,17 +268,17 @@ export default function MTRVisualization({
 
   return (
     <div
-      className={`mtr-visualization bg-white rounded-lg shadow-sm p-4 ${className}`}
+      className={`mtr-visualization bg-background rounded-lg shadow-sm p-4 ${className}`}
       role="region"
       aria-label={t('mtr.title')}
     >
       {/* Summary Header */}
-      <div className="mb-4 pb-4 border-b border-gray-200">
+      <div className="mb-4 pb-4 border-b border-border">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{t('mtr.title')}</h3>
-            <p className="text-sm text-gray-500 mt-1">
-              {t('mtr.target')}: <span className="font-mono font-medium text-gray-700">{data.target}</span>
+            <h3 className="text-lg font-semibold text-foreground">{t('mtr.title')}</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t('mtr.target')}: <span className="font-mono font-medium text-foreground/80">{data.target}</span>
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -293,14 +293,14 @@ export default function MTRVisualization({
             </span>
           </div>
         </div>
-        <div className="flex items-center gap-4 mt-3 text-sm text-gray-600">
+        <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
           <span>
-            {t('mtr.totalHops')}: <span className="font-medium text-gray-700">{data.totalHops}</span>
+            {t('mtr.totalHops')}: <span className="font-medium text-foreground/80">{data.totalHops}</span>
           </span>
           {data.completedAt && (
             <span>
               {t('mtr.completedAt')}:{' '}
-              <span className="font-medium text-gray-700">
+              <span className="font-medium text-foreground/80">
                 {new Date(data.completedAt).toLocaleString()}
               </span>
             </span>
@@ -347,7 +347,7 @@ export default function MTRVisualization({
                 </div>
                 {/* Connector line */}
                 {!isLastHop && (
-                  <div className="w-0.5 h-full bg-gray-300 mt-2 min-h-[20px]" aria-hidden="true" />
+                  <div className="w-0.5 h-full bg-muted-foreground/30 mt-2 min-h-[20px]" aria-hidden="true" />
                 )}
               </div>
 
@@ -355,12 +355,12 @@ export default function MTRVisualization({
               <div className="flex-1 min-w-0">
                 {/* IP and Hostname */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono font-medium text-gray-900">{hop.ip}</span>
+                  <span className="font-mono font-medium text-foreground">{hop.ip}</span>
                   {hop.hostname && hop.hostname !== hop.ip && (
-                    <span className="text-gray-600 text-sm">({hop.hostname})</span>
+                    <span className="text-muted-foreground text-sm">({hop.hostname})</span>
                   )}
                   {hop.asNumber && (
-                    <span className="text-xs text-gray-500 font-mono bg-gray-200 px-1.5 py-0.5 rounded">
+                    <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
                       AS{hop.asNumber}
                     </span>
                   )}
@@ -368,7 +368,7 @@ export default function MTRVisualization({
 
                 {/* Location */}
                 {hop.location && (
-                  <p className="text-sm text-gray-500 mt-0.5">{hop.location}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{hop.location}</p>
                 )}
 
                 {/* Statistics Row */}
@@ -376,38 +376,38 @@ export default function MTRVisualization({
                   {/* Packet Loss */}
                   <div className="flex items-center gap-1.5">
                     <span className={`inline-block w-2 h-2 rounded-full ${hopConfig.dotColor}`} aria-hidden="true" />
-                    <span className="text-gray-600">{t('mtr.loss')}:</span>
+                    <span className="text-muted-foreground">{t('mtr.loss')}:</span>
                     <span className={`font-medium ${hopConfig.textColor}`}>
                       {formatLossRate(hop.lossRate)}
                     </span>
                   </div>
 
                   {/* RTT Stats */}
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <span>{t('mtr.avg')}:</span>
-                    <span className="font-medium text-gray-700">{formatRTT(hop.avgRTTMs)}</span>
+                    <span className="font-medium text-foreground/80">{formatRTT(hop.avgRTTMs)}</span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <span>{t('mtr.min')}:</span>
-                    <span className="font-medium text-gray-700">{formatRTT(hop.bestRTTMs)}</span>
+                    <span className="font-medium text-foreground/80">{formatRTT(hop.bestRTTMs)}</span>
                   </div>
 
-                  <div className="flex items-center gap-2 text-gray-600">
+                  <div className="flex items-center gap-2 text-muted-foreground">
                     <span>{t('mtr.max')}:</span>
-                    <span className="font-medium text-gray-700">{formatRTT(hop.worstRTTMs)}</span>
+                    <span className="font-medium text-foreground/80">{formatRTT(hop.worstRTTMs)}</span>
                   </div>
 
                   {hop.stdDevMs > 0 && (
-                    <div className="flex items-center gap-2 text-gray-600">
+                    <div className="flex items-center gap-2 text-muted-foreground">
                       <span>{t('mtr.stdDev')}:</span>
-                      <span className="font-medium text-gray-700">{formatRTT(hop.stdDevMs)}</span>
+                      <span className="font-medium text-foreground/80">{formatRTT(hop.stdDevMs)}</span>
                     </div>
                   )}
                 </div>
 
                 {/* Packets info (collapsed by default) */}
-                <div className="text-xs text-gray-400 mt-1">
+                <div className="text-xs text-muted-foreground mt-1">
                   {t('mtr.packets')}: {hop.received}/{hop.sent} {t('mtr.received')}
                 </div>
               </div>
@@ -417,15 +417,15 @@ export default function MTRVisualization({
       </div>
 
       {/* Legend */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500 mb-2">{t('mtr.legend')}:</p>
+      <div className="mt-4 pt-4 border-t border-border">
+        <p className="text-xs text-muted-foreground mb-2">{t('mtr.legend')}:</p>
         <div className="flex items-center gap-4 flex-wrap">
           {(['healthy', 'degraded', 'problematic'] as const).map((status) => {
             const config = healthStatusConfig[status]
             return (
               <div key={status} className="flex items-center gap-1.5">
                 <span className={`w-3 h-3 rounded-full ${config.dotColor}`} aria-hidden="true" />
-                <span className="text-xs text-gray-600">
+                <span className="text-xs text-muted-foreground">
                   {t(`mtr.healthStatus.${status}`)}: {t(`mtr.legendDescription.${status}`)}
                 </span>
               </div>

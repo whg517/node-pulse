@@ -1,6 +1,11 @@
 import { useState } from 'react'
-import type { AlertRecordFilters, AlertLevel, AlertRecordStatus } from '../../api/alertRecords'
-import type { NodeDTO } from '../../api/types'
+import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent } from '@/components/ui/card'
+import type { AlertRecordFilters, AlertLevel, AlertRecordStatus } from '@/api/alertRecords'
+import type { NodeDTO } from '@/api/types'
 
 interface AlertRecordsFilterProps {
   filters: AlertRecordFilters
@@ -11,15 +16,8 @@ interface AlertRecordsFilterProps {
   onReset: () => void
 }
 
-export function AlertRecordsFilter({
-  filters,
-  nodes,
-  searchQuery,
-  onFilterChange,
-  onSearchChange,
-  onReset,
-}: AlertRecordsFilterProps) {
-  // Local state for form inputs
+export function AlertRecordsFilter({ filters, nodes, searchQuery, onFilterChange, onSearchChange, onReset }: AlertRecordsFilterProps) {
+  const { t } = useTranslation()
   const [nodeId, setNodeId] = useState<string>(filters.node_id || '')
   const [startTime, setStartTime] = useState<string>(filters.start_time || '')
   const [endTime, setEndTime] = useState<string>(filters.end_time || '')
@@ -29,147 +27,84 @@ export function AlertRecordsFilter({
 
   const handleApply = () => {
     const newFilters: AlertRecordFilters = {}
-
     if (nodeId) newFilters.node_id = nodeId
     if (startTime) newFilters.start_time = startTime
     if (endTime) newFilters.end_time = endTime
     if (level) newFilters.level = level as AlertLevel
     if (status) newFilters.status = status as AlertRecordStatus
-
     onFilterChange(newFilters)
     onSearchChange(searchInput)
   }
 
   const handleReset = () => {
-    setNodeId('')
-    setStartTime('')
-    setEndTime('')
-    setLevel('')
-    setStatus('')
-    setSearchInput('')
+    setNodeId(''); setStartTime(''); setEndTime(''); setLevel(''); setStatus(''); setSearchInput('')
     onReset()
   }
 
+  const selectClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
+  const inputClass = 'w-full rounded-md border border-input bg-background px-3 py-2 text-sm'
+
   return (
-    <div className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6 mb-6 border border-[var(--color-border)]">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        {/* Search Input */}
-        <div>
-          <label htmlFor="search-input" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-            搜索
-          </label>
-          <input
-            id="search-input"
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="节点名称或指标类型"
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)]"
-          />
+    <Card>
+      <CardContent className="p-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="space-y-2">
+            <Label>{t('alerts.search', 'Search')}</Label>
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder={t('alerts.searchPlaceholder', 'Node name or metric')}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('alerts.node', 'Node')}</Label>
+            <select value={nodeId} onChange={(e) => setNodeId(e.target.value)} className={selectClass}>
+              <option value="">{t('alerts.allNodes', 'All Nodes')}</option>
+              {nodes.map((node) => (
+                <option key={node.id} value={node.id}>{node.name} ({node.ip})</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('alerts.startTime', 'Start Time')}</Label>
+            <input type="datetime-local" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={inputClass} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('alerts.endTime', 'End Time')}</Label>
+            <input type="datetime-local" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={inputClass} />
+          </div>
+
+          <div className="space-y-2">
+            <Label>{t('alerts.level', 'Level')}</Label>
+            <select value={level} onChange={(e) => setLevel(e.target.value)} className={selectClass}>
+              <option value="">{t('alerts.allLevels', 'All Levels')}</option>
+              <option value="P0">P0</option>
+              <option value="P1">P1</option>
+              <option value="P2">P2</option>
+            </select>
+          </div>
         </div>
 
-        {/* Node Selection */}
-        <div>
-          <label htmlFor="node-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-            节点
-          </label>
-          <select
-            id="node-filter"
-            value={nodeId}
-            onChange={(e) => setNodeId(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
-          >
-            <option value="">全部节点</option>
-            {nodes.map((node) => (
-              <option key={node.id} value={node.id}>
-                {node.name} ({node.ip})
-              </option>
-            ))}
-          </select>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="space-y-2">
+            <Label>{t('alerts.status', 'Status')}</Label>
+            <select value={status} onChange={(e) => setStatus(e.target.value)} className={selectClass}>
+              <option value="">{t('alerts.allStatuses', 'All Statuses')}</option>
+              <option value="pending">{t('alerts.pending', 'Pending')}</option>
+              <option value="in_progress">{t('alerts.inProgress', 'In Progress')}</option>
+              <option value="resolved">{t('alerts.resolved', 'Resolved')}</option>
+            </select>
+          </div>
         </div>
 
-        {/* Time Range - Start */}
-        <div>
-          <label htmlFor="start-time" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-            开始时间
-          </label>
-          <input
-            id="start-time"
-            type="datetime-local"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
-          />
+        <div className="mt-4 flex justify-end gap-3">
+          <Button variant="outline" onClick={handleReset}>{t('alerts.resetFilters', 'Reset')}</Button>
+          <Button onClick={handleApply}>{t('alerts.applyFilters', 'Apply')}</Button>
         </div>
-
-        {/* Time Range - End */}
-        <div>
-          <label htmlFor="end-time" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-            结束时间
-          </label>
-          <input
-            id="end-time"
-            type="datetime-local"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
-          />
-        </div>
-
-        {/* Alert Level */}
-        <div>
-          <label htmlFor="level-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-            告警级别
-          </label>
-          <select
-            id="level-filter"
-            value={level}
-            onChange={(e) => setLevel(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
-          >
-            <option value="">全部级别</option>
-            <option value="P0">P0</option>
-            <option value="P1">P1</option>
-            <option value="P2">P2</option>
-          </select>
-        </div>
-
-        {/* Status */}
-        <div>
-          <label htmlFor="status-filter" className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-            处理状态
-          </label>
-          <select
-            id="status-filter"
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
-          >
-            <option value="">全部状态</option>
-            <option value="pending">未处理</option>
-            <option value="in_progress">处理中</option>
-            <option value="resolved">已解决</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Action Buttons */}
-      <div className="mt-4 flex justify-end gap-3">
-        <button
-          type="button"
-          onClick={handleReset}
-          className="px-4 py-2 bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-bg-subtle)] transition-colors"
-        >
-          重置筛选
-        </button>
-        <button
-          type="button"
-          onClick={handleApply}
-          className="px-4 py-2 bg-[var(--color-brand)] text-white rounded-md hover:bg-[var(--color-brand-hover)] transition-colors"
-        >
-          应用筛选
-        </button>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }

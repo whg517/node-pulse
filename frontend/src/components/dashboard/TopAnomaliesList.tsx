@@ -122,12 +122,12 @@ export const TopAnomaliesList = memo(function TopAnomaliesList({ nodes, metrics,
 
   if (isLoading) {
     return (
-      <div className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6">
+      <div className="bg-card shadow rounded-lg p-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-[var(--color-bg-muted)] rounded w-1/3 mb-4"></div>
+          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map(i => (
-              <div key={i} className="h-16 bg-[var(--color-bg-muted)] rounded"></div>
+              <div key={i} className="h-16 bg-muted rounded"></div>
             ))}
           </div>
         </div>
@@ -142,16 +142,16 @@ export const TopAnomaliesList = memo(function TopAnomaliesList({ nodes, metrics,
 
   if (criticalAndWarning.length === 0) {
     return (
-      <div className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6">
-        <div className="px-6 py-4 border-b border-[var(--color-border)]">
-          <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Top Anomalies</h3>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+      <div className="bg-card shadow rounded-lg p-6">
+        <div className="px-6 py-4 border-b border-border">
+          <h3 className="text-lg font-medium text-foreground">Top Anomalies</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             Nodes with critical or warning health status
           </p>
         </div>
         <div className="text-center py-12">
           <svg
-            className="mx-auto h-12 w-12 text-[var(--color-healthy)]"
+            className="mx-auto h-12 w-12 text-healthy"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -164,8 +164,8 @@ export const TopAnomaliesList = memo(function TopAnomaliesList({ nodes, metrics,
               d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">All systems normal</h3>
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+          <h3 className="mt-2 text-sm font-medium text-foreground">All systems normal</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
             No critical or warning issues detected across all nodes.
           </p>
         </div>
@@ -174,34 +174,34 @@ export const TopAnomaliesList = memo(function TopAnomaliesList({ nodes, metrics,
   }
 
   return (
-    <div className="bg-[var(--color-bg-surface)] shadow rounded-lg overflow-hidden">
-      <div className="px-6 py-4 border-b border-[var(--color-border)]">
-        <h3 className="text-lg font-medium text-[var(--color-text-primary)]">Top Anomalies</h3>
-        <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+    <div className="bg-card shadow rounded-lg overflow-hidden">
+      <div className="px-6 py-4 border-b border-border">
+        <h3 className="text-lg font-medium text-foreground">Top Anomalies</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
           Nodes requiring attention (sorted by severity)
         </p>
       </div>
-      <ul className="divide-y divide-[var(--color-border)]">
+      <ul className="divide-y divide-border">
         {criticalAndWarning.map(({ node, metrics, healthStatus }) => (
           <li
             key={node.id}
             onClick={() => handleNodeClick(node.id, node.name)}
-            className="hover:bg-[var(--color-hover-overlay)] cursor-pointer transition-colors duration-150"
+            className="hover:bg-accent/10 cursor-pointer transition-colors duration-150"
           >
             <div className="px-6 py-4">
               <div className="flex items-center justify-between">
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                  <p className="text-sm font-medium text-foreground truncate">
                     {node.name}
                   </p>
-                  <p className="text-sm text-[var(--color-text-secondary)] truncate">{node.ip}</p>
+                  <p className="text-sm text-muted-foreground truncate">{node.ip}</p>
                 </div>
                 <div className="ml-4 flex items-center space-x-3">
                   <div className="text-right">
-                    <p className="text-sm font-medium text-[var(--color-text-primary)]">
+                    <p className="text-sm font-medium text-foreground">
                       {metrics ? getKeyMetric(node, metrics) : 'Offline'}
                     </p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{node.region}</p>
+                    <p className="text-xs text-muted-foreground">{node.region}</p>
                   </div>
                   <HealthStatusBadge status={healthStatus} />
                 </div>

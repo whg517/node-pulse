@@ -41,29 +41,29 @@ export default function MetricCard({
   className = '',
 }: MetricCardProps) {
   const statusBorderColors = {
-    good: 'border-l-[var(--color-healthy)]',
-    warning: 'border-l-[var(--color-warning)]',
-    critical: 'border-l-[var(--color-critical)]',
-    neutral: 'border-l-[var(--color-text-muted)]',
+    good: 'border-l-healthy',
+    warning: 'border-l-warning',
+    critical: 'border-l-destructive',
+    neutral: 'border-l-muted-foreground',
   }
 
   const statusIndicatorColors = {
-    good: 'bg-[var(--color-healthy)]',
-    warning: 'bg-[var(--color-warning)]',
-    critical: 'bg-[var(--color-critical)]',
-    neutral: 'bg-[var(--color-text-muted)]',
+    good: 'bg-healthy',
+    warning: 'bg-warning',
+    critical: 'bg-destructive',
+    neutral: 'bg-muted-foreground',
   }
 
   return (
     <div
-      className={`metric-card rounded-lg border border-[var(--color-border)] border-l-[3px] p-4 shadow-sm hover:shadow-md transition-shadow duration-200 bg-[var(--color-bg-surface)] ${statusBorderColors[status]} ${className}`}
+      className={`metric-card rounded-lg border border-border border-l-[3px] p-4 shadow-sm hover:shadow-md transition-shadow duration-200 bg-card ${statusBorderColors[status]} ${className}`}
       role="region"
       aria-label={`${title} metric`}
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
-          {icon && <div className="text-[var(--color-text-secondary)]">{icon}</div>}
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--color-text-secondary)]">
+          {icon && <div className="text-muted-foreground">{icon}</div>}
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             {title}
           </h3>
         </div>
@@ -74,11 +74,11 @@ export default function MetricCard({
       </div>
 
       <div className="flex items-baseline space-x-2">
-        <span className="text-3xl font-bold text-[var(--color-text-primary)]" aria-label={`${title} value`}>
+        <span className="text-3xl font-bold text-foreground" aria-label={`${title} value`}>
           {value}
         </span>
         {unit && (
-          <span className="text-sm text-[var(--color-text-secondary)]" aria-label="unit">
+          <span className="text-sm text-muted-foreground" aria-label="unit">
             {unit}
           </span>
         )}
@@ -87,12 +87,12 @@ export default function MetricCard({
       {trend && (
         <div className="mt-2 flex items-center text-sm">
           <span
-            className={`font-medium ${trend.isPositive ? 'text-[var(--color-healthy)]' : 'text-[var(--color-critical)]'}`}
+            className={`font-medium ${trend.isPositive ? 'text-healthy' : 'text-destructive'}`}
             aria-label={`trend ${trend.isPositive ? 'up' : 'down'} by ${Math.abs(trend.value)}%`}
           >
             {trend.isPositive ? '↑' : '↓'} {Math.abs(trend.value)}%
           </span>
-          <span className="text-[var(--color-text-secondary)] ml-1">vs. previous period</span>
+          <span className="text-muted-foreground ml-1">vs. previous period</span>
         </div>
       )}
     </div>

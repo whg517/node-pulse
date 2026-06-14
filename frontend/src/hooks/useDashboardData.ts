@@ -61,7 +61,11 @@ export function useDashboardData(): UseDashboardDataResult {
     if (inFlightFetchRef.current) return inFlightFetchRef.current
 
     const fetchPromise = (async () => {
-      setData(prev => ({ ...prev, isLoading: prev.nodes.length === 0, error: null }))
+      setData(prev => {
+          const newLoading = prev.nodes.length === 0
+          if (prev.isLoading === newLoading && prev.error === null) return prev
+          return { ...prev, isLoading: newLoading, error: null }
+        })
 
       try {
         // Parallel fetch for better performance

@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom'
 import { lazy, useEffect, useRef, Suspense } from 'react'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from './lib/query-client'
 import ProtectedRoute from './components/common/ProtectedRoute'
 import { AppLayout } from './components/layout'
 import { useAuthStore, setupCrossTabLogoutSync, setupVisibilityHandler } from './stores/authStore'
@@ -81,6 +83,7 @@ function App() {
   }, [])
 
   return (
+    <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <Suspense fallback={null}>
       <Routes>
@@ -135,6 +138,7 @@ function App() {
       </Routes>
       </Suspense>
     </BrowserRouter>
+    </QueryClientProvider>
   )
 }
 

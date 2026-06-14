@@ -87,7 +87,7 @@ describe('MetricsSummaryCards', () => {
       )
 
       // Check for healthy background class
-      expect(container.querySelector('[class*="bg-[var(--color-healthy-bg)"]')).toBeInTheDocument()
+      expect(container.querySelector('[class*="bg-healthy-bg"]')).toBeInTheDocument()
     })
 
     it('should show warning color for warning metrics (80-100% threshold)', () => {
@@ -106,7 +106,7 @@ describe('MetricsSummaryCards', () => {
       )
 
       // Check for warning background
-      expect(container.querySelector('[class*="bg-[var(--color-warning-bg)"]')).toBeInTheDocument()
+      expect(container.querySelector('[class*="bg-warning-bg"]')).toBeInTheDocument()
     })
 
     it('should show critical color for critical metrics (exceeds threshold)', () => {
@@ -125,7 +125,7 @@ describe('MetricsSummaryCards', () => {
       )
 
       // Check for critical background
-      expect(container.querySelector('[class*="bg-[var(--color-critical-bg)"]')).toBeInTheDocument()
+      expect(container.querySelector('[class*="bg-destructive/10"]')).toBeInTheDocument()
     })
   })
 

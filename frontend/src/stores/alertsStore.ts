@@ -114,7 +114,7 @@ export const useAlertsStore = create<AlertsStore>((set) => ({
     try {
       const response = await fetchAlertRecords()
 
-      const alertRecords: AlertRecord[] = response.data.map((record) => ({
+      const alertRecords: AlertRecord[] = (response.data || []).map((record) => ({
         id: record.id,
         nodeId: record.node_id,
         metric: record.metric,

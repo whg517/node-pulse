@@ -3,13 +3,6 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import AlertRulesPage from '../AlertRulesPage'
 
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: vi.fn() },
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}))
-
 vi.mock('../../hooks/useTheme', () => ({
   useTheme: () => ({ isDark: false }),
 }))
@@ -85,7 +78,7 @@ describe('AlertRulesPage', () => {
   it('opens create dialog on add button click', async () => {
     render(<MemoryRouter><AlertRulesPage /></MemoryRouter>)
     await waitFor(() => expect(screen.getByTestId('alert-rules-table')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('alerts.createRule'))
+    fireEvent.click(screen.getByText('Create Alert Rule'))
     expect(screen.getByTestId('alert-rule-dialog')).toBeInTheDocument()
   })
 
@@ -100,13 +93,13 @@ describe('AlertRulesPage', () => {
     render(<MemoryRouter><AlertRulesPage /></MemoryRouter>)
     await waitFor(() => expect(screen.getByTestId('alert-rules-table')).toBeInTheDocument())
     fireEvent.click(screen.getByText('Delete Rule'))
-    expect(screen.getByText('alerts.deleteTitle')).toBeInTheDocument()
+    expect(screen.getByText('Delete Alert Rule')).toBeInTheDocument()
   })
 
   it('saves new rule via dialog', async () => {
     render(<MemoryRouter><AlertRulesPage /></MemoryRouter>)
     await waitFor(() => expect(screen.getByTestId('alert-rules-table')).toBeInTheDocument())
-    fireEvent.click(screen.getByText('alerts.createRule'))
+    fireEvent.click(screen.getByText('Create Alert Rule'))
     fireEvent.click(screen.getByText('Save Rule'))
     await waitFor(() => expect(mockAddAlertRule).toHaveBeenCalled())
   })
@@ -124,7 +117,7 @@ describe('AlertRulesPage', () => {
     await waitFor(() => expect(screen.getByTestId('alert-rules-table')).toBeInTheDocument())
     fireEvent.click(screen.getByText('Delete Rule'))
     // Find and click confirm button in the dialog
-    fireEvent.click(screen.getByText('common.delete'))
+    fireEvent.click(screen.getByText('Delete'))
     await waitFor(() => expect(mockRemoveAlertRule).toHaveBeenCalledWith('rule-1'))
   })
 

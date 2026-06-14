@@ -1,97 +1,63 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { AlertRecordDTO, AlertRecordStatus } from '../../api/alertRecords'
-import type { NodeDTO } from '../../api/types'
+import { useTranslation } from 'react-i18next'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import type { AlertRecordDTO, AlertRecordStatus } from '@/api/alertRecords'
+import type { NodeDTO } from '@/api/types'
 
 interface AlertRecordDetailModalProps {
   record: AlertRecordDTO
   nodes: NodeDTO[]
   canEdit: boolean
+  open: boolean
   onClose: () => void
   onStatusUpdate: (id: string, status: AlertRecordStatus) => Promise<void>
 }
 
-export function AlertRecordDetailModal({
-  record,
-  nodes,
-  canEdit,
-  onClose,
-  onStatusUpdate,
-}: AlertRecordDetailModalProps) {
+export function AlertRecordDetailModal({ record, nodes, canEdit, open, onClose, onStatusUpdate }: AlertRecordDetailModalProps) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [isUpdating, setIsUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Helper to get node name by ID
   const node = nodes.find((n) => n.id === record.node_id)
 
-  // Helper to get status display name
-  const getStatusDisplayName = (status: string) => {
+  const statusLabel = (status: string) => {
     switch (status) {
-      case 'pending':
-        return '未处理'
-      case 'in_progress':
-        return '处理中'
-      case 'resolved':
-        return '已解决'
-      default:
-        return status
+      case 'pending': return t('alerts.pending', 'Pending')
+      case 'in_progress': return t('alerts.inProgress', 'In Progress')
+      case 'resolved': return t('alerts.resolved', 'Resolved')
+      default: return status
     }
   }
 
-  // Helper to get status badge color
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
-      case 'in_progress':
-        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
-      case 'resolved':
-        return 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
-      default:
-        return 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'
-    }
+  const statusVariant = (status: string): 'destructive' | 'secondary' | 'default' => {
+    if (status === 'pending') return 'destructive'
+    if (status === 'in_progress') return 'secondary'
+    return 'default'
   }
 
-  // Helper to get level badge color
-  const getLevelBadgeColor = (level: string) => {
-    switch (level) {
-      case 'P0':
-        return 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
-      case 'P1':
-        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
-      case 'P2':
-        return 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]'
-      default:
-        return 'bg-slate-100 dark:bg-slate-700/50 text-slate-700 dark:text-slate-300'
-    }
+  const levelVariant = (level: string): 'destructive' | 'secondary' | 'outline' => {
+    if (level === 'P0') return 'destructive'
+    if (level === 'P1') return 'secondary'
+    return 'outline'
   }
 
-  // Helper to get metric display name
   const getMetricDisplayName = (metric: string) => {
     switch (metric) {
-      case 'latency':
-        return '延迟'
-      case 'packet_loss_rate':
-        return '丢包率'
-      case 'jitter':
-        return '抖动'
-      default:
-        return metric
+      case 'latency': return t('metrics.latency', 'Latency')
+      case 'packet_loss_rate': return t('metrics.packetLoss', 'Packet Loss')
+      case 'jitter': return t('metrics.jitter', 'Jitter')
+      default: return metric
     }
-  }
-
-  // Helper to format timestamp
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp)
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    })
   }
 
   const handleStatusUpdate = async (newStatus: AlertRecordStatus) => {
@@ -101,151 +67,94 @@ export function AlertRecordDetailModal({
       await onStatusUpdate(record.id, newStatus)
       onClose()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update status')
+      setError(err instanceof Error ? err.message : t('alerts.updateFailed', 'Failed to update status'))
     } finally {
       setIsUpdating(false)
     }
   }
 
-  const handleViewNodeDetails = () => {
-    onClose()
-    navigate(`/nodes/${record.node_id}`, { state: { breadcrumbLabel: node?.name } })
-  }
-
   return (
-    <div
-      className="fixed inset-0 bg-black/50 overflow-y-auto h-full w-full z-50"
-      onClick={onClose}
-    >
-      <div
-        className="relative top-20 mx-auto p-5 border border-[var(--color-border)] shadow-lg rounded-md bg-[var(--color-bg-elevated)] max-w-2xl w-full"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex justify-between items-start mb-4">
-          <h3 className="text-lg font-medium text-[var(--color-text-primary)]">告警记录详情</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
-          >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose() }}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{t('alerts.recordDetail', 'Alert Record Detail')}</DialogTitle>
+        </DialogHeader>
 
-        {/* Error Message */}
         {error && (
-          <div className="mb-4 bg-[var(--color-critical-bg)] border-l-4 border-[var(--color-critical)] p-4 rounded-md">
-            <p className="text-sm text-[var(--color-critical-text)]">{error}</p>
-          </div>
+          <div className="rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{error}</div>
         )}
 
-        {/* Content */}
         <div className="space-y-4">
-          {/* Alert ID */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)]">告警 ID</label>
-            <p className="mt-1 text-sm text-[var(--color-text-primary)] font-mono">{record.id}</p>
+            <p className="text-sm font-medium text-muted-foreground">{t('alerts.alertId', 'Alert ID')}</p>
+            <p className="text-sm font-mono">{record.id}</p>
           </div>
 
-          {/* Node Information */}
           <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)]">节点</label>
-            <div className="mt-1 flex items-center gap-2">
-              <p className="text-sm text-[var(--color-text-primary)]">{node?.name || record.node_id}</p>
-              <button
-                type="button"
-                onClick={handleViewNodeDetails}
-                className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] text-sm"
+            <p className="text-sm font-medium text-muted-foreground">{t('alerts.node', 'Node')}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm">{node?.name || record.node_id}</p>
+              <Button
+                variant="link"
+                size="sm"
+                onClick={() => { onClose(); navigate(`/nodes/${record.node_id}`, { state: { breadcrumbLabel: node?.name } }) }}
               >
-                查看节点详情
-              </button>
+                {t('alerts.viewNodeDetail', 'View Node')}
+              </Button>
             </div>
-            {node && (
-              <p className="text-xs text-[var(--color-text-muted)]">IP: {node.ip}</p>
+            {node && <p className="text-xs text-muted-foreground">IP: {node.ip}</p>}
+          </div>
+
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{t('alerts.metric', 'Metric')}</p>
+            <p className="text-sm">{getMetricDisplayName(record.metric)}</p>
+          </div>
+
+          <div className="flex gap-6">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">{t('alerts.level', 'Level')}</p>
+              <Badge variant={levelVariant(record.level)}>{record.level}</Badge>
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">{t('common.status')}</p>
+              <Badge variant={statusVariant(record.status)}>{statusLabel(record.status)}</Badge>
+            </div>
+          </div>
+
+          <div className="flex gap-6">
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">{t('alerts.created', 'Created')}</p>
+              <p className="text-sm">{new Date(record.created_at).toLocaleString()}</p>
+            </div>
+            {record.updated_at !== record.created_at && (
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{t('alerts.updated', 'Updated')}</p>
+                <p className="text-sm">{new Date(record.updated_at).toLocaleString()}</p>
+              </div>
             )}
           </div>
 
-          {/* Metric Type */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)]">指标类型</label>
-            <p className="mt-1 text-sm text-[var(--color-text-primary)]">{getMetricDisplayName(record.metric)}</p>
-          </div>
-
-          {/* Alert Level */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)]">告警级别</label>
-            <div className="mt-1">
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getLevelBadgeColor(record.level)}`}>
-                {record.level}
-              </span>
-            </div>
-          </div>
-
-          {/* Status */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)]">状态</label>
-            <div className="mt-1">
-              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadgeColor(record.status)}`}>
-                {getStatusDisplayName(record.status)}
-              </span>
-            </div>
-          </div>
-
-          {/* Timestamps */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)]">创建时间</label>
-            <p className="mt-1 text-sm text-[var(--color-text-primary)]">{formatTimestamp(record.created_at)}</p>
-          </div>
-
-          {record.updated_at !== record.created_at && (
-            <div>
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)]">更新时间</label>
-              <p className="mt-1 text-sm text-[var(--color-text-primary)]">{formatTimestamp(record.updated_at)}</p>
-            </div>
-          )}
-
-          {/* Status Update Actions */}
           {canEdit && record.status !== 'resolved' && (
-            <div className="pt-4 border-t border-[var(--color-border)]">
-              <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">更新状态</label>
+            <div className="pt-4 border-t">
+              <p className="text-sm font-medium text-muted-foreground mb-2">{t('alerts.updateStatus', 'Update Status')}</p>
               <div className="flex gap-3">
                 {record.status === 'pending' && (
-                  <button
-                    type="button"
-                    onClick={() => handleStatusUpdate('in_progress')}
-                    disabled={isUpdating}
-                    className="px-4 py-2 bg-[var(--color-warning)] text-white rounded-md hover:bg-[var(--color-warning-hover)] transition-colors disabled:opacity-50"
-                  >
-                    标记为处理中
-                  </button>
+                  <Button variant="secondary" onClick={() => handleStatusUpdate('in_progress')} disabled={isUpdating}>
+                    {t('alerts.markInProgress', 'Mark In Progress')}
+                  </Button>
                 )}
-                <button
-                  type="button"
-                  onClick={() => handleStatusUpdate('resolved')}
-                  disabled={isUpdating}
-                  className="px-4 py-2 bg-[var(--color-healthy)] text-white rounded-md hover:bg-[var(--color-healthy-hover)] transition-colors disabled:opacity-50"
-                >
-                  标记为已解决
-                </button>
+                <Button onClick={() => handleStatusUpdate('resolved')} disabled={isUpdating}>
+                  {t('alerts.markResolved', 'Mark Resolved')}
+                </Button>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
-        <div className="mt-6 flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-bg-subtle)] transition-colors"
-          >
-            关闭
-          </button>
-        </div>
-      </div>
-    </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>{t('common.close', 'Close')}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,17 +1,22 @@
-/**
- * NodeDialog Component
- *
- * Modal dialog for creating or editing a node.
- * Handles form validation and submission.
- */
-
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import type { NodeDTO, CreateNodeRequest, UpdateNodeRequest } from '../../api/types'
 
 interface NodeDialogProps {
   mode: 'create' | 'edit'
   node?: NodeDTO
+  open: boolean
   onSubmit: (data: CreateNodeRequest | UpdateNodeRequest) => Promise<void>
   onCancel: () => void
 }
@@ -30,7 +35,7 @@ interface FormErrors {
   tags?: string
 }
 
-export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) {
+export function NodeDialog({ mode, node, open, onSubmit, onCancel }: NodeDialogProps) {
   const { t } = useTranslation()
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -41,7 +46,6 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Initialize form data when node changes
   useEffect(() => {
     if (node && mode === 'edit') {
       setFormData({
@@ -56,7 +60,6 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
   const validate = (): boolean => {
     const newErrors: FormErrors = {}
 
-    // Name validation
     if (!formData.name.trim()) {
       newErrors.name = t('nodes.errorNameRequired')
     } else if (formData.name.length < 2) {
@@ -65,14 +68,11 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
       newErrors.name = t('nodes.errorNameMax')
     }
 
-    // IP validation
     if (!formData.ip.trim()) {
       newErrors.ip = t('nodes.errorIpRequired')
     } else {
-      // Simple IPv4 validation
       const ipv4Regex =
         /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
-      // Simple IPv6 validation (simplified)
       const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/
 
       if (!ipv4Regex.test(formData.ip) && !ipv6Regex.test(formData.ip)) {
@@ -80,7 +80,6 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
       }
     }
 
-    // Region validation
     if (!formData.region.trim()) {
       newErrors.region = t('nodes.errorRegionRequired')
     } else if (formData.region.length < 2) {
@@ -89,11 +88,10 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
       newErrors.region = t('nodes.errorRegionMax')
     }
 
-    // Tags validation
     const tagArray = formData.tags
       .split(',')
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0)
+      .map((v) => v.trim())
+      .filter((v) => v.length > 0)
 
     if (tagArray.length > 10) {
       newErrors.tags = t('nodes.errorTagsMax')
@@ -111,32 +109,21 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    if (!validate()) {
-      return
-    }
+    if (!validate()) return
 
     setIsSubmitting(true)
     try {
       const tagArray = formData.tags
         .split(',')
-        .map((t) => t.trim())
-        .filter((t) => t.length > 0)
+        .map((v) => v.trim())
+        .filter((v) => v.length > 0)
 
-      const data: CreateNodeRequest | UpdateNodeRequest =
-        mode === 'create'
-          ? ({
-              name: formData.name.trim(),
-              ip: formData.ip.trim(),
-              region: formData.region.trim(),
-              tags: tagArray,
-            } as CreateNodeRequest)
-          : ({
-              name: formData.name.trim(),
-              ip: formData.ip.trim(),
-              region: formData.region.trim(),
-              tags: tagArray,
-            } as UpdateNodeRequest)
+      const data: CreateNodeRequest | UpdateNodeRequest = {
+        name: formData.name.trim(),
+        ip: formData.ip.trim(),
+        region: formData.region.trim(),
+        tags: tagArray,
+      }
 
       await onSubmit(data)
     } catch (error) {
@@ -146,148 +133,91 @@ export function NodeDialog({ mode, node, onSubmit, onCancel }: NodeDialogProps) 
     }
   }
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
-    // Clear error for this field when user starts typing
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }))
     }
   }
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-xl max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="px-6 py-4 border-b border-[var(--color-border)]">
-          <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) onCancel() }}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
             {mode === 'create' ? t('nodes.addNode') : t('nodes.editNode')}
-          </h3>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-          {/* Name Field */}
-          <div>
-            <label
-              htmlFor="name"
-              className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
-            >
-              {t('nodes.nodeName')} <span className="text-[var(--color-critical)]">*</span>
-            </label>
-            <input
-              type="text"
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">{t('nodes.nodeName')} <span className="text-destructive">*</span></Label>
+            <Input
               id="name"
               name="name"
               value={formData.name}
               onChange={handleChange}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)]"
               placeholder="e.g., Production Server 1"
             />
-            {errors.name && (
-              <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.name}</p>
-            )}
+            {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
 
-          {/* IP Address Field */}
-          <div>
-            <label
-              htmlFor="ip"
-              className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
-            >
-              {t('nodes.ipAddress')} <span className="text-[var(--color-critical)]">*</span>
-            </label>
-            <input
-              type="text"
+          <div className="space-y-2">
+            <Label htmlFor="ip">{t('nodes.ipAddress')} <span className="text-destructive">*</span></Label>
+            <Input
               id="ip"
               name="ip"
               value={formData.ip}
               onChange={handleChange}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)] font-mono"
               placeholder="e.g., 192.168.1.100"
+              className="font-mono"
             />
-            {errors.ip && (
-              <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.ip}</p>
-            )}
+            {errors.ip && <p className="text-sm text-destructive">{errors.ip}</p>}
           </div>
 
-          {/* Region Field */}
-          <div>
-            <label
-              htmlFor="region"
-              className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
-            >
-              {t('nodes.region')} <span className="text-[var(--color-critical)]">*</span>
-            </label>
-            <input
-              type="text"
+          <div className="space-y-2">
+            <Label htmlFor="region">{t('nodes.region')} <span className="text-destructive">*</span></Label>
+            <Input
               id="region"
               name="region"
               value={formData.region}
               onChange={handleChange}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)]"
               placeholder="e.g., us-east-1"
             />
-            {errors.region && (
-              <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.region}</p>
-            )}
+            {errors.region && <p className="text-sm text-destructive">{errors.region}</p>}
           </div>
 
-          {/* Tags Field */}
-          <div>
-            <label
-              htmlFor="tags"
-              className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1"
-            >
-              {t('nodes.tags')}
-            </label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="tags">{t('nodes.tags')}</Label>
+            <Textarea
               id="tags"
               name="tags"
               value={formData.tags}
               onChange={handleChange}
               disabled={isSubmitting}
               rows={3}
-              className="w-full px-3 py-2 border border-[var(--color-border)] rounded-md bg-[var(--color-bg-surface)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] disabled:bg-[var(--color-bg-muted)]"
               placeholder="e.g., production, critical, backend (comma-separated)"
             />
-            <p className="mt-1 text-xs text-[var(--color-text-muted)]">
-              {t('nodes.tagsHint')}
-            </p>
-            {errors.tags && (
-              <p className="mt-1 text-sm text-[var(--color-critical)]">{errors.tags}</p>
-            )}
+            <p className="text-xs text-muted-foreground">{t('nodes.tagsHint')}</p>
+            {errors.tags && <p className="text-sm text-destructive">{errors.tags}</p>}
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-[var(--color-border)]">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-hover-overlay)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
               {t('common.cancel')}
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-4 py-2 bg-[var(--color-brand)] text-white rounded-md hover:bg-[var(--color-brand-hover)] transition-colors disabled:bg-[var(--color-brand-muted)] disabled:cursor-not-allowed"
-            >
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
               {isSubmitting
-                ? mode === 'create'
-                  ? t('nodes.creating')
-                  : t('common.saving')
-                : mode === 'create'
-                ? t('nodes.createNode')
-                : t('common.saveChanges')}
-            </button>
-          </div>
+                ? mode === 'create' ? t('nodes.creating') : t('common.saving')
+                : mode === 'create' ? t('nodes.createNode') : t('common.saveChanges')}
+            </Button>
+          </DialogFooter>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

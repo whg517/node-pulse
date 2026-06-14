@@ -7,27 +7,27 @@ interface HealthStatusBadgeProps {
 const statusConfig = {
   healthy: {
     label: '健康',
-    bgColor: 'bg-[var(--color-healthy-bg)]',
-    textColor: 'text-[var(--color-healthy-text)]',
-    dotColor: 'bg-[var(--color-healthy)]',
+    bgColor: 'bg-healthy-bg',
+    textColor: 'text-healthy-text',
+    dotColor: 'bg-healthy',
   },
   warning: {
     label: '预警',
-    bgColor: 'bg-[var(--color-warning-bg)]',
-    textColor: 'text-[var(--color-warning-text)]',
-    dotColor: 'bg-[var(--color-warning)]',
+    bgColor: 'bg-warning-bg',
+    textColor: 'text-warning-text',
+    dotColor: 'bg-warning',
   },
   critical: {
     label: '异常',
-    bgColor: 'bg-[var(--color-critical-bg)]',
-    textColor: 'text-[var(--color-critical-text)]',
-    dotColor: 'bg-[var(--color-critical)]',
+    bgColor: 'bg-destructive/10',
+    textColor: 'text-destructive',
+    dotColor: 'bg-destructive',
   },
   offline: {
     label: '离线',
-    bgColor: 'bg-[var(--color-unknown-bg)]',
-    textColor: 'text-[var(--color-unknown-text)]',
-    dotColor: 'bg-[var(--color-unknown)]',
+    bgColor: 'bg-muted',
+    textColor: 'text-muted-foreground',
+    dotColor: 'bg-muted-foreground',
   },
 }
 

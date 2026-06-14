@@ -2,12 +2,6 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import MTRPathVisualization, { MTRHop } from './MTRPathVisualization'
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}))
-
 describe('MTRPathVisualization', () => {
   const createMockHop = (overrides: Partial<MTRHop> = {}): MTRHop => ({
     hopNumber: 1,
@@ -30,7 +24,7 @@ describe('MTRPathVisualization', () => {
 
   it('renders empty state', () => {
     render(<MTRPathVisualization hops={[]} />)
-    expect(screen.getByText('mtr.noHopData')).toBeInTheDocument()
+    expect(screen.getByText('No hop data available')).toBeInTheDocument()
   })
 
   // Helper: jsdom can't parse CSS attribute selectors with nested brackets from CSS var classes
@@ -40,31 +34,31 @@ describe('MTRPathVisualization', () => {
   it('applies safe styling', () => {
     const hops = [createMockHop({ lossRate: 0 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(findHopWithClass(container, 'border-[var(--color-healthy-bg)]')).toBeTruthy()
+    expect(findHopWithClass(container, 'border-healthy-bg')).toBeTruthy()
   })
 
   it('applies critical styling for high loss', () => {
     const hops = [createMockHop({ lossRate: 15 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(findHopWithClass(container, 'border-[var(--color-critical-bg)]')).toBeTruthy()
+    expect(findHopWithClass(container, 'border-destructive/10')).toBeTruthy()
   })
 
   it('applies critical styling for high latency', () => {
     const hops = [createMockHop({ avgRTTMs: 250 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(findHopWithClass(container, 'border-[var(--color-critical-bg)]')).toBeTruthy()
+    expect(findHopWithClass(container, 'border-destructive/10')).toBeTruthy()
   })
 
   it('applies warning styling for jitter', () => {
     const hops = [createMockHop({ stdDevMs: 60 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(findHopWithClass(container, 'border-[var(--color-warning-bg)]')).toBeTruthy()
+    expect(findHopWithClass(container, 'border-warning-bg')).toBeTruthy()
   })
 
   it('applies timeout styling', () => {
     const hops = [createMockHop({ lossRate: 100, sent: 10, received: 0 })]
     const { container } = render(<MTRPathVisualization hops={hops} />)
-    expect(container.querySelector('[class*="border-[var(--color-border)]"]')).toBeTruthy()
+    expect(container.querySelector('[class*="border-border"]')).toBeTruthy()
   })
 
   it('calls onHopClick when clicked', () => {

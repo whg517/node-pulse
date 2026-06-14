@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PageContainer, ErrorBanner, LoadingSpinner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
-import { fetchNodes } from '../api/nodes'
-import { fetchBeaconConfig, updateBeaconConfig, fetchConfigHistory } from '../api/beaconConfig'
-import type { BeaconConfigDTO, ProbeConfigDTO, ConfigHistoryEntry } from '../api/beaconConfig'
-import type { NodeDTO } from '../api/types'
-import { useSettingsStore, type ConfigTemplate } from '../stores/settingsStore'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { fetchNodes } from '@/api/nodes'
+import { fetchBeaconConfig, updateBeaconConfig, fetchConfigHistory } from '@/api/beaconConfig'
+import type { BeaconConfigDTO, ProbeConfigDTO, ConfigHistoryEntry } from '@/api/beaconConfig'
+import type { NodeDTO } from '@/api/types'
+import { useSettingsStore, type ConfigTemplate } from '@/stores/settingsStore'
 
 function emptyProbe(): ProbeConfigDTO {
   return {
@@ -145,7 +144,7 @@ export default function BeaconConfigPage() {
   }
 
   return (
-    <PageContainer>
+    <div className="space-y-6">
       <PageHeader
         title={t('beaconConfig.title')}
         subtitle={t('beaconConfig.subtitle')}
@@ -154,7 +153,7 @@ export default function BeaconConfigPage() {
             <button
               type="button"
               onClick={() => setShowHistory(!showHistory)}
-              className="px-4 py-2 text-sm font-medium rounded-lg border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)]"
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-muted-foreground hover:bg-accent/10"
             >
               {showHistory ? t('beaconConfig.hideHistory') : t('beaconConfig.showHistory')}
             </button>
@@ -162,7 +161,7 @@ export default function BeaconConfigPage() {
               type="button"
               onClick={() => void handleSave()}
               disabled={isSaving || !config}
-              className="px-4 py-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white text-sm font-medium rounded-lg disabled:opacity-50"
+              className="px-4 py-2 bg-primary hover:bg-primary/85 text-white text-sm font-medium rounded-lg disabled:opacity-50"
             >
               {isSaving ? t('common.saving') : t('common.save')}
             </button>
@@ -170,22 +169,22 @@ export default function BeaconConfigPage() {
         }
       />
 
-      {error && <ErrorBanner error={new Error(error)} onRetry={loadConfig} className="mb-4" />}
+      {error && <div className="mb-4 rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
       {saveMessage && (
-        <div className="mb-4 rounded-lg bg-[var(--color-healthy-bg)] text-[var(--color-healthy)] px-4 py-2 text-sm">
+        <div className="mb-4 rounded-lg bg-healthy-bg text-healthy px-4 py-2 text-sm">
           {saveMessage}
         </div>
       )}
 
       {/* Node Selector */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
+        <label className="block text-sm font-medium text-muted-foreground mb-2">
           {t('beaconConfig.selectNode')}
         </label>
         <select
           value={selectedNodeId}
           onChange={(e) => setSelectedNodeId(e.target.value)}
-          className="w-full max-w-md rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+          className="w-full max-w-md rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
         >
           {nodes.map((n) => (
             <option key={n.id} value={n.id}>
@@ -196,17 +195,17 @@ export default function BeaconConfigPage() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12"><LoadingSpinner /></div>
+        <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
       ) : config ? (
         <div className="space-y-6">
           {/* Global Config */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)] p-4">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
+          <div className="rounded-lg border border-border bg-card p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">
               {t('beaconConfig.globalSettings')}
             </h3>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   {t('beaconConfig.intervalSeconds')}
                 </label>
                 <input
@@ -214,11 +213,11 @@ export default function BeaconConfigPage() {
                   min={5}
                   value={config.interval_seconds}
                   onChange={(e) => setConfig({ ...config, interval_seconds: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1">
+                <label className="block text-xs font-medium text-muted-foreground mb-1">
                   {t('beaconConfig.timeoutSeconds')}
                 </label>
                 <input
@@ -226,111 +225,111 @@ export default function BeaconConfigPage() {
                   min={1}
                   value={config.timeout_seconds}
                   onChange={(e) => setConfig({ ...config, timeout_seconds: Number(e.target.value) })}
-                  className="w-full rounded-lg border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-3 py-2 text-sm text-[var(--color-text-primary)]"
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
                 />
               </div>
             </div>
-            <div className="mt-2 text-xs text-[var(--color-text-muted)]">
+            <div className="mt-2 text-xs text-muted-foreground">
               {t('beaconConfig.version')}: {config.version} · {t('beaconConfig.updated')}: {new Date(config.updated_at).toLocaleString()}
             </div>
           </div>
 
           {/* Probe List */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
-            <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+          <div className="rounded-lg border border-border bg-card">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">
                 {t('beaconConfig.probes')} ({config.probes.length})
               </h3>
               <button
                 type="button"
                 onClick={handleAddProbe}
-                className="text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+                className="text-sm text-primary hover:text-primary font-medium"
               >
                 + {t('beaconConfig.addProbe')}
               </button>
             </div>
             {config.probes.length === 0 ? (
-              <div className="p-8 text-center text-sm text-[var(--color-text-secondary)]">
+              <div className="p-8 text-center text-sm text-muted-foreground">
                 {t('beaconConfig.noProbes')}
               </div>
             ) : (
-              <div className="divide-y divide-[var(--color-border)]">
+              <div className="divide-y divide-border">
                 {config.probes.map((probe, i) => (
                   <div key={probe.id} className="p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                      <span className="text-sm font-medium text-foreground">
                         {t('beaconConfig.probe')} #{i + 1}
                       </span>
                       <button
                         type="button"
                         onClick={() => handleRemoveProbe(i)}
-                        className="text-xs text-[var(--color-critical)] hover:opacity-80"
+                        className="text-xs text-destructive hover:opacity-80"
                       >
                         {t('common.delete')}
                       </button>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs text-[var(--color-text-muted)] mb-1">Type</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Type</label>
                         <select
                           value={probe.type}
                           onChange={(e) => handleProbeChange(i, 'type', e.target.value)}
-                          className="w-full rounded-md border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-2 py-1 text-xs"
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         >
                           <option value="TCP">TCP</option>
                           <option value="UDP">UDP</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs text-[var(--color-text-muted)] mb-1">Target</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Target</label>
                         <input
                           type="text"
                           value={probe.target}
                           onChange={(e) => handleProbeChange(i, 'target', e.target.value)}
                           placeholder="IP or domain"
-                          className="w-full rounded-md border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-2 py-1 text-xs"
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[var(--color-text-muted)] mb-1">Port</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Port</label>
                         <input
                           type="number"
                           min={1}
                           max={65535}
                           value={probe.port}
                           onChange={(e) => handleProbeChange(i, 'port', Number(e.target.value))}
-                          className="w-full rounded-md border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-2 py-1 text-xs"
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[var(--color-text-muted)] mb-1">Interval (s)</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Interval (s)</label>
                         <input
                           type="number"
                           min={5}
                           value={probe.interval_seconds}
                           onChange={(e) => handleProbeChange(i, 'interval_seconds', Number(e.target.value))}
-                          className="w-full rounded-md border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-2 py-1 text-xs"
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[var(--color-text-muted)] mb-1">Timeout (s)</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Timeout (s)</label>
                         <input
                           type="number"
                           min={1}
                           value={probe.timeout_seconds}
                           onChange={(e) => handleProbeChange(i, 'timeout_seconds', Number(e.target.value))}
-                          className="w-full rounded-md border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-2 py-1 text-xs"
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-[var(--color-text-muted)] mb-1">Count</label>
+                        <label className="block text-xs text-muted-foreground mb-1">Count</label>
                         <input
                           type="number"
                           min={1}
                           max={100}
                           value={probe.count}
                           onChange={(e) => handleProbeChange(i, 'count', Number(e.target.value))}
-                          className="w-full rounded-md border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-2 py-1 text-xs"
+                          className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
                       </div>
                     </div>
@@ -342,24 +341,24 @@ export default function BeaconConfigPage() {
 
           {/* Config History */}
           {showHistory && history.length > 0 && (
-            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
-              <div className="px-4 py-3 border-b border-[var(--color-border)]">
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+            <div className="rounded-lg border border-border bg-card">
+              <div className="px-4 py-3 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground">
                   {t('beaconConfig.configHistory')}
                 </h3>
               </div>
-              <div className="divide-y divide-[var(--color-border)]">
+              <div className="divide-y divide-border">
                 {history.map((entry) => (
                   <div key={entry.version} className="p-3 flex items-center justify-between text-sm">
                     <div>
-                      <span className="font-medium text-[var(--color-text-primary)]">
+                      <span className="font-medium text-foreground">
                         v{entry.version}
                       </span>
-                      <span className="ml-2 text-[var(--color-text-secondary)]">
+                      <span className="ml-2 text-muted-foreground">
                         {entry.config.probes.length} {t('beaconConfig.probes')}
                       </span>
                     </div>
-                    <div className="text-xs text-[var(--color-text-muted)]">
+                    <div className="text-xs text-muted-foreground">
                       {entry.changed_by} · {new Date(entry.changed_at).toLocaleString()}
                     </div>
                   </div>
@@ -369,50 +368,50 @@ export default function BeaconConfigPage() {
           )}
 
           {/* Config Templates */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]">
-            <div className="px-4 py-3 border-b border-[var(--color-border)] flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+          <div className="rounded-lg border border-border bg-card">
+            <div className="px-4 py-3 border-b border-border flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">
                 {t('beaconConfig.templates')}
               </h3>
               {!showSaveTemplate && (
                 <button
                   type="button"
                   onClick={() => setShowSaveTemplate(true)}
-                  className="text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+                  className="text-sm text-primary hover:text-primary font-medium"
                 >
                   + {t('beaconConfig.saveAsTemplate')}
                 </button>
               )}
             </div>
             {showSaveTemplate && (
-              <div className="px-4 py-3 border-b border-[var(--color-border)] space-y-2">
+              <div className="px-4 py-3 border-b border-border space-y-2">
                 <input
                   type="text"
                   value={templateName}
                   onChange={(e) => setTemplateName(e.target.value)}
                   placeholder={t('beaconConfig.templateName')}
-                  className="w-full rounded-md border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-2 py-1 text-sm"
+                  className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
                 />
                 <input
                   type="text"
                   value={templateDesc}
                   onChange={(e) => setTemplateDesc(e.target.value)}
                   placeholder={t('beaconConfig.templateDescription')}
-                  className="w-full rounded-md border border-[var(--color-input-border)] bg-[var(--color-input-bg)] px-2 py-1 text-sm"
+                  className="w-full rounded-md border border-input bg-background px-2 py-1 text-sm"
                 />
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={handleSaveTemplate}
                     disabled={!templateName.trim()}
-                    className="px-3 py-1 bg-[var(--color-brand)] text-white text-xs font-medium rounded-md disabled:opacity-50"
+                    className="px-3 py-1 bg-primary text-white text-xs font-medium rounded-md disabled:opacity-50"
                   >
                     {t('common.save')}
                   </button>
                   <button
                     type="button"
                     onClick={() => { setShowSaveTemplate(false); setTemplateName(''); setTemplateDesc('') }}
-                    className="px-3 py-1 text-xs font-medium rounded-md border border-[var(--color-border)] text-[var(--color-text-secondary)]"
+                    className="px-3 py-1 text-xs font-medium rounded-md border border-border text-muted-foreground"
                   >
                     {t('common.cancel')}
                   </button>
@@ -420,19 +419,19 @@ export default function BeaconConfigPage() {
               </div>
             )}
             {configTemplates.length === 0 ? (
-              <div className="p-6 text-center text-sm text-[var(--color-text-secondary)]">
+              <div className="p-6 text-center text-sm text-muted-foreground">
                 {t('beaconConfig.noTemplates')}
               </div>
             ) : (
-              <div className="divide-y divide-[var(--color-border)]">
+              <div className="divide-y divide-border">
                 {configTemplates.map((tmpl) => (
                   <div key={tmpl.id} className="px-4 py-3 flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-[var(--color-text-primary)]">{tmpl.name}</p>
+                      <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
                       {tmpl.description && (
-                        <p className="text-xs text-[var(--color-text-muted)]">{tmpl.description}</p>
+                        <p className="text-xs text-muted-foreground">{tmpl.description}</p>
                       )}
-                      <p className="text-xs text-[var(--color-text-muted)]">
+                      <p className="text-xs text-muted-foreground">
                         {tmpl.probes.length} {t('beaconConfig.probes')}
                       </p>
                     </div>
@@ -440,14 +439,14 @@ export default function BeaconConfigPage() {
                       <button
                         type="button"
                         onClick={() => handleApplyTemplate(tmpl)}
-                        className="text-xs text-[var(--color-brand)] hover:opacity-80 font-medium"
+                        className="text-xs text-primary hover:opacity-80 font-medium"
                       >
                         {t('beaconConfig.applyTemplate')}
                       </button>
                       <button
                         type="button"
                         onClick={() => deleteConfigTemplate(tmpl.id)}
-                        className="text-xs text-[var(--color-critical)] hover:opacity-80"
+                        className="text-xs text-destructive hover:opacity-80"
                       >
                         {t('common.delete')}
                       </button>
@@ -459,6 +458,6 @@ export default function BeaconConfigPage() {
           </div>
         </div>
       ) : null}
-    </PageContainer>
+    </div>
   )
 }

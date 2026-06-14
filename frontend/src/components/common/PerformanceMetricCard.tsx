@@ -13,24 +13,24 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
 
   return (
     <div
-      className={`bg-white rounded-lg shadow p-6 border-l-4 ${
-        isHealthy ? 'border-[var(--color-healthy)]' : 'border-[var(--color-critical)]'
+      className={`bg-background rounded-lg shadow p-6 border-l-4 ${
+        isHealthy ? 'border-healthy' : 'border-destructive'
       }`}
     >
       {/* Metric Name */}
-      <h3 className="text-lg font-semibold text-gray-900 mb-4">
+      <h3 className="text-lg font-semibold text-foreground mb-4">
         {metric.display_name}
       </h3>
 
       {/* Current Values */}
       <div className="space-y-3">
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">P99 当前值</span>
+          <span className="text-sm text-muted-foreground">P99 当前值</span>
           <span
             className={`text-lg font-bold ${
               metric.current_p99 > metric.target_p99
-                ? 'text-[var(--color-critical)]'
-                : 'text-[var(--color-healthy)]'
+                ? 'text-destructive'
+                : 'text-healthy'
             }`}
           >
             {metric.current_p99.toFixed(0)} {metric.unit}
@@ -38,12 +38,12 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
         </div>
 
         <div className="flex justify-between items-center">
-          <span className="text-sm text-gray-600">P95 当前值</span>
+          <span className="text-sm text-muted-foreground">P95 当前值</span>
           <span
             className={`text-lg font-bold ${
               metric.current_p95 > metric.target_p95
-                ? 'text-[var(--color-critical)]'
-                : 'text-[var(--color-healthy)]'
+                ? 'text-destructive'
+                : 'text-healthy'
             }`}
           >
             {metric.current_p95.toFixed(0)} {metric.unit}
@@ -51,23 +51,23 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
         </div>
 
         {/* Target Values (Reference) */}
-        <div className="pt-3 border-t border-gray-200">
+        <div className="pt-3 border-t border-border">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500">目标值 P99</span>
-            <span className="text-gray-700">≤ {metric.target_p99} {metric.unit}</span>
+            <span className="text-muted-foreground">目标值 P99</span>
+            <span className="text-foreground/80">≤ {metric.target_p99} {metric.unit}</span>
           </div>
           <div className="flex justify-between items-center text-sm">
-            <span className="text-gray-500">目标值 P95</span>
-            <span className="text-gray-700">≤ {metric.target_p95} {metric.unit}</span>
+            <span className="text-muted-foreground">目标值 P95</span>
+            <span className="text-foreground/80">≤ {metric.target_p95} {metric.unit}</span>
           </div>
         </div>
 
         {/* Anomaly Warning */}
         {!isHealthy && metric.anomaly && (
-          <div className="mt-4 p-3 bg-[var(--color-critical-bg)] border border-[var(--color-critical-bg)] rounded-md">
+          <div className="mt-4 p-3 bg-destructive/10 border border-destructive/10 rounded-md">
             <div className="flex items-center">
               <svg
-                className="w-5 h-5 text-[var(--color-critical)] mr-2"
+                className="w-5 h-5 text-destructive mr-2"
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
@@ -77,7 +77,7 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
                   clipRule="evenodd"
                 />
               </svg>
-              <span className="text-sm font-medium text-[var(--color-critical-text)]">
+              <span className="text-sm font-medium text-destructive">
                 {metric.anomaly}
               </span>
             </div>
@@ -86,12 +86,12 @@ export function PerformanceMetricCard({ metric }: PerformanceMetricCardProps) {
 
         {/* Health Status Badge */}
         <div className="mt-4 flex items-center justify-between">
-          <span className="text-sm text-gray-600">状态</span>
+          <span className="text-sm text-muted-foreground">状态</span>
           <span
             className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
               isHealthy
-                ? 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]'
-                : 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]'
+                ? 'bg-healthy-bg text-healthy-text'
+                : 'bg-destructive/10 text-destructive'
             }`}
           >
             {isHealthy ? '健康' : '异常'}

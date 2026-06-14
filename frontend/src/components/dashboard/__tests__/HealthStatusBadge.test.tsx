@@ -8,7 +8,7 @@ describe('HealthStatusBadge', () => {
       render(<HealthStatusBadge status="healthy" />)
       const badge = screen.getByRole('status', { name: /health status: 健康/i })
       expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-[var(--color-healthy-bg)]', 'text-[var(--color-healthy-text)]')
+      expect(badge).toHaveClass('bg-healthy-bg', 'text-healthy-text')
       expect(badge).toHaveTextContent('健康')
     })
 
@@ -16,7 +16,7 @@ describe('HealthStatusBadge', () => {
       render(<HealthStatusBadge status="warning" />)
       const badge = screen.getByRole('status', { name: /health status: 预警/i })
       expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-[var(--color-warning-bg)]', 'text-[var(--color-warning-text)]')
+      expect(badge).toHaveClass('bg-warning-bg', 'text-warning-text')
       expect(badge).toHaveTextContent('预警')
     })
 
@@ -24,7 +24,7 @@ describe('HealthStatusBadge', () => {
       render(<HealthStatusBadge status="critical" />)
       const badge = screen.getByRole('status', { name: /health status: 异常/i })
       expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-[var(--color-critical-bg)]', 'text-[var(--color-critical-text)]')
+      expect(badge).toHaveClass('bg-destructive/10', 'text-destructive')
       expect(badge).toHaveTextContent('异常')
     })
 
@@ -32,7 +32,7 @@ describe('HealthStatusBadge', () => {
       render(<HealthStatusBadge status="offline" />)
       const badge = screen.getByRole('status', { name: /health status: 离线/i })
       expect(badge).toBeInTheDocument()
-      expect(badge).toHaveClass('bg-[var(--color-unknown-bg)]', 'text-[var(--color-unknown-text)]')
+      expect(badge).toHaveClass('bg-muted', 'text-muted-foreground')
       expect(badge).toHaveTextContent('离线')
     })
   })
@@ -80,16 +80,16 @@ describe('HealthStatusBadge', () => {
 
     it('should display colored dot for all status types', () => {
       const { rerender } = render(<HealthStatusBadge status="healthy" />)
-      expect(screen.getByRole('status').querySelector('.bg-\\[var\\(--color-healthy\\)\\]')).toBeInTheDocument()
+      expect(screen.getByRole('status').querySelector('.bg-healthy')).toBeInTheDocument()
 
       rerender(<HealthStatusBadge status="warning" />)
-      expect(screen.getByRole('status').querySelector('.bg-\\[var\\(--color-warning\\)\\]')).toBeInTheDocument()
+      expect(screen.getByRole('status').querySelector('.bg-warning')).toBeInTheDocument()
 
       rerender(<HealthStatusBadge status="critical" />)
-      expect(screen.getByRole('status').querySelector('.bg-\\[var\\(--color-critical\\)\\]')).toBeInTheDocument()
+      expect(screen.getByRole('status').querySelector('.bg-destructive')).toBeInTheDocument()
 
       rerender(<HealthStatusBadge status="offline" />)
-      expect(screen.getByRole('status').querySelector('.bg-\\[var\\(--color-unknown\\)\\]')).toBeInTheDocument()
+      expect(screen.getByRole('status').querySelector('.bg-muted-foreground')).toBeInTheDocument()
     })
   })
 })

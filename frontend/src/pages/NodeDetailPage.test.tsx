@@ -11,62 +11,6 @@ vi.mock('../i18n', () => ({
   i18nInitPromise: Promise.resolve(),
 }))
 
-const mockI18n = { changeLanguage: vi.fn() }
-const mockTranslate = (key: string, options?: { count?: number }) => {
-  const translations: Record<string, string> = {
-    'common.loading': 'Loading node details...',
-    'common.error': 'Error',
-    'common.back': 'Back to Dashboard',
-    'errors.failedToLoad': 'Error Loading Node',
-    'errors.nodeNotFound': 'Node Not Found',
-    'errors.notFound': 'The requested node does not exist.',
-    'errors.loadHistoricalError': 'Failed to load historical data.',
-    'nodes.errorLoadingNode': 'Error Loading Node',
-    'nodes.nodeNotFound': 'Node Not Found',
-    'nodes.nodeNotFoundDescription': 'The requested node does not exist.',
-    'nodes.backToDashboard': 'Back to Dashboard',
-    'nodes.details': 'Node Details',
-    'nodes.status': 'Status',
-    'nodes.region': 'Region',
-    'nodes.tags': 'Tags',
-    'nodes.noTags': 'No tags',
-    'nodes.metrics': 'Metrics',
-    'nodes.latency': 'Latency',
-    'nodes.packetLoss': 'Packet Loss Rate',
-    'nodes.jitter': 'Jitter',
-    'nodes.lastHeartbeat': 'Last Heartbeat',
-    'nodes.problemDiagnosis': 'Problem Diagnosis',
-    'nodes.noDiagnosisData': 'No diagnosis data available',
-    'nodes.diagnosisNote': 'Note: Current diagnosis uses client-side analysis based on available metrics.',
-    'mtr.title': 'MTR Traceroute',
-    'mtr.noData': 'No MTR data available',
-    'nodes.mtrBackendNote': 'MTR path data is not yet available from the API.',
-    'navigation.dashboard': 'Dashboard',
-    'status.online': 'online',
-    'status.offline': 'Offline',
-    'status.connecting': 'Connecting',
-    'status.live': 'Live',
-    'nodes.live': 'Live',
-    'metrics.latency': 'Latency',
-    'metrics.packetLoss': 'Packet Loss Rate',
-    'metrics.jitter': 'Jitter',
-    'aria.backToDashboard': 'Back to Dashboard',
-    'time.justNow': 'Just now',
-    'time.minutesAgo': `${options?.count || 1} minute${(options?.count || 1) > 1 ? 's' : ''} ago`,
-    'time.hoursAgo': `${options?.count || 1} hour${(options?.count || 1) > 1 ? 's' : ''} ago`,
-  }
-  return translations[key] || key
-}
-
-// Mock react-i18next
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: vi.fn() },
-  useTranslation: () => ({
-    t: mockTranslate,
-    i18n: mockI18n,
-  }),
-}))
-
 // Mock useTheme hook
 vi.mock('../hooks/useTheme', () => ({
   useTheme: () => ({ isDark: false }),
@@ -129,7 +73,7 @@ describe('NodeDetailPage', () => {
 
     await renderNodeDetailPage()
 
-    expect(screen.getByText('Loading node details...')).toBeInTheDocument()
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
   })
 
   it('renders error state', async () => {
@@ -146,9 +90,9 @@ describe('NodeDetailPage', () => {
 
     await renderNodeDetailPage()
 
-    expect(screen.getByText('Error Loading Node')).toBeInTheDocument()
+    expect(screen.getByText('Failed to load data')).toBeInTheDocument()
     expect(screen.getByText('Failed to load node')).toBeInTheDocument()
-    expect(screen.getByText('Back to Dashboard')).toBeInTheDocument()
+    expect(screen.getByText('Back')).toBeInTheDocument()
   })
 
   it('renders node not found state', async () => {
@@ -164,8 +108,8 @@ describe('NodeDetailPage', () => {
 
     await renderNodeDetailPage()
 
-    expect(screen.getByText('Node Not Found')).toBeInTheDocument()
     expect(screen.getByText('The requested node does not exist.')).toBeInTheDocument()
+    expect(screen.getByText('Not found')).toBeInTheDocument()
   })
 
   it('renders node details successfully', async () => {
@@ -250,7 +194,7 @@ describe('NodeDetailPage', () => {
     const msLabels = screen.getAllByText('ms')
     expect(msLabels.length).toBeGreaterThan(0)
 
-    expect(screen.getByText('Packet Loss Rate')).toBeInTheDocument()
+    expect(screen.getByText('Packet Loss')).toBeInTheDocument()
     expect(screen.getByText('0.5')).toBeInTheDocument()
     expect(screen.getByText('%')).toBeInTheDocument()
 
@@ -284,7 +228,7 @@ describe('NodeDetailPage', () => {
 
     await renderNodeDetailPage()
 
-    expect(screen.getByText('online')).toBeInTheDocument()
+    expect(screen.getByText('Online')).toBeInTheDocument()
     expect(screen.getByText('Live')).toBeInTheDocument()
   })
 

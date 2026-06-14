@@ -71,12 +71,12 @@ describe('PerformanceMetricCard', () => {
   it('applies green border for healthy metric', () => {
     const { container } = render(<PerformanceMetricCard metric={healthyMetric} />)
     const card = container.firstChild as HTMLElement
-    expect(card.className).toContain('border-[var(--color-healthy)]')
+    expect(card.className).toContain('border-healthy')
   })
 
   it('applies red border for unhealthy metric', () => {
     const { container } = render(<PerformanceMetricCard metric={unhealthyMetric} />)
     const card = container.firstChild as HTMLElement
-    expect(card.className).toContain('border-[var(--color-critical)]')
+    expect(card.className).toContain('border-destructive')
   })
 })

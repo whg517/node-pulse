@@ -3,47 +3,6 @@ import { describe, it, expect, vi } from 'vitest'
 import MTRVisualization, { MTRHop, MTRResult } from './MTRVisualization'
 
 // Mock react-i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string, params?: Record<string, unknown>) => {
-      const translations: Record<string, string> = {
-        'mtr.title': 'MTR Traceroute',
-        'mtr.target': 'Target',
-        'mtr.totalHops': 'Total Hops',
-        'mtr.completedAt': 'Completed At',
-        'mtr.pathStatus': 'Path Status',
-        'mtr.hopList': 'Hop List',
-        'mtr.hopAriaLabel': `Hop {{number}}: {{ip}}`,
-        'mtr.loss': 'Loss',
-        'mtr.avg': 'Avg',
-        'mtr.min': 'Min',
-        'mtr.max': 'Max',
-        'mtr.stdDev': 'Std Dev',
-        'mtr.packets': 'Packets',
-        'mtr.received': 'received',
-        'mtr.legend': 'Legend',
-        'mtr.running': 'Running MTR trace...',
-        'mtr.noData': 'No MTR data available',
-        'mtr.error': 'MTR trace failed',
-        'mtr.healthStatus.healthy': 'Healthy',
-        'mtr.healthStatus.degraded': 'Degraded',
-        'mtr.healthStatus.problematic': 'Problematic',
-        'mtr.legendDescription.healthy': '< 5% loss',
-        'mtr.legendDescription.degraded': '5-20% loss',
-        'mtr.legendDescription.problematic': '> 20% loss',
-        'common.loading': 'Loading...',
-      }
-      let result = translations[key] || key
-      if (params) {
-        Object.entries(params).forEach(([k, v]) => {
-          result = result.replace(`{{${k}}}`, String(v))
-        })
-      }
-      return result
-    },
-  }),
-}))
-
 describe('MTRVisualization', () => {
   const createMockHop = (overrides: Partial<MTRHop> = {}): MTRHop => ({
     hopNumber: 1,
@@ -155,7 +114,7 @@ describe('MTRVisualization', () => {
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      expect(findHopWithClass(container, 'border-[var(--color-healthy-bg)]')).toBeTruthy()
+      expect(findHopWithClass(container, 'border-healthy-bg')).toBeTruthy()
     })
 
     it('should apply yellow styling for degraded hops (5-20% loss)', () => {
@@ -164,7 +123,7 @@ describe('MTRVisualization', () => {
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      expect(findHopWithClass(container, 'border-[var(--color-warning-bg)]')).toBeTruthy()
+      expect(findHopWithClass(container, 'border-warning-bg')).toBeTruthy()
     })
 
     it('should apply red styling for problematic hops (> 20% loss)', () => {
@@ -173,7 +132,7 @@ describe('MTRVisualization', () => {
       })
       const { container } = render(<MTRVisualization data={data} />)
 
-      expect(findHopWithClass(container, 'border-[var(--color-critical-bg)]')).toBeTruthy()
+      expect(findHopWithClass(container, 'border-destructive/10')).toBeTruthy()
     })
 
     it('should display healthy badge for path with all healthy hops', () => {
@@ -494,7 +453,7 @@ describe('MTRVisualization', () => {
       const { container } = render(<MTRVisualization data={data} />)
 
       expect(screen.getByText('100.0%')).toBeInTheDocument()
-      const hopEl = Array.from(container.querySelectorAll('[role="listitem"]')).find(el => el.className.includes('border-[var(--color-critical-bg)]'))
+      const hopEl = Array.from(container.querySelectorAll('[role="listitem"]')).find(el => el.className.includes('border-destructive/10'))
       expect(hopEl).toBeTruthy()
     })
 

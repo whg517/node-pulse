@@ -158,7 +158,20 @@
     "healthDistribution": "健康分布",
     "averageMetrics": "平均指标",
     "nodesRequiringAttention": "需要关注的节点",
-    "allSystemsNormal": "所有系统正常"
+    "allSystemsNormal": "所有系统正常",
+    "nodeList": "节点列表",
+    "nodeListDescription": "所有监控节点及其健康状态概览",
+    "nodeName": "节点名称",
+    "ipAddress": "IP地址",
+    "region": "区域",
+    "status": "状态",
+    "health": "健康",
+    "online": "在线",
+    "offline": "离线",
+    "noNodes": "暂无节点",
+    "noNodesDescription": "尚未配置监控节点，请先添加第一个节点。",
+    "acrossNodes": "共 {{count}} 个节点",
+    "acrossNodes_one": "共 {{count}} 个节点"
   },
   "nodes": {
     "title": "节点",

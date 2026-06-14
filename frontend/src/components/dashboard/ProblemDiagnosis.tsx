@@ -43,7 +43,7 @@ export default function ProblemDiagnosis({
       labelZh: '节点本地故障',
       description: 'Issue detected on this specific node only',
       descriptionZh: '仅在此节点检测到问题',
-      color: 'bg-[var(--color-critical-bg)] border-[var(--color-critical-bg)] text-[var(--color-critical-text)]',
+      color: 'bg-destructive/10 border-destructive/10 text-destructive',
       icon: '⚠️',
     },
     cross_border_link: {
@@ -51,7 +51,7 @@ export default function ProblemDiagnosis({
       labelZh: '跨境链路问题',
       description: 'Issue affecting multiple nodes across regions',
       descriptionZh: '影响多个跨区域节点的问题',
-      color: 'bg-[var(--color-warning-bg)] border-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
+      color: 'bg-warning-bg border-warning-bg text-warning-text',
       icon: '🌍',
     },
     carrier_routing: {
@@ -59,7 +59,7 @@ export default function ProblemDiagnosis({
       labelZh: '运营商路由问题',
       description: 'Issue related to ISP routing changes',
       descriptionZh: '与ISP路由变更相关的问题',
-      color: 'bg-[var(--color-warning-bg)] border-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
+      color: 'bg-warning-bg border-warning-bg text-warning-text',
       icon: '🔀',
     },
     none: {
@@ -67,7 +67,7 @@ export default function ProblemDiagnosis({
       labelZh: '未检测到问题',
       description: 'All metrics are within normal ranges',
       descriptionZh: '所有指标均在正常范围内',
-      color: 'bg-[var(--color-healthy-bg)] border-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]',
+      color: 'bg-healthy-bg border-healthy-bg text-healthy-text',
       icon: '✓',
     },
   }
@@ -75,16 +75,16 @@ export default function ProblemDiagnosis({
   const config = problemConfig[problemType]
 
   const confidenceConfig = {
-    high: { label: 'High', labelZh: '高', color: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]' },
-    medium: { label: 'Medium', labelZh: '中', color: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]' },
-    low: { label: 'Low', labelZh: '低', color: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]' },
+    high: { label: 'High', labelZh: '高', color: 'bg-healthy-bg text-healthy-text' },
+    medium: { label: 'Medium', labelZh: '中', color: 'bg-warning-bg text-warning-text' },
+    low: { label: 'Low', labelZh: '低', color: 'bg-destructive/10 text-destructive' },
   }
 
   const conf = confidenceConfig[confidence]
 
   return (
     <div
-      className={`problem-diagnosis bg-[var(--color-bg-surface)] rounded-lg border-2 p-4 shadow-sm ${config.color} ${className}`}
+      className={`problem-diagnosis bg-card rounded-lg border-2 p-4 shadow-sm ${config.color} ${className}`}
       role="region"
       aria-label="Problem diagnosis"
     >
@@ -120,7 +120,7 @@ export default function ProblemDiagnosis({
             {conf.label} Confidence
           </span>
           <button
-            className="text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] transition-colors"
+            className="text-muted-foreground hover:text-foreground transition-colors"
             aria-label={isExpanded ? 'Collapse details' : 'Expand details'}
           >
             <svg

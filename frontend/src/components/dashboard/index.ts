@@ -20,3 +20,6 @@ export type {
   ComparisonChartProps,
 } from './ComparisonChart'
 export { AlertStream } from './AlertStream'
+export { LatencyTrendChart } from './LatencyTrendChart'
+export { WorldMap } from './WorldMap'
+export type { HealthStatus, NodeLocation, WorldMapProps } from './WorldMap'

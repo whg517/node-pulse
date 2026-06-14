@@ -77,13 +77,13 @@ export default function SessionList({
 
   if (isLoading) {
     return (
-      <div className="bg-[var(--color-bg-surface)] shadow rounded-lg p-6">
+      <div className="bg-card shadow rounded-lg p-6">
         <div className="animate-pulse space-y-4">
           {[1, 2, 3].map((i) => (
             <div key={i} className="flex items-center space-x-4">
-              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/4"></div>
-              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div>
-              <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-1/4"></div>
+              <div className="h-4 bg-muted dark:bg-accent rounded w-1/4"></div>
+              <div className="h-4 bg-muted dark:bg-accent rounded w-1/3"></div>
+              <div className="h-4 bg-muted dark:bg-accent rounded w-1/4"></div>
             </div>
           ))}
         </div>
@@ -92,13 +92,13 @@ export default function SessionList({
   }
 
   return (
-    <div className="bg-[var(--color-bg-surface)] shadow rounded-lg overflow-hidden border border-[var(--color-border)]">
-      <div className="px-6 py-4 border-b border-[var(--color-border)] flex justify-between items-center">
-        <h3 className="text-lg font-medium text-[var(--color-text-primary)]">{t('sessions.activeSessions')}</h3>
+    <div className="bg-card shadow rounded-lg overflow-hidden border border-border">
+      <div className="px-6 py-4 border-b border-border flex justify-between items-center">
+        <h3 className="text-lg font-medium text-foreground">{t('sessions.activeSessions')}</h3>
         <button
           onClick={onRefresh}
           disabled={isLoading}
-          className="inline-flex items-center px-3 py-1.5 border border-[var(--color-border-strong)] rounded-md text-sm font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--color-brand)] disabled:opacity-50"
+          className="inline-flex items-center px-3 py-1.5 border border-foreground/20 rounded-md text-sm font-medium text-muted-foreground bg-card hover:bg-accent/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
         >
           <svg
             className={`-ml-1 mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
@@ -118,32 +118,32 @@ export default function SessionList({
       </div>
 
       {sessions.length === 0 ? (
-        <div className="px-6 py-8 text-center text-[var(--color-text-secondary)]">
+        <div className="px-6 py-8 text-center text-muted-foreground">
           {t('sessions.noSessions')}
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-[var(--color-border)]">
-            <thead className="bg-[var(--color-bg-muted)]">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('sessions.device')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('sessions.ipAddress')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('sessions.created')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('sessions.expires')}
                 </th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                   {t('common.actions')}
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
+            <tbody className="bg-card divide-y divide-border">
               {sessions.map((session) => {
                 const isCurrent = session.session_id === currentSessionId
                 const isRevoking = revokingId === session.session_id
@@ -151,12 +151,12 @@ export default function SessionList({
                 const { browser, device } = parseUserAgent(session.user_agent || '')
 
                 return (
-                  <tr key={session.session_id} className="hover:bg-[var(--color-hover-overlay)]">
+                  <tr key={session.session_id} className="hover:bg-accent/10">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-[var(--color-bg-muted)] flex items-center justify-center">
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
                           <svg
-                            className="h-4 w-4 text-[var(--color-text-secondary)]"
+                            className="h-4 w-4 text-muted-foreground"
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -171,45 +171,45 @@ export default function SessionList({
                         </div>
                         <div className="ml-4">
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                            <span className="text-sm font-medium text-foreground">
                               {device}
                             </span>
                             {isCurrent && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]" data-testid="current-session">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-healthy-bg text-healthy-text" data-testid="current-session">
                                 {t('sessions.currentSession')}
                               </span>
                             )}
                           </div>
-                          <span className="text-xs text-[var(--color-text-muted)]">{browser}</span>
+                          <span className="text-xs text-muted-foreground">{browser}</span>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {session.ip_address || 'Unknown IP'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {formatDateTime(session.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-secondary)]">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                       {formatDateTime(session.expires_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       {isConfirming ? (
                         <div className="flex items-center justify-end space-x-2">
-                          <span className="text-sm text-[var(--color-critical)]">
+                          <span className="text-sm text-destructive">
                             {isCurrent ? t('sessions.logoutWarning') + ' ' : ''}{t('sessions.confirmRevoke')}
                           </span>
                           <button
                             onClick={() => handleRevoke(session.session_id, isCurrent)}
                             disabled={isRevoking}
-                            className="inline-flex items-center px-2 py-1 border border-[var(--color-critical-bg)] rounded text-xs font-medium text-[var(--color-critical-text)] bg-[var(--color-critical-bg)] hover:bg-[var(--color-critical-bg)] focus:outline-none disabled:opacity-50"
+                            className="inline-flex items-center px-2 py-1 border border-destructive/10 rounded text-xs font-medium text-destructive bg-destructive/10 hover:bg-destructive/10 focus:outline-none disabled:opacity-50"
                           >
                             {isRevoking ? t('sessions.revoking') : t('sessions.yesRevoke')}
                           </button>
                           <button
                             onClick={() => setConfirmRevoke(null)}
                             disabled={isRevoking}
-                            className="inline-flex items-center px-2 py-1 border border-[var(--color-border-strong)] rounded text-xs font-medium text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:outline-none disabled:opacity-50"
+                            className="inline-flex items-center px-2 py-1 border border-foreground/20 rounded text-xs font-medium text-muted-foreground bg-card hover:bg-accent/10 focus:outline-none disabled:opacity-50"
                           >
                             {t('common.cancel')}
                           </button>
@@ -220,8 +220,8 @@ export default function SessionList({
                           disabled={isRevoking || isLoading}
                           className={`inline-flex items-center px-3 py-1.5 border rounded text-xs font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 ${
                             isCurrent
-                              ? 'border-[var(--color-critical-bg)] text-[var(--color-critical-text)] bg-[var(--color-critical-bg)] hover:bg-[var(--color-critical-bg)] focus:ring-[var(--color-critical)]'
-                              : 'border-[var(--color-border-strong)] text-[var(--color-text-secondary)] bg-[var(--color-bg-surface)] hover:bg-[var(--color-hover-overlay)] focus:ring-[var(--color-brand)]'
+                              ? 'border-destructive/10 text-destructive bg-destructive/10 hover:bg-destructive/10 focus:ring-destructive'
+                              : 'border-foreground/20 text-muted-foreground bg-card hover:bg-accent/10 focus:ring-primary'
                           }`}
                         >
                           {t('sessions.revoke')}

@@ -1,184 +1,78 @@
-/**
- * Probe Success Rate Gauge Component
- *
- * ECharts-based gauge chart for displaying probe success rate.
- * Supports dark/light theme switching via useTheme hook.
- */
-
-import { useEffect, useRef, useCallback } from 'react'
-import echarts from '../../lib/echarts-core'
-import type { ECharts, EChartsOption } from '../../lib/echarts-core'
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts'
 import { useTranslation } from 'react-i18next'
 import { useThemeColors } from '../../hooks/useThemeColors'
 
-function getCSSVar(name: string): string {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-}
-
 export interface ProbeSuccessGaugeProps {
-  value: number // 0-100 percentage
+  value: number
   height?: string
   className?: string
   isLoading?: boolean
 }
 
-/**
- * Get color based on success rate value
- */
 function getColorForValue(value: number, themeColors: ReturnType<typeof useThemeColors>): string {
-  if (value >= 95) return themeColors.healthy
-  if (value >= 80) return themeColors.warning
-  if (value >= 50) return themeColors.critical
-  return themeColors.unknown
+  if (value >= 95) return themeColors.healthy || 'var(--chart-2)'
+  if (value >= 80) return themeColors.warning || 'var(--chart-4)'
+  if (value >= 50) return themeColors.critical || 'var(--destructive)'
+  return themeColors.unknown || 'var(--muted-foreground)'
 }
 
-/**
- * ProbeSuccessGauge Component
- *
- * @param value - Success rate percentage (0-100)
- * @param height - Chart height (default: 200px)
- * @param className - Additional CSS classes
- * @param isLoading - Loading state
- */
 export function ProbeSuccessGauge({
   value,
   height = '200px',
   className = '',
   isLoading = false,
 }: ProbeSuccessGaugeProps) {
-  const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<ECharts | null>(null)
   const { t } = useTranslation()
   const themeColors = useThemeColors()
+  const color = getColorForValue(value, themeColors)
+  const clampedValue = Math.max(0, Math.min(100, value))
 
-  const getChartOptions = useCallback((): EChartsOption => {
-    const textColor = getCSSVar('--color-chart-text') || '#374151'
-    const trackColor = getCSSVar('--color-chart-grid') || '#e5e7eb'
-    const color = getColorForValue(value, themeColors)
+  const data = [
+    { name: 'success', value: clampedValue },
+    { name: 'remaining', value: 100 - clampedValue },
+  ]
 
-    return {
-      backgroundColor: 'transparent',
-      series: [
-        {
-          type: 'gauge',
-          startAngle: 200,
-          endAngle: -20,
-          min: 0,
-          max: 100,
-          splitNumber: 10,
-          itemStyle: {
-            color,
-          },
-          progress: {
-            show: true,
-            width: 18,
-          },
-          pointer: {
-            show: false,
-          },
-          axisLine: {
-            lineStyle: {
-              width: 18,
-              color: [[1, trackColor || '#e5e7eb']],
-            },
-          },
-          axisTick: {
-            show: false,
-          },
-          splitLine: {
-            show: false,
-          },
-          axisLabel: {
-            show: false,
-          },
-          anchor: {
-            show: false,
-          },
-          title: {
-            show: true,
-            offsetCenter: [0, '35%'],
-            fontSize: 12,
-            color: textColor,
-            formatter: t('dashboard.probeSuccessRate'),
-          },
-          detail: {
-            valueAnimation: true,
-            width: '60%',
-            lineHeight: 32,
-            borderRadius: 8,
-            offsetCenter: [0, '20%'],
-            fontSize: 28,
-            fontWeight: 'bold',
-            formatter: `{value}${t('units.percent')}`,
-            color,
-          },
-          data: [
-            {
-              value: Math.round(value),
-            },
-          ],
-        },
-      ],
-    }
-  }, [value, t, themeColors])
-
-  // Initialize chart only once on mount
-  useEffect(() => {
-    if (!chartRef.current) return
-
-    chartInstance.current = echarts.init(chartRef.current)
-
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.dispose()
-        chartInstance.current = null
-      }
-    }
-  }, []) // Empty deps - only run on mount/unmount
-
-  // Update chart options when value or theme changes
-  useEffect(() => {
-    if (!chartInstance.current || isLoading) return
-
-    chartInstance.current.setOption(getChartOptions(), true)
-  }, [value, isLoading, getChartOptions])
-
-  // Handle resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (chartInstance.current) {
-        chartInstance.current.resize()
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [])
+  const trackColor = 'var(--muted)'
 
   return (
-    <div
-      className={`probe-success-gauge ${className}`}
-      role="img"
-      aria-label={`${t('dashboard.probeSuccessRate')}: ${value.toFixed(1)}${t('units.percent')}`}
-    >
-      <div
-        ref={chartRef}
-        style={{ height }}
-      />
-      {isLoading && (
-        <div className="flex items-center justify-center h-full">
-          <div
-            className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-healthy)]"
-            role="status"
-            aria-label={t('common.loading')}
-          />
+    <div className={`probe-success-gauge ${className}`} role="img" aria-label={`${t('dashboard.probeSuccessRate')}: ${value.toFixed(1)}${t('units.percent')}`}>
+      {isLoading ? (
+        <div className="flex items-center justify-center" style={{ height }}>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-healthy" role="status" aria-label={t('common.loading')} />
+        </div>
+      ) : (
+        <div className="relative" style={{ height }}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey="value"
+                cx="50%"
+                cy="50%"
+                innerRadius="65%"
+                outerRadius="85%"
+                startAngle={200}
+                endAngle={-20}
+                strokeWidth={0}
+                isAnimationActive={false}
+                animationBegin={0}
+                animationDuration={600}
+              >
+                <Cell fill={color} />
+                <Cell fill={trackColor} />
+              </Pie>
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+            <span className="text-2xl font-bold" style={{ color }}>
+              {Math.round(clampedValue)}{t('units.percent')}
+            </span>
+            <span className="text-xs text-muted-foreground mt-0.5">
+              {t('dashboard.probeSuccessRate')}
+            </span>
+          </div>
         </div>
       )}
     </div>
   )
 }
-
-

@@ -1,22 +1,15 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import echarts from '../../lib/echarts-core'
-import type { ECharts, EChartsOption, SeriesOption } from '../../lib/echarts-core'
-import { useThemeColors } from '../../hooks/useThemeColors'
-
-interface TooltipParam {
-  name: string
-  value: number
-}
-
-function normalizeTooltipParams(params: unknown): TooltipParam[] {
-  if (!Array.isArray(params)) {
-    return []
-  }
-
-  return params.filter((param): param is TooltipParam => {
-    return typeof param === 'object' && param !== null && 'name' in param && 'value' in param
-  })
-}
+import { useState } from 'react'
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from 'recharts'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export type TimeRange = '24h' | '7d' | '30d'
 export type MetricType = 'latency_ms' | 'packet_loss_rate' | 'jitter_ms'
@@ -38,29 +31,18 @@ export interface TrendChartProps {
   isLoading?: boolean
 }
 
-/**
- * TrendChart component for displaying time-series data using ECharts
- *
- * Features:
- * - Time range selection (24h/7d/30d)
- * - Multi-metric support (latency/packet loss/jitter)
- * - Hover tooltips with exact values
- * - Zoom functionality (mouse wheel)
- * - Baseline reference line
- * - Responsive design
- *
- * @param props - TrendChart props
- * @returns TrendChart component
- *
- * @example
- * <TrendChart
- *   data={dataPoints}
- *   metric="latency_ms"
- *   timeRange="7d"
- *   showBaseline={true}
- *   onTimeRangeChange={(range) => console.log(range)}
- * />
- */
+const metricConfig: Record<MetricType, { label: string; unit: string; chartColor: string }> = {
+  latency_ms: { label: 'Latency', unit: 'ms', chartColor: 'var(--chart-1)' },
+  packet_loss_rate: { label: 'Packet Loss Rate', unit: '%', chartColor: 'var(--chart-3)' },
+  jitter_ms: { label: 'Jitter', unit: 'ms', chartColor: 'var(--chart-5)' },
+}
+
+const timeRangeOptions: { value: TimeRange; label: string }[] = [
+  { value: '24h', label: '24 Hours' },
+  { value: '7d', label: '7 Days' },
+  { value: '30d', label: '30 Days' },
+]
+
 export default function TrendChart({
   data,
   metric,
@@ -72,324 +54,101 @@ export default function TrendChart({
   onTimeRangeChange,
   isLoading = false,
 }: TrendChartProps) {
-  const chartRef = useRef<HTMLDivElement>(null)
-  const chartInstance = useRef<ECharts | null>(null)
-  const [localTimeRange, setLocalTimeRange] = useState<TimeRange>(timeRange)
-  const themeColors = useThemeColors()
-
-  // Metric configuration
-  const metricConfig = {
-    latency_ms: {
-      label: 'Latency',
-      unit: 'ms',
-      color: themeColors.brand,
-      yAxisLabel: 'Latency (ms)',
-    },
-    packet_loss_rate: {
-      label: 'Packet Loss Rate',
-      unit: '%',
-      color: themeColors.critical,
-      yAxisLabel: 'Packet Loss Rate (%)',
-    },
-    jitter_ms: {
-      label: 'Jitter',
-      unit: 'ms',
-      color: themeColors.unknown,
-      yAxisLabel: 'Jitter (ms)',
-    },
-  }
-
+  const [localRange, setLocalRange] = useState<TimeRange>(timeRange)
   const config = metricConfig[metric]
 
-  // Time range options
-  const timeRangeOptions: { value: TimeRange; label: string }[] = [
-    { value: '24h', label: '24 Hours' },
-    { value: '7d', label: '7 Days' },
-    { value: '30d', label: '30 Days' },
-  ]
+  const formatted = data.map((d) => ({
+    ...d,
+    time: new Date(d.timestamp).toLocaleString([], {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+  }))
 
-  // Handle time range change
-  const handleTimeRangeChange = (newRange: TimeRange) => {
-    setLocalTimeRange(newRange)
-    if (onTimeRangeChange) {
-      onTimeRangeChange(newRange)
-    }
+  const handleRangeChange = (range: TimeRange) => {
+    setLocalRange(range)
+    onTimeRangeChange?.(range)
   }
 
-  // Format X-axis labels based on time range
-  const getXAxisFormatter = useCallback((): string => {
-    switch (localTimeRange) {
-      case '24h':
-        return '{HH}:{mm}'
-      case '7d':
-        return '{MM}-{dd}\n{HH}:{mm}'
-      case '30d':
-        return '{MM}-{dd}'
-      default:
-        return '{HH}:{mm}'
-    }
-  }, [localTimeRange])
-
-  // Initialize chart only when data exists, not loading, and ref is available
-  useEffect(() => {
-    if (!chartRef.current) return
-
-    // Only initialize if we have data and not loading
-    if (!data || data.length === 0 || isLoading) {
-      // Dispose existing chart if no data or loading
-      if (chartInstance.current) {
-        chartInstance.current.dispose()
-        chartInstance.current = null
-      }
-      return
-    }
-
-    // Initialize ECharts instance if not already initialized
-    if (!chartInstance.current) {
-      chartInstance.current = echarts.init(chartRef.current)
-    }
-
-    // Cleanup on unmount
-    return () => {
-      if (chartInstance.current) {
-        chartInstance.current.dispose()
-        chartInstance.current = null
-      }
-    }
-  }, [data, isLoading])
-
-  // Update chart when data or time range changes
-  useEffect(() => {
-    if (!chartInstance.current || !data || data.length === 0) return
-
-    const series: SeriesOption[] = [
-      {
-        name: config.label,
-        type: 'line',
-        data: data.map((point) => point.value),
-        smooth: true,
-        lineStyle: {
-          color: config.color,
-          width: 2,
-        },
-        itemStyle: {
-          color: config.color,
-        },
-        areaStyle: {
-          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: `${config.color}CC` },
-            { offset: 1, color: `${config.color}33` },
-          ]),
-        },
-      },
-    ]
-
-    // Add baseline if enabled
-    if (showBaseline && baselineValue !== undefined) {
-      series.push({
-        name: 'Baseline',
-        type: 'line',
-        data: Array(data.length).fill(baselineValue),
-        lineStyle: {
-          color: themeColors.healthy,
-          width: 2,
-          type: 'dashed',
-        },
-        itemStyle: {
-          color: themeColors.healthy,
-        },
-        symbol: 'none',
-      })
-    }
-
-    const option: EChartsOption = {
-      title: {
-        text: `${config.label} Trend`,
-        left: 'center',
-        textStyle: {
-          fontSize: 16,
-          fontWeight: 'bold',
-        },
-      },
-      tooltip: {
-        trigger: 'axis',
-        formatter: (params: unknown) => {
-          const tooltipParams = normalizeTooltipParams(params)
-          if (tooltipParams.length === 0) return ''
-
-          const param = tooltipParams[0]
-          const date = new Date(param.name)
-          const formattedDate = date.toLocaleString()
-          return `${formattedDate}<br/>${config.label}: ${param.value} ${config.unit}`
-        },
-      },
-      toolbox: {
-        feature: {
-          dataZoom: {
-            yAxisIndex: 'none',
-          },
-          restore: {},
-          saveAsImage: {},
-        },
-        right: 20,
-        top: 10,
-      },
-      grid: {
-        left: '60px',
-        right: '60px',
-        bottom: '80px',
-        top: '80px',
-        containLabel: true,
-      },
-      xAxis: {
-        type: 'category',
-        data: data.map((point) => point.timestamp),
-        axisLabel: {
-          formatter: getXAxisFormatter(),
-          rotate: localTimeRange === '7d' ? 45 : 0,
-        },
-      },
-      yAxis: {
-        type: 'value',
-        name: config.yAxisLabel,
-        nameLocation: 'middle',
-        nameGap: 50,
-        axisLabel: {
-          formatter: (value: number) => value.toFixed(2),
-        },
-      },
-      dataZoom: [
-        {
-          type: 'inside',
-          start: 0,
-          end: 100,
-        },
-        {
-          start: 0,
-          end: 100,
-          height: 20,
-          bottom: 10,
-        },
-      ],
-      series,
-    }
-
-    chartInstance.current.setOption(option, true)
-  }, [data, localTimeRange, config, showBaseline, baselineValue, getXAxisFormatter, themeColors])
-
-  // Handle window resize
-  useEffect(() => {
-    const handleResize = () => {
-      if (chartInstance.current) {
-        chartInstance.current.resize()
-      }
-    }
-
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [])
-
   return (
-    <div
-      className={`trend-chart bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-4 ${className}`}
-      role="region"
-      aria-label={`${config.label} trend chart`}
-    >
-      {/* Time Range Selector */}
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">{config.label} Trend</h3>
-        <div className="flex space-x-2" role="group" aria-label="Time range selector">
-          {timeRangeOptions.map((option) => (
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-base font-semibold">{config.label} Trend</CardTitle>
+        <div className="flex gap-1" role="group" aria-label="Time range selector">
+          {timeRangeOptions.map((opt) => (
             <button
-              key={option.value}
-              onClick={() => handleTimeRangeChange(option.value)}
-              className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-                localTimeRange === option.value
-                  ? 'bg-[var(--color-brand)] text-[var(--color-text-on-primary)]'
-                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
+              key={opt.value}
+              onClick={() => handleRangeChange(opt.value)}
+              className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                localRange === opt.value
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:bg-accent'
               }`}
-              aria-pressed={localTimeRange === option.value}
+              aria-pressed={localRange === opt.value}
               disabled={isLoading}
             >
-              {option.label}
+              {opt.label}
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Chart Container */}
-      <div
-        ref={chartRef}
-        className="relative"
-        style={{ height }}
-        role="img"
-        aria-label={`${config.label} trend chart showing ${data.length} data points`}
-      >
-        {/* Loading Overlay */}
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-[var(--color-bg-surface)] bg-opacity-75 z-10">
-            <div className="flex flex-col items-center">
-              <div
-                className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"
-                role="status"
-                aria-label="Loading chart data"
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center text-muted-foreground text-sm" style={{ height }}>
+            Loading...
+          </div>
+        ) : formatted.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-muted-foreground" style={{ height }}>
+            <p className="text-sm font-medium">No Data Available</p>
+            <p className="text-xs">No trend data for the selected range.</p>
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height={parseInt(height) || 400} minWidth={0}>
+            <AreaChart data={formatted}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <XAxis dataKey="time" tick={{ fontSize: 11 }} className="fill-muted-foreground" />
+              <YAxis tick={{ fontSize: 11 }} className="fill-muted-foreground" unit={config.unit} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'var(--popover)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 'var(--radius)',
+                  fontSize: 12,
+                }}
+                formatter={(value) => [`${Number(value).toFixed(2)} ${config.unit}`, config.label]}
               />
-              <p className="mt-2 text-[var(--color-text-secondary)]">Loading chart data...</p>
-            </div>
-          </div>
+              {showBaseline && baselineValue !== undefined && (
+                <ReferenceLine y={baselineValue} stroke="var(--chart-2)" strokeDasharray="6 3" label={{ value: `Baseline ${baselineValue}${config.unit}`, fontSize: 10 }} />
+              )}
+              <Area
+                type="monotone"
+                dataKey="value"
+                stroke={`hsl(${config.chartColor})`}
+                fill={`hsl(${config.chartColor})`}
+                fillOpacity={0.15}
+                strokeWidth={2}
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         )}
 
-        {/* Empty State */}
-        {!isLoading && (!data || data.length === 0) && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">No Data Available</h3>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                No trend data available for the selected time range.
-              </p>
-            </div>
+        {showBaseline && baselineValue !== undefined && (
+          <div className="mt-3 flex items-center justify-center gap-6 text-xs text-muted-foreground">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-0.5 w-4 rounded" style={{ backgroundColor: `hsl(${config.chartColor})` }} />
+              {config.label}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-0.5 w-4 rounded border-t-2 border-dashed border-muted-foreground" />
+              Baseline ({baselineValue} {config.unit})
+            </span>
           </div>
         )}
-      </div>
-
-      {/* Legend */}
-      {showBaseline && baselineValue !== undefined && (
-        <div className="mt-4 flex items-center justify-center space-x-6 text-sm">
-          <div className="flex items-center space-x-2">
-            <div
-              className="w-4 h-1"
-              style={{ backgroundColor: config.color }}
-              aria-hidden="true"
-            />
-            <span className="text-[var(--color-text-secondary)]">{config.label}</span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <div
-              className="w-4 h-1 bg-[var(--color-healthy)]"
-              style={{ borderStyle: 'dashed', borderWidth: '2px' }}
-              aria-hidden="true"
-            />
-            <span className="text-[var(--color-text-secondary)]">Baseline ({baselineValue} {config.unit})</span>
-          </div>
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   )
 }

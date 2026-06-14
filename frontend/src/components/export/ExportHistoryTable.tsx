@@ -82,10 +82,10 @@ export function ExportHistoryTable({
    */
   const getStatusBadge = (status: ExportStatus) => {
     const statusStyles = {
-      pending: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
-      processing: 'bg-[var(--color-brand-muted)] text-[var(--color-brand)]',
-      completed: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]',
-      failed: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]',
+      pending: 'bg-warning-bg text-warning-text',
+      processing: 'bg-primary/10 text-primary',
+      completed: 'bg-healthy-bg text-healthy-text',
+      failed: 'bg-destructive/10 text-destructive',
     }
 
     const statusLabels = {
@@ -108,8 +108,8 @@ export function ExportHistoryTable({
   if (loading) {
     return (
       <div className="flex justify-center items-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand)]"></div>
-        <span className="ml-2 text-gray-600">Loading export history...</span>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <span className="ml-2 text-muted-foreground">Loading export history...</span>
       </div>
     )
   }
@@ -117,9 +117,9 @@ export function ExportHistoryTable({
   // Empty state
   if (exports.length === 0) {
     return (
-      <div className="text-center py-8 text-gray-500">
+      <div className="text-center py-8 text-muted-foreground">
         <svg
-          className="mx-auto h-12 w-12 text-gray-400"
+          className="mx-auto h-12 w-12 text-muted-foreground"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -140,15 +140,15 @@ export function ExportHistoryTable({
     <div className="space-y-4">
       {/* Header with filter */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold text-gray-900">Export History</h3>
+        <h3 className="text-lg font-semibold text-foreground">Export History</h3>
         <div className="flex space-x-2">
           <button
             type="button"
             onClick={() => handleFilterChange('all')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               statusFilter === 'all'
-                ? 'bg-[var(--color-brand)] text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-primary text-white'
+                : 'bg-muted text-foreground/80 hover:bg-muted-foreground/30'
             }`}
           >
             All ({exports.length})
@@ -158,8 +158,8 @@ export function ExportHistoryTable({
             onClick={() => handleFilterChange('completed')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               statusFilter === 'completed'
-                ? 'bg-[var(--color-brand)] text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-primary text-white'
+                : 'bg-muted text-foreground/80 hover:bg-muted-foreground/30'
             }`}
           >
             Completed
@@ -169,8 +169,8 @@ export function ExportHistoryTable({
             onClick={() => handleFilterChange('failed')}
             className={`px-3 py-1 text-sm rounded-md transition-colors ${
               statusFilter === 'failed'
-                ? 'bg-[var(--color-brand)] text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                ? 'bg-primary text-white'
+                : 'bg-muted text-foreground/80 hover:bg-muted-foreground/30'
             }`}
           >
             Failed
@@ -179,45 +179,45 @@ export function ExportHistoryTable({
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto border border-gray-200 rounded-lg">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="overflow-x-auto border border-border rounded-lg">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted/50">
             <tr>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Date
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Nodes
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Metrics
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Status
               </th>
-              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Size
               </th>
-              <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-background divide-y divide-border">
             {paginatedExports.map((exp) => (
-              <tr key={exp.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 text-sm text-gray-900">
+              <tr key={exp.id} className="hover:bg-muted/50">
+                <td className="px-4 py-3 text-sm text-foreground">
                   {formatDate(exp.created_at)}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
+                <td className="px-4 py-3 text-sm text-muted-foreground">
                   {exp.node_ids.length} node{exp.node_ids.length !== 1 ? 's' : ''}
                 </td>
-                <td className="px-4 py-3 text-sm text-gray-600">
+                <td className="px-4 py-3 text-sm text-muted-foreground">
                   <div className="flex flex-wrap gap-1">
                     {exp.metrics.map((metric) => (
                       <span
                         key={metric}
-                        className="px-2 py-0.5 text-xs bg-gray-100 rounded"
+                        className="px-2 py-0.5 text-xs bg-muted rounded"
                       >
                         {metric === 'latency' && 'Latency'}
                         {metric === 'packet_loss_rate' && 'Packet Loss'}
@@ -227,7 +227,7 @@ export function ExportHistoryTable({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-sm">{getStatusBadge(exp.status)}</td>
-                <td className="px-4 py-3 text-sm text-gray-600">
+                <td className="px-4 py-3 text-sm text-muted-foreground">
                   {formatFileSize(exp.file_size)}
                 </td>
                 <td className="px-4 py-3 text-sm text-right space-x-2">
@@ -235,7 +235,7 @@ export function ExportHistoryTable({
                     <button
                       type="button"
                       onClick={() => onDownload(exp.id)}
-                      className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+                      className="text-primary hover:text-primary font-medium"
                       title="Download"
                     >
                       Download
@@ -244,7 +244,7 @@ export function ExportHistoryTable({
                   <button
                     type="button"
                     onClick={() => onDelete(exp.id)}
-                    className="text-[var(--color-critical)] hover:text-[var(--color-critical)] font-medium"
+                    className="text-destructive hover:text-destructive font-medium"
                     title="Delete"
                   >
                     Delete
@@ -259,10 +259,10 @@ export function ExportHistoryTable({
       {/* Pagination */}
       {totalPages > 1 && (
         <nav
-          className="flex items-center justify-between border-t border-gray-200 pt-4"
+          className="flex items-center justify-between border-t border-border pt-4"
           aria-label="Pagination"
         >
-          <div className="text-sm text-gray-700">
+          <div className="text-sm text-foreground/80">
             Showing {startIndex + 1} to {Math.min(startIndex + itemsPerPage, filteredExports.length)} of{' '}
             {filteredExports.length} results
           </div>
@@ -271,18 +271,18 @@ export function ExportHistoryTable({
               type="button"
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
-              className="px-3 py-1 text-sm border border-[var(--color-border)] rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-border rounded-md hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
-            <span className="px-3 py-1 text-sm text-gray-700">
+            <span className="px-3 py-1 text-sm text-foreground/80">
               Page {currentPage} of {totalPages}
             </span>
             <button
               type="button"
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
-              className="px-3 py-1 text-sm border border-[var(--color-border)] rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-border rounded-md hover:bg-muted/50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

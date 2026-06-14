@@ -59,9 +59,9 @@ function getStatusDisplayName(status: string): string {
  */
 function getStatusBadgeColor(status: string): string {
   const colors: Record<string, string> = {
-    pending: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)] border-[var(--color-critical-bg)]',
-    in_progress: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-bg)]',
-    resolved: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)] border-[var(--color-healthy-bg)]',
+    pending: 'bg-destructive/10 text-destructive border-destructive/10',
+    in_progress: 'bg-warning-bg text-warning-text border-warning-bg',
+    resolved: 'bg-healthy-bg text-healthy-text border-healthy-bg',
   }
   return colors[status] || colors.pending
 }
@@ -71,9 +71,9 @@ function getStatusBadgeColor(status: string): string {
  */
 function getLevelBadgeColor(level: string): string {
   const colors: Record<string, string> = {
-    P0: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)] border-[var(--color-critical-bg)]',
-    P1: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-bg)]',
-    P2: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)] border-[var(--color-warning-bg)]',
+    P0: 'bg-destructive/10 text-destructive border-destructive/10',
+    P1: 'bg-warning-bg text-warning-text border-warning-bg',
+    P2: 'bg-warning-bg text-warning-text border-warning-bg',
   }
   return colors[level] || colors.P2
 }
@@ -132,24 +132,24 @@ function TimelineEvent({
     <div className="flex gap-3">
       {/* Timeline line */}
       <div className="flex flex-col items-center">
-        <div className="w-2 h-2 rounded-full bg-[var(--color-brand)]" />
+        <div className="w-2 h-2 rounded-full bg-primary" />
         {!isLast && (
-          <div className="w-0.5 flex-1 min-h-[24px] bg-gray-200 dark:bg-slate-700" />
+          <div className="w-0.5 flex-1 min-h-[24px] bg-muted dark:bg-accent" />
         )}
       </div>
       
       {/* Content */}
       <div className="flex-1 pb-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-[var(--color-text-primary)]">
+          <span className="text-sm font-medium text-foreground">
             {title}
           </span>
-          <span className="text-xs text-[var(--color-text-muted)]">
+          <span className="text-xs text-muted-foreground">
             {time}
           </span>
         </div>
         {description && (
-          <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
+          <p className="mt-1 text-sm text-muted-foreground">
             {description}
           </p>
         )}
@@ -187,7 +187,7 @@ function NoteInput({
   
   return (
     <div className="mt-4">
-      <label className="block text-sm font-medium mb-2 text-[var(--color-text-secondary)]">
+      <label className="block text-sm font-medium mb-2 text-muted-foreground">
         Add Note
       </label>
       <textarea
@@ -196,18 +196,18 @@ function NoteInput({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         rows={3}
-        className="w-full px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-[var(--color-brand)] bg-[var(--color-input-bg)] border-[var(--color-input-border)] text-[var(--color-text-primary)] placeholder:text-[var(--color-text-placeholder)]"
+        className="w-full px-3 py-2 rounded-lg border resize-none focus:outline-none focus:ring-2 focus:ring-primary bg-background border-input text-foreground placeholder:text-muted-foreground"
         disabled={isSubmitting}
         aria-label="Add a note (press Ctrl+Enter or Cmd+Enter to submit)"
       />
       <div className="mt-2 flex justify-between items-center">
-        <p className="text-xs text-[var(--color-text-muted)]">
+        <p className="text-xs text-muted-foreground">
           Press Ctrl+Enter or Cmd+Enter to submit
         </p>
         <button
           onClick={handleSubmit}
           disabled={!note.trim() || isSubmitting}
-          className="px-4 py-2 bg-[var(--color-brand)] text-white text-sm font-medium rounded-lg hover:bg-[var(--color-brand-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/85 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? 'Adding...' : 'Add Note'}
         </button>
@@ -308,18 +308,18 @@ export function AlertDetailMobile({
       />
       
       {/* Modal Content */}
-      <div className="relative flex flex-col h-full w-full bg-[var(--color-bg-surface)]">
+      <div className="relative flex flex-col h-full w-full bg-card">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)] bg-[var(--color-bg-elevated)]">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-card">
           <h2
             id="alert-detail-title"
-            className="text-lg font-semibold text-[var(--color-text-primary)]"
+            className="text-lg font-semibold text-foreground"
           >
             Alert Details
           </h2>
           <button
             onClick={onClose}
-            className="p-2 rounded-lg transition-colors text-[var(--color-text-muted)] hover:bg-[var(--color-hover-overlay)]"
+            className="p-2 rounded-lg transition-colors text-muted-foreground hover:bg-accent/10"
             aria-label="Close alert details"
           >
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -332,18 +332,18 @@ export function AlertDetailMobile({
         <div className="flex-1 overflow-y-auto">
           {/* Error Message */}
           {error && (
-            <div className="mx-4 mt-4 bg-[var(--color-critical-bg)] border-l-4 border-[var(--color-critical)] p-4 rounded-md" role="alert">
-              <p className="text-sm text-[var(--color-critical-text)]">{error}</p>
+            <div className="mx-4 mt-4 bg-destructive/10 border-l-4 border-destructive p-4 rounded-md" role="alert">
+              <p className="text-sm text-destructive">{error}</p>
             </div>
           )}
           
           <div className="p-4 space-y-6">
             {/* Alert ID */}
             <section aria-labelledby="alert-id-label">
-              <h3 id="alert-id-label" className="text-xs font-medium uppercase tracking-wider mb-1 text-[var(--color-text-muted)]">
+              <h3 id="alert-id-label" className="text-xs font-medium uppercase tracking-wider mb-1 text-muted-foreground">
                 Alert ID
               </h3>
-              <p className="text-sm font-mono break-all text-[var(--color-text-secondary)]">
+              <p className="text-sm font-mono break-all text-muted-foreground">
                 {record.id}
               </p>
             </section>
@@ -351,13 +351,13 @@ export function AlertDetailMobile({
             {/* Status and Level */}
             <section aria-labelledby="status-level-label" className="flex gap-3">
               <div>
-                <h3 id="status-level-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-[var(--color-text-muted)]">
+                <h3 id="status-level-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-muted-foreground">
                   Status
                 </h3>
                 <StatusBadge status={record.status} />
               </div>
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wider mb-2 text-[var(--color-text-muted)]">
+                <h3 className="text-xs font-medium uppercase tracking-wider mb-2 text-muted-foreground">
                   Level
                 </h3>
                 <LevelBadge level={record.level} />
@@ -366,21 +366,21 @@ export function AlertDetailMobile({
             
             {/* Node Information */}
             <section aria-labelledby="node-label">
-              <h3 id="node-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-[var(--color-text-muted)]">
+              <h3 id="node-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-muted-foreground">
                 Node
               </h3>
-              <div className="p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-muted)]">
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">
+              <div className="p-3 rounded-lg border border-border bg-muted">
+                <p className="text-sm font-medium text-foreground">
                   {node?.name || record.node_id}
                 </p>
                 {node && (
                   <>
-                    <p className="text-xs mt-1 text-[var(--color-text-muted)]">
+                    <p className="text-xs mt-1 text-muted-foreground">
                       IP: {node.ip}
                     </p>
                     <button
                       onClick={handleViewNodeDetails}
-                      className="mt-2 text-sm text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium"
+                      className="mt-2 text-sm text-primary hover:text-primary font-medium"
                     >
                       View Node Details →
                     </button>
@@ -391,11 +391,11 @@ export function AlertDetailMobile({
             
             {/* Metric Information */}
             <section aria-labelledby="metric-label">
-              <h3 id="metric-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-[var(--color-text-muted)]">
+              <h3 id="metric-label" className="text-xs font-medium uppercase tracking-wider mb-2 text-muted-foreground">
                 Metric
               </h3>
-              <div className="p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-muted)]">
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">
+              <div className="p-3 rounded-lg border border-border bg-muted">
+                <p className="text-sm font-medium text-foreground">
                   {getMetricDisplayName(record.metric)}
                 </p>
               </div>
@@ -403,10 +403,10 @@ export function AlertDetailMobile({
             
             {/* Timeline - Shared UTC View */}
             <section aria-labelledby="timeline-label">
-              <h3 id="timeline-label" className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--color-text-muted)]">
+              <h3 id="timeline-label" className="text-xs font-medium uppercase tracking-wider mb-3 text-muted-foreground">
                 Timeline (UTC)
               </h3>
-              <div className="p-4 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-muted)]">
+              <div className="p-4 rounded-lg border border-border bg-muted">
                 <div className="space-y-0">
                   {timelineEvents.map((event, index) => (
                     <TimelineEvent
@@ -424,24 +424,24 @@ export function AlertDetailMobile({
             {/* Notes Section */}
             {notes.length > 0 && (
               <section aria-labelledby="notes-label">
-                <h3 id="notes-label" className="text-xs font-medium uppercase tracking-wider mb-3 text-[var(--color-text-muted)]">
+                <h3 id="notes-label" className="text-xs font-medium uppercase tracking-wider mb-3 text-muted-foreground">
                   Notes ({notes.length})
                 </h3>
                 <div className="space-y-3">
                   {notes.map((note) => (
                     <div
                       key={note.id}
-                      className="p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-surface)]"
+                      className="p-3 rounded-lg border border-border bg-card"
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
+                        <span className="text-sm font-medium text-foreground">
                           {note.userName}
                         </span>
-                        <span className="text-xs text-[var(--color-text-muted)]">
+                        <span className="text-xs text-muted-foreground">
                           {timezoneUtils.formatRelative(note.createdAt)}
                         </span>
                       </div>
-                      <p className="text-sm whitespace-pre-wrap text-[var(--color-text-secondary)]">
+                      <p className="text-sm whitespace-pre-wrap text-muted-foreground">
                         {note.content}
                       </p>
                     </div>
@@ -452,8 +452,8 @@ export function AlertDetailMobile({
             
             {/* Status Update Actions */}
             {canEdit && record.status !== 'resolved' && (
-              <section aria-labelledby="actions-label" className="pt-4 border-t border-[var(--color-border)]">
-                <h3 id="actions-label" className="text-sm font-medium mb-3 text-[var(--color-text-primary)]">
+              <section aria-labelledby="actions-label" className="pt-4 border-t border-border">
+                <h3 id="actions-label" className="text-sm font-medium mb-3 text-foreground">
                   Update Status
                 </h3>
                 
@@ -463,7 +463,7 @@ export function AlertDetailMobile({
                     <button
                       onClick={() => handleStatusUpdate('in_progress')}
                       disabled={isUpdating}
-                      className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-[var(--color-warning)] text-white hover:bg-[var(--color-warning-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-warning text-white hover:bg-warning-hover disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isUpdating ? 'Updating...' : 'Acknowledge Alert'}
                     </button>
@@ -473,7 +473,7 @@ export function AlertDetailMobile({
                   <button
                     onClick={() => setShowNoteInput(!showNoteInput)}
                     disabled={isUpdating}
-                    className="w-full py-3 px-4 rounded-lg font-medium transition-colors border border-[var(--color-border-strong)] bg-[var(--color-bg-surface)] text-[var(--color-text-secondary)] hover:bg-[var(--color-hover-overlay)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 px-4 rounded-lg font-medium transition-colors border border-foreground/20 bg-card text-muted-foreground hover:bg-accent/10 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {showNoteInput ? 'Cancel' : 'Add Note'}
                   </button>
@@ -496,7 +496,7 @@ export function AlertDetailMobile({
                   <button
                     onClick={() => handleStatusUpdate('resolved')}
                     disabled={isUpdating}
-                    className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-[var(--color-healthy)] text-white hover:bg-[var(--color-healthy-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-3 px-4 rounded-lg font-medium transition-colors bg-healthy text-white hover:bg-healthy-hover disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isUpdating ? 'Updating...' : 'Resolve Alert'}
                   </button>

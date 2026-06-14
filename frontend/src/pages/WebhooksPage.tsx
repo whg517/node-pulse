@@ -1,201 +1,110 @@
-/**
- * Webhooks Page
- *
- * Configure webhook endpoints for alert notifications.
- * Uses standardized layout components for consistent UI.
- */
-
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateWebhookRequest } from '../api/webhooks'
-import { useAuthStore } from '../stores/authStore'
-import { useWebhooks } from '../hooks/useWebhooks'
-import { PageContainer, ErrorBanner, ConfirmDialog, ActionButton, LoadingSpinner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
-import { WebhooksTable } from '../components/webhooks/WebhooksTable'
-import { WebhookDialog } from '../components/webhooks/WebhookDialog'
+import type { CreateWebhookRequest } from '@/api/webhooks'
+import { useAuthStore } from '@/stores/authStore'
+import { useWebhooks } from '@/hooks/useWebhooks'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { WebhooksTable } from '@/components/webhooks/WebhooksTable'
+import { WebhookDialog } from '@/components/webhooks/WebhookDialog'
+import { Button } from '@/components/ui/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 
 export default function WebhooksPage() {
   const { t } = useTranslation()
   const user = useAuthStore((state) => state.user)
-  const {
-    webhooks,
-    isLoading,
-    error,
-    reload,
-    createWebhook,
-    updateWebhook,
-    deleteWebhook,
-    toggleWebhookEnabled,
-    getWebhookById,
-  } = useWebhooks()
+  const { webhooks, isLoading, error, reload, createWebhook, updateWebhook, deleteWebhook, toggleWebhookEnabled, getWebhookById } = useWebhooks()
 
-  // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogMode, setDialogMode] = useState<'create' | 'edit'>('create')
   const [selectedWebhookId, setSelectedWebhookId] = useState<string | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
-  const [webhookToDelete, setWebhookToDelete] = useState<string | undefined>(undefined)
+  const [webhookToDelete, setWebhookToDelete] = useState<string>()
 
-  const selectedWebhook = useMemo(() => {
-    return selectedWebhookId ? getWebhookById(selectedWebhookId) : undefined
-  }, [getWebhookById, selectedWebhookId])
-
-  // Check if user can edit (admin only)
+  const selectedWebhook = useMemo(() => selectedWebhookId ? getWebhookById(selectedWebhookId) : undefined, [getWebhookById, selectedWebhookId])
   const canEdit = user?.role === 'admin'
 
-  const handleCreate = () => {
-    setDialogMode('create')
-    setSelectedWebhookId(null)
-    setDialogOpen(true)
-  }
+  const handleCreate = () => { setDialogMode('create'); setSelectedWebhookId(null); setDialogOpen(true) }
 
   const handleEdit = (id: string) => {
     const webhook = getWebhookById(id)
-    if (webhook) {
-      setDialogMode('edit')
-      setSelectedWebhookId(webhook.id)
-      setDialogOpen(true)
-    }
+    if (webhook) { setDialogMode('edit'); setSelectedWebhookId(webhook.id); setDialogOpen(true) }
   }
 
-  const handleDelete = (id: string) => {
-    setWebhookToDelete(id)
-    setDeleteConfirmOpen(true)
-  }
+  const handleDelete = (id: string) => { setWebhookToDelete(id); setDeleteConfirmOpen(true) }
 
   const confirmDelete = async () => {
     if (!webhookToDelete) return
-
-    try {
-      await deleteWebhook(webhookToDelete)
-      setDeleteConfirmOpen(false)
-      setWebhookToDelete(undefined)
-    } catch (error) {
-      console.error('Failed to delete webhook:', error)
-    }
+    try { await deleteWebhook(webhookToDelete) } catch { /* handled */ }
+    setDeleteConfirmOpen(false)
+    setWebhookToDelete(undefined)
   }
 
   const handleToggleEnabled = (id: string, enabled: boolean) => {
-    const submitToggle = async () => {
-      try {
-        await toggleWebhookEnabled(id, enabled)
-      } catch (error) {
-        console.error('Failed to toggle webhook:', error)
-      }
-    }
-
-    void submitToggle()
+    void (async () => { try { await toggleWebhookEnabled(id, enabled) } catch { /* handled */ } })()
   }
 
   const handleSubmit = async (data: CreateWebhookRequest) => {
-    try {
-      if (dialogMode === 'create') {
-        await createWebhook(data)
-      } else if (selectedWebhook) {
-        await updateWebhook(selectedWebhook.id, data)
-      } else {
-        throw new Error('No webhook selected for update')
-      }
-
-      setDialogOpen(false)
-      setSelectedWebhookId(null)
-    } catch (error) {
-      console.error('Failed to submit webhook:', error)
-      throw error
-    }
+    if (dialogMode === 'create') { await createWebhook(data) }
+    else if (selectedWebhook) { await updateWebhook(selectedWebhook.id, data) }
+    else throw new Error('No webhook selected')
+    setDialogOpen(false)
+    setSelectedWebhookId(null)
   }
 
   return (
-    <PageContainer>
+    <div className="space-y-6">
       <PageHeader
         title={t('webhooks.title')}
         subtitle={t('webhooks.description')}
-        actions={
-          canEdit && (
-            <ActionButton onClick={handleCreate}>
-              {t('webhooks.addWebhook')}
-            </ActionButton>
-          )
-        }
+        actions={canEdit ? <Button onClick={handleCreate}>{t('webhooks.addWebhook')}</Button> : undefined}
       />
 
-      {/* Access Warning for Non-Admin Users */}
       {!canEdit && (
-        <div className="mb-6 rounded-md border-l-4 border-[var(--color-warning)] bg-[var(--color-warning-bg)] p-4">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-[var(--color-warning)]" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm text-[var(--color-warning-text)]">
-                <strong>{t('webhooks.adminOnly')}:</strong> {t('webhooks.adminOnlyDescription')}
-              </p>
-            </div>
-          </div>
+        <div className="rounded-md border-l-4 border-yellow-500 bg-yellow-50 p-4 dark:bg-yellow-950">
+          <p className="text-sm"><strong>{t('webhooks.adminOnly')}:</strong> {t('webhooks.adminOnlyDescription')}</p>
         </div>
       )}
 
-      {/* Error State */}
       {error && (
-        <ErrorBanner
-          error={error}
-          onRetry={reload}
-          className="mb-6"
-        />
-      )}
-
-      {/* Loading State */}
-      {isLoading && !error && (
-        <div className="py-12">
-          <LoadingSpinner />
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error.message}
+          <Button variant="link" size="sm" onClick={reload}>Retry</Button>
         </div>
       )}
 
-      {/* Content */}
+      {isLoading && !error && (
+        <div className="flex justify-center py-12"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
+      )}
+
       {!isLoading && !error && (
-        <WebhooksTable
-          webhooks={webhooks}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onToggleEnabled={handleToggleEnabled}
-          canEdit={canEdit}
-        />
+        <WebhooksTable webhooks={webhooks} onEdit={handleEdit} onDelete={handleDelete} onToggleEnabled={handleToggleEnabled} canEdit={canEdit} />
       )}
 
-      {/* Create/Edit Dialog */}
       {dialogOpen && (
-        <WebhookDialog
-          mode={dialogMode}
-          initialData={selectedWebhook}
-          onSubmit={handleSubmit}
-          onCancel={() => {
-            setDialogOpen(false)
-            setSelectedWebhookId(null)
-          }}
-        />
+        <WebhookDialog mode={dialogMode} open={dialogOpen} initialData={selectedWebhook} onSubmit={handleSubmit} onCancel={() => { setDialogOpen(false); setSelectedWebhookId(null) }} />
       )}
 
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        title={t('webhooks.deleteTitle')}
-        message={t('webhooks.deleteMessage')}
-        confirmText={t('common.delete')}
-        onConfirm={confirmDelete}
-        onCancel={() => {
-          setDeleteConfirmOpen(false)
-          setWebhookToDelete(undefined)
-        }}
-        loading={false}
-        variant="danger"
-      />
-    </PageContainer>
+      <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('webhooks.deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('webhooks.deleteMessage')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setWebhookToDelete(undefined) }}>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('common.delete')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   )
 }

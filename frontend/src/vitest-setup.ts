@@ -1,5 +1,12 @@
 import '@testing-library/jest-dom'
 import { vi } from 'vitest'
+import en from './locales/en.json'
+
+;(globalThis as Record<string, unknown>).ResizeObserver = class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
 
 const noisyConsolePatterns = [
   'i18next is maintained with support from Locize',
@@ -60,15 +67,38 @@ console.debug = (...args: unknown[]) => {
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
 
+  const translate = (key: string, options?: Record<string, unknown> | string): string => {
+    if (typeof options === 'string') return options
+    if (options && typeof options === 'object' && 'defaultValue' in options && typeof options.defaultValue === 'string') {
+      return options.defaultValue
+    }
+
+    const resource = en as Record<string, unknown>
+    const lookup = (lookupKey: string) => lookupKey.split('.').reduce<unknown>((current, part) => {
+      if (current && typeof current === 'object' && part in current) {
+        return (current as Record<string, unknown>)[part]
+      }
+      return undefined
+    }, resource)
+
+    const lookupKeys =
+      options && typeof options.count === 'number' && options.count !== 1
+        ? [`${key}_other`, key]
+        : [`${key}_one`, key]
+    const value = lookupKeys.map(lookup).find((candidate): candidate is string => typeof candidate === 'string')
+
+    if (typeof value !== 'string') return key
+
+    return value.replace(/\{\{(\w+)\}\}/g, (match, name: string) => {
+      const replacement = options?.[name]
+      return replacement === undefined || replacement === null ? match : String(replacement)
+    })
+  }
+
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, options?: Record<string, unknown>) => {
-        if (options && 'defaultValue' in options && typeof options.defaultValue === 'string') {
-          return options.defaultValue
-        }
-        return key
-      },
+      t: translate,
       i18n: {
         language: 'en',
         changeLanguage: vi.fn(),

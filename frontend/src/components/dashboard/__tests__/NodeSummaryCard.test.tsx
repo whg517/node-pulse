@@ -4,13 +4,6 @@ import { MemoryRouter } from 'react-router-dom'
 import { NodeSummaryCard } from '../NodeSummaryCard'
 import type { NodeDTO } from '../../../api/types'
 
-// Mock react-i18next
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({
-    t: (key: string) => key,
-  }),
-}))
-
 // Mock react-router-dom navigate
 const mockNavigate = vi.fn()
 vi.mock('react-router-dom', async () => {
@@ -61,7 +54,7 @@ describe('NodeSummaryCard', () => {
         <NodeSummaryCard node={mockNode} healthStatus="healthy" />
       </MemoryRouter>
     )
-    expect(screen.getByText('status.healthy')).toBeInTheDocument()
+    expect(screen.getByText('Healthy')).toBeInTheDocument()
   })
 
   it('navigates to node detail on click', () => {
@@ -167,7 +160,7 @@ describe('NodeSummaryCard', () => {
         />
       </MemoryRouter>
     )
-    expect(screen.getByText('nodes.lastSeen:')).toBeInTheDocument()
+    expect(screen.getByText('Last Seen:')).toBeInTheDocument()
   })
 
   it('renders warning status', () => {
@@ -176,7 +169,7 @@ describe('NodeSummaryCard', () => {
         <NodeSummaryCard node={mockNode} healthStatus="warning" />
       </MemoryRouter>
     )
-    expect(screen.getByText('status.warning')).toBeInTheDocument()
+    expect(screen.getByText('Warning')).toBeInTheDocument()
   })
 
   it('renders critical status', () => {
@@ -185,7 +178,7 @@ describe('NodeSummaryCard', () => {
         <NodeSummaryCard node={mockNode} healthStatus="critical" />
       </MemoryRouter>
     )
-    expect(screen.getByText('status.critical')).toBeInTheDocument()
+    expect(screen.getByText('Critical')).toBeInTheDocument()
   })
 
   it('renders offline status', () => {
@@ -194,7 +187,7 @@ describe('NodeSummaryCard', () => {
         <NodeSummaryCard node={mockNode} healthStatus="offline" />
       </MemoryRouter>
     )
-    expect(screen.getByText('status.offline')).toBeInTheDocument()
+    expect(screen.getByText('Offline')).toBeInTheDocument()
   })
 
   it('applies custom className', () => {

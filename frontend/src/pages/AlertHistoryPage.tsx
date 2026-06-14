@@ -1,13 +1,6 @@
-/**
- * Alert History Page
- *
- * Displays historical view of past alert triggers with filtering,
- * search, and status management capabilities.
- */
-
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useAuthStore } from '../stores/authStore'
+import { useAuthStore } from '@/stores/authStore'
 import {
   getAlertRecords,
   updateAlertRecordStatus,
@@ -16,10 +9,13 @@ import {
   type AlertRecordFilters,
   type AlertRecordStatus,
   type AlertLevel,
-} from '../api/alertRecords'
-import { fetchNodes } from '../api/nodes'
-import { PageContainer, ErrorBanner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
+} from '@/api/alertRecords'
+import { fetchNodes } from '@/api/nodes'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
 
 export default function AlertHistoryPage() {
   const { user } = useAuthStore()
@@ -27,19 +23,14 @@ export default function AlertHistoryPage() {
   const [records, setRecords] = useState<AlertRecordDTO[]>([])
   const [nodes, setNodes] = useState<Array<{ id: string; name: string; ip: string }>>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const [statusUpdateError, setStatusUpdateError] = useState<string | null>(null)
 
-  // Filters
   const [filters, setFilters] = useState<AlertRecordFilters>({})
   const [tempFilters, setTempFilters] = useState<AlertRecordFilters>({})
-
-  // Pagination
   const [page, setPage] = useState(1)
   const pageSize = 20
 
-
-  // Check if user can edit (admin only)
   const canEdit = user?.role === 'admin'
 
   const loadRecords = useCallback(async () => {
@@ -53,12 +44,11 @@ export default function AlertHistoryPage() {
       })
       setRecords(response.data)
     } catch (err) {
-      setError(err as Error)
-      console.error('Failed to load alert records:', err)
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setIsLoading(false)
     }
-  }, [filters, page, pageSize])
+  }, [filters, page])
 
   const loadNodes = useCallback(async () => {
     try {
@@ -74,10 +64,7 @@ export default function AlertHistoryPage() {
     void loadNodes()
   }, [loadRecords, loadNodes])
 
-  const handleFilterChange = (
-    key: keyof AlertRecordFilters,
-    value: string | number | undefined
-  ) => {
+  const handleFilterChange = (key: keyof AlertRecordFilters, value: string | number | undefined) => {
     setTempFilters((prev) => ({ ...prev, [key]: value || undefined }))
   }
 
@@ -93,23 +80,16 @@ export default function AlertHistoryPage() {
   }
 
   const handleStatusUpdate = async (id: string, currentStatus: AlertRecordStatus, newStatus: AlertRecordStatus) => {
-    // Clear previous error
     setStatusUpdateError(null)
-
-    // Validate status transition
     if (!isValidStatusTransition(currentStatus, newStatus)) {
       setStatusUpdateError(`Invalid status transition: ${currentStatus} -> ${newStatus}`)
       return
     }
-
     try {
       await updateAlertRecordStatus(id, newStatus)
-      // Reload records
       await loadRecords()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to update status'
-      setStatusUpdateError(message)
-      console.error('Failed to update status:', error)
+    } catch (err) {
+      setStatusUpdateError(err instanceof Error ? err.message : 'Failed to update status')
     }
   }
 
@@ -118,219 +98,140 @@ export default function AlertHistoryPage() {
     return node?.name || nodeId
   }
 
-  return (
-    <PageContainer>
-      <PageHeader
-        title={t('alertHistory.title')}
-        subtitle={t('alertHistory.description')}
-      />
+  const levelVariant = (level: AlertLevel): 'destructive' | 'secondary' | 'outline' => {
+    if (level === 'P0') return 'destructive'
+    if (level === 'P1') return 'secondary'
+    return 'outline'
+  }
 
-      {/* Error State */}
+  const statusVariant = (status: AlertRecordStatus): 'destructive' | 'secondary' | 'default' => {
+    if (status === 'pending') return 'destructive'
+    if (status === 'in_progress') return 'secondary'
+    return 'default'
+  }
+
+  return (
+    <div className="space-y-6">
+      <PageHeader title={t('alertHistory.title')} subtitle={t('alertHistory.description')} />
+
       {error && (
-        <ErrorBanner error={error} onRetry={loadRecords} />
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+          <Button variant="link" size="sm" onClick={loadRecords}>Retry</Button>
+        </div>
       )}
 
-      {/* Status Update Error */}
       {statusUpdateError && (
-        <div className="mb-6 bg-[var(--color-warning-bg)] border border-[var(--color-warning-bg)] rounded-lg p-4">
-          <div className="flex items-center">
-            <svg
-              className="w-5 h-5 text-[var(--color-warning)] mr-2"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-            <p className="text-[var(--color-warning-text)]">{statusUpdateError}</p>
-            <button
-              onClick={() => setStatusUpdateError(null)}
-              className="ml-auto px-3 py-1 bg-[var(--color-warning)] text-white rounded hover:bg-[var(--color-warning)] hover:opacity-90 transition-colors text-sm"
-            >
+        <div className="rounded-md border-l-4 border-yellow-500 bg-yellow-50 p-4 dark:bg-yellow-950">
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-medium">{statusUpdateError}</p>
+            <Button variant="link" size="sm" onClick={() => setStatusUpdateError(null)}>
               {t('alertHistory.dismiss')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
 
       {/* Filters */}
-      <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm p-6 mb-6 border border-[var(--color-border)]">
-        <h3 className="text-lg font-medium text-[var(--color-text-primary)] mb-4">{t('alertHistory.filters')}</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Node Filter */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              {t('alertHistory.node')}
-            </label>
-            <select
-              value={tempFilters.node_id || ''}
-              onChange={(e) =>
-                handleFilterChange('node_id', e.target.value || undefined)
-              }
-              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
-            >
-              <option value="">{t('alertHistory.allNodes')}</option>
-              {nodes.map((node) => (
-                <option key={node.id} value={node.id}>
-                  {node.name}
-                </option>
-              ))}
-            </select>
-          </div>
+      <Card>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-medium mb-4">{t('alertHistory.filters')}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>{t('alertHistory.node')}</Label>
+              <select
+                value={tempFilters.node_id || ''}
+                onChange={(e) => handleFilterChange('node_id', e.target.value || undefined)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">{t('alertHistory.allNodes')}</option>
+                {nodes.map((node) => (
+                  <option key={node.id} value={node.id}>{node.name}</option>
+                ))}
+              </select>
+            </div>
 
-          {/* Level Filter */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              {t('alertHistory.level')}
-            </label>
-            <select
-              value={tempFilters.level || ''}
-              onChange={(e) =>
-                handleFilterChange(
-                  'level',
-                  (e.target.value as AlertLevel) || undefined
-                )
-              }
-              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
-            >
-              <option value="">{t('alertHistory.allLevels')}</option>
-              <option value="P0">{t('alertHistory.p0Critical')}</option>
-              <option value="P1">{t('alertHistory.p1Warning')}</option>
-              <option value="P2">{t('alertHistory.p2Info')}</option>
-            </select>
-          </div>
+            <div className="space-y-2">
+              <Label>{t('alertHistory.level')}</Label>
+              <select
+                value={tempFilters.level || ''}
+                onChange={(e) => handleFilterChange('level', (e.target.value as AlertLevel) || undefined)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">{t('alertHistory.allLevels')}</option>
+                <option value="P0">{t('alertHistory.p0Critical')}</option>
+                <option value="P1">{t('alertHistory.p1Warning')}</option>
+                <option value="P2">{t('alertHistory.p2Info')}</option>
+              </select>
+            </div>
 
-          {/* Status Filter */}
-          <div>
-            <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-              {t('common.status')}
-            </label>
-            <select
-              value={tempFilters.status || ''}
-              onChange={(e) =>
-                handleFilterChange(
-                  'status',
-                  (e.target.value as AlertRecordStatus) || undefined
-                )
-              }
-              className="w-full px-3 py-2 border border-[var(--color-input-border)] rounded-md focus:ring-[var(--color-brand)] focus:border-[var(--color-brand)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)]"
-            >
-              <option value="">{t('alertHistory.allStatuses')}</option>
-              <option value="pending">{t('alertHistory.pending')}</option>
-              <option value="in_progress">{t('alertHistory.inProgress')}</option>
-              <option value="resolved">{t('alertHistory.resolved')}</option>
-            </select>
-          </div>
+            <div className="space-y-2">
+              <Label>{t('common.status')}</Label>
+              <select
+                value={tempFilters.status || ''}
+                onChange={(e) => handleFilterChange('status', (e.target.value as AlertRecordStatus) || undefined)}
+                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">{t('alertHistory.allStatuses')}</option>
+                <option value="pending">{t('alertHistory.pending')}</option>
+                <option value="in_progress">{t('alertHistory.inProgress')}</option>
+                <option value="resolved">{t('alertHistory.resolved')}</option>
+              </select>
+            </div>
 
-          {/* Actions */}
-          <div className="flex items-end space-x-2">
-            <button
-              type="button"
-              onClick={applyFilters}
-              className="flex-1 px-4 py-2 bg-[var(--color-brand)] text-white rounded-md hover:bg-[var(--color-brand-hover)] transition-colors"
-            >
-              {t('alertHistory.apply')}
-            </button>
-            <button
-              type="button"
-              onClick={clearFilters}
-              className="px-4 py-2 bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] rounded-md hover:bg-[var(--color-bg-subtle)] transition-colors"
-            >
-              {t('alertHistory.clear')}
-            </button>
+            <div className="flex items-end gap-2">
+              <Button onClick={applyFilters} className="flex-1">{t('alertHistory.apply')}</Button>
+              <Button variant="outline" onClick={clearFilters}>{t('alertHistory.clear')}</Button>
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* Alert Records Table */}
-      <div className="bg-[var(--color-bg-surface)] rounded-lg shadow-sm overflow-hidden border border-[var(--color-border)]">
+      {/* Table */}
+      <Card>
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div
-              className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--color-brand)]"
-              role="status"
-              aria-label="Loading alert records"
-            />
+          <div className="flex justify-center py-12">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : records.length === 0 ? (
-          <div className="text-center py-12">
-            <svg
-              className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-              />
-            </svg>
-            <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">{t('alertHistory.noAlerts')}</h3>
-            <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-              {Object.keys(filters).length > 0
-                ? t('alertHistory.noAlertsFiltered')
-                : t('alertHistory.noAlertsEmpty')}
+          <CardContent className="py-12 text-center">
+            <h3 className="text-sm font-medium">{t('alertHistory.noAlerts')}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {Object.keys(filters).length > 0 ? t('alertHistory.noAlertsFiltered') : t('alertHistory.noAlertsEmpty')}
             </p>
-          </div>
+          </CardContent>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-[var(--color-border)]">
-              <thead className="bg-[var(--color-bg-muted)]">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/50">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                    {t('alertHistory.time')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                    {t('alertHistory.node')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                    {t('alertHistory.metric')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                    {t('alertHistory.level')}
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                    {t('common.status')}
-                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('alertHistory.time')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('alertHistory.node')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('alertHistory.metric')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('alertHistory.level')}</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('common.status')}</th>
                   {canEdit && (
-                    <th className="px-6 py-3 text-right text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider">
-                      {t('common.actions')}
-                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">{t('common.actions')}</th>
                   )}
                 </tr>
               </thead>
-              <tbody className="bg-[var(--color-bg-surface)] divide-y divide-[var(--color-border)]">
+              <tbody className="divide-y divide-border">
                 {records.map((record) => (
-                  <tr key={record.id} className="hover:bg-[var(--color-hover-overlay)]">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-primary)]">
-                      {formatDateTime(record.created_at)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-primary)]">
-                      {getNodeName(record.node_id)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--color-text-primary)]">
-                      {formatMetric(record.metric)}
+                  <tr key={record.id} className="hover:bg-muted/50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{new Date(record.created_at).toLocaleString()}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{getNodeName(record.node_id)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">{formatMetric(record.metric)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Badge variant={levelVariant(record.level)}>{record.level}</Badge>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <LevelBadge level={record.level} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={record.status} />
+                      <Badge variant={statusVariant(record.status)}>{record.status}</Badge>
                     </td>
                     {canEdit && (
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                         <StatusActions
                           currentStatus={record.status}
-                          onStatusChange={(newStatus) =>
-                            handleStatusUpdate(record.id, record.status, newStatus)
-                          }
+                          onStatusChange={(newStatus) => handleStatusUpdate(record.id, record.status, newStatus)}
                         />
                       </td>
                     )}
@@ -340,186 +241,51 @@ export default function AlertHistoryPage() {
             </table>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Pagination */}
       {!isLoading && records.length > 0 && (
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-[var(--color-text-secondary)]">
-            {t('alertHistory.showingPage', { page })}
-          </div>
-          <div className="flex space-x-2">
-            <button
-              type="button"
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="px-4 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-border-strong)] rounded-md hover:bg-[var(--color-hover-overlay)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)]"
-            >
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">{t('alertHistory.showingPage', { page })}</p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}>
               {t('common.previous')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPage((p) => p + 1)}
-              disabled={records.length < pageSize}
-              className="px-4 py-2 bg-[var(--color-bg-surface)] border border-[var(--color-border-strong)] rounded-md hover:bg-[var(--color-hover-overlay)] disabled:opacity-50 disabled:cursor-not-allowed text-[var(--color-text-primary)]"
-            >
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setPage((p) => p + 1)} disabled={records.length < pageSize}>
               {t('common.next')}
-            </button>
+            </Button>
           </div>
         </div>
       )}
-    </PageContainer>
+    </div>
   )
 }
 
-/**
- * Level badge component
- */
-function LevelBadge({ level }: { level: AlertLevel }) {
-  const levelConfig = {
-    P0: {
-      bgColor: 'bg-[var(--color-critical-bg)]',
-      textColor: 'text-[var(--color-critical-text)]',
-      label: 'P0 - Critical',
-    },
-    P1: {
-      bgColor: 'bg-[var(--color-warning-bg)]',
-      textColor: 'text-[var(--color-warning-text)]',
-      label: 'P1 - Warning',
-    },
-    P2: {
-      bgColor: 'bg-[var(--color-brand-muted)]',
-      textColor: 'text-[var(--color-brand)]',
-      label: 'P2 - Info',
-    },
-  }
-
-  const config = levelConfig[level]
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor}`}
-    >
-      {config.label}
-    </span>
-  )
-}
-
-/**
- * Status badge component
- */
-function StatusBadge({ status }: { status: AlertRecordStatus }) {
-  const statusConfig = {
-    pending: {
-      bgColor: 'bg-[var(--color-critical-bg)]',
-      textColor: 'text-[var(--color-critical-text)]',
-      label: 'Pending',
-    },
-    in_progress: {
-      bgColor: 'bg-[var(--color-warning-bg)]',
-      textColor: 'text-[var(--color-warning-text)]',
-      label: 'In Progress',
-    },
-    resolved: {
-      bgColor: 'bg-[var(--color-healthy-bg)]',
-      textColor: 'text-[var(--color-healthy-text)]',
-      label: 'Resolved',
-    },
-  }
-
-  const config = statusConfig[status]
-
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor}`}
-    >
-      {config.label}
-    </span>
-  )
-}
-
-/**
- * Status actions component
- */
-function StatusActions({
-  currentStatus,
-  onStatusChange,
-}: {
-  currentStatus: AlertRecordStatus
-  onStatusChange: (status: AlertRecordStatus) => void
-}) {
+function StatusActions({ currentStatus, onStatusChange }: { currentStatus: AlertRecordStatus; onStatusChange: (status: AlertRecordStatus) => void }) {
   const [isUpdating, setIsUpdating] = useState(false)
 
   const handleAction = async (newStatus: AlertRecordStatus) => {
     setIsUpdating(true)
-    try {
-      await onStatusChange(newStatus)
-    } finally {
-      setIsUpdating(false)
-    }
+    try { await onStatusChange(newStatus) } finally { setIsUpdating(false) }
   }
 
-  if (currentStatus === 'resolved') {
-    return (
-      <span className="text-sm text-[var(--color-text-muted)]">Completed</span>
-    )
-  }
+  if (currentStatus === 'resolved') return <span className="text-sm text-muted-foreground">Completed</span>
 
-  if (currentStatus === 'pending') {
-    return (
-      <div className="flex justify-end space-x-2">
-        <button
-          type="button"
-          onClick={() => handleAction('in_progress')}
-          disabled={isUpdating}
-          className="text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] text-sm disabled:text-[var(--color-brand-muted)] disabled:cursor-not-allowed"
-        >
+  return (
+    <div className="flex justify-end gap-2">
+      {currentStatus === 'pending' && (
+        <Button variant="link" size="sm" onClick={() => handleAction('in_progress')} disabled={isUpdating}>
           {isUpdating ? 'Starting...' : 'Start'}
-        </button>
-        <button
-          type="button"
-          onClick={() => handleAction('resolved')}
-          disabled={isUpdating}
-          className="text-[var(--color-healthy)] hover:text-[var(--color-healthy)] hover:opacity-80 text-sm disabled:text-[var(--color-healthy-muted)] disabled:cursor-not-allowed"
-        >
-          {isUpdating ? 'Resolving...' : 'Resolve'}
-        </button>
-      </div>
-    )
-  }
-
-  if (currentStatus === 'in_progress') {
-    return (
-      <button
-        type="button"
-        onClick={() => handleAction('resolved')}
-        disabled={isUpdating}
-        className="text-[var(--color-healthy)] hover:text-[var(--color-healthy)] hover:opacity-80 text-sm disabled:text-[var(--color-healthy-muted)] disabled:cursor-not-allowed"
-      >
+        </Button>
+      )}
+      <Button variant="link" size="sm" onClick={() => handleAction('resolved')} disabled={isUpdating}>
         {isUpdating ? 'Resolving...' : 'Resolve'}
-      </button>
-    )
-  }
-
-  return null
+      </Button>
+    </div>
+  )
 }
 
-/**
- * Format date/time
- */
-function formatDateTime(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleString()
-}
-
-/**
- * Format metric name
- */
 function formatMetric(metric: string): string {
-  const metricMap: Record<string, string> = {
-    latency: 'Latency',
-    packet_loss_rate: 'Packet Loss',
-    jitter: 'Jitter',
-  }
-  return metricMap[metric] || metric
+  const map: Record<string, string> = { latency: 'Latency', packet_loss_rate: 'Packet Loss', jitter: 'Jitter' }
+  return map[metric] || metric
 }

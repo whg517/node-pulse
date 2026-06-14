@@ -1,45 +1,27 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { fetchNodes } from '../api/nodes'
-import { PageContainer, ErrorBanner } from '../components/common'
-import { PageHeader } from '../components/layout/PageHeader'
-import { getComparisonData, fetchDiagnosis } from '../api/data'
-import type { DiagnosisResultDTO } from '../api/data'
-import type { NodeDTO } from '../api/types'
-import ComparisonChart from '../components/dashboard/ComparisonChart'
-import ProblemDiagnosis from '../components/dashboard/ProblemDiagnosis'
-import type { ProblemType, ConfidenceLevel } from '../components/dashboard/ProblemDiagnosis'
-import type {
-  NodeComparisonData,
-  MetricType,
-} from '../components/dashboard/ComparisonChart'
-import { useDashboardStore } from '../stores/dashboardStore'
-import type { ExtendedTimeRange, GroupByType } from '../stores/types'
+import { fetchNodes } from '@/api/nodes'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { getComparisonData, fetchDiagnosis } from '@/api/data'
+import type { DiagnosisResultDTO } from '@/api/data'
+import type { NodeDTO } from '@/api/types'
+import ComparisonChart from '@/components/dashboard/ComparisonChart'
+import ProblemDiagnosis from '@/components/dashboard/ProblemDiagnosis'
+import type { ProblemType, ConfidenceLevel } from '@/components/dashboard/ProblemDiagnosis'
+import type { NodeComparisonData, MetricType } from '@/components/dashboard/ComparisonChart'
+import { useDashboardStore } from '@/stores/dashboardStore'
+import type { GroupByType } from '@/stores/types'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 
-// ISP tags for grouping
-const ISP_TAGS = [
-  'AWS',
-  'GCP',
-  'Azure',
-  'Alibaba',
-  'Tencent',
-  'DigitalOcean',
-  'Linode',
-  'Vultr',
-  'OVH',
-  'Hetzner',
-] as const
+const ISP_TAGS = ['AWS', 'GCP', 'Azure', 'Alibaba', 'Tencent', 'DigitalOcean', 'Linode', 'Vultr', 'OVH', 'Hetzner'] as const
 
 function mapApiProblemToUi(problemType: string): ProblemType {
   switch (problemType) {
-    case 'node_local_failure':
-      return 'node_local'
-    case 'cross_border_link':
-      return 'cross_border_link'
-    case 'isp_routing':
-      return 'carrier_routing'
-    default:
-      return 'none'
+    case 'node_local_failure': return 'node_local'
+    case 'cross_border_link': return 'cross_border_link'
+    case 'isp_routing': return 'carrier_routing'
+    default: return 'none'
   }
 }
 
@@ -48,23 +30,9 @@ function mapApiConfidence(c: string): ConfidenceLevel {
   return 'medium'
 }
 
-/**
- * NodeComparison Page
- *
- * Multi-node comparison page allowing users to:
- * - Select 2-5 nodes for comparison
- * - Group nodes by region or ISP
- * - Select time range (24h/7d/30d/custom)
- * - Select metrics (latency/packet loss/jitter)
- * - View comparison charts with statistics
- * - Highlight differences between nodes
- *
- * @returns NodeComparison page component
- */
 export default function NodeComparisonPage() {
   const { t } = useTranslation()
 
-  // Store state and actions
   const {
     comparison: storeComparison,
     setComparisonNodeIds,
@@ -74,7 +42,6 @@ export default function NodeComparisonPage() {
     setComparisonGroupBy,
   } = useDashboardStore()
 
-  // Local state
   const [availableNodes, setAvailableNodes] = useState<NodeDTO[]>([])
   const [comparisonData, setComparisonData] = useState<NodeComparisonData[] | null>(null)
   const [isLoadingNodes, setIsLoadingNodes] = useState(true)
@@ -84,7 +51,6 @@ export default function NodeComparisonPage() {
   const [diagnosisLoading, setDiagnosisLoading] = useState(false)
   const [diagnosisError, setDiagnosisError] = useState<string | null>(null)
 
-  // Destructure store state for cleaner access
   const { selectedNodeIds, selectedMetrics, timeRange, customTimeRange, groupBy } = storeComparison
 
   useEffect(() => {
@@ -95,7 +61,6 @@ export default function NodeComparisonPage() {
     }
   }, [selectedNodeIds])
 
-  // Load available nodes on mount
   useEffect(() => {
     async function loadNodes() {
       try {
@@ -104,107 +69,38 @@ export default function NodeComparisonPage() {
         const { data } = await fetchNodes()
         setAvailableNodes(data.nodes)
       } catch (err) {
-        const message = err instanceof Error ? err.message : t('errors.failedToLoad')
-        setError(message)
-        console.error('Error loading nodes:', err)
+        setError(err instanceof Error ? err.message : t('errors.failedToLoad'))
       } finally {
         setIsLoadingNodes(false)
       }
     }
-
     loadNodes()
   }, [t])
 
-  // Transform available nodes to selector format
   const nodeOptions = availableNodes.map((node) => ({
     node_id: node.id,
     name: node.name,
     region: node.region,
-    isp: node.tags.find((tag): tag is typeof ISP_TAGS[number] =>
-      ISP_TAGS.includes(tag as typeof ISP_TAGS[number])) || undefined,
+    isp: node.tags.find((tag): tag is typeof ISP_TAGS[number] => ISP_TAGS.includes(tag as typeof ISP_TAGS[number])) || undefined,
     status: node.status as 'online' | 'offline' | 'connecting',
   }))
 
-  // Handle node selection change
   const handleNodeSelectionChange = (nodeIds: string[]) => {
-    // Validate min/max selection
-    if (nodeIds.length > 5) {
-      setError(t('nodes.maxNodesSelected', { max: 5 }))
-      return
-    }
-    if (nodeIds.length < 2 && nodeIds.length > 0) {
-      setError(t('nodes.selectAtLeast', { count: 2 }))
-    }
+    if (nodeIds.length > 5) { setError(t('nodes.maxNodesSelected', { max: 5 })); return }
+    if (nodeIds.length < 2 && nodeIds.length > 0) setError(t('nodes.selectAtLeast', { count: 2 }))
     setComparisonNodeIds(nodeIds)
     setError(null)
   }
 
-  // Handle time range change
-  const handleTimeRangeChange = (range: ExtendedTimeRange) => {
-    setComparisonTimeRange(range)
-  }
-
-  // Handle custom time range change
-  const handleCustomTimeRangeChange = (start: string, end: string) => {
-    setComparisonCustomTimeRange({ start, end })
-  }
-
-  // Handle metric selection change
-  const handleMetricSelectionChange = (metrics: MetricType[]) => {
-    setComparisonMetrics(metrics)
-  }
-
-  // Handle group by change
-  const handleGroupByChange = (newGroupBy: GroupByType) => {
-    setComparisonGroupBy(newGroupBy)
-  }
-
-  // Calculate time range parameters
   const getTimeRangeParams = (): { start_time: string; end_time: string } => {
     const end = new Date()
-    let start: Date
-
-    if (timeRange === 'custom' && customTimeRange) {
-      return {
-        start_time: customTimeRange.start,
-        end_time: customTimeRange.end,
-      }
-    }
-
-    switch (timeRange) {
-      case '24h':
-        start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
-        break
-      case '7d':
-        start = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000)
-        break
-      case '30d':
-        start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000)
-        break
-      default:
-        start = new Date(end.getTime() - 24 * 60 * 60 * 1000)
-    }
-
-    return {
-      start_time: start.toISOString(),
-      end_time: end.toISOString(),
-    }
+    if (timeRange === 'custom' && customTimeRange) return { start_time: customTimeRange.start, end_time: customTimeRange.end }
+    const hours = timeRange === '7d' ? 168 : timeRange === '30d' ? 720 : 24
+    return { start_time: new Date(end.getTime() - hours * 60 * 60 * 1000).toISOString(), end_time: end.toISOString() }
   }
 
-  // Handle comparison button click
   const handleCompare = async () => {
-    if (selectedNodeIds.length < 2) {
-      setError(t('nodes.selectAtLeast', { count: 2 }))
-      return
-    }
-    if (selectedNodeIds.length > 5) {
-      setError(t('nodes.maxNodesSelected', { max: 5 }))
-      return
-    }
-    if (selectedMetrics.length === 0) {
-      setError(t('reports.selectMetrics'))
-      return
-    }
+    if (selectedNodeIds.length < 2 || selectedNodeIds.length > 5 || selectedMetrics.length === 0) return
 
     try {
       setIsLoadingComparison(true)
@@ -213,25 +109,15 @@ export default function NodeComparisonPage() {
       setDiagnosisError(null)
 
       const { start_time, end_time } = getTimeRangeParams()
+      const apiResponse = await getComparisonData({ node_ids: selectedNodeIds, start_time, end_time, metrics: selectedMetrics })
 
-      // Call comparison API using centralized API function
-      const apiResponse = await getComparisonData({
-        node_ids: selectedNodeIds,
-        start_time,
-        end_time,
-        metrics: selectedMetrics,
-      })
-
-      // Transform API response to ComparisonChart format
-      const transformedData: NodeComparisonData[] = apiResponse.data.nodes.map(
-        (node) => ({
-          node_id: node.node_id,
-          node_name: node.name,
-          region: node.region,
-          isp: node.isp,
-          data: node.metrics[selectedMetrics[0]]?.data_points || [],
-        })
-      )
+      const transformedData: NodeComparisonData[] = apiResponse.data.nodes.map((node) => ({
+        node_id: node.node_id,
+        node_name: node.name,
+        region: node.region,
+        isp: node.isp,
+        data: node.metrics[selectedMetrics[0]]?.data_points || [],
+      }))
 
       setComparisonData(transformedData)
 
@@ -240,26 +126,19 @@ export default function NodeComparisonPage() {
         try {
           const diagRes = await fetchDiagnosis(selectedNodeIds)
           setDiagnosisResult(diagRes.data)
-          setDiagnosisError(null)
         } catch (diagErr) {
-          setDiagnosisResult(null)
-          const message =
-            diagErr instanceof Error ? diagErr.message : String(diagErr)
-          setDiagnosisError(message)
+          setDiagnosisError(diagErr instanceof Error ? diagErr.message : String(diagErr))
         } finally {
           setDiagnosisLoading(false)
         }
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('errors.failedToLoad')
-      setError(message)
-      console.error('Error fetching comparison data:', err)
+      setError(err instanceof Error ? err.message : t('errors.failedToLoad'))
     } finally {
       setIsLoadingComparison(false)
     }
   }
 
-  // Metric options
   const metricOptions = [
     { key: 'latency_ms' as MetricType, label: t('metrics.latency'), unit: 'ms' },
     { key: 'packet_loss_rate' as MetricType, label: t('metrics.packetLoss'), unit: '%' },
@@ -267,61 +146,48 @@ export default function NodeComparisonPage() {
   ]
 
   return (
-    <PageContainer>
-      <PageHeader
-        title={t('nodes.comparison')}
-        subtitle={t('nodes.comparisonDescription')}
-      />
+    <div className="space-y-6">
+      <PageHeader title={t('nodes.comparison')} subtitle={t('nodes.comparisonDescription')} />
 
-        {/* Error Message */}
-        {error && (
-          <ErrorBanner error={error} className="mb-6" />
-        )}
+      {error && (
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {error}
+          <Button variant="link" size="sm" onClick={() => setError(null)}>Dismiss</Button>
+        </div>
+      )}
 
-        {/* Node Selector */}
-        <div className="rounded-lg shadow-sm p-6 mb-6 bg-[var(--color-bg-surface)]">
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-            {t('nodes.selectNodes')} (2-5)
-          </h2>
+      {/* Node Selector */}
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-4">{t('nodes.selectNodes')} (2-5)</h2>
 
           {isLoadingNodes ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-brand)]" />
-              <span className="ml-3 text-[var(--color-text-secondary)]">
-                {t('common.loading')}
-              </span>
+            <div className="flex justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             </div>
           ) : (
             <>
-              {/* Group By Selector */}
+              {/* Group By */}
               <div className="mb-4">
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-2">
-                  {t('nodes.groupBy')}
-                </label>
-                <div className="flex space-x-2">
+                <p className="text-sm font-medium text-muted-foreground mb-2">{t('nodes.groupBy')}</p>
+                <div className="flex gap-2">
                   {(['none', 'region', 'isp'] as GroupByType[]).map((option) => (
-                    <button
+                    <Button
                       key={option}
-                      onClick={() => handleGroupByChange(option)}
-                      className={`px-4 py-2 rounded font-medium transition-colors ${
-                        groupBy === option
-                          ? 'bg-[var(--color-brand)] text-white'
-                          : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
-                      }`}
+                      variant={groupBy === option ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setComparisonGroupBy(option)}
                     >
                       {option === 'none' ? t('nodes.none') : option.charAt(0).toUpperCase() + option.slice(1)}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
 
               {/* Node List */}
-              <div data-testid="node-selector" className="space-y-2 max-h-64 overflow-y-auto border border-[var(--color-border)] rounded-lg p-4">
+              <div data-testid="node-selector" className="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-4">
                 {nodeOptions.map((node) => (
-                  <label
-                    key={node.node_id}
-                    className="flex items-center p-3 hover:bg-[var(--color-hover-overlay)] rounded cursor-pointer"
-                  >
+                  <label key={node.node_id} className="flex items-center p-3 hover:bg-muted/50 rounded cursor-pointer">
                     <input
                       type="checkbox"
                       checked={selectedNodeIds.includes(node.node_id)}
@@ -331,36 +197,18 @@ export default function NodeComparisonPage() {
                           : selectedNodeIds.filter((id) => id !== node.node_id)
                         handleNodeSelectionChange(newSelected)
                       }}
-                      disabled={
-                        !selectedNodeIds.includes(node.node_id) && selectedNodeIds.length >= 5
-                      }
-                      className="h-4 w-4 text-[var(--color-brand)] focus:ring-[var(--color-brand)] border-[var(--color-border)] rounded"
+                      disabled={!selectedNodeIds.includes(node.node_id) && selectedNodeIds.length >= 5}
+                      className="h-4 w-4 rounded border-input"
                     />
                     <div className="ml-3 flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium text-[var(--color-text-primary)]">
-                          {node.name}
-                        </span>
-                        <div className="flex items-center space-x-2">
-                          {node.region && (
-                            <span className="text-xs text-[var(--color-text-muted)]">
-                              {t('nodes.region')}: {node.region}
-                            </span>
-                          )}
-                          {node.isp && (
-                            <span className="text-xs text-[var(--color-text-muted)]">
-                              ISP: {node.isp}
-                            </span>
-                          )}
-                          <span
-                            className={`text-xs font-medium ${
-                              node.status === 'online'
-                                ? 'text-[var(--color-healthy)]'
-                                : node.status === 'offline'
-                                ? 'text-[var(--color-critical)]'
-                                : 'text-[var(--color-warning)]'
-                            }`}
-                          >
+                        <span className="text-sm font-medium">{node.name}</span>
+                        <div className="flex items-center gap-2">
+                          {node.region && <span className="text-xs text-muted-foreground">{t('nodes.region')}: {node.region}</span>}
+                          {node.isp && <span className="text-xs text-muted-foreground">ISP: {node.isp}</span>}
+                          <span className={`text-xs font-medium ${
+                            node.status === 'online' ? 'text-green-600' : node.status === 'offline' ? 'text-destructive' : 'text-yellow-600'
+                          }`}>
                             {t(`status.${node.status}`)}
                           </span>
                         </div>
@@ -370,163 +218,114 @@ export default function NodeComparisonPage() {
                 ))}
               </div>
 
-              {/* Selection Summary */}
-              <div className="mt-4 text-sm text-[var(--color-text-secondary)]">
+              <div className="mt-4 text-sm text-muted-foreground">
                 {t('nodes.selectedCount', { count: selectedNodeIds.length, max: 5 })}
                 {selectedNodeIds.length > 0 && selectedNodeIds.length < 2 && (
-                  <span className="text-[var(--color-critical)] ml-2">({t('nodes.selectAtLeast', { count: 2 })})</span>
+                  <span className="text-destructive ml-2">({t('nodes.selectAtLeast', { count: 2 })})</span>
                 )}
               </div>
-
-              {/* Diagnosis hint: show when 1-2 nodes selected */}
-              {selectedNodeIds.length >= 1 && selectedNodeIds.length < 3 && (
-                <div className="mt-3 flex items-start gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-muted)] px-4 py-3">
-                  <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-[var(--color-text-secondary)]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-                  </svg>
-                  <span className="text-sm text-[var(--color-text-secondary)]">
-                    {t('nodes.serverDiagnosisSelectThree')}
-                  </span>
-                </div>
-              )}
             </>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Time Range Selector */}
-        <div className="rounded-lg shadow-sm p-6 mb-6 bg-[var(--color-bg-surface)]">
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-            {t('nodes.timeRange')}
-          </h2>
-          <div className="flex space-x-2">
+      {/* Time Range */}
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-4">{t('nodes.timeRange')}</h2>
+          <div className="flex gap-2">
             {(['24h', '7d', '30d'] as const).map((range) => (
-              <button
+              <Button
                 key={range}
-                onClick={() => handleTimeRangeChange(range)}
-                className={`px-4 py-2 rounded font-medium transition-colors ${
-                  timeRange === range
-                    ? 'bg-[var(--color-brand)] text-white'
-                    : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
-                }`}
+                variant={timeRange === range ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setComparisonTimeRange(range)}
               >
                 {range === '24h' ? t('nodes.hours24') : range === '7d' ? t('nodes.days7') : t('nodes.days30')}
-              </button>
+              </Button>
             ))}
-            <button
-              onClick={() => handleTimeRangeChange('custom')}
-              className={`px-4 py-2 rounded font-medium transition-colors ${
-                timeRange === 'custom'
-                  ? 'bg-[var(--color-brand)] text-white'
-                  : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
-              }`}
+            <Button
+              variant={timeRange === 'custom' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setComparisonTimeRange('custom')}
             >
               {t('nodes.custom')}
-            </button>
+            </Button>
           </div>
 
-          {/* Custom Time Range Inputs */}
           {timeRange === 'custom' && (
             <div className="mt-4 grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  {t('nodes.startTime')}
-                </label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">{t('nodes.startTime')}</label>
                 <input
                   type="datetime-local"
                   value={customTimeRange?.start || ''}
-                  onChange={(e) =>
-                    handleCustomTimeRangeChange(e.target.value, customTimeRange?.end || '')
-                  }
-                  className="w-full px-3 py-2 border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
+                  onChange={(e) => setComparisonCustomTimeRange({ start: e.target.value, end: customTimeRange?.end || '' })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-[var(--color-text-secondary)] mb-1">
-                  {t('nodes.endTime')}
-                </label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-muted-foreground">{t('nodes.endTime')}</label>
                 <input
                   type="datetime-local"
                   value={customTimeRange?.end || ''}
-                  onChange={(e) =>
-                    handleCustomTimeRangeChange(customTimeRange?.start || '', e.target.value)
-                  }
-                  className="w-full px-3 py-2 border border-[var(--color-input-border)] bg-[var(--color-input-bg)] text-[var(--color-text-primary)] rounded-lg focus:ring-2 focus:ring-[var(--color-brand)] focus:border-transparent"
+                  onChange={(e) => setComparisonCustomTimeRange({ start: customTimeRange?.start || '', end: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 />
               </div>
             </div>
           )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Metric Selector */}
-        <div className="rounded-lg shadow-sm p-6 mb-6 bg-[var(--color-bg-surface)]">
-          <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-4">
-            {t('nodes.metricsSelector')}
-          </h2>
-          <div className="flex space-x-2">
+      {/* Metric Selector */}
+      <Card>
+        <CardContent className="p-6">
+          <h2 className="text-lg font-semibold mb-4">{t('nodes.metricsSelector')}</h2>
+          <div className="flex gap-2">
             {metricOptions.map((metric) => (
-              <button
+              <Button
                 key={metric.key}
+                variant={selectedMetrics.includes(metric.key) ? 'default' : 'outline'}
+                size="sm"
                 onClick={() => {
                   const newMetrics = selectedMetrics.includes(metric.key)
                     ? selectedMetrics.filter((m) => m !== metric.key)
                     : [...selectedMetrics, metric.key]
-                  handleMetricSelectionChange(newMetrics)
+                  setComparisonMetrics(newMetrics)
                 }}
-                className={`px-4 py-2 rounded font-medium transition-colors ${
-                  selectedMetrics.includes(metric.key)
-                    ? 'bg-[var(--color-brand)] text-white'
-                    : 'bg-[var(--color-bg-muted)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-subtle)]'
-                }`}
               >
                 {metric.label} ({metric.unit})
-              </button>
+              </Button>
             ))}
           </div>
-        </div>
+        </CardContent>
+      </Card>
 
-        {/* Compare Button */}
-        <div className="mb-6">
-          <button
-            data-testid="compare-button"
-            onClick={handleCompare}
-            disabled={
-              selectedNodeIds.length < 2 ||
-              selectedNodeIds.length > 5 ||
-              selectedMetrics.length === 0 ||
-              isLoadingComparison
-            }
-            className={`w-full py-3 px-4 rounded-lg font-semibold text-white transition-colors ${
-              selectedNodeIds.length >= 2 &&
-              selectedNodeIds.length <= 5 &&
-              selectedMetrics.length > 0 &&
-              !isLoadingComparison
-                ? 'bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)]'
-                : 'bg-[var(--color-bg-subtle)] text-[var(--color-text-placeholder)] cursor-not-allowed'
-            }`}
-          >
-            {isLoadingComparison ? t('common.loading') : t('nodes.compareNodes')}
-          </button>
-        </div>
+      {/* Compare Button */}
+      <Button
+        data-testid="compare-button"
+        className="w-full py-6"
+        onClick={handleCompare}
+        disabled={selectedNodeIds.length < 2 || selectedNodeIds.length > 5 || selectedMetrics.length === 0 || isLoadingComparison}
+      >
+        {isLoadingComparison ? t('common.loading') : t('nodes.compareNodes')}
+      </Button>
 
-        {selectedNodeIds.length >= 3 && (
-          <div className="rounded-lg shadow-sm p-6 mb-6 bg-[var(--color-bg-surface)] border border-[var(--color-border)]">
-            <h2 className="text-lg font-semibold text-[var(--color-text-primary)] mb-1">
-              {t('nodes.serverDiagnosisTitle')}
-            </h2>
-            <p className="text-sm text-[var(--color-text-secondary)] mb-4">
-              {t('nodes.serverDiagnosisSubtitle')}
-            </p>
+      {/* Diagnosis */}
+      {selectedNodeIds.length >= 3 && (
+        <Card>
+          <CardContent className="p-6">
+            <h2 className="text-lg font-semibold mb-1">{t('nodes.serverDiagnosisTitle')}</h2>
+            <p className="text-sm text-muted-foreground mb-4">{t('nodes.serverDiagnosisSubtitle')}</p>
             {diagnosisLoading && (
-              <div className="flex items-center gap-2 text-[var(--color-text-secondary)]">
-                <div
-                  className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-[var(--color-brand)] border-t-transparent"
-                  aria-hidden
-                />
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 <span>{t('nodes.serverDiagnosisLoading')}</span>
               </div>
             )}
             {!diagnosisLoading && diagnosisError && (
-              <ErrorBanner error={new Error(diagnosisError)} className="mb-2" />
+              <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{diagnosisError}</div>
             )}
             {!diagnosisLoading && diagnosisResult && (
               <ProblemDiagnosis
@@ -537,53 +336,33 @@ export default function NodeComparisonPage() {
               />
             )}
             {!diagnosisLoading && !diagnosisError && !diagnosisResult && !comparisonData && (
-              <p className="text-sm text-[var(--color-text-muted)]">
-                {t('nodes.serverDiagnosisAfterCompare')}
-              </p>
+              <p className="text-sm text-muted-foreground">{t('nodes.serverDiagnosisAfterCompare')}</p>
             )}
-          </div>
-        )}
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Comparison Chart */}
-        {comparisonData && comparisonData.length > 0 && (
-          <ComparisonChart
-            nodes={comparisonData}
-            metric={selectedMetrics[0]}
-            timeRange={timeRange === 'custom' ? '24h' : timeRange}
-            showStatistics={true}
-            highlightDifferences={true}
-            groupBy={groupBy}
-            isLoading={isLoadingComparison}
-          />
-        )}
+      {/* Comparison Chart */}
+      {comparisonData && comparisonData.length > 0 && (
+        <ComparisonChart
+          nodes={comparisonData}
+          metric={selectedMetrics[0]}
+          timeRange={timeRange === 'custom' ? '24h' : timeRange}
+          showStatistics={true}
+          highlightDifferences={true}
+          groupBy={groupBy}
+          isLoading={isLoadingComparison}
+        />
+      )}
 
-        {/* Empty State */}
-        {!comparisonData && !isLoadingComparison && (
-          <div className="rounded-lg shadow-sm p-12 bg-[var(--color-bg-surface)]">
-            <div className="text-center">
-              <svg
-                className="mx-auto h-12 w-12 text-[var(--color-text-muted)]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-[var(--color-text-primary)]">
-                {t('nodes.noComparisonData')}
-              </h3>
-              <p className="mt-1 text-sm text-[var(--color-text-secondary)]">
-                {t('nodes.noComparisonDataDescription')}
-              </p>
-            </div>
-          </div>
-        )}
-    </PageContainer>
+      {!comparisonData && !isLoadingComparison && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <h3 className="text-sm font-medium">{t('nodes.noComparisonData')}</h3>
+            <p className="mt-1 text-sm text-muted-foreground">{t('nodes.noComparisonDataDescription')}</p>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   )
 }

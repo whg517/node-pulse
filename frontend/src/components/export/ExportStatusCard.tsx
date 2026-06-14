@@ -83,10 +83,10 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
    */
   const getStatusBadge = () => {
     const statusStyles = {
-      pending: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
-      processing: 'bg-[var(--color-brand-muted)] text-[var(--color-brand)]',
-      completed: 'bg-[var(--color-healthy-bg)] text-[var(--color-healthy-text)]',
-      failed: 'bg-[var(--color-critical-bg)] text-[var(--color-critical-text)]',
+      pending: 'bg-warning-bg text-warning-text',
+      processing: 'bg-primary/10 text-primary',
+      completed: 'bg-healthy-bg text-healthy-text',
+      failed: 'bg-destructive/10 text-destructive',
     }
 
     const statusLabels = {
@@ -106,18 +106,18 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+    <div className="bg-background rounded-lg shadow-md p-6 border border-border">
       {/* Header with status and dismiss */}
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center space-x-2">
-          <h3 className="text-lg font-semibold text-gray-900">Export Task</h3>
+          <h3 className="text-lg font-semibold text-foreground">Export Task</h3>
           {getStatusBadge()}
         </div>
         {onDismiss && (
           <button
             type="button"
             onClick={onDismiss}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
+            className="text-muted-foreground hover:text-muted-foreground transition-colors"
             aria-label="Dismiss"
           >
             <svg
@@ -141,26 +141,26 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
       {(exportTask.status === 'pending' || exportTask.status === 'processing') && (
         <div className="mb-4">
           <div className="flex items-center space-x-2">
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--color-brand)]"></div>
-            <span className="text-sm text-gray-600">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+            <span className="text-sm text-muted-foreground">
               {exportTask.status === 'pending' ? 'Initializing export...' : 'Exporting data...'}
             </span>
           </div>
           {estimatedCompletion && (
-            <p className="text-xs text-gray-500 mt-1 ml-7">{estimatedCompletion}</p>
+            <p className="text-xs text-muted-foreground mt-1 ml-7">{estimatedCompletion}</p>
           )}
         </div>
       )}
 
       {/* Error message for failed exports */}
       {exportTask.status === 'failed' && exportTask.error && (
-        <div className="mb-4 bg-[var(--color-critical-bg)] border-l-4 border-[var(--color-critical)] p-3 rounded">
-          <p className="text-sm text-[var(--color-critical-text)]">{exportTask.error}</p>
+        <div className="mb-4 bg-destructive/10 border-l-4 border-destructive p-3 rounded">
+          <p className="text-sm text-destructive">{exportTask.error}</p>
         </div>
       )}
 
       {/* Export Details */}
-      <div className="space-y-2 text-sm text-gray-700">
+      <div className="space-y-2 text-sm text-foreground/80">
         <div className="flex items-center justify-between">
           <span className="font-medium">Nodes:</span>
           <span>{exportTask.node_ids.length} selected</span>
@@ -179,7 +179,7 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
             {exportTask.metrics.map((metric) => (
               <span
                 key={metric}
-                className="px-2 py-0.5 text-xs bg-gray-100 rounded"
+                className="px-2 py-0.5 text-xs bg-muted rounded"
               >
                 {metric === 'latency' && 'Latency'}
                 {metric === 'packet_loss_rate' && 'Packet Loss'}
@@ -221,11 +221,11 @@ export function ExportStatusCard({ exportTask, onDownload, onDismiss }: ExportSt
 
       {/* Download button when completed */}
       {exportTask.status === 'completed' && onDownload && (
-        <div className="mt-4 pt-4 border-t border-gray-200">
+        <div className="mt-4 pt-4 border-t border-border">
           <button
             type="button"
             onClick={() => onDownload(exportTask.id)}
-            className="w-full bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-medium py-2 px-4 rounded-md transition-colors duration-150 flex items-center justify-center space-x-2"
+            className="w-full bg-primary hover:bg-primary/85 text-white font-medium py-2 px-4 rounded-md transition-colors duration-150 flex items-center justify-center space-x-2"
           >
             <svg
               className="h-5 w-5"

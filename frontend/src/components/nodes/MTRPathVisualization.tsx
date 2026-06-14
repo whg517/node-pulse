@@ -67,39 +67,39 @@ const riskStatusConfig: Record<
   }
 > = {
   safe: {
-    borderColor: 'border-[var(--color-healthy-bg)]',
-    bgColor: 'bg-[var(--color-healthy-bg)]',
-    textColor: 'text-[var(--color-healthy-text)]',
-    badgeBgColor: 'bg-[var(--color-healthy-bg)]',
-    badgeTextColor: 'text-[var(--color-healthy-text)]',
-    indicatorColor: 'bg-[var(--color-healthy)]',
+    borderColor: 'border-healthy-bg',
+    bgColor: 'bg-healthy-bg',
+    textColor: 'text-healthy-text',
+    badgeBgColor: 'bg-healthy-bg',
+    badgeTextColor: 'text-healthy-text',
+    indicatorColor: 'bg-healthy',
     shadowColor: 'shadow-sm',
   },
   warning: {
-    borderColor: 'border-[var(--color-warning-bg)]',
-    bgColor: 'bg-[var(--color-warning-bg)]',
-    textColor: 'text-[var(--color-warning-text)]',
-    badgeBgColor: 'bg-[var(--color-warning-bg)]',
-    badgeTextColor: 'text-[var(--color-warning-text)]',
-    indicatorColor: 'bg-[var(--color-warning)]',
+    borderColor: 'border-warning-bg',
+    bgColor: 'bg-warning-bg',
+    textColor: 'text-warning-text',
+    badgeBgColor: 'bg-warning-bg',
+    badgeTextColor: 'text-warning-text',
+    indicatorColor: 'bg-warning',
     shadowColor: 'shadow-sm',
   },
   critical: {
-    borderColor: 'border-[var(--color-critical-bg)]',
-    bgColor: 'bg-[var(--color-critical-bg)]',
-    textColor: 'text-[var(--color-critical-text)]',
-    badgeBgColor: 'bg-[var(--color-critical-bg)]',
-    badgeTextColor: 'text-[var(--color-critical-text)]',
-    indicatorColor: 'bg-[var(--color-critical)]',
+    borderColor: 'border-destructive/10',
+    bgColor: 'bg-destructive/10',
+    textColor: 'text-destructive',
+    badgeBgColor: 'bg-destructive/10',
+    badgeTextColor: 'text-destructive',
+    indicatorColor: 'bg-destructive',
     shadowColor: 'shadow-sm',
   },
   timeout: {
-    borderColor: 'border-[var(--color-border)]',
-    bgColor: 'bg-[var(--color-bg-muted)]',
-    textColor: 'text-[var(--color-text-primary)]',
-    badgeBgColor: 'bg-gray-100',
-    badgeTextColor: 'text-gray-700',
-    indicatorColor: 'bg-gray-400',
+    borderColor: 'border-border',
+    bgColor: 'bg-muted',
+    textColor: 'text-foreground',
+    badgeBgColor: 'bg-muted',
+    badgeTextColor: 'text-foreground/80',
+    indicatorColor: 'bg-muted-foreground/30',
     shadowColor: 'shadow-sm',
   },
 }
@@ -217,7 +217,7 @@ function HopTooltip({ hop, conditions, position, onClose }: HopTooltipProps) {
 
   return (
     <div
-      className="fixed z-50 w-80 bg-white rounded-lg shadow-xl border border-gray-200 overflow-hidden"
+      className="fixed z-50 w-80 bg-background rounded-lg shadow-xl border border-border overflow-hidden"
       style={{
         top: Math.min(position.y + 10, window.innerHeight - 400),
         left: Math.min(position.x + 10, window.innerWidth - 350),
@@ -226,13 +226,13 @@ function HopTooltip({ hop, conditions, position, onClose }: HopTooltipProps) {
       aria-label={`Detailed information for hop ${hop.hopNumber}`}
     >
       {/* Tooltip Header */}
-      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-        <h4 className="font-semibold text-gray-900">
+      <div className="bg-muted/50 px-4 py-3 border-b border-border flex items-center justify-between">
+        <h4 className="font-semibold text-foreground">
           {t('mtr.hopDetail', 'Hop {{number}}', { number: hop.hopNumber })}
         </h4>
         <button
           onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 transition-colors"
+          className="text-muted-foreground hover:text-muted-foreground transition-colors"
           aria-label={t('common.close', 'Close')}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -245,54 +245,54 @@ function HopTooltip({ hop, conditions, position, onClose }: HopTooltipProps) {
       <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
         {/* IP and Hostname */}
         <div>
-          <p className="text-xs text-gray-500 mb-1">{t('mtr.ipAddress', 'IP Address')}</p>
-          <p className="font-mono text-sm font-medium text-gray-900">{hop.ip}</p>
+          <p className="text-xs text-muted-foreground mb-1">{t('mtr.ipAddress', 'IP Address')}</p>
+          <p className="font-mono text-sm font-medium text-foreground">{hop.ip}</p>
           {hop.hostname && hop.hostname !== hop.ip && (
-            <p className="text-xs text-gray-600 mt-0.5">{hop.hostname}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{hop.hostname}</p>
           )}
         </div>
 
         {/* AS Number */}
         {hop.asNumber && (
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('mtr.asNumber', 'AS Number')}</p>
-            <p className="text-sm font-medium text-gray-900">AS{hop.asNumber}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('mtr.asNumber', 'AS Number')}</p>
+            <p className="text-sm font-medium text-foreground">AS{hop.asNumber}</p>
           </div>
         )}
 
         {/* Location */}
         {hop.location && (
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('mtr.location', 'Location')}</p>
-            <p className="text-sm text-gray-700">{hop.location}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('mtr.location', 'Location')}</p>
+            <p className="text-sm text-foreground/80">{hop.location}</p>
           </div>
         )}
 
         {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+        <div className="grid grid-cols-2 gap-3 pt-2 border-t border-border">
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('mtr.avgLatency', 'Avg Latency')}</p>
-            <p className="text-sm font-semibold text-gray-900">{formatRTT(hop.avgRTTMs)}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('mtr.avgLatency', 'Avg Latency')}</p>
+            <p className="text-sm font-semibold text-foreground">{formatRTT(hop.avgRTTMs)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('mtr.minLatency', 'Min Latency')}</p>
-            <p className="text-sm font-medium text-gray-700">{formatRTT(hop.bestRTTMs)}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('mtr.minLatency', 'Min Latency')}</p>
+            <p className="text-sm font-medium text-foreground/80">{formatRTT(hop.bestRTTMs)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('mtr.maxLatency', 'Max Latency')}</p>
-            <p className="text-sm font-medium text-gray-700">{formatRTT(hop.worstRTTMs)}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('mtr.maxLatency', 'Max Latency')}</p>
+            <p className="text-sm font-medium text-foreground/80">{formatRTT(hop.worstRTTMs)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('mtr.jitter', 'Jitter')}</p>
-            <p className="text-sm font-medium text-gray-700">{formatRTT(hop.stdDevMs)}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('mtr.jitter', 'Jitter')}</p>
+            <p className="text-sm font-medium text-foreground/80">{formatRTT(hop.stdDevMs)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('mtr.packetLoss', 'Packet Loss')}</p>
-            <p className="text-sm font-semibold text-gray-900">{formatLossRate(hop.lossRate)}</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('mtr.packetLoss', 'Packet Loss')}</p>
+            <p className="text-sm font-semibold text-foreground">{formatLossRate(hop.lossRate)}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 mb-1">{t('mtr.packets', 'Packets')}</p>
-            <p className="text-sm font-medium text-gray-700">
+            <p className="text-xs text-muted-foreground mb-1">{t('mtr.packets', 'Packets')}</p>
+            <p className="text-sm font-medium text-foreground/80">
               {hop.received}/{hop.sent}
             </p>
           </div>
@@ -300,8 +300,8 @@ function HopTooltip({ hop, conditions, position, onClose }: HopTooltipProps) {
 
         {/* Risk Conditions */}
         {conditions.length > 0 && (
-          <div className="pt-2 border-t border-gray-100">
-            <p className="text-xs font-medium text-gray-700 mb-2">
+          <div className="pt-2 border-t border-border">
+            <p className="text-xs font-medium text-foreground/80 mb-2">
               {t('mtr.riskConditions', 'Risk Conditions')}
             </p>
             <div className="space-y-1.5">
@@ -310,8 +310,8 @@ function HopTooltip({ hop, conditions, position, onClose }: HopTooltipProps) {
                   key={idx}
                   className={`flex items-start gap-2 px-2 py-1.5 rounded text-xs ${
                     condition.severity === 'critical'
-                      ? 'bg-[var(--color-critical-bg)] text-[var(--color-critical)]'
-                      : 'bg-[var(--color-warning-bg)] text-[var(--color-warning)]'
+                      ? 'bg-destructive/10 text-destructive'
+                      : 'bg-warning-bg text-warning'
                   }`}
                 >
                   <svg
@@ -340,12 +340,12 @@ function HopTooltip({ hop, conditions, position, onClose }: HopTooltipProps) {
       </div>
 
       {/* Tooltip Footer */}
-      <div className="bg-gray-50 px-4 py-2 border-t border-gray-200">
+      <div className="bg-muted/50 px-4 py-2 border-t border-border">
         <button
           onClick={() => {
             onClose()
           }}
-          className="w-full text-xs text-[var(--color-brand)] hover:text-[var(--color-brand-hover)] font-medium transition-colors"
+          className="w-full text-xs text-primary hover:text-primary font-medium transition-colors"
         >
           {t('mtr.closeTooltip', 'Click outside to close')}
         </button>
@@ -424,13 +424,13 @@ export default function MTRPathVisualization({
   if (!hops || hops.length === 0) {
     return (
       <div
-        className={`mtr-path-visualization bg-white rounded-lg shadow-sm p-6 ${className}`}
+        className={`mtr-path-visualization bg-background rounded-lg shadow-sm p-6 ${className}`}
         role="region"
         aria-label={t('mtr.pathVisualization', 'MTR Path Visualization')}
       >
         <div className="flex flex-col items-center justify-center py-12 text-center" role="img">
           <svg
-            className="h-16 w-16 text-gray-300 mb-4"
+            className="h-16 w-16 text-muted-foreground mb-4"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -443,8 +443,8 @@ export default function MTRPathVisualization({
               d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
             />
           </svg>
-          <p className="text-gray-500 font-medium">{t('mtr.noHopData', 'No hop data available')}</p>
-          <p className="text-gray-400 text-sm mt-1">{t('mtr.runMTRToSeePath', 'Run an MTR trace to see the network path')}</p>
+          <p className="text-muted-foreground font-medium">{t('mtr.noHopData', 'No hop data available')}</p>
+          <p className="text-muted-foreground text-sm mt-1">{t('mtr.runMTRToSeePath', 'Run an MTR trace to see the network path')}</p>
         </div>
       </div>
     )
@@ -452,25 +452,25 @@ export default function MTRPathVisualization({
 
   return (
     <div
-      className={`mtr-path-visualization bg-white rounded-lg shadow-sm p-4 ${className}`}
+      className={`mtr-path-visualization bg-background rounded-lg shadow-sm p-4 ${className}`}
       role="region"
       aria-label={t('mtr.pathVisualization', 'MTR Path Visualization')}
     >
       {/* Header with target info */}
       {target && (
-        <div className="mb-4 pb-3 border-b border-gray-100">
+        <div className="mb-4 pb-3 border-b border-border">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-gray-900">
+              <h3 className="text-base font-semibold text-foreground">
                 {t('mtr.networkPath', 'Network Path')}
               </h3>
-              <p className="text-sm text-gray-500 mt-0.5">
+              <p className="text-sm text-muted-foreground mt-0.5">
                 {t('mtr.pathTo', 'Path to')}:{' '}
-                <span className="font-mono font-medium text-gray-700">{target}</span>
+                <span className="font-mono font-medium text-foreground/80">{target}</span>
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {hops.length} {t('mtr.hops', 'hops')}
               </span>
             </div>
@@ -528,7 +528,7 @@ export default function MTRPathVisualization({
                   <div
                     className={`absolute left-8 top-10 w-0.5 h-full ${
                       riskStatus === 'critical' || riskStatus === 'timeout'
-                        ? 'bg-gray-300'
+                        ? 'bg-muted-foreground/30'
                         : config.indicatorColor
                     } opacity-50`}
                     style={{ height: 'calc(100% + 8px)' }}
@@ -540,7 +540,7 @@ export default function MTRPathVisualization({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {/* IP Address */}
-                    <span className="font-mono font-medium text-gray-900 text-sm">
+                    <span className="font-mono font-medium text-foreground text-sm">
                       {hop.ip}
                     </span>
 
@@ -552,8 +552,8 @@ export default function MTRPathVisualization({
                             key={idx}
                             className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium ${
                               condition.severity === 'critical'
-                                ? 'bg-[var(--color-critical-bg)] text-[var(--color-critical)]'
-                                : 'bg-[var(--color-warning-bg)] text-[var(--color-warning)]'
+                                ? 'bg-destructive/10 text-destructive'
+                                : 'bg-warning-bg text-warning'
                             }`}
                             title={condition.message}
                           >
@@ -568,7 +568,7 @@ export default function MTRPathVisualization({
 
                     {/* AS Number */}
                     {hop.asNumber && (
-                      <span className="text-xs text-gray-500 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
+                      <span className="text-xs text-muted-foreground font-mono bg-muted px-1.5 py-0.5 rounded">
                         AS{hop.asNumber}
                       </span>
                     )}
@@ -576,7 +576,7 @@ export default function MTRPathVisualization({
 
                   {/* Location */}
                   {hop.location && (
-                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                    <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1">
                       <svg
                         className="w-3 h-3"
                         fill="none"
@@ -609,14 +609,14 @@ export default function MTRPathVisualization({
                         className={`w-2 h-2 rounded-full ${config.indicatorColor}`}
                         aria-hidden="true"
                       />
-                      <span className="text-gray-600">{t('mtr.loss', 'Loss')}:</span>
+                      <span className="text-muted-foreground">{t('mtr.loss', 'Loss')}:</span>
                       <span
                         className={`font-semibold ${
                           hop.lossRate >= 10
-                            ? 'text-[var(--color-critical)]'
+                            ? 'text-destructive'
                             : hop.lossRate >= 5
-                            ? 'text-[var(--color-warning)]'
-                            : 'text-gray-700'
+                            ? 'text-warning'
+                            : 'text-foreground/80'
                         }`}
                       >
                         {formatLossRate(hop.lossRate)}
@@ -625,14 +625,14 @@ export default function MTRPathVisualization({
 
                     {/* Avg Latency */}
                     <div className="flex items-center gap-1">
-                      <span className="text-gray-600">{t('mtr.avg', 'Avg')}:</span>
+                      <span className="text-muted-foreground">{t('mtr.avg', 'Avg')}:</span>
                       <span
                         className={`font-medium ${
                           hop.avgRTTMs >= 200
-                            ? 'text-[var(--color-critical)]'
+                            ? 'text-destructive'
                             : hop.avgRTTMs >= 100
-                            ? 'text-[var(--color-warning)]'
-                            : 'text-gray-700'
+                            ? 'text-warning'
+                            : 'text-foreground/80'
                         }`}
                       >
                         {formatRTT(hop.avgRTTMs)}
@@ -640,7 +640,7 @@ export default function MTRPathVisualization({
                     </div>
 
                     {/* Min/Max Latency */}
-                    <div className="flex items-center gap-1 text-gray-500">
+                    <div className="flex items-center gap-1 text-muted-foreground">
                       <span>
                         {formatRTT(hop.bestRTTMs)} - {formatRTT(hop.worstRTTMs)}
                       </span>
@@ -649,12 +649,12 @@ export default function MTRPathVisualization({
                     {/* Jitter */}
                     {hop.stdDevMs > 0 && (
                       <div className="flex items-center gap-1">
-                        <span className="text-gray-600">{t('mtr.jitter', 'Jitter')}:</span>
+                        <span className="text-muted-foreground">{t('mtr.jitter', 'Jitter')}:</span>
                         <span
                           className={`font-medium ${
                             hop.stdDevMs >= 50
-                              ? 'text-[var(--color-warning)]'
-                              : 'text-gray-700'
+                              ? 'text-warning'
+                              : 'text-foreground/80'
                           }`}
                         >
                           {formatRTT(hop.stdDevMs)}
@@ -667,7 +667,7 @@ export default function MTRPathVisualization({
                 {/* Status Indicator Icon */}
                 <div className="flex-shrink-0" aria-hidden="true">
                   {riskStatus === 'critical' && (
-                    <svg className="w-5 h-5 text-[var(--color-critical)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -677,7 +677,7 @@ export default function MTRPathVisualization({
                     </svg>
                   )}
                   {riskStatus === 'warning' && (
-                    <svg className="w-5 h-5 text-[var(--color-warning)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -687,7 +687,7 @@ export default function MTRPathVisualization({
                     </svg>
                   )}
                   {riskStatus === 'timeout' && (
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -697,7 +697,7 @@ export default function MTRPathVisualization({
                     </svg>
                   )}
                   {riskStatus === 'safe' && (
-                    <svg className="w-5 h-5 text-[var(--color-healthy)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5 text-healthy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
@@ -714,30 +714,30 @@ export default function MTRPathVisualization({
       </div>
 
       {/* Legend */}
-      <div className="mt-4 pt-3 border-t border-gray-100">
-        <p className="text-xs text-gray-500 mb-2">{t('mtr.riskLegend', 'Risk indicators')}:</p>
+      <div className="mt-4 pt-3 border-t border-border">
+        <p className="text-xs text-muted-foreground mb-2">{t('mtr.riskLegend', 'Risk indicators')}:</p>
         <div className="flex items-center gap-3 flex-wrap text-xs">
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-[var(--color-healthy)]" aria-hidden="true" />
-            <span className="text-gray-600">
+            <span className="w-3 h-3 rounded-full bg-healthy" aria-hidden="true" />
+            <span className="text-muted-foreground">
               {t('mtr.riskSafe', 'Normal')} ({t('mtr.riskSafeDesc', '< 10% loss, < 200ms latency')})
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-[var(--color-warning)]" aria-hidden="true" />
-            <span className="text-gray-600">
+            <span className="w-3 h-3 rounded-full bg-warning" aria-hidden="true" />
+            <span className="text-muted-foreground">
               {t('mtr.riskWarning', 'Warning')} ({t('mtr.riskWarningDesc', '≥ 50ms jitter')})
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-[var(--color-critical)]" aria-hidden="true" />
-            <span className="text-gray-600">
+            <span className="w-3 h-3 rounded-full bg-destructive" aria-hidden="true" />
+            <span className="text-muted-foreground">
               {t('mtr.riskCritical', 'Critical')} ({t('mtr.riskCriticalDesc', '≥ 10% loss or ≥ 200ms latency')})
             </span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-full bg-gray-400" aria-hidden="true" />
-            <span className="text-gray-600">
+            <span className="w-3 h-3 rounded-full bg-muted-foreground/30" aria-hidden="true" />
+            <span className="text-muted-foreground">
               {t('mtr.riskTimeout', 'Timeout')} ({t('mtr.riskTimeoutDesc', 'No response')})
             </span>
           </div>

@@ -25,7 +25,7 @@ describe('MetricCard', () => {
     )
 
     const card = container.querySelector('.metric-card')
-    expect(card).toHaveClass('border-l-[var(--color-healthy)]', 'bg-[var(--color-bg-surface)]')
+    expect(card).toHaveClass('border-l-healthy', 'bg-card')
   })
 
   it('applies correct status colors for warning status', () => {
@@ -34,7 +34,7 @@ describe('MetricCard', () => {
     )
 
     const card = container.querySelector('.metric-card')
-    expect(card).toHaveClass('border-l-[var(--color-warning)]', 'bg-[var(--color-bg-surface)]')
+    expect(card).toHaveClass('border-l-warning', 'bg-card')
   })
 
   it('applies correct status colors for critical status', () => {
@@ -43,7 +43,7 @@ describe('MetricCard', () => {
     )
 
     const card = container.querySelector('.metric-card')
-    expect(card).toHaveClass('border-l-[var(--color-critical)]', 'bg-[var(--color-bg-surface)]')
+    expect(card).toHaveClass('border-l-destructive', 'bg-card')
   })
 
   it('renders trend when provided', () => {
