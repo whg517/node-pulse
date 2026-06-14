@@ -1,907 +1,347 @@
-# NodePulse UI/UX Design Document
+# NodePulse UI Design System
 
-**Version:** 3.0
-**Date:** 2026-03-21
-**Author:** Design Team
-**Status:** Implemented
+**Version:** 4.0
+**Date:** 2026-06-14
+**Status:** Current implementation
 
----
-
-## Design Direction
-
-**Aesthetic:** "Instrument Panel" — Precision, clarity, signal-strength identity
-**Tech Stack:** React 19 + TypeScript + Tailwind CSS v4 + Vite 7 + ECharts + Zustand
-
-**Design Principles:**
-- **Function-first:** Monitoring status scannability never degrades for aesthetics
-- **Signal clarity:** Teal brand color for network/connectivity semantics
-- **Depth through shadow:** 5-level shadow system replaces pure border separation
-- **Unified language:** Light and dark themes share the same design vocabulary
-- **WCAG AA:** All color pairings verified for >= 4.5:1 text contrast
+This document reflects the current React 19 + Tailwind CSS 4 + shadcn/ui frontend. It replaces the older legacy charting-era design document.
 
 ---
 
-## 1. Information Architecture
+## 1. Design Direction
 
-### 1.1 Navigation Structure
+NodePulse is an operations dashboard for repeated monitoring and incident response work. The interface should feel dense, calm, and precise rather than promotional.
 
-Based on PRD user journeys and functional requirements:
+Design goals:
 
-```
-NodePulse
-├── 📊 Dashboard                    /dashboard
-│   ├── World Map (节点分布)
-│   ├── Core Metrics Panel
-│   ├── Alert Stream
-│   └── Node Quick List
-│
-├── 🖥️ Nodes                       /nodes
-│   ├── Node List / Management     /nodes
-│   ├── Node Detail                /nodes/:id
-│   │   ├── Real-time Metrics
-│   │   ├── Trend Charts (24h/7d/30d)
-│   │   ├── MTR Path Visualization
-│   │   └── Diagnostic Report Export
-│   └── Node Comparison            /nodes/comparison
-│
-├── 🚨 Alerts                      /alerts
-│   ├── Alert Rules                /alerts/rules
-│   ├── Active Alerts / Records    /alerts/records
-│   └── Alert History              /alerts/history
-│
-├── 📈 Reports                     /reports
-│   ├── Report Generator           /reports
-│   └── Export History             /reports/history
-│
-├── 🔗 Integrations                /integrations
-│   ├── Webhooks                   /integrations/webhooks
-│   └── System Health              /integrations/health
-│
-└── ⚙️ Settings                    /settings
-    ├── Preferences                /settings/preferences
-    │   ├── Timezone
-    │   ├── Language
-    │   └── Theme
-    ├── Sessions                   /settings/sessions
-    └── Users (Admin only)         /settings/users
-```
-
-### 1.2 Key User Flows
-
-| Flow | Entry Point | Key Actions | Exit Point |
-|------|-------------|-------------|------------|
-| **Journey 1: Manager Overview** | Dashboard Map | Click region -> View anomaly -> Export report | PDF Download |
-| **Journey 2: Node Deployment** | Node Management | Add Node -> Copy script -> Deploy | Beacon Running |
-| **Journey 3: Daily Inspection** | Dashboard | View health map -> Generate report | Email/PDF |
-| **Journey 4: Optimization Analysis** | Reports | Select time ranges -> Compare -> Export | PDF with charts |
-| **Journey 5: Emergency Response** | Mobile Push | View alert -> MTR path -> Add notes | Alert Resolved |
+- High scanability for network health, alerts, and node state.
+- Consistent light/dark behavior through semantic theme tokens.
+- Predictable layout and controls across all management pages.
+- Accessible keyboard and screen-reader behavior through Radix-based primitives.
+- Clear separation between reusable UI primitives and domain components.
 
 ---
 
-## 2. Layout Architecture
+## 2. Current Frontend Stack
 
-### 2.1 Shared Layout Component
-
-All authenticated pages use a shared `AppLayout` component:
-
-```
-+============================================================================+
-|                         [Header - 64px]                                    |
-|  [Hamburger] NodePulse        [Search...]    [TZ] [EN] [🌙] [User ▼]      |
-+============================================================================+
-|        |                                                                   |
-|   S    |                                                                   |
-|   I    |                     Main Content                                  |
-|   D    |                                                                   |
-|   E    |                   (max-w-7xl, scrollable)                         |
-|   B    |                                                                   |
-|   A    |                                                                   |
-|   R    |                                                                   |
-|        |                                                                   |
-| 256px |                                                                   |
-| (64px |                                                                   |
-|collap)|                                                                   |
-|        |                                                                   |
-+============================================================================+
-```
-
-### 2.2 Sidebar Design
-
-**Desktop (≥768px):**
-- Width: 256px (expanded) / 64px (collapsed)
-- Sections with collapsible groups
-- Active state highlighting
-- Badge counts for alerts
-
-**Mobile (<768px):**
-- Hidden by default
-- Overlay when opened (hamburger menu)
-- Full-height with backdrop
-- Touch-friendly tap targets (48px min)
-
-```typescript
-interface SidebarItem {
-  icon: React.ReactNode
-  label: string
-  path: string
-  badge?: number        // Alert count, etc.
-  children?: SidebarItem[]
-  requiredRole?: string // RBAC support
-}
-```
-
-### 2.3 Header Design
-
-```
-+============================================================================+
-| [≡] NodePulse    [🔍 Search...]     [UTC+8 ▼] [EN/中文 ▼] [🌙] [Admin ▼]  |
-+============================================================================+
-```
-
-**Components:**
-- **Logo/Brand:** "NodePulse" (consistent)
-- **Search:** Global search (future feature)
-- **Timezone Selector:** User's preferred timezone
-- **Language Switcher:** EN/中文
-- **Theme Toggle:** Dark/Light mode
-- **User Menu:** Profile, Settings, Logout
+- React 19 + TypeScript 5
+- Vite 7
+- React Router 7
+- Tailwind CSS 4 using `@theme inline`
+- shadcn/ui v4-style primitives in `frontend/src/components/ui`
+- Radix UI primitives through the `radix-ui` package
+- Recharts for time-series and gauge visualizations
+- react-simple-maps for map visualizations
+- Zustand and TanStack Query for state/data workflows
+- i18next / react-i18next for `en` and `zh-CN`
 
 ---
 
-## 3. Visual Design System
+## 3. Theming Architecture
 
-### 3.1 Color Palette — Brand (Teal)
+The frontend uses the shadcn/Tailwind semantic-token model:
 
-Teal conveys network connectivity and signal strength. Replaces the previous generic blue.
-
-**Design Token:** `frontend/src/config/designTokens.ts` → `primaryColors`
-
-| Token | Light | Dark | WCAG AA |
-|-------|-------|------|---------|
-| `--color-brand` | `#0F766E` (teal-700) | `#2DD4BF` (teal-400) | 5.47:1 on white |
-| `--color-brand-hover` | `#115E59` (teal-800) | `#5EEAD4` (teal-300) | — |
-| `--color-brand-muted` | `#CCFBF1` (teal-50) | `#042F2E` (teal-900) | — |
-| `--color-brand-subtle` | `#99F6E4` (teal-100) | `#115E59` (teal-800) | — |
-
-**Usage:** Sidebar active state, header brand, links, primary buttons, focus rings.
-
-### 3.2 Color Palette — Status / Semantic
-
-Each status has three tiers: **main** (dot/icon), **bg** (badge background), **text** (readable text on badge).
-
-| Status | Main | BG (Light) | Text (Light) | BG (Dark) | Text (Dark) |
-|--------|------|------------|--------------|-----------|-------------|
-| Healthy | `#059669` (emerald-600) | `#ECFDF5` | `#065F46` | `rgba(5,150,105,0.12)` | `#6EE7B7` |
-| Warning | `#D97706` (amber-600) | `#FFFBEB` | `#92400E` | `rgba(217,119,6,0.12)` | `#FCD34D` |
-| Critical | `#DC2626` (red-600) | `#FEF2F2` | `#991B1B` | `rgba(220,38,38,0.12)` | `#FCA5A5` |
-| Unknown | `#64748B` (slate-500) | `#F1F5F9` | `#475569` | `rgba(100,116,139,0.12)` | `#C9D1D9` |
-
-**CSS Variables:** `--color-{status}`, `--color-{status}-bg`, `--color-{status}-text`
-
-### 3.3 Color Palette — Neutrals (Slate)
-
-All UI chrome uses the Tailwind slate scale. Gray-* references have been fully migrated.
-
-| Token | Light | Dark |
-|-------|-------|------|
-| `--color-bg-page` | `#F8FAFB` | `#080B10` |
-| `--color-bg-surface` | `#FFFFFF` | `#0F1218` |
-| `--color-bg-elevated` | `#FFFFFF` | `#161B22` |
-| `--color-bg-muted` | `#F1F5F9` | `#1C2129` |
-| `--color-bg-subtle` | `#E2E8F0` | `#272D38` |
-| `--color-border` | `#E2E8F0` | `#1E2530` |
-| `--color-border-strong` | `#CBD5E1` | `#2D3544` |
-| `--color-text-primary` | `#0F172A` | `#E6EDF3` |
-| `--color-text-secondary` | `#475569` | `#8B949E` |
-| `--color-text-muted` | `#64748B` | `#7D8590` |
-| `--color-text-placeholder` | `#94A3B8` | `#3D444D` |
-| `--color-hover-overlay` | `#F1F5F9` | `#161B22` |
-| `--color-active-overlay` | `#E2E8F0` | `#272D38` |
-
-### 3.4 Color Palette — Charts
-
-| Token | Light | Dark |
-|-------|-------|------|
-| `--color-chart-text` | `#334155` | `#C9D1D9` |
-| `--color-chart-axis` | `#E2E8F0` | `#2D3544` |
-| `--color-chart-grid` | `#F1F5F9` | `#161B22` |
-| `--color-chart-tooltip-bg` | `rgba(255,255,255,0.96)` | `rgba(15,18,24,0.96)` |
-| `--color-chart-tooltip-border` | `#E2E8F0` | `#2D3544` |
-| `--color-chart-tooltip-text` | `#334155` | `#E6EDF3` |
-
-### 3.5 Shadow System
-
-5-level shadow depth system. Replaces `border-gray-200` separations with elevation-based depth.
-
-| Token | Light | Dark | Usage |
-|-------|-------|------|-------|
-| `--shadow-xs` | `0 1px 2px rgba(15,23,42,0.04)` | `0 1px 2px rgba(0,0,0,0.2)` | Header bottom |
-| `--shadow-sm` | `0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)` | `0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2)` | Cards, tables |
-| `--shadow-md` | `0 4px 6px -1px rgba(15,23,42,0.06), 0 2px 4px -2px rgba(15,23,42,0.04)` | `0 4px 6px -1px rgba(0,0,0,0.35), 0 2px 4px -2px rgba(0,0,0,0.2)` | Hovered cards |
-| `--shadow-lg` | `0 10px 15px -3px rgba(15,23,42,0.06), 0 4px 6px -4px rgba(15,23,42,0.03)` | `0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -4px rgba(0,0,0,0.2)` | Sidebar, dropdowns |
-| `--shadow-xl` | `0 20px 25px -5px rgba(15,23,42,0.08), 0 8px 10px -6px rgba(15,23,42,0.04)` | `0 20px 25px -5px rgba(0,0,0,0.5), 0 8px 10px -6px rgba(0,0,0,0.25)` | Modals, dialogs |
-
-**Utility classes:** `.shadow-xs` through `.shadow-xl` (defined in `index.css`).
-
-### 3.6 Typography
-
-```css
-font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+```
+src/index.css
+  :root / .dark CSS variables
+    -> @theme inline token mapping
+      -> Tailwind utilities
+        -> shadcn/ui primitives
+          -> feature components
 ```
 
-| Level | Tailwind | Size | Weight |
-|-------|----------|------|--------|
-| Display | `text-4xl` | 2.25rem | 700 |
-| Title | `text-2xl` | 1.5rem | 600 |
-| Subtitle | `text-lg` | 1.125rem | 500 |
-| Body | `text-base` | 1rem | 400 |
-| Small | `text-sm` | 0.875rem | 400 |
-| Label | `text-xs` | 0.75rem | 500, uppercase |
+### 3.1 Styling Rules
 
-### 3.7 Theme Architecture
+Use semantic utilities:
 
-**Mechanism:** CSS custom properties in `index.css` (`:root` for light, `.dark` for dark). Tailwind v4 `@custom-variant dark (&:where(.dark, .dark *))` for class-based toggling. Zustand store persists preference to localStorage.
-
-**Key rule:** All colors reference CSS variables — **never** use hardcoded Tailwind color classes (`bg-blue-*`, `text-red-*`, etc.) or `dark:` prefixed overrides. The `.dark` class swap handles both themes automatically.
-
-```css
-/* Correct — theme-aware via CSS variables */
-className="bg-[var(--color-brand)] text-[var(--color-healthy-text)]"
-
-/* Wrong — hardcoded, not theme-aware */
-className="bg-blue-500 text-green-800 dark:bg-blue-900/30 dark:text-green-300"
+```tsx
+<div className="rounded-lg border bg-card text-card-foreground">
+  <span className="text-muted-foreground">Latency</span>
+</div>
 ```
 
-### 3.8 Badge System
+Avoid direct CSS variable styling in components:
 
-Pill-shaped badges with colored dot indicator. Defined in `index.css`.
-
-```html
-<span class="badge badge-healthy">
-  <span class="badge-dot"></span>Healthy
-</span>
+```tsx
+// Avoid for ordinary UI styling
+<div className="bg-[var(--color-bg-surface)] text-[var(--color-text-primary)]" />
 ```
 
-| Class | BG | Text | Dot |
-|-------|-----|------|-----|
-| `.badge-healthy` | `--color-healthy-bg` | `--color-healthy-text` | `--color-healthy` |
-| `.badge-warning` | `--color-warning-bg` | `--color-warning-text` | `--color-warning` |
-| `.badge-critical` | `--color-critical-bg` | `--color-critical-text` | `--color-critical` |
-| `.badge-unknown` | `--color-unknown-bg` | `--color-unknown-text` | `--color-unknown` |
-| `.badge-brand` | `--color-brand-muted` | `--color-brand` | — |
+Avoid hardcoded palette classes for theme-sensitive UI:
 
-### 3.9 Chart Theme (ECharts)
-
-```javascript
-const nodePulseTheme = {
-  color: ['#0F766E', '#059669', '#D97706', '#DC2626', '#8B5CF6'],
-  backgroundColor: 'transparent',
-  textStyle: {
-    fontFamily: 'Inter, system-ui, sans-serif',
-    color: 'var(--color-chart-text)',
-  },
-  title: {
-    textStyle: { fontWeight: 600, fontSize: 16 },
-  },
-  line: {
-    smooth: 0.3,
-    symbol: 'circle',
-    symbolSize: 4,
-  },
-  grid: {
-    left: 60, right: 40, top: 60, bottom: 60,
-  },
-  splitLine: {
-    lineStyle: { color: 'var(--color-chart-axis)' },
-  },
-  tooltip: {
-    backgroundColor: 'var(--color-chart-tooltip-bg)',
-    borderColor: 'var(--color-chart-tooltip-border)',
-    textStyle: { color: 'var(--color-chart-tooltip-text)' },
-  },
-}
+```tsx
+// Avoid
+<span className="text-gray-500 dark:text-gray-300" />
 ```
 
-### 3.10 Component Design Tokens
+Use status tokens:
 
-**Source:** `frontend/src/config/designTokens.ts`
+| Purpose | Utilities |
+|---------|-----------|
+| Healthy | `text-healthy`, `bg-healthy-bg`, `text-healthy-text` |
+| Warning | `text-warning`, `bg-warning-bg`, `text-warning-text` |
+| Critical / destructive | `text-destructive`, `bg-destructive`, `bg-destructive/10` |
+| Muted / unknown | `text-muted-foreground`, `bg-muted` |
+| Brand / primary action | `bg-primary`, `text-primary`, `text-primary-foreground` |
 
-**Button Variants:**
-
-| Variant | Description |
-|---------|-------------|
-| `primary` | Teal brand bg, white text, hover darkens |
-| `secondary` | Surface bg, border-strong, brand focus ring |
-| `danger` | Critical bg, white text |
-| `ghost` | Transparent, hover-overlay bg |
-| `icon` | Square, muted text, hover overlay |
-
-**Card Variants:**
-
-| Variant | Shadow | Border |
-|---------|--------|--------|
-| `default` | `shadow-sm` | `--color-border` |
-| `elevated` | `shadow-md` | `--color-border` |
-| `interactive` | `shadow-sm` → `shadow-md` on hover | `--color-border` |
-
-### 3.11 Component Visual Patterns
-
-**Sidebar:**
-- Brand color: Teal for logo and active nav item
-- Active state: Light background fill (`--color-brand-muted`), not a colored highlight
-- Right edge: `shadow-lg` instead of `border-r border-gray-200`
-
-**Header:**
-- Bottom: `shadow-xs` instead of `border-b border-gray-200`
-- Brand elements use `--color-brand`
-
-**MetricCard:**
-- No full-card background color based on status
-- Left 3px accent border in status color (`border-l-3 border-[var(--color-healthy)]`)
-- Surface background with `shadow-sm`
-
-**Data Tables:**
-- Header row: `--color-bg-subtle` background
-- Alternating rows: `--color-bg-muted` on even rows
-- Hover: `--color-hover-overlay`
+Dark mode is handled by `:root` and `.dark` variables. Use `dark:` only for structural exceptions, not for routine color mirroring.
 
 ---
 
-## 4. Key UI Patterns
+## 4. UI Primitive Layer
 
-### 4.1 Dashboard Layout
+All reusable primitives live in `frontend/src/components/ui/`.
+
+Current primitive set:
 
 ```
-+============================================================================+
-|  DASHBOARD                           [Refresh] [Export] [24h ▼]            |
-+============================================================================+
-|                                                                            |
-|  +--------------------------------------------------------------------+   |
-|  |                    WORLD MAP - ECharts Geo                         |   |
-|  |                                                                    |   |
-|  |   [Regional clusters with health color coding]                    |   |
-|  |   [Pulsing markers for critical alerts]                           |   |
-|  |   [Click to navigate to node detail]                              |   |
-|  |                                                                    |   |
-|  +--------------------------------------------------------------------+   |
-|                                                                            |
-|  +------------+  +------------+  +------------+  +------------+           |
-|  | ONLINE     |  | ANOMALY    |  | 24H ALERTS |  | PROBE      |           |
-|  | 94.2%      |  | 5.8%       |  | 23         |  | SUCCESS    |           |
-|  | ^ 2.1%     |  | v 1.2%     |  | [sparkline]|  | 98.5%      |           |
-|  +------------+  +------------+  +------------+  +------------+           |
-|                                                                            |
-|  +---------------------------------------+  +-----------------------+     |
-|  | LATENCY TREND                         |  | PACKET LOSS TREND     |     |
-|  | ------------------------------------- |  | --------------------- |     |
-|  | [ECharts line chart with baseline]    |  | [ECharts area chart]  |     |
-|  | [24h/7d/30d toggle]                   |  | [Threshold markers]   |     |
-|  +---------------------------------------+  +-----------------------+     |
-|                                                                            |
-|  +---------------------------------------+  +-----------------------+     |
-|  | NODE HEALTH CARDS (Top 6)             |  | ALERT STREAM          |     |
-|  | ------------------------------------- |  | --------------------- |     |
-|  | [Card] [Card]                         |  | [P0] Packet Loss 85%  |     |
-|  | [Card] [Card]                         |  | [P1] Latency 320ms    |     |
-|  | [Card] [Card]                         |  | [P2] Jitter 45ms      |     |
-|  +---------------------------------------+  +-----------------------+     |
-|                                                                            |
-|  +--------------------------------------------------------------------+   |
-|  | NODE LIST TABLE                                                    |   |
-|  | ------------------------------------------------------------------ |   |
-|  | Name | Status | Region | Latency | Packet Loss | Jitter | Actions |   |
-|  | ------------------------------------------------------------------ |   |
-|  | ...  | ...    | ...    | ...     | ...         | ...    | ...     |   |
-|  +--------------------------------------------------------------------+   |
-|                                                                            |
-+============================================================================+
+alert-dialog.tsx
+avatar.tsx
+badge.tsx
+breadcrumb.tsx
+button.tsx
+card.tsx
+chart.tsx
+collapsible.tsx
+dialog.tsx
+dropdown-menu.tsx
+input.tsx
+label.tsx
+scroll-area.tsx
+separator.tsx
+sheet.tsx
+sidebar.tsx
+skeleton.tsx
+switch.tsx
+textarea.tsx
+tooltip.tsx
 ```
 
-### 4.2 Health Distribution Map (FR-4.3.1)
+Rules:
 
-**Implementation:**
-- ECharts `geo` component with world map
-- Custom SVG markers for nodes with health-state colors
-- `effectScatter` for pulsing animation on alerts
-- Tooltip with node details
-- Data zoom for regional drill-down
-
-**Marker Size:**
-| Node Count | Marker Size |
-|------------|-------------|
-| 1-10 | 8px |
-| 11-50 | 12px |
-| 50+ | 18px |
-
-**Interaction:**
-- **Hover:** Tooltip with node count, avg latency, worst node
-- **Click:** Navigate to node detail page
-- **Long-press (mobile):** Context menu for quick actions
-
-### 4.3 Alert Stream Component
-
-**Display:**
-- Latest 10 active alerts
-- Auto-scrolling (new alerts insert at top)
-- Each alert shows: Level (P0/P1/P2), Node name, Type, Time, Status
-
-**Status Indicators:**
-- Unacknowledged: Red background
-- In Progress: Yellow background
-- Resolved: Gray background
-
-```typescript
-interface AlertStreamItem {
-  id: string
-  level: 'P0' | 'P1' | 'P2'
-  nodeName: string
-  type: 'latency' | 'packet_loss' | 'jitter'
-  value: number
-  timestamp: string
-  status: 'new' | 'acknowledged' | 'resolved'
-}
-```
-
-### 4.4 MTR Path Visualization (FR-4.3.5)
-
-**Visual Design:**
-```
-Source                                              Destination
-   |                                                    |
-   v                                                    ^
-+-------+      +-------+      +-------+      +-------+
-| Hop 1 |----->| Hop 2 |----->| Hop 3 |----->| Hop 4 |
-|  2ms  |      |  5ms  |      | 12ms  |      | 45ms  |
-|  0%   |      |  0%   |      |  0%   |      |  2%   |
-+-------+      +-------+      +-------+      +-------+
-                                                  |
-+===================================================+  <-- Red border (critical)
-|  Hop 5: 8.8.8.8                                   |
-|  Latency: 85ms | Loss: 15% | AS: 15169           |
-|  Location: United States, California             |
-+===================================================+
-```
-
-**Risk Indicators:**
-| Condition | Visual Treatment |
-|-----------|------------------|
-| Loss >= 10% | Red border, pulsing animation |
-| Latency >= 200ms | Red border, warning icon |
-| Jitter >= 50ms | Yellow border |
-| Timeout | Gray box with question mark |
-| Normal | Default teal/gray styling |
-
-### 4.5 Multi-Metric Time Series (FR-4.3.4)
-
-**Features:**
-- Metric selector (latency/loss/jitter toggle)
-- Overlay multiple metrics on same chart
-- Baseline comparison (shaded area, not just line)
-- Export chart as PNG (ECharts toolbox)
-- Annotation markers for alert events
-
-### 4.6 Empty States (Zero Data Experience)
-
-**Design Principles:**
-- **Visual Anchor:** Use a soft, monochromatic SVG illustration or a high-quality Lucide icon inside a circular container.
-- **Clear Messaging:** Headline should state the situation clearly (e.g., "No Nodes Found"). Subtitle should explain how to resolve it.
-- **Prominent CTA:** The primary action button (e.g., "Add Node", "Create Alert") must be highly visible and centered, acting as the primary focal point of the card.
-- **Example Layout:**
-  ```
-  +--------------------------------------------------+
-  |                                                  |
-  |                  [ 🖥️ ]                          |
-  |             No Nodes Configured                  |
-  |    Start monitoring your network by adding       |
-  |          your first beacon node.                 |
-  |                                                  |
-  |              [ + Add Node ]                      |
-  |                                                  |
-  +--------------------------------------------------+
-  ```
-
-### 4.7 Loading States (Skeletons over Spinners)
-
-**Implementation Strategy:**
-- Avoid full-page blocking spinners which cause perceived slowness.
-- Use **Skeleton Screens** that mimic the layout of the loaded content.
-- Skeletons should pulse gently (`animate-pulse`) using the theme's tertiary background color (`dark:bg-slate-800`, `bg-slate-200`).
-- For data tables, show 5-10 rows of skeleton bars.
-- For dashboard cards, show skeleton shapes for numbers and sparklines.
+- Use `Button` for commands and actions.
+- Use `Dialog` for create/edit/detail forms.
+- Use `AlertDialog` for destructive confirmations.
+- Use `Card` for repeated items, tables, and contained dashboard regions.
+- Use `Badge` for status and compact labels.
+- Use `Label` with `htmlFor` and a matching form-control `id`.
+- Use `Switch` for binary state.
+- Use `Skeleton` for structured loading states.
 
 ---
 
-## 5. Wireframes
+## 5. Dialog and Modal Standards
 
-### 5.1 Global Dashboard (Desktop) - With Sidebar
+Dialog consistency is important because NodePulse has many CRUD workflows.
 
-```
-+============================================================================+
-|                         HEADER (64px)                                      |
-|  [≡] NodePulse Dashboard      [UTC+8 ▼] [EN ▼] [🌙] [Admin ▼]            |
-+============================================================================+
-|        |                                                                   |
-|  S     |  DASHBOARD                                                        |
-|  I     |  Real-time Network Overview        [Refresh] [Export PDF]         |
-|  D     |                                                                   |
-|  E     |  +------------------------------------------------------------+   |
-|  B     |  |                                                            |   |
-|  A     |  |              [WORLD MAP - ECharts Geo]                     |   |
-|  R     |  |                                                            |   |
-|        |  |   [APAC: 12 nodes]  [EMEA: 8 nodes]  [AMER: 5 nodes]      |   |
-|  ───   |  |   [●] healthy       [●] warning      [●] critical          |   |
-|  📊    |  |                                                            |   |
-|  Dash  |  +------------------------------------------------------------+   |
-|  ───   |                                                                   |
-|  🖥️    |  +----------+  +----------+  +----------+  +----------+          |
-|  Nodes |  | ONLINE   |  | ANOMALY  |  | ALERTS   |  | LATENCY  |          |
-|  ───   |  | 94.2%    |  | 5.8%     |  | 23       |  | 45ms     |          |
-|  🚨    |  +----------+  +----------+  +----------+  +----------+          |
-|  Alerts|                                                                   |
-|  ───   |  +-----------------------------------+  +-------------------+    |
-|  📈    |  | LATENCY TREND (24h)               |  | PACKET LOSS       |    |
-|  Rep   |  | [Chart with baseline overlay]     |  | [Area chart]      |    |
-|  ───   |  +-----------------------------------+  +-------------------+    |
-|  🔗    |                                                                   |
-|  Integ |  +-----------------------------------+  +-------------------+    |
-|  ───   |  | NODE HEALTH CARDS (2x3 grid)     |  | ALERT STREAM      |    |
-|  ⚙️    |  | [SG-1] [TK-1] [LD-1]              |  | [P0] SG-3 Loss    |    |
-|  Set   |  | [NY-1] [FR-1] [SY-1]              |  | [P1] TK-1 Latency |    |
-|        |  +-----------------------------------+  +-------------------+    |
-|        |                                                                   |
-|        |  +------------------------------------------------------------+   |
-|        |  | NODE LIST TABLE                          [View All →]     |   |
-|        |  | Name | Status | Region | Latency | Loss | Jitter | Actions|   |
-|        |  +------------------------------------------------------------+   |
-|        |                                                                   |
-+============================================================================+
+### 5.1 Standard Dialog
+
+Use:
+
+```tsx
+<Dialog open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose() }}>
+  <DialogContent className="sm:max-w-md">
+    <DialogHeader>
+      <DialogTitle>{title}</DialogTitle>
+    </DialogHeader>
+    {/* form or content */}
+    <DialogFooter>
+      <Button variant="outline" onClick={onClose}>Cancel</Button>
+      <Button type="submit">Save</Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 ```
 
-### 5.2 Node Detail Page (Desktop)
+Size guidance:
 
-```
-+============================================================================+
-|                         HEADER                                             |
-+============================================================================+
-|        |                                                                   |
-|  S     |  [<] Nodes / Singapore-Primary                                    |
-|  I     |                                                                   |
-|  D     |  +------------------------------------------------------------+   |
-|  E     |  | NODE INFO                                                  |   |
-|  B     |  | IP: 203.0.113.45 | Region: APAC-SG | ISP: AWS | Uptime: 45d|   |
-|  A     |  | Tags: [prod] [edge] [primary] | Last Heartbeat: 30s ago    |   |
-|  R     |  +------------------------------------------------------------+   |
-|        |                                                                   |
-|  ───   |  +------------------+  +------------------+  +------------------+  |
-|  📊    |  | LATENCY          |  | PACKET LOSS      |  | JITTER           |  |
-|  Dash  |  |      45 ms       |  |      0.2 %       |  |      12 ms       |  |
-|  ───   |  |   [Good]         |  |   [Good]         |  |   [Good]         |  |
-|  🖥️    |  +------------------+  +------------------+  +------------------+  |
-|  Nodes |                                                                   |
-|  ●     |  TREND CHARTS                                     [24h] [7d] [30d] |
-|  ───   |  +------------------------------------------------------------+   |
-|  🚨    |  |                                                            |   |
-|  Alerts|  |  [ECharts - Latency with baseline overlay]                 |   |
-|  ───   |  |                                                            |   |
-|  📈    |  +------------------------------------------------------------+   |
-|  Rep   |                                                                   |
-|  ───   |  MTR PATH (8 hops)                                                 |
-|  🔗    |  +------------------------------------------------------------+   |
-|  Integ |  | [1] 10.0.0.1 -----> [2] 203.0.113.1 -----> [3] ... -----> [8]|   |
-|  ───   |  |  2ms, 0%            5ms, 0%             12ms, 0%       92ms  |   |
-|  ⚙️    |  |                                                            |   |
-|  Set   |  |  [!] Hop 5: 8.8.8.8 - 85ms, 15% loss [CRITICAL]            |   |
-|        |  +------------------------------------------------------------+   |
-|        |                                                                   |
-|        |  DIAGNOSIS                                                 [Expand]|
-|        |  +------------------------------------------------------------+   |
-|        |  | Root Cause: Cross-border link degradation (SG -> US)       |   |
-|        |  | Confidence: High (85%)                                     |   |
-|        |  | Recommendation: Contact carrier, consider route optimization|   |
-|        |  +------------------------------------------------------------+   |
-|        |                                                                   |
-+============================================================================+
+| Use case | Width |
+|----------|-------|
+| Small confirmation or compact form | `sm:max-w-md` |
+| Standard create/edit form | `sm:max-w-lg` |
+| Detail panel or wider form | `sm:max-w-2xl` |
+| JSON/template editor | `sm:max-w-3xl max-h-[85vh] overflow-y-auto` |
+| Preview/report dialog | `max-w-4xl max-h-[90vh] overflow-y-auto` |
+
+### 5.2 AlertDialog
+
+Use `AlertDialog` for destructive confirmations and set the action variant semantically:
+
+```tsx
+<AlertDialogAction variant="destructive">Delete</AlertDialogAction>
 ```
 
-### 5.3 Mobile Layout (<768px)
+Do not repeat destructive button styles with ad hoc `className="bg-destructive ..."`.
+
+### 5.3 Accessibility Requirements
+
+- Dialog content must have a `DialogTitle`.
+- Forms must use `Label htmlFor` with a matching input/select/textarea `id`.
+- Loading submit buttons must be disabled.
+- Errors should appear close to the failing field or above the form for form-level errors.
+- Do not hand-roll fixed overlays for normal dialogs; use `Dialog`/`AlertDialog`.
+
+---
+
+## 6. Layout Architecture
+
+Authenticated pages render under `AppLayout`:
 
 ```
-+============================+
-|  [≡] NodePulse      [🌙]   |
-+============================+
-|                            |
-|  DASHBOARD                 |
-|  [Refresh] [Export]        |
-|                            |
-|  +------------------------+|
-|  |      WORLD MAP         ||
-|  |   (simplified view)    ||
-|  +------------------------+|
-|                            |
-|  +--------+  +--------+    |
-|  | ONLINE |  |ANOMALY |    |
-|  | 94.2%  |  | 5.8%   |    |
-|  +--------+  +--------+    |
-|                            |
-|  ALERT STREAM              |
-|  +------------------------+|
-|  | [P0] SG-3: Loss 85%   ||
-|  | [P1] TK-1: 320ms      ||
-|  +------------------------+|
-|                            |
-|  NODE LIST                 |
-|  +------------------------+|
-|  | SG-1 | ● | 45ms       ||
-|  | TK-1 | ⚠ | 180ms      ||
-|  | LD-1 | ● | 32ms       ||
-|  +------------------------+|
-|                            |
-+============================+
+App
+  -> QueryClientProvider
+  -> BrowserRouter
+  -> ProtectedLayout
+      -> ProtectedRoute
+      -> AppLayout
+          -> Header
+          -> Sidebar
+          -> Page content
+```
 
-Sidebar (overlay when opened):
-+============================+
-|  NodePulse            [✕]  |
-+============================+
-|  📊 Dashboard              |
-|  🖥️ Nodes                  |
-|  🚨 Alerts          [5]    |
-|  📈 Reports                |
-|  🔗 Integrations           |
-|  ─────────────────────     |
-|  ⚙️ Settings               |
-|  [Logout]                  |
-+============================+
+Page-level rules:
+
+- Use `PageHeader` for page title, subtitle, and primary page actions.
+- Keep operational pages dense and scan-friendly.
+- Prefer tables for lists that operators compare repeatedly.
+- Avoid marketing-style hero sections inside the application.
+- Keep cards as functional containers, not nested decorative layouts.
+
+---
+
+## 7. Navigation and Routes
+
+Primary navigation groups:
+
+| Group | Routes |
+|-------|--------|
+| Dashboard | `/dashboard`, `/performance` |
+| Nodes | `/nodes`, `/nodes/:id`, `/nodes/comparison`, `/nodes/probes`, `/beacons/config` |
+| Alerts | `/alerts/rules`, `/alerts/records`, `/alerts/history` |
+| Reports | `/reports`, `/reports/history` |
+| Integrations | `/integrations/webhooks`, `/integrations/health` |
+| Settings | `/settings/preferences`, `/settings/sessions`, `/settings/users` |
+
+Short aliases exist for legacy and e2e navigation: `/webhooks`, `/sessions`, `/comparison`.
+
+---
+
+## 8. Visualization Standards
+
+Current visualization libraries:
+
+- Recharts for line, area, comparison, and gauge-style charts.
+- react-simple-maps for geographical views.
+
+Chart rules:
+
+- Use `useThemeColors()` or semantic CSS variables resolved through theme-aware helpers.
+- Do not use invalid SVG color expressions such as `hsl(var(--token))` when the token is already an OKLCH/color value.
+- Keep chart legends and tooltips compact.
+- Use status colors sparingly; reserve destructive/warning colors for actual risk states.
+- Provide a tabular or textual fallback where data is critical for operations.
+
+Key chart components:
+
+```
+components/charts/
+├── LatencyTrendChart.tsx
+├── PacketLossChart.tsx
+└── ProbeSuccessGauge.tsx
+
+components/dashboard/
+├── ComparisonChart.tsx
+├── LatencyTrendChart.tsx
+├── PerformanceTrendChart.tsx
+├── TrendChart.tsx
+└── WorldMap.tsx
 ```
 
 ---
 
-## 6. Component Architecture
+## 9. Domain Component Conventions
 
-### 6.1 Layout Components
+### Dashboard
 
-```
-frontend/src/components/layout/
-├── AppLayout.tsx           # Main layout wrapper with sidebar + header
-├── Sidebar.tsx             # Navigation sidebar (collapsible)
-├── SidebarItem.tsx         # Individual navigation item
-├── SidebarGroup.tsx        # Grouped navigation items
-├── Header.tsx              # Top header with user actions
-├── Breadcrumb.tsx          # Navigation breadcrumbs
-├── PageHeader.tsx          # Standardized page header
-└── index.ts
-```
+Dashboard components should prioritize live state and anomaly scanning:
 
-### 6.2 Dashboard Components
+- `MetricsSummaryCards`
+- `MetricCard`
+- `HealthStatusBadge`
+- `WorldMap`
+- `AlertStream`
+- `TopAnomaliesList`
+- `NodeListTable`
+- `ProblemDiagnosis`
 
-```
-frontend/src/components/dashboard/
-├── WorldMap.tsx            # ✓ Health distribution map
-├── AlertStream.tsx         # NEW: Real-time alert feed
-├── MetricsSummaryCards.tsx # ✓ Dashboard summary stats
-├── NodeSummaryCard.tsx     # ✓ Individual node card
-├── NodeListTable.tsx       # ✓ Node list table
-├── TopAnomaliesList.tsx    # ✓ Top anomalies list
-├── TrendChart.tsx          # ✓ Time series chart
-├── MetricCard.tsx          # ✓ Single metric display
-├── HealthStatusBadge.tsx   # ✓ Status badge
-├── ProblemDiagnosis.tsx    # ✓ Root cause analysis
-└── index.ts
-```
+### Nodes
 
-### 6.3 Common Components
+Node workflows should use:
 
-```
-frontend/src/components/common/
-├── ThemeToggle.tsx         # ✓ Dark/light mode toggle
-├── LanguageSwitcher.tsx    # ✓ EN/中文 switcher
-├── TimezoneSelector.tsx    # ✓ Timezone picker
-├── ProtectedRoute.tsx      # ✓ Auth route guard
-├── LoadingSpinner.tsx      # Loading indicator
-├── ErrorBoundary.tsx       # Error handling
-├── EmptyState.tsx          # Empty data display (with prominent CTA)
-├── Skeleton.tsx            # NEW: Loading skeleton components
-└── ConfirmDialog.tsx       # Confirmation modal
-```
+- `NodeTable` for list management.
+- `NodeDialog` for create/edit.
+- `MTRVisualization` and `MTRPathVisualization` for route/path diagnostics.
+
+### Alerts
+
+Alert workflows should use:
+
+- `AlertRuleDialog` and `AlertRuleForm` for rule editing.
+- `AlertRecordsFilter` and `AlertRecordsTable` for record triage.
+- `AlertRecordDetailModal` for record details.
+- `AlertDetailMobile` for the mobile full-screen alert detail experience.
+
+### Webhooks
+
+Webhook create/edit uses:
+
+- `WebhookDialog`
+- `WebhookForm`
+- `WebhooksTable`
+
+Webhook forms may use wider dialogs because the event-format JSON editor needs more horizontal space.
 
 ---
 
-## 7. Route Structure
+## 10. Internationalization
 
-### 7.1 App.tsx Routes
+Rules:
 
-```typescript
-<Routes>
-  {/* Public */}
-  <Route path="/login" element={<LoginPage />} />
-
-  {/* Protected - Wrapped in AppLayout */}
-  <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-    {/* Dashboard */}
-    <Route path="/dashboard" element={<DashboardPage />} />
-    <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
-    {/* Nodes */}
-    <Route path="/nodes" element={<NodeManagementPage />} />
-    <Route path="/nodes/:id" element={<NodeDetailPage />} />
-    <Route path="/nodes/comparison" element={<NodeComparisonPage />} />
-
-    {/* Alerts */}
-    <Route path="/alerts" element={<Navigate to="rules" replace />} />
-    <Route path="/alerts/rules" element={<AlertRulesPage />} />
-    <Route path="/alerts/records" element={<AlertRecordsPage />} />
-    <Route path="/alerts/history" element={<AlertHistoryPage />} />
-
-    {/* Reports */}
-    <Route path="/reports" element={<ReportsPage />} />
-    <Route path="/reports/history" element={<ExportHistoryPage />} />
-
-    {/* Integrations */}
-    <Route path="/integrations" element={<Navigate to="webhooks" replace />} />
-    <Route path="/integrations/webhooks" element={<WebhooksPage />} />
-    <Route path="/integrations/health" element={<SystemHealthPage />} />
-
-    {/* Settings */}
-    <Route path="/settings" element={<Navigate to="preferences" replace />} />
-    <Route path="/settings/preferences" element={<PreferencesPage />} />
-    <Route path="/settings/sessions" element={<SessionsPage />} />
-    <Route
-      path="/settings/users"
-      element={
-        <ProtectedRoute requiredRole="admin">
-          <UsersPage />
-        </ProtectedRoute>
-      }
-    />
-  </Route>
-
-  {/* 404 */}
-  <Route path="*" element={<NotFoundPage />} />
-</Routes>
-```
+- All user-visible text should use `useTranslation()`.
+- Add keys to both `frontend/src/locales/en.json` and `frontend/src/locales/zh-CN.json`.
+- Test mocks use real English locale lookup in `vitest-setup.ts`; tests should assert visible English text unless a key fallback is intentional.
+- Technical placeholders may remain in English where they are protocol names, metric keys, or payload examples.
 
 ---
 
-## 8. Accessibility & i18n
+## 11. Responsive Behavior
 
-### 8.1 WCAG 2.1 AA Compliance
-
-| Requirement | Implementation |
-|-------------|----------------|
-| **Keyboard Navigation** | Tab order follows logical flow; focus trap in modals |
-| **Focus Indicators** | 2px solid outline with 2px offset, using primary color |
-| **Color Contrast** | 4.5:1 minimum; health states use icons + color |
-| **Screen Reader** | ARIA labels on all charts; live regions for alerts |
-| **Chart Alternatives** | Collapsible data tables for all visualizations |
-| **Motion** | Respect `prefers-reduced-motion`; disable animations |
-
-### 8.2 Multi-Timezone Display (FR-4.3.14)
-
-**Display Pattern:**
-```
-+-------------------------------------------------------+
-| Timestamp: 2026-02-22 10:30:00 SGT (UTC+8)           |
-|           = 2026-02-22 02:30:00 UTC                  |
-|           = 2026-02-21 21:30:00 EST (UTC-5)          |
-+-------------------------------------------------------+
-```
-
-**Settings:**
-```typescript
-type TimezoneDisplay = 'utc' | 'local' | 'node_local' | 'multi'
-
-interface TimezoneConfig {
-  display: TimezoneDisplay
-  primaryTimezone: string  // e.g., 'Asia/Singapore'
-  showMultiZone: boolean
-}
-```
-
-### 8.3 Chinese/English Language Switching
-
-**i18n Structure:**
-```
-frontend/src/
-├── locales/
-│   ├── en.json
-│   └── zh-CN.json
-├── i18n.ts
-└── ...
-```
-
-**Key Translations:**
-| English | Chinese |
-|---------|---------|
-| Dashboard | 仪表盘 |
-| Nodes | 节点 |
-| Alerts | 告警 |
-| Reports | 报告 |
-| Settings | 设置 |
-| Healthy | 健康 |
-| Warning | 预警 |
-| Critical | 异常 |
-| Offline | 离线 |
+- Tables may scroll horizontally when column density requires it.
+- Form dialogs should fit within `max-w-[calc(100%-2rem)]` inherited from `DialogContent`.
+- Wider dialogs must set `max-h` and `overflow-y-auto`.
+- Mobile-specific full-screen overlays are allowed only when the interaction is deliberately full-screen, such as alert detail triage.
+- Touch targets should be at least 44px where practical for mobile-first interactions.
 
 ---
 
-## 9. Implementation Priority
+## 12. Verification Checklist
 
-### Phase 1: Foundation (Week 1)
-| Priority | Task | Effort |
-|----------|------|--------|
-| **P0** | Create AppLayout component | High |
-| **P0** | Create Sidebar component | High |
-| **P0** | Create Header component | Medium |
-| **P0** | Update App.tsx routes | Medium |
+Before merging UI changes:
 
-### Phase 2: Migration (Week 2)
-| Priority | Task | Effort |
-|----------|------|--------|
-| **P0** | Migrate DashboardPage to AppLayout | Medium |
-| **P0** | Integrate WorldMap into Dashboard | Medium |
-| **P0** | Migrate all pages to AppLayout | High |
-| **P1** | Create AlertStream component | Medium |
-
-### Phase 3: Enhancement (Week 3)
-| Priority | Task | Effort |
-|----------|------|--------|
-| **P1** | Create PreferencesPage | Medium |
-| **P1** | Create UsersPage | Medium |
-| **P1** | Create SystemHealthPage | Medium |
-| **P2** | Mobile responsive optimization | High |
-
-### Phase 4: Polish (Week 4)
-| Priority | Task | Effort |
-|----------|------|--------|
-| **P2** | E2E test updates | High |
-| **P2** | Accessibility audit | Medium |
-| **P2** | Performance optimization | Medium |
-| **P3** | Animation polish | Low |
+- `npm run lint`
+- `npm run test -- --run`
+- `npm run build`
+- Confirm no hand-rolled CRUD modal overlays remain.
+- Confirm dialogs use `DialogTitle`.
+- Confirm destructive confirmations use `AlertDialog`.
+- Confirm form labels are associated with controls.
+- Confirm both light and dark theme tokens are respected.
 
 ---
 
-## 10. Summary
-
-This UI/UX design document provides a comprehensive framework for NodePulse's frontend with a focus on:
-
-### Key Design Highlights
-
-1. **Shared Layout Architecture**
-   - Single AppLayout component for all authenticated pages
-   - Collapsible sidebar navigation for scalability
-   - Consistent header with global actions
-
-2. **Dashboard Enhancement**
-   - WorldMap integration for geographic node visualization
-   - AlertStream for real-time monitoring
-   - Improved visual hierarchy with card-based layout
-
-3. **Instrument Panel Design System**
-   - Teal brand color for network/connectivity identity
-   - Slate neutral scale for visual depth
-   - 5-level shadow system (xs/sm/md/lg/xl) replacing border-based separation
-   - Status colors with bg/text variants, CSS variable-driven for instant theme switching
-   - Badge system with dot indicators for scannable status display
-   - WCAG AA verified contrast ratios across all color pairings
-   - Unified light/dark design language — no `dark:` class overrides needed
-
-4. **Key Differentiators**
-   - Interactive world map with real-time health visualization
-   - MTR path diagram with risk highlighting
-   - Multi-timezone collaboration support
-   - Bilingual (Chinese/English) interface
-
-5. **Mobile-First for Alerts**
-   - Emergency response flow optimized for mobile
-   - Overlay sidebar for navigation
-   - Touch-friendly interactions
-
----
-
-## Version History
+## 13. Change History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2026-02-17 | Design Team | Initial UI/UX design document |
-| 2.0 | 2026-02-22 | Design Team | Comprehensive restructure: added shared layout, sidebar navigation, integrated WorldMap, reorganized routes |
-| 3.0 | 2026-03-21 | Design Team | "Instrument Panel" design system: Teal brand replacing blue, slate neutrals, 5-level shadow system, CSS variable-driven status colors, badge system, Inter typography, dark mode OLED-optimized, WCAG AA verified |
+| 4.0 | 2026-06-14 | Codex | Updated to current shadcn/ui + Tailwind CSS 4 + Recharts implementation; documented dialog standards, semantic token rules, current routes, and current component architecture. |
+| 3.0 | 2026-03-21 | Design Team | Older Instrument Panel design system from the previous frontend implementation. Superseded by 4.0. |

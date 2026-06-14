@@ -1,8 +1,8 @@
 # Product Requirements Document - NodePulse
 
 **作者:** Kevin
-**日期:** 2026-02-05 (全栈实现版本)
-**版本:** 3.6 (BMAD 标准)
+**日期:** 2026-06-14 (文档同步版本)
+**版本:** 3.8 (BMAD 标准)
 
 ## 1. 项目背景与成功准则
 
@@ -1249,10 +1249,13 @@ Beacon 应监控自身的服务健康状况,特别是独立模式下的可观测
 
 ### 6.1 技术栈 (技术栈)
 *   **Backend (后端):** Go 1.23+
-*   **Frontend (前端):** React 18+、TypeScript、Tailwind CSS、Vite
-*   **图表库:** 开源图表库(针对大型时序数据集优化)
-*   **国际化库:** 国际化库(用于多语言支持)
+*   **Frontend (前端):** React 19、TypeScript 5、Vite 7、React Router 7
+*   **UI 与样式:** Tailwind CSS 4、shadcn/ui v4、Radix UI primitives
+*   **前端状态与数据:** Zustand 5、TanStack Query 5、Axios API client
+*   **图表与地图:** Recharts、react-simple-maps
+*   **国际化库:** i18next、react-i18next(用于中英双语支持)
 *   **时区库:** 时区处理库(用于时区转换)
+*   **架构文档:** 当前实现架构见 `docs/architecture.md`; UI 设计系统见 `docs/ui-design.md`
 
 ### 6.2 部署模型 (部署模型)
 *   前端支持静态文件托管，支持通过环境变量配置
@@ -1308,6 +1311,7 @@ Beacon 应监控自身的服务健康状况,特别是独立模式下的可观测
 
 | 版本 | 日期 | 作者 | 更改 |
 |---------|------|--------|---------|
+| 3.8 | 2026-06-14 | Codex | **文档同步:** 更新当前前端技术栈，新增架构文档引用，并将 UI 设计文档同步到 shadcn/ui + Recharts 实现。 |
 | 3.7 | 2026-02-17 | Kevin | **PRD Review 修复:** (1) 修复重复 FR 编号(FR-4.3.4/4.3.5 重复 → 改为引用说明); (2) 完善 FR-4.1.2 降级模式定义(进入/退出条件); (3) 添加 FR-4.1.7 优先级术语说明(Cache-P0/P1/P2 vs Alert-P0/P1/P2); (4) 添加 FR-4.3.9 Webhook 重试与超时验收标准; (5) 完善 NFR-5.5.1 指标计数说明(24 个核心指标 + self_health_status) |
 | 3.6 | 2026-02-06 | Kevin | **PRD 范围调整:** 移除 Section 6.4 数据模型(属于技术架构文档,不属于 PRD 范围) |
 | 3.5 | 2026-02-06 | Kevin | **PRD 范围调整:** 移除 Section 6.4 API 规范(属于技术架构文档,不属于 PRD 范围),将原 Section 6.5 数据模型重新编号为 6.4 |
