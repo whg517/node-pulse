@@ -10,6 +10,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -161,37 +168,38 @@ export default function UsersPage() {
         </Card>
       )}
 
-      {dialogOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/50" onClick={() => setDialogOpen(false)} />
-            <Card className="relative w-full max-w-md">
-              <CardContent className="p-6">
-                <h3 className="mb-4 text-lg font-semibold">{dialogState.mode === 'create' ? t('settings.addUser') : t('settings.editUser')}</h3>
-                {dialogError && <div className="mb-4 rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{dialogError}</div>}
-                <div className="space-y-4">
-                  <div className="space-y-2"><Label>{t('settings.username')} *</Label><Input value={formUsername} onChange={(e) => setFormUsername(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>{t('settings.email')}</Label><Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} /></div>
-                  <div className="space-y-2">
-                    <Label>{t('settings.password')}{dialogState.mode === 'create' && ' *'}</Label>
-                    <Input type="password" value={formPassword} onChange={(e) => setFormPassword(e.target.value)} placeholder={dialogState.mode === 'edit' ? t('settings.leaveBlankToKeep') : ''} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('settings.role')} *</Label>
-                    <select value={formRole} onChange={(e) => setFormRole(e.target.value as 'admin' | 'operator' | 'viewer')} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                      <option value="admin">Admin</option><option value="operator">Operator</option><option value="viewer">Viewer</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="mt-6 flex justify-end gap-3">
-                  <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
-                  <Button onClick={() => void handleDialogSubmit()} disabled={dialogLoading}>{dialogLoading ? t('common.saving') : t('common.save')}</Button>
-                </div>
-              </CardContent>
-            </Card>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) setDialogOpen(false) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{dialogState.mode === 'create' ? t('settings.addUser') : t('settings.editUser')}</DialogTitle>
+          </DialogHeader>
+          {dialogError && <div className="rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{dialogError}</div>}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="user-username">{t('settings.username')} *</Label>
+              <Input id="user-username" value={formUsername} onChange={(e) => setFormUsername(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user-email">{t('settings.email')}</Label>
+              <Input id="user-email" type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user-password">{t('settings.password')}{dialogState.mode === 'create' && ' *'}</Label>
+              <Input id="user-password" type="password" value={formPassword} onChange={(e) => setFormPassword(e.target.value)} placeholder={dialogState.mode === 'edit' ? t('settings.leaveBlankToKeep') : ''} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="user-role">{t('settings.role')} *</Label>
+              <select id="user-role" value={formRole} onChange={(e) => setFormRole(e.target.value as 'admin' | 'operator' | 'viewer')} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                <option value="admin">Admin</option><option value="operator">Operator</option><option value="viewer">Viewer</option>
+              </select>
+            </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={() => void handleDialogSubmit()} disabled={dialogLoading}>{dialogLoading ? t('common.saving') : t('common.save')}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <AlertDialogContent>
@@ -201,7 +209,7 @@ export default function UsersPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setUserToDelete(undefined) }}>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">{t('common.delete')}</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDelete} variant="destructive">{t('common.delete')}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

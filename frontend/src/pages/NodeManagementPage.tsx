@@ -133,7 +133,7 @@ export default function NodeManagementPage() {
             <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setNodeToDelete(undefined) }}>
               {t('common.cancel')}
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={confirmDelete} disabled={isSubmitting} variant="destructive">
               {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -238,13 +238,14 @@ export default function ReportsPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>{t('reports.scheduleName')}</Label>
-              <Input value={scheduleForm.name} onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })} />
+              <Label htmlFor="schedule-name">{t('reports.scheduleName')}</Label>
+              <Input id="schedule-name" value={scheduleForm.name} onChange={(e) => setScheduleForm({ ...scheduleForm, name: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('reports.frequency')}</Label>
+                <Label htmlFor="schedule-frequency">{t('reports.frequency')}</Label>
                 <select
+                  id="schedule-frequency"
                   value={scheduleForm.frequency}
                   onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value as ReportSchedule['frequency'] })}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -255,13 +256,14 @@ export default function ReportsPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>{t('reports.scheduleTime')}</Label>
-                <Input type="time" value={scheduleForm.time} onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })} />
+                <Label htmlFor="schedule-time">{t('reports.scheduleTime')}</Label>
+                <Input id="schedule-time" type="time" value={scheduleForm.time} onChange={(e) => setScheduleForm({ ...scheduleForm, time: e.target.value })} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label>{t('reports.format')}</Label>
+              <Label htmlFor="schedule-format">{t('reports.format')}</Label>
               <select
+                id="schedule-format"
                 value={scheduleForm.format}
                 onChange={(e) => setScheduleForm({ ...scheduleForm, format: e.target.value as ReportSchedule['format'] })}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -272,10 +274,11 @@ export default function ReportsPage() {
             </div>
             <div className="flex items-center gap-2">
               <Switch
+                id="schedule-enabled"
                 checked={scheduleForm.enabled}
                 onCheckedChange={(checked) => setScheduleForm({ ...scheduleForm, enabled: checked })}
               />
-              <Label>{t('status.enabled')}</Label>
+              <Label htmlFor="schedule-enabled">{t('status.enabled')}</Label>
             </div>
           </div>
           <DialogFooter>

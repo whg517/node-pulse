@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch'
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -283,16 +284,18 @@ export default function AlertRulesPage() {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>{t('common.name')}</Label>
+              <Label htmlFor="routing-name">{t('common.name')}</Label>
               <Input
+                id="routing-name"
                 value={routingForm.name}
                 onChange={(e) => setRoutingForm({ ...routingForm, name: e.target.value })}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>{t('alerts.whenMetric')}</Label>
+                <Label htmlFor="routing-metric">{t('alerts.whenMetric')}</Label>
                 <select
+                  id="routing-metric"
                   value={routingForm.metric}
                   onChange={(e) => setRoutingForm({ ...routingForm, metric: e.target.value })}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -304,8 +307,9 @@ export default function AlertRulesPage() {
                 </select>
               </div>
               <div className="space-y-2">
-                <Label>{t('alerts.whenSeverity')}</Label>
+                <Label htmlFor="routing-severity">{t('alerts.whenSeverity')}</Label>
                 <select
+                  id="routing-severity"
                   value={routingForm.severity}
                   onChange={(e) => setRoutingForm({ ...routingForm, severity: e.target.value })}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -318,8 +322,9 @@ export default function AlertRulesPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label>{t('alerts.notifyVia')}</Label>
+              <Label htmlFor="routing-action-type">{t('alerts.notifyVia')}</Label>
               <select
+                id="routing-action-type"
                 value={routingForm.actionType}
                 onChange={(e) => setRoutingForm({ ...routingForm, actionType: e.target.value as 'webhook' | 'email' })}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
@@ -329,8 +334,9 @@ export default function AlertRulesPage() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label>{t('alerts.routeTo')}</Label>
+              <Label htmlFor="routing-action-target">{t('alerts.routeTo')}</Label>
               <Input
+                id="routing-action-target"
                 value={routingForm.actionTarget}
                 onChange={(e) => setRoutingForm({ ...routingForm, actionTarget: e.target.value })}
                 placeholder={routingForm.actionType === 'email' ? 'user@example.com' : 'Webhook URL or ID'}
@@ -338,16 +344,17 @@ export default function AlertRulesPage() {
             </div>
             <div className="flex items-center gap-2">
               <Switch
+                id="routing-enabled"
                 checked={routingForm.enabled}
                 onCheckedChange={(checked) => setRoutingForm({ ...routingForm, enabled: checked })}
               />
-              <Label>{t('status.enabled')}</Label>
+              <Label htmlFor="routing-enabled">{t('status.enabled')}</Label>
             </div>
           </div>
-          <div className="mt-4 flex justify-end gap-3">
+          <DialogFooter>
             <Button variant="outline" onClick={() => setShowRoutingDialog(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleCreateRoutingRule} disabled={!routingForm.name.trim()}>{t('common.create')}</Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -361,7 +368,7 @@ export default function AlertRulesPage() {
             <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setRuleToDelete(undefined) }}>
               {t('common.cancel')}
             </AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={confirmDelete} variant="destructive">
               {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>

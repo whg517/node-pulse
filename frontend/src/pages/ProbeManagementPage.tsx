@@ -1,6 +1,16 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -210,74 +220,71 @@ export default function ProbeManagementPage() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
-      {dialogOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div className="fixed inset-0 bg-black/50" onClick={() => setDialogOpen(false)} />
-            <div className="relative w-full max-w-md rounded-lg bg-card border border-border shadow-xl p-6">
-              <h3 className="text-lg font-semibold text-foreground mb-4">
-                {dialogState.mode === 'create' ? t('probes.addProbe') : t('probes.editProbe')}
-              </h3>
-              {dialogError && (
-                <div className="mb-4 rounded-lg bg-destructive/10 text-destructive px-4 py-2 text-sm">{dialogError}</div>
-              )}
-              <div className="space-y-3">
-                {dialogState.mode === 'create' && (
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">{t('probes.node')} <span className="text-destructive">*</span></label>
-                    <select
-                      value={form.node_id}
-                      onChange={(e) => setForm({ ...form, node_id: e.target.value })}
-                      className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="">—</option>
-                      {nodes.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
-                    </select>
-                  </div>
-                )}
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">{t('probes.type')}</label>
-                    <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'TCP' | 'UDP' })} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm">
-                      <option value="TCP">TCP</option>
-                      <option value="UDP">UDP</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">{t('probes.port')}</label>
-                    <input type="number" min={1} max={65535} value={form.port} onChange={(e) => setForm({ ...form, port: Number(e.target.value) })} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">{t('probes.target')} <span className="text-destructive">*</span></label>
-                  <input type="text" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} placeholder="IP or domain" className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                </div>
-                <div className="grid grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">{t('probes.interval')} (s)</label>
-                    <input type="number" min={60} max={300} value={form.interval_seconds} onChange={(e) => setForm({ ...form, interval_seconds: Number(e.target.value) })} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">{t('probes.count')}</label>
-                    <input type="number" min={1} max={100} value={form.count} onChange={(e) => setForm({ ...form, count: Number(e.target.value) })} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-muted-foreground mb-1">{t('probes.timeout')} (s)</label>
-                    <input type="number" min={1} max={30} value={form.timeout_seconds} onChange={(e) => setForm({ ...form, timeout_seconds: Number(e.target.value) })} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm" />
-                  </div>
-                </div>
+      <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) setDialogOpen(false) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {dialogState.mode === 'create' ? t('probes.addProbe') : t('probes.editProbe')}
+            </DialogTitle>
+          </DialogHeader>
+          {dialogError && (
+            <div className="rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{dialogError}</div>
+          )}
+          <div className="space-y-4">
+            {dialogState.mode === 'create' && (
+              <div className="space-y-2">
+                <Label htmlFor="probe-node">{t('probes.node')} <span className="text-destructive">*</span></Label>
+                <select
+                  id="probe-node"
+                  value={form.node_id}
+                  onChange={(e) => setForm({ ...form, node_id: e.target.value })}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  <option value="">—</option>
+                  {nodes.map((n) => <option key={n.id} value={n.id}>{n.name}</option>)}
+                </select>
               </div>
-              <div className="mt-6 flex justify-end gap-3">
-                <button type="button" onClick={() => setDialogOpen(false)} className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-muted-foreground hover:bg-accent/10">{t('common.cancel')}</button>
-                <button type="button" onClick={() => void handleDialogSubmit()} disabled={dialogLoading} className="px-4 py-2 text-sm font-medium rounded-lg bg-primary hover:bg-primary/85 text-white disabled:opacity-50">
-                  {dialogLoading ? t('common.saving') : t('common.save')}
-                </button>
+            )}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="probe-type">{t('probes.type')}</Label>
+                <select id="probe-type" value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as 'TCP' | 'UDP' })} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                  <option value="TCP">TCP</option>
+                  <option value="UDP">UDP</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="probe-port">{t('probes.port')}</Label>
+                <Input id="probe-port" type="number" min={1} max={65535} value={form.port} onChange={(e) => setForm({ ...form, port: Number(e.target.value) })} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="probe-target">{t('probes.target')} <span className="text-destructive">*</span></Label>
+              <Input id="probe-target" type="text" value={form.target} onChange={(e) => setForm({ ...form, target: e.target.value })} placeholder="IP or domain" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="probe-interval">{t('probes.interval')} (s)</Label>
+                <Input id="probe-interval" type="number" min={60} max={300} value={form.interval_seconds} onChange={(e) => setForm({ ...form, interval_seconds: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="probe-count">{t('probes.count')}</Label>
+                <Input id="probe-count" type="number" min={1} max={100} value={form.count} onChange={(e) => setForm({ ...form, count: Number(e.target.value) })} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="probe-timeout">{t('probes.timeout')} (s)</Label>
+                <Input id="probe-timeout" type="number" min={1} max={30} value={form.timeout_seconds} onChange={(e) => setForm({ ...form, timeout_seconds: Number(e.target.value) })} />
               </div>
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>{t('common.cancel')}</Button>
+            <Button type="button" onClick={() => void handleDialogSubmit()} disabled={dialogLoading}>
+              {dialogLoading ? t('common.saving') : t('common.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={deleteConfirm.open} onOpenChange={(open) => !open && setDeleteConfirm({ open: false })}>
         <AlertDialogContent>
@@ -287,7 +294,7 @@ export default function ProbeManagementPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void handleDelete()} disabled={deleteLoading} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction onClick={() => void handleDelete()} disabled={deleteLoading} variant="destructive">
               {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
