@@ -486,10 +486,65 @@ func TestPushService_formatAlertEvent(t *testing.T) {
 	assert.Equal(t, 150.0, alert["current_value"])
 	assert.Equal(t, "P0", alert["level"])
 	assert.Equal(t, "node-1", alert["node_id"])
+	assert.Equal(t, "node-1", alert["node_name"])
 	assert.Equal(t, "2024-01-15T10:30:00Z", alert["triggered_at"])
 
 	links, ok := formatted["links"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "http://localhost:6532/nodes/node-1", links["alert_details"])
 	assert.Equal(t, "http://localhost:6532", links["dashboard"])
+}
+
+func TestPushService_formatAlertEvent_CustomEventFormat(t *testing.T) {
+	service := &PushService{
+		baseURL: "http://localhost:6532",
+	}
+
+	alertEvent := &models.AlertEvent{
+		ID:           "test-alert-1",
+		NodeID:       "node-1",
+		Metric:       "packet_loss_rate",
+		Threshold:    0.05,
+		CurrentValue: 0.12,
+		Level:        "P1",
+		CreatedAt:    time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
+	}
+
+	eventFormat := map[string]any{
+		"text":     "Alert {{.AlertID}} on {{.NodeID}}",
+		"severity": "{{.Level}}",
+		"details": map[string]any{
+			"metric":       "{{.Metric}}",
+			"threshold":    "{{.Threshold}}",
+			"current":      "{{.CurrentValue}}",
+			"triggered_at": "{{.TriggeredAt}}",
+			"url":          "{{.BaseURL}}/nodes/{{.NodeID}}",
+		},
+		"tags": []any{"node:{{.NodeID}}", "metric:{{.Metric}}"},
+	}
+	webhook := &models.Webhook{
+		ID:          "webhook-1",
+		URL:         "https://example.com/webhook",
+		EventFormat: eventFormat,
+		Enabled:     true,
+	}
+
+	formatted, err := service.formatAlertEvent(alertEvent, webhook)
+	require.NoError(t, err)
+
+	assert.Equal(t, "Alert test-alert-1 on node-1", formatted["text"])
+	assert.Equal(t, "P1", formatted["severity"])
+
+	details, ok := formatted["details"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "packet_loss_rate", details["metric"])
+	assert.Equal(t, 0.05, details["threshold"])
+	assert.Equal(t, 0.12, details["current"])
+	assert.Equal(t, "2024-01-15T10:30:00Z", details["triggered_at"])
+	assert.Equal(t, "http://localhost:6532/nodes/node-1", details["url"])
+
+	tags, ok := formatted["tags"].([]any)
+	require.True(t, ok)
+	assert.Equal(t, []any{"node:node-1", "metric:packet_loss_rate"}, tags)
+	assert.Equal(t, "{{.Metric}}", eventFormat["details"].(map[string]any)["metric"])
 }
