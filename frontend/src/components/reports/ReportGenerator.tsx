@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeDTO } from '../../api/types'
+import { fetchLatestMTR } from '@/api/data'
 import { HealthReportPDF, type HealthMetrics, type MTRHop, type RootCauseAnalysis, type TimelineEvent } from './HealthReportPDF'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -49,6 +50,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
   const [includeCharts, setIncludeCharts] = useState(true)
   const [includeSummary, setIncludeSummary] = useState(true)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isPreparingPdf, setIsPreparingPdf] = useState(false)
 
   // PDF Preview state
   const [showPdfPreview, setShowPdfPreview] = useState(false)
@@ -129,14 +131,17 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     return Object.keys(newErrors).length === 0
   }
 
-  const generateSampleMTRPath = (): MTRHop[] => {
-    return [
-      { hop: 1, ip: '192.168.1.1', location: 'Local Gateway', avgLatency: 1.2, lossRate: 0 },
-      { hop: 2, ip: '10.0.0.1', location: 'ISP Core', avgLatency: 5.4, lossRate: 0 },
-      { hop: 3, ip: '203.0.113.1', location: 'Regional Hub', avgLatency: 12.8, lossRate: 0.1 },
-      { hop: 4, ip: '198.51.100.1', location: 'International Gateway', avgLatency: 35.2, lossRate: 0.2 },
-      { hop: 5, ip: '192.0.2.1', location: 'Destination', avgLatency: 45.2, lossRate: 0.5 },
-    ]
+  const fetchReportMTRPath = async (nodeId: string): Promise<MTRHop[]> => {
+    const latestMTR = await fetchLatestMTR(nodeId)
+    if (!latestMTR?.success) return []
+
+    return latestMTR.hops.map((hop) => ({
+      hop: hop.hopNumber,
+      ip: hop.ip,
+      location: hop.location || hop.hostname,
+      avgLatency: hop.avgRTTMs,
+      lossRate: hop.lossRate,
+    }))
   }
 
   const generateRootCauseAnalysis = (metrics: HealthMetrics): RootCauseAnalysis => {
@@ -211,7 +216,8 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     if (format === 'pdf') {
       const selectedNode = nodes.find((n) => n.id === selectedNodeIds[0])
       if (selectedNode) {
-        // Generate sample data for PDF report
+        setIsPreparingPdf(true)
+        // PDF preview still uses locally summarized metrics until report metrics endpoints are wired in.
         const reportMetrics: HealthMetrics = {
           latency: {
             current: 45.2,
@@ -244,15 +250,26 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
                 end: new Date().toISOString(),
               }
 
-        setPdfReportData({
-          node: selectedNode,
-          metrics: reportMetrics,
-          mtrPath: generateSampleMTRPath(),
-          rootCause: generateRootCauseAnalysis(reportMetrics),
-          timeline: generateTimelineEvents(),
-          reportPeriod,
-        })
-        setShowPdfPreview(true)
+        try {
+          const mtrPath = await fetchReportMTRPath(selectedNode.id)
+          setPdfReportData({
+            node: selectedNode,
+            metrics: reportMetrics,
+            mtrPath,
+            rootCause: generateRootCauseAnalysis(reportMetrics),
+            timeline: generateTimelineEvents(),
+            reportPeriod,
+          })
+          setShowPdfPreview(true)
+        } catch (err) {
+          console.error('Failed to prepare PDF report:', err)
+          setErrors((prev) => ({
+            ...prev,
+            submit: err instanceof Error ? err.message : t('errors.failedToLoad'),
+          }))
+        } finally {
+          setIsPreparingPdf(false)
+        }
       }
       return
     }
@@ -298,6 +315,12 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {errors.submit && (
+        <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errors.submit}
+        </div>
+      )}
+
       {/* Report Type */}
       <div>
         <label className="block text-sm font-medium text-muted-foreground mb-2">
@@ -481,7 +504,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
               key={option.value}
               type="button"
               onClick={() => setFormat(option.value)}
-              disabled={loading}
+              disabled={loading || isPreparingPdf}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 format === option.value
                   ? 'bg-primary text-white'
@@ -531,10 +554,10 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || isPreparingPdf}
           className="bg-primary hover:bg-primary/85 disabled:bg-primary/10 dark:disabled:bg-primary/10 text-white font-medium py-2 px-6 rounded-lg transition-colors duration-150"
         >
-          {loading ? t('reports.generating') : t('reports.generateReport')}
+          {loading || isPreparingPdf ? t('reports.generating') : t('reports.generateReport')}
         </button>
       </div>
     </form>
