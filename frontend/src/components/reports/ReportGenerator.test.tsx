@@ -14,14 +14,22 @@ vi.mock('./HealthReportPDF', () => ({
   HealthReportPDF: ({
     metrics,
     mtrPath,
+    timeline,
   }: {
     metrics: { latency: { current: number }; packetLoss: { current: number }; jitter: { current: number } }
     mtrPath?: Array<{ hop: number; ip: string; location?: string; avgLatency: number; lossRate: number }>
+    timeline?: Array<{ event: string; severity: string }>
   }) => (
     <div data-testid="pdf-preview">
       <div>{metrics.latency.current} ms latency</div>
       <div>{metrics.packetLoss.current}% packet loss</div>
       <div>{metrics.jitter.current} ms jitter</div>
+      {(timeline || []).map((event) => (
+        <div key={event.event}>
+          <span>{event.event}</span>
+          <span>{event.severity}</span>
+        </div>
+      ))}
       {(mtrPath || []).map((hop) => (
         <div key={hop.hop}>
           <span>{hop.ip}</span>
@@ -80,7 +88,7 @@ describe('ReportGenerator', () => {
             metric,
             data_points: [
               { timestamp: '2024-01-01T11:00:00Z', value: metric === 'latency' ? 42 : metric === 'packet_loss_rate' ? 0.2 : 7 },
-              { timestamp: '2024-01-01T12:00:00Z', value: metric === 'latency' ? 48 : metric === 'packet_loss_rate' ? 0.3 : 8 },
+              { timestamp: '2024-01-01T12:00:00Z', value: metric === 'latency' ? 520 : metric === 'packet_loss_rate' ? 6 : 120 },
             ],
           },
         ],
@@ -142,6 +150,10 @@ describe('ReportGenerator', () => {
     expect(screen.getByText('88 ms latency')).toBeInTheDocument()
     expect(screen.getByText('2.5% packet loss')).toBeInTheDocument()
     expect(screen.getByText('14 ms jitter')).toBeInTheDocument()
+    expect(screen.getByText('Latency threshold exceeded (520.0ms)')).toBeInTheDocument()
+    expect(screen.getByText('Packet loss threshold exceeded (6.0%)')).toBeInTheDocument()
+    expect(screen.getByText('Jitter threshold exceeded (120.0ms)')).toBeInTheDocument()
+    expect(screen.getAllByText('critical').length).toBeGreaterThan(0)
     expect(screen.getByText('192.0.2.1')).toBeInTheDocument()
     expect(screen.getByText('gateway.local')).toBeInTheDocument()
     expect(screen.getByText('198.51.100.1')).toBeInTheDocument()

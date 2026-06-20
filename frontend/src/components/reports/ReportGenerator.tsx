@@ -256,39 +256,48 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     }
   }
 
-  const generateTimelineEvents = (): TimelineEvent[] => {
+  const generateTimelineEvents = (metrics: HealthMetrics): TimelineEvent[] => {
     const events: TimelineEvent[] = []
-    const now = Date.now()
+    const addMetricEvent = (
+      data: Array<{ timestamp: string; value: number }>,
+      label: string,
+      unit: string,
+      warningThreshold: number,
+      criticalThreshold: number
+    ) => {
+      if (data.length === 0) return
 
-    if (Math.random() > 0.5) {
+      const peak = data.reduce((max, point) => point.value > max.value ? point : max, data[0])
+      if (peak.value < warningThreshold) return
+
       events.push({
-        timestamp: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
-        event: 'Latency spike detected (85ms)',
-        severity: 'warning',
+        timestamp: peak.timestamp,
+        event: `${label} threshold exceeded (${peak.value.toFixed(1)}${unit})`,
+        severity: peak.value >= criticalThreshold ? 'critical' : 'warning',
       })
     }
 
-    if (Math.random() > 0.7) {
-      events.push({
-        timestamp: new Date(now - 6 * 60 * 60 * 1000).toISOString(),
-        event: 'Packet loss threshold exceeded (2.5%)',
-        severity: 'critical',
-      })
-    }
-
-    if (Math.random() > 0.6) {
-      events.push({
-        timestamp: new Date(now - 24 * 60 * 60 * 1000).toISOString(),
-        event: 'Node reconnected after brief outage',
-        severity: 'warning',
-      })
-    }
-
-    events.push({
-      timestamp: new Date(now - 48 * 60 * 60 * 1000).toISOString(),
-      event: 'Scheduled maintenance completed',
-      severity: 'info',
-    })
+    addMetricEvent(
+      metrics.latency.data,
+      'Latency',
+      'ms',
+      Math.max(metrics.latency.baseline * 1.5, 200),
+      500
+    )
+    addMetricEvent(
+      metrics.packetLoss.data,
+      'Packet loss',
+      '%',
+      Math.max(metrics.packetLoss.baseline * 1.5, 1),
+      5
+    )
+    addMetricEvent(
+      metrics.jitter.data,
+      'Jitter',
+      'ms',
+      Math.max(metrics.jitter.baseline * 1.5, 50),
+      100
+    )
 
     return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
   }
@@ -317,7 +326,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
             metrics: reportMetrics,
             mtrPath,
             rootCause: generateRootCauseAnalysis(reportMetrics),
-            timeline: generateTimelineEvents(),
+            timeline: generateTimelineEvents(reportMetrics),
             reportPeriod,
           })
           setShowPdfPreview(true)
