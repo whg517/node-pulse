@@ -232,11 +232,29 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     }
   }
 
-  const generateRootCauseAnalysis = (metrics: HealthMetrics): RootCauseAnalysis => {
+  const generateRootCauseAnalysis = (metrics: HealthMetrics, mtrPath: MTRHop[]): RootCauseAnalysis => {
+    const worstLossHop = mtrPath.reduce<MTRHop | null>(
+      (worst, hop) => !worst || hop.lossRate > worst.lossRate ? hop : worst,
+      null
+    )
+
+    if (worstLossHop && worstLossHop.lossRate >= 5) {
+      return {
+        probableCause: t('reports.routeHopLossCause', {
+          hop: worstLossHop.hop,
+          ip: worstLossHop.ip,
+          lossRate: worstLossHop.lossRate.toFixed(1),
+        }),
+        confidence: worstLossHop.lossRate >= 20 ? 'high' : 'medium',
+        impact: t('reports.routeHopLossImpact'),
+        recommendation: t('reports.routeHopLossRecommendation'),
+      }
+    }
+
     const degradedMetrics = [
-      metrics.latency.trend === 'degraded' ? 'latency' : null,
-      metrics.packetLoss.trend === 'degraded' ? 'packet loss' : null,
-      metrics.jitter.trend === 'degraded' ? 'jitter' : null,
+      metrics.latency.trend === 'degraded' ? t('metrics.latency') : null,
+      metrics.packetLoss.trend === 'degraded' ? t('metrics.packetLoss') : null,
+      metrics.jitter.trend === 'degraded' ? t('metrics.jitter') : null,
     ].filter(Boolean)
 
     if (degradedMetrics.length === 0) {
@@ -249,10 +267,10 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     }
 
     return {
-      probableCause: `Network congestion affecting ${degradedMetrics.join(' and ')}`,
+      probableCause: t('reports.metricDegradationCause', { metrics: degradedMetrics.join(', ') }),
       confidence: 'medium',
-      impact: 'Moderate impact on application performance',
-      recommendation: 'Monitor network path and consider routing optimization or bandwidth upgrade',
+      impact: t('reports.metricDegradationImpact'),
+      recommendation: t('reports.metricDegradationRecommendation'),
     }
   }
 
@@ -325,7 +343,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
             node: selectedNode,
             metrics: reportMetrics,
             mtrPath,
-            rootCause: generateRootCauseAnalysis(reportMetrics),
+            rootCause: generateRootCauseAnalysis(reportMetrics, mtrPath),
             timeline: generateTimelineEvents(reportMetrics),
             reportPeriod,
           })

@@ -14,16 +14,25 @@ vi.mock('./HealthReportPDF', () => ({
   HealthReportPDF: ({
     metrics,
     mtrPath,
+    rootCause,
     timeline,
   }: {
     metrics: { latency: { current: number }; packetLoss: { current: number }; jitter: { current: number } }
     mtrPath?: Array<{ hop: number; ip: string; location?: string; avgLatency: number; lossRate: number }>
+    rootCause?: { probableCause: string; impact: string; recommendation: string }
     timeline?: Array<{ event: string; severity: string }>
   }) => (
     <div data-testid="pdf-preview">
       <div>{metrics.latency.current} ms latency</div>
       <div>{metrics.packetLoss.current}% packet loss</div>
       <div>{metrics.jitter.current} ms jitter</div>
+      {rootCause && (
+        <div>
+          <span>{rootCause.probableCause}</span>
+          <span>{rootCause.impact}</span>
+          <span>{rootCause.recommendation}</span>
+        </div>
+      )}
       {(timeline || []).map((event) => (
         <div key={event.event}>
           <span>{event.event}</span>
@@ -154,6 +163,7 @@ describe('ReportGenerator', () => {
     expect(screen.getByText('Packet loss threshold exceeded (6.0%)')).toBeInTheDocument()
     expect(screen.getByText('Jitter threshold exceeded (120.0ms)')).toBeInTheDocument()
     expect(screen.getAllByText('critical').length).toBeGreaterThan(0)
+    expect(screen.getByText('Packet loss concentrated at hop 2 (198.51.100.1), reaching 10.0%.')).toBeInTheDocument()
     expect(screen.getByText('192.0.2.1')).toBeInTheDocument()
     expect(screen.getByText('gateway.local')).toBeInTheDocument()
     expect(screen.getByText('198.51.100.1')).toBeInTheDocument()
