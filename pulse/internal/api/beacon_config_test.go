@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -184,6 +185,24 @@ func TestValidateBeaconConfig(t *testing.T) {
 						Port:            53,
 						IntervalSeconds: 30,
 						TimeoutSeconds:  5,
+					},
+				},
+			},
+			expectError: false,
+		},
+		{
+			name: "MTR probe type is valid without port",
+			req: &BeaconConfigUpdateRequest{
+				Probes: &[]ProbeConfig{
+					{
+						ID:              "probe-mtr-1",
+						Type:            "MTR",
+						Target:          "example.com",
+						IntervalSeconds: 60,
+						TimeoutSeconds:  5,
+						Count:           3,
+						MaxHops:         30,
+						PacketSize:      128,
 					},
 				},
 			},
@@ -473,6 +492,114 @@ func TestGetConfigPreview(t *testing.T) {
 		data := response["data"].(map[string]interface{})
 		warnings := data["warnings"].([]interface{})
 		assert.Greater(t, len(warnings), 0)
+	})
+}
+
+func TestAcknowledgeBeaconConfig(t *testing.T) {
+	handler := &BeaconHandler{}
+
+	t.Run("Valid acknowledgement", func(t *testing.T) {
+		req := BeaconConfigAckRequest{
+			NodeID:  "550e8400-e29b-41d4-a716-446655440000",
+			Version: 2,
+			Status:  "applied",
+		}
+
+		body, _ := json.Marshal(req)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Set("user_id", req.NodeID)
+
+		handler.AcknowledgeBeaconConfig(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("Reject mismatched token node", func(t *testing.T) {
+		req := BeaconConfigAckRequest{
+			NodeID:  "550e8400-e29b-41d4-a716-446655440000",
+			Version: 2,
+			Status:  "applied",
+		}
+
+		body, _ := json.Marshal(req)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Set("user_id", "550e8400-e29b-41d4-a716-446655440001")
+
+		handler.AcknowledgeBeaconConfig(c)
+
+		assert.Equal(t, http.StatusForbidden, w.Code)
+	})
+
+	t.Run("Reject invalid status", func(t *testing.T) {
+		req := BeaconConfigAckRequest{
+			NodeID:  "550e8400-e29b-41d4-a716-446655440000",
+			Version: 2,
+			Status:  "unknown",
+		}
+
+		body, _ := json.Marshal(req)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.AcknowledgeBeaconConfig(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+func TestHandleMTRResult(t *testing.T) {
+	handler := &BeaconHandler{}
+
+	t.Run("Valid MTR result without DB querier", func(t *testing.T) {
+		nodeID := "550e8400-e29b-41d4-a716-446655440000"
+		req := MTRResultRequest{
+			NodeID:      nodeID,
+			ProbeID:     "mtr-1",
+			Target:      "example.com",
+			CompletedAt: time.Now().Format(time.RFC3339),
+			Success:     true,
+			Hops: []MTRHopRequest{
+				{HopNumber: 1, IP: "192.0.2.1", Sent: 10, Received: 10, LossRate: 0, AvgRTTMs: 1.2},
+			},
+		}
+
+		body, _ := json.Marshal(req)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+		c.Set("user_id", nodeID)
+
+		handler.HandleMTRResult(c)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+	})
+
+	t.Run("Reject invalid timestamp", func(t *testing.T) {
+		req := MTRResultRequest{
+			NodeID:      "550e8400-e29b-41d4-a716-446655440000",
+			Target:      "example.com",
+			CompletedAt: "not-time",
+			Hops:        []MTRHopRequest{{HopNumber: 1, IP: "192.0.2.1"}},
+		}
+
+		body, _ := json.Marshal(req)
+		w := httptest.NewRecorder()
+		c, _ := gin.CreateTestContext(w)
+		c.Request = httptest.NewRequest(http.MethodPost, "/", bytes.NewReader(body))
+		c.Request.Header.Set("Content-Type", "application/json")
+
+		handler.HandleMTRResult(c)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
 

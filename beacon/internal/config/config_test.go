@@ -201,6 +201,25 @@ func TestProbeConfigStruct_UDP(t *testing.T) {
 	}
 }
 
+func TestProbeConfigStruct_MTR(t *testing.T) {
+	probe := ProbeConfig{
+		Type:           "mtr",
+		Target:         "example.com",
+		Interval:       300,
+		Count:          3,
+		TimeoutSeconds: 5,
+		MaxHops:        30,
+		PacketSize:     128,
+	}
+
+	if probe.Type != "mtr" {
+		t.Errorf("Expected Type to be 'mtr', got: %s", probe.Type)
+	}
+	if probe.MaxHops != 30 {
+		t.Errorf("Expected MaxHops to be 30, got: %d", probe.MaxHops)
+	}
+}
+
 func TestReconnectConfigStruct_Valid(t *testing.T) {
 	// Test ReconnectConfig struct with valid values
 	reconnect := ReconnectConfig{

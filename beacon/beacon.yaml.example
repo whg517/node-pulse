@@ -39,6 +39,14 @@ probes:
     count: 10
     timeout_seconds: 5
 
+  - type: mtr
+    target: example.com
+    interval: 300
+    count: 3
+    timeout_seconds: 5
+    max_hops: 30
+    packet_size: 128
+
 # Optional: Reconnect configuration (for Story 2.6)
 reconnect:
   max_retries: 10          # Maximum retry attempts (1-100)

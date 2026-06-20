@@ -61,6 +61,18 @@ func makeValidUDPProbeConfig(target string, port int) config.ProbeConfig {
 	}
 }
 
+func makeValidMTRProbeConfig(target string) config.ProbeConfig {
+	return config.ProbeConfig{
+		Type:           "mtr",
+		Target:         target,
+		TimeoutSeconds: 2,
+		Interval:       60,
+		Count:          3,
+		MaxHops:        8,
+		PacketSize:     128,
+	}
+}
+
 // TestNewProbeScheduler_Empty tests creating a scheduler with no probes
 func TestNewProbeScheduler_Empty(t *testing.T) {
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{})
@@ -102,6 +114,17 @@ func TestNewProbeScheduler_WithUDPProbe(t *testing.T) {
 	}
 }
 
+func TestNewProbeScheduler_WithMTRProbe(t *testing.T) {
+	cfg := makeValidMTRProbeConfig("localhost")
+	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
+	if err != nil {
+		t.Fatalf("NewProbeScheduler failed: %v", err)
+	}
+	if scheduler.GetProbeCount() != 1 {
+		t.Errorf("Expected 1 probe, got %d", scheduler.GetProbeCount())
+	}
+}
+
 // TestNewProbeScheduler_MixedProbes tests creating a scheduler with mixed probe types
 func TestNewProbeScheduler_MixedProbes(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18772")
@@ -110,13 +133,14 @@ func TestNewProbeScheduler_MixedProbes(t *testing.T) {
 	probes := []config.ProbeConfig{
 		makeValidTCPProbeConfig("localhost", 18772),
 		makeValidUDPProbeConfig("localhost", 18773),
+		makeValidMTRProbeConfig("localhost"),
 	}
 	scheduler, err := NewProbeScheduler(probes)
 	if err != nil {
 		t.Fatalf("NewProbeScheduler failed: %v", err)
 	}
-	if scheduler.GetProbeCount() != 2 {
-		t.Errorf("Expected 2 probes, got %d", scheduler.GetProbeCount())
+	if scheduler.GetProbeCount() != 3 {
+		t.Errorf("Expected 3 probes, got %d", scheduler.GetProbeCount())
 	}
 }
 

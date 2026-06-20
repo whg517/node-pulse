@@ -53,6 +53,7 @@ func SetupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
 	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS webhooks CASCADE")
 	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS webhook_logs CASCADE")
+	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS mtr_results CASCADE")
 	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS metrics CASCADE")
 	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS probes CASCADE")
 	_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS nodes CASCADE")

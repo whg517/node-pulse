@@ -10,6 +10,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	pulseapi "beacon/internal/api"
+	"beacon/internal/models"
 )
 
 // executeWithTimeout executes the command with a timeout context
@@ -484,5 +487,100 @@ log_to_console: false
 	// But should have gotten past config loading, scheduler creation, etc.
 	if strings.Contains(output, "Loading configuration") {
 		t.Log("Config loading started - good")
+	}
+}
+
+func TestServerConfigToLocalProbes(t *testing.T) {
+	serverConfig := pulseapi.BeaconConfigData{
+		IntervalSeconds: 30,
+		TimeoutSeconds:  4,
+		Probes: []pulseapi.ProbeConfig{
+			{
+				ID:              "tcp-1",
+				Type:            "TCP",
+				Target:          "example.com",
+				Port:            443,
+				IntervalSeconds: 0,
+				TimeoutSeconds:  0,
+				Count:           3,
+			},
+			{
+				ID:              "udp-1",
+				Type:            "UDP",
+				Target:          "8.8.8.8",
+				Port:            53,
+				IntervalSeconds: 120,
+				TimeoutSeconds:  2,
+				Count:           12,
+			},
+			{
+				ID:              "mtr-1",
+				Type:            "MTR",
+				Target:          "example.com",
+				IntervalSeconds: 60,
+				TimeoutSeconds:  3,
+				Count:           3,
+				MaxHops:         30,
+				PacketSize:      128,
+			},
+		},
+		Version: 2,
+	}
+
+	probes := serverConfigToLocalProbes(serverConfig)
+
+	if len(probes) != 3 {
+		t.Fatalf("Expected 3 probes, got %d", len(probes))
+	}
+
+	if probes[0].Type != "tcp_ping" {
+		t.Errorf("Expected first probe type tcp_ping, got %s", probes[0].Type)
+	}
+	if probes[0].Interval != 60 {
+		t.Errorf("Expected first probe interval normalized to 60, got %d", probes[0].Interval)
+	}
+	if probes[0].TimeoutSeconds != 4 {
+		t.Errorf("Expected first probe timeout from global config, got %d", probes[0].TimeoutSeconds)
+	}
+	if probes[0].Count != 10 {
+		t.Errorf("Expected first probe count normalized to 10, got %d", probes[0].Count)
+	}
+
+	if probes[1].Type != "udp_ping" {
+		t.Errorf("Expected second probe type udp_ping, got %s", probes[1].Type)
+	}
+	if probes[1].Interval != 120 {
+		t.Errorf("Expected second probe interval 120, got %d", probes[1].Interval)
+	}
+	if probes[1].Count != 12 {
+		t.Errorf("Expected second probe count 12, got %d", probes[1].Count)
+	}
+
+	if probes[2].Type != "mtr" {
+		t.Errorf("Expected third probe type mtr, got %s", probes[2].Type)
+	}
+	if probes[2].MaxHops != 30 {
+		t.Errorf("Expected third probe max_hops 30, got %d", probes[2].MaxHops)
+	}
+	if probes[2].PacketSize != 128 {
+		t.Errorf("Expected third probe packet_size 128, got %d", probes[2].PacketSize)
+	}
+}
+
+func TestMTRResultToRequest(t *testing.T) {
+	result := models.NewMTRResult("example.com", []models.MTRHop{
+		{HopNumber: 1, IP: "192.0.2.1", Sent: 10, Received: 10, AvgRTTMs: 1.5},
+	}, true, "")
+
+	req := mtrResultToRequest("550e8400-e29b-41d4-a716-446655440000", result)
+
+	if req.NodeID != "550e8400-e29b-41d4-a716-446655440000" {
+		t.Errorf("Expected node ID to be propagated, got %s", req.NodeID)
+	}
+	if req.Target != "example.com" {
+		t.Errorf("Expected target example.com, got %s", req.Target)
+	}
+	if len(req.Hops) != 1 || req.Hops[0].IP != "192.0.2.1" {
+		t.Fatalf("Expected one hop with IP 192.0.2.1, got %#v", req.Hops)
 	}
 }

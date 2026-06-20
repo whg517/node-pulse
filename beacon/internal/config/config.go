@@ -78,6 +78,8 @@ type ProbeConfig struct {
 	TimeoutSeconds int    `mapstructure:"timeout_seconds" yaml:"timeout_seconds"`
 	Interval       int    `mapstructure:"interval" yaml:"interval"`
 	Count          int    `mapstructure:"count" yaml:"count"`
+	MaxHops        int    `mapstructure:"max_hops" yaml:"max_hops"`
+	PacketSize     int    `mapstructure:"packet_size" yaml:"packet_size"`
 }
 
 // ReconnectConfig represents connection retry configuration
@@ -442,8 +444,8 @@ func resolveConfigPath(customPath string) (string, error) {
 // validateProbeConfig validates probe configuration
 func validateProbeConfig(probe ProbeConfig) error {
 	// Validate type
-	if probe.Type != "tcp_ping" && probe.Type != "udp_ping" {
-		return fmt.Errorf("invalid probe type '%s', must be 'tcp_ping' or 'udp_ping'", probe.Type)
+	if probe.Type != "tcp_ping" && probe.Type != "udp_ping" && probe.Type != "mtr" {
+		return fmt.Errorf("invalid probe type '%s', must be 'tcp_ping', 'udp_ping', or 'mtr'", probe.Type)
 	}
 
 	// Validate target (IP address or hostname)
@@ -457,8 +459,8 @@ func validateProbeConfig(probe ProbeConfig) error {
 		}
 	}
 
-	// Validate port range (1-65535)
-	if probe.Port < 1 || probe.Port > 65535 {
+	// Validate port range (1-65535) for TCP/UDP probes. MTR uses ICMP TTL.
+	if probe.Type != "mtr" && (probe.Port < 1 || probe.Port > 65535) {
 		return fmt.Errorf("invalid port %d, must be between 1 and 65535 (suggestion: check port number is valid)", probe.Port)
 	}
 
@@ -475,6 +477,18 @@ func validateProbeConfig(probe ProbeConfig) error {
 	// Validate timeout range (1-30)
 	if probe.TimeoutSeconds < 1 || probe.TimeoutSeconds > 30 {
 		return fmt.Errorf("invalid timeout %d, must be between 1 and 30 seconds (suggestion: adjust timeout to be within range)", probe.TimeoutSeconds)
+	}
+
+	if probe.Type == "mtr" {
+		if probe.Count > 30 {
+			return fmt.Errorf("invalid count %d for mtr, must be between 1 and 30", probe.Count)
+		}
+		if probe.MaxHops < 1 || probe.MaxHops > 64 {
+			return fmt.Errorf("invalid max_hops %d, must be between 1 and 64", probe.MaxHops)
+		}
+		if probe.PacketSize != 0 && (probe.PacketSize < 64 || probe.PacketSize > 1500) {
+			return fmt.Errorf("invalid packet_size %d, must be between 64 and 1500 bytes", probe.PacketSize)
+		}
 	}
 
 	return nil

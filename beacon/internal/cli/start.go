@@ -5,15 +5,18 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
 
+	pulseapi "beacon/internal/api"
 	"beacon/internal/auth"
 	"beacon/internal/config"
 	"beacon/internal/logger"
 	"beacon/internal/metrics"
+	"beacon/internal/models"
 	"beacon/internal/monitor"
 	"beacon/internal/probe"
 	"beacon/internal/process"
@@ -176,6 +179,13 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Starting heartbeat reporter...")
 
+	if cfg.Mode.Mode == config.ModeStandalone {
+		logger.Info("Beacon running in standalone mode; skipping Pulse authentication and heartbeat reporting")
+		waitForStop(ctx, configWatcher)
+		logger.Info("Shutting down gracefully...")
+		return nil
+	}
+
 	// Validate API key configuration
 	if cfg.APIKey == "" {
 		return fmt.Errorf("required field 'api_key' is missing (JWT authentication required)")
@@ -194,6 +204,11 @@ func runStart(cmd *cobra.Command, args []string) error {
 	}
 	logger.Info("Authentication successful")
 
+	stopConfigSync := startServerConfigSync(ctx, cfg, jwtClient, scheduler)
+	defer stopConfigSync()
+	stopMTRReporting := startMTRResultReporting(ctx, cfg, jwtClient, scheduler)
+	defer stopMTRReporting()
+
 	// Create Pulse API client with 5 second timeout (NFR-PERF-001)
 	apiClient := reporter.NewPulseAPIClient(cfg.PulseServer, 5*time.Second, jwtClient)
 
@@ -210,6 +225,228 @@ func runStart(cmd *cobra.Command, args []string) error {
 	}).Info("Beacon started successfully")
 	logger.Info("Press Ctrl+C to stop...")
 
+	waitForStop(ctx, configWatcher)
+
+	logger.Info("Shutting down gracefully...")
+
+	return nil
+}
+
+type accessTokenProvider interface {
+	GetAccessToken(ctx context.Context) (string, error)
+}
+
+func startServerConfigSync(ctx context.Context, cfg *config.Config, tokenProvider accessTokenProvider, scheduler *probe.ProbeScheduler) context.CancelFunc {
+	syncCtx, cancel := context.WithCancel(ctx)
+	interval := time.Duration(cfg.Mode.ConfigCheckIntervalSeconds) * time.Second
+	if interval <= 0 {
+		interval = 60 * time.Second
+	}
+
+	go func() {
+		currentVersion := 0
+		syncConfig := func() {
+			token, err := tokenProvider.GetAccessToken(syncCtx)
+			if err != nil {
+				logger.WithError(err).Warn("Failed to get access token for beacon config sync")
+				return
+			}
+
+			client := pulseapi.NewPulseClient(cfg.PulseServer, token, nil)
+			resp, err := client.GetBeaconConfig(syncCtx, cfg.NodeID)
+			if err != nil {
+				logger.WithError(err).Warn("Failed to fetch server beacon config")
+				return
+			}
+			if resp.Data.Version <= currentVersion {
+				return
+			}
+
+			probes := serverConfigToLocalProbes(resp.Data)
+			if err := scheduler.ReloadConfig(probes); err != nil {
+				logger.WithError(err).Warn("Failed to apply server beacon config")
+				ackErr := client.AcknowledgeBeaconConfig(syncCtx, &pulseapi.BeaconConfigAckRequest{
+					NodeID:       cfg.NodeID,
+					Version:      resp.Data.Version,
+					Status:       "failed",
+					ErrorMessage: err.Error(),
+				})
+				if ackErr != nil {
+					logger.WithError(ackErr).Warn("Failed to acknowledge rejected server beacon config")
+				}
+				return
+			}
+			if err := client.AcknowledgeBeaconConfig(syncCtx, &pulseapi.BeaconConfigAckRequest{
+				NodeID:  cfg.NodeID,
+				Version: resp.Data.Version,
+				Status:  "applied",
+			}); err != nil {
+				logger.WithError(err).Warn("Failed to acknowledge applied server beacon config")
+			}
+			currentVersion = resp.Data.Version
+			logger.WithFields(map[string]interface{}{
+				"version":     currentVersion,
+				"probe_count": len(probes),
+			}).Info("Applied server beacon config")
+		}
+
+		syncConfig()
+
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				syncConfig()
+			case <-syncCtx.Done():
+				return
+			}
+		}
+	}()
+
+	return cancel
+}
+
+func serverConfigToLocalProbes(serverConfig pulseapi.BeaconConfigData) []config.ProbeConfig {
+	probes := make([]config.ProbeConfig, 0, len(serverConfig.Probes))
+	for _, serverProbe := range serverConfig.Probes {
+		probeType := strings.ToUpper(serverProbe.Type)
+		localType := strings.ToLower(serverProbe.Type)
+		switch probeType {
+		case "TCP":
+			localType = "tcp_ping"
+		case "UDP":
+			localType = "udp_ping"
+		case "MTR":
+			localType = "mtr"
+		}
+
+		interval := serverProbe.IntervalSeconds
+		if interval == 0 {
+			interval = serverConfig.IntervalSeconds
+		}
+		if interval < 60 {
+			interval = 60
+		}
+
+		timeout := serverProbe.TimeoutSeconds
+		if timeout == 0 {
+			timeout = serverConfig.TimeoutSeconds
+		}
+		if timeout == 0 {
+			timeout = 5
+		}
+
+		count := serverProbe.Count
+		if count < 10 {
+			count = 10
+		}
+
+		probes = append(probes, config.ProbeConfig{
+			Type:           localType,
+			Target:         serverProbe.Target,
+			Port:           serverProbe.Port,
+			TimeoutSeconds: timeout,
+			Interval:       interval,
+			Count:          count,
+			MaxHops:        serverProbe.MaxHops,
+			PacketSize:     serverProbe.PacketSize,
+		})
+	}
+
+	return probes
+}
+
+type mtrResultProvider interface {
+	GetLatestMTRResults() []*models.MTRResult
+}
+
+func startMTRResultReporting(ctx context.Context, cfg *config.Config, tokenProvider accessTokenProvider, resultProvider mtrResultProvider) context.CancelFunc {
+	reportCtx, cancel := context.WithCancel(ctx)
+	interval := time.Duration(cfg.Mode.ConfigCheckIntervalSeconds) * time.Second
+	if interval <= 0 {
+		interval = reporter.ReportInterval
+	}
+
+	go func() {
+		sent := make(map[string]time.Time)
+		upload := func() {
+			results := resultProvider.GetLatestMTRResults()
+			if len(results) == 0 {
+				return
+			}
+
+			token, err := tokenProvider.GetAccessToken(reportCtx)
+			if err != nil {
+				logger.WithError(err).Warn("Failed to get access token for MTR result upload")
+				return
+			}
+			client := pulseapi.NewPulseClient(cfg.PulseServer, token, nil)
+
+			for _, result := range results {
+				if result == nil {
+					continue
+				}
+				key := result.Target
+				if lastSent, ok := sent[key]; ok && !result.CompletedAt.After(lastSent) {
+					continue
+				}
+
+				if err := client.SendMTRResult(reportCtx, mtrResultToRequest(cfg.NodeID, result)); err != nil {
+					logger.WithError(err).Warn("Failed to upload MTR result")
+					continue
+				}
+				sent[key] = result.CompletedAt
+			}
+		}
+
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ticker.C:
+				upload()
+			case <-reportCtx.Done():
+				return
+			}
+		}
+	}()
+
+	return cancel
+}
+
+func mtrResultToRequest(nodeID string, result *models.MTRResult) *pulseapi.MTRResultRequest {
+	hops := make([]pulseapi.MTRHop, 0, len(result.Hops))
+	for _, hop := range result.Hops {
+		hops = append(hops, pulseapi.MTRHop{
+			HopNumber:  hop.HopNumber,
+			IP:         hop.IP,
+			Hostname:   hop.Hostname,
+			ASNumber:   hop.ASNumber,
+			Sent:       hop.Sent,
+			Received:   hop.Received,
+			LossRate:   hop.LossRate,
+			LastRTTMs:  hop.LastRTTMs,
+			AvgRTTMs:   hop.AvgRTTMs,
+			BestRTTMs:  hop.BestRTTMs,
+			WorstRTTMs: hop.WorstRTTMs,
+			StdDevMs:   hop.StdDevMs,
+			Location:   hop.Location,
+		})
+	}
+
+	return &pulseapi.MTRResultRequest{
+		NodeID:       nodeID,
+		Target:       result.Target,
+		TotalHops:    result.TotalHops,
+		Hops:         hops,
+		CompletedAt:  result.CompletedAt.Format(time.RFC3339),
+		Success:      result.Success,
+		ErrorMessage: result.ErrorMessage,
+	}
+}
+
+func waitForStop(ctx context.Context, configWatcher *config.FileWatcher) {
 	// Wait for interrupt signal or context cancellation
 	sigChan := make(chan os.Signal, 1)
 	sighupChan := make(chan os.Signal, 1)
@@ -237,8 +474,4 @@ func runStart(cmd *cobra.Command, args []string) error {
 		}
 		break // Exit loop for shutdown signals and context cancellation
 	}
-
-	logger.Info("Shutting down gracefully...")
-
-	return nil
 }

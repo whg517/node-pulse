@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/whg517/node-pulse/pulse/internal/cache"
+	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/diagnostic"
 )
 
@@ -55,6 +57,54 @@ type HistorySeries struct {
 type HistoryResponse struct {
 	Data        []HistorySeries `json:"data"`
 	Aggregation string          `json:"aggregation"`
+}
+
+// MTRResultResponse represents a latest MTR route-hop response.
+type MTRResultResponse struct {
+	Data      *db.MTRResult `json:"data"`
+	Message   string        `json:"message"`
+	Timestamp string        `json:"timestamp"`
+}
+
+// GetLatestMTRHandler handles GET /api/v1/data/mtr.
+func (h *DataHandler) GetLatestMTRHandler(c *gin.Context) {
+	nodeIDRaw := c.Query("node_id")
+	nodeID, err := uuid.Parse(nodeIDRaw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid node_id",
+			"details": "node_id must be a valid UUID",
+		})
+		return
+	}
+	if h.pool == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Database unavailable",
+		})
+		return
+	}
+
+	result, err := db.GetLatestMTRResult(c.Request.Context(), h.pool, nodeID)
+	if err != nil {
+		if err == db.ErrMTRResultNotFound {
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "MTR result not found",
+				"details": "No MTR result has been reported for this node",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to query MTR result",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, MTRResultResponse{
+		Data:      result,
+		Message:   "MTR result retrieved successfully",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
 }
 
 // GetHistoryHandler handles GET /api/v1/data/history

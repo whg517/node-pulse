@@ -13,17 +13,19 @@ import (
 
 // ProbeScheduler manages and executes multiple probes
 type ProbeScheduler struct {
-	tcpPingers    []*TCPPinger
-	udpPingers    []*UDPPinger
-	interval      time.Duration
-	baseInterval  time.Duration // Store original interval for degradation recovery
-	stopChan      chan struct{}
-	wg            sync.WaitGroup
-	running       bool
-	mu            sync.RWMutex
+	tcpPingers   []*TCPPinger
+	udpPingers   []*UDPPinger
+	mtrProbes    []*MTRProbe
+	interval     time.Duration
+	baseInterval time.Duration // Store original interval for degradation recovery
+	stopChan     chan struct{}
+	wg           sync.WaitGroup
+	running      bool
+	mu           sync.RWMutex
 	// Cache latest results for heartbeat reporting
 	latestTCPResults []*models.TCPProbeResult
 	latestUDPResults []*models.UDPProbeResult
+	latestMTRResults []*models.MTRResult
 	resultsMu        sync.RWMutex
 }
 
@@ -32,6 +34,7 @@ func NewProbeScheduler(probeConfigs []config.ProbeConfig) (*ProbeScheduler, erro
 	scheduler := &ProbeScheduler{
 		tcpPingers: make([]*TCPPinger, 0),
 		udpPingers: make([]*UDPPinger, 0),
+		mtrProbes:  make([]*MTRProbe, 0),
 		stopChan:   make(chan struct{}),
 		running:    false,
 	}
@@ -82,6 +85,25 @@ func NewProbeScheduler(probeConfigs []config.ProbeConfig) (*ProbeScheduler, erro
 
 			pinger := NewUDPPinger(udpConfig)
 			scheduler.udpPingers = append(scheduler.udpPingers, pinger)
+		} else if cfg.Type == "mtr" {
+			mtrConfig := MTRProbeConfig{
+				Type:           cfg.Type,
+				Target:         cfg.Target,
+				MaxHops:        cfg.MaxHops,
+				TimeoutSeconds: cfg.TimeoutSeconds,
+				Interval:       cfg.Interval,
+				Count:          cfg.Count,
+				PacketSize:     cfg.PacketSize,
+			}
+			if mtrConfig.MaxHops == 0 {
+				mtrConfig.MaxHops = 30
+			}
+
+			if err := mtrConfig.Validate(); err != nil {
+				return nil, fmt.Errorf("invalid mtr config for %s: %w", cfg.Target, err)
+			}
+
+			scheduler.mtrProbes = append(scheduler.mtrProbes, NewMTRProbe(mtrConfig))
 		}
 	}
 
@@ -99,7 +121,7 @@ func (s *ProbeScheduler) Start() error {
 	s.mu.Unlock()
 
 	// Determine interval from first probe config (all probes share the same interval in MVP)
-	totalProbes := len(s.tcpPingers) + len(s.udpPingers)
+	totalProbes := len(s.tcpPingers) + len(s.udpPingers) + len(s.mtrProbes)
 	if totalProbes == 0 {
 		logger.Info("No probes configured, scheduler started but will not execute any probes")
 		return nil
@@ -110,15 +132,18 @@ func (s *ProbeScheduler) Start() error {
 		interval = time.Duration(s.tcpPingers[0].config.Interval) * time.Second
 	} else if len(s.udpPingers) > 0 {
 		interval = time.Duration(s.udpPingers[0].config.Interval) * time.Second
+	} else if len(s.mtrProbes) > 0 {
+		interval = time.Duration(s.mtrProbes[0].config.Interval) * time.Second
 	}
 	s.interval = interval
 	s.baseInterval = interval // Store base interval
 
 	logger.WithFields(map[string]interface{}{
-		"component":  "probe",
-		"interval":   interval.String(),
-		"tcp_count":  len(s.tcpPingers),
-		"udp_count":  len(s.udpPingers),
+		"component": "probe",
+		"interval":  interval.String(),
+		"tcp_count": len(s.tcpPingers),
+		"udp_count": len(s.udpPingers),
+		"mtr_count": len(s.mtrProbes),
 	}).Info("Probe scheduler started")
 
 	// Start scheduling loop in background
@@ -151,13 +176,14 @@ func (s *ProbeScheduler) run() {
 
 // executeProbes runs all probes concurrently
 func (s *ProbeScheduler) executeProbes() {
-	logger.WithFields(map[string]interface{}{"component": "probe", "tcp_count": len(s.tcpPingers), "udp_count": len(s.udpPingers)}).Info("Executing probes...")
+	logger.WithFields(map[string]interface{}{"component": "probe", "tcp_count": len(s.tcpPingers), "udp_count": len(s.udpPingers), "mtr_count": len(s.mtrProbes)}).Info("Executing probes...")
 
 	var wg sync.WaitGroup
 
 	// Temporary storage for results
 	tcpResults := make([]*models.TCPProbeResult, len(s.tcpPingers))
 	udpResults := make([]*models.UDPProbeResult, len(s.udpPingers))
+	mtrResults := make([]*models.MTRResult, len(s.mtrProbes))
 
 	// Execute TCP probes
 	for i, pinger := range s.tcpPingers {
@@ -181,19 +207,42 @@ func (s *ProbeScheduler) executeProbes() {
 
 			// Log core metrics
 			logger.WithFields(map[string]interface{}{
-				"component":      "probe",
-				"probe_type":     "tcp_ping",
-				"target":         target,
-				"success":        result.Success,
-				"sample_count":   result.SampleCount,
-				"rtt_ms":         result.RTTMs,
-				"rtt_median_ms":  result.RTTMedianMs,
-				"jitter_ms":      result.JitterMs,
-				"variance_ms":    result.VarianceMs,
-				"packet_loss":    result.PacketLossRate,
-				"timestamp":      result.Timestamp,
+				"component":     "probe",
+				"probe_type":    "tcp_ping",
+				"target":        target,
+				"success":       result.Success,
+				"sample_count":  result.SampleCount,
+				"rtt_ms":        result.RTTMs,
+				"rtt_median_ms": result.RTTMedianMs,
+				"jitter_ms":     result.JitterMs,
+				"variance_ms":   result.VarianceMs,
+				"packet_loss":   result.PacketLossRate,
+				"timestamp":     result.Timestamp,
 			}).Info("TCP probe completed")
 		}(i, pinger)
+	}
+
+	for i, mtrProbe := range s.mtrProbes {
+		wg.Add(1)
+		go func(index int, p *MTRProbe) {
+			defer wg.Done()
+
+			logger.WithFields(map[string]interface{}{"component": "probe", "probe_type": "mtr", "target": p.config.Target, "count": p.config.Count}).Debug("Starting MTR probe")
+			result, err := p.Execute()
+			if err != nil {
+				logger.WithFields(map[string]interface{}{"component": "probe", "probe_type": "mtr", "target": p.config.Target, "error": err}).Error("MTR probe failed")
+				return
+			}
+			mtrResults[index] = result
+			logger.WithFields(map[string]interface{}{
+				"component":  "probe",
+				"probe_type": "mtr",
+				"target":     result.Target,
+				"success":    result.Success,
+				"total_hops": result.TotalHops,
+				"timestamp":  result.CompletedAt,
+			}).Info("MTR probe completed")
+		}(i, mtrProbe)
 	}
 
 	// Execute UDP probes
@@ -218,19 +267,19 @@ func (s *ProbeScheduler) executeProbes() {
 
 			// Log core metrics
 			logger.WithFields(map[string]interface{}{
-				"component":       "probe",
-				"probe_type":      "udp_ping",
-				"target":          target,
-				"success":         result.Success,
-				"sample_count":    result.SampleCount,
-				"sent":            result.SentPackets,
-				"received":        result.ReceivedPackets,
-				"rtt_ms":          result.RTTMs,
-				"rtt_median_ms":   result.RTTMedianMs,
-				"jitter_ms":       result.JitterMs,
-				"variance_ms":     result.VarianceMs,
-				"packet_loss":     result.PacketLossRate,
-				"timestamp":       result.Timestamp,
+				"component":     "probe",
+				"probe_type":    "udp_ping",
+				"target":        target,
+				"success":       result.Success,
+				"sample_count":  result.SampleCount,
+				"sent":          result.SentPackets,
+				"received":      result.ReceivedPackets,
+				"rtt_ms":        result.RTTMs,
+				"rtt_median_ms": result.RTTMedianMs,
+				"jitter_ms":     result.JitterMs,
+				"variance_ms":   result.VarianceMs,
+				"packet_loss":   result.PacketLossRate,
+				"timestamp":     result.Timestamp,
 			}).Info("UDP probe completed")
 		}(i, pinger)
 	}
@@ -241,6 +290,7 @@ func (s *ProbeScheduler) executeProbes() {
 	s.resultsMu.Lock()
 	s.latestTCPResults = tcpResults
 	s.latestUDPResults = udpResults
+	s.latestMTRResults = mtrResults
 	s.resultsMu.Unlock()
 
 	logger.WithField("component", "probe").Info("All probes completed")
@@ -273,7 +323,7 @@ func (s *ProbeScheduler) IsRunning() bool {
 func (s *ProbeScheduler) GetProbeCount() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return len(s.tcpPingers) + len(s.udpPingers)
+	return len(s.tcpPingers) + len(s.udpPingers) + len(s.mtrProbes)
 }
 
 // ExecuteProbeNow executes a specific probe immediately (for testing or manual trigger)
@@ -304,6 +354,20 @@ func (s *ProbeScheduler) GetLatestResults() ([]*models.TCPProbeResult, []*models
 	return tcpCopy, udpCopy
 }
 
+// GetLatestMTRResults returns the most recent MTR results for upload.
+func (s *ProbeScheduler) GetLatestMTRResults() []*models.MTRResult {
+	s.resultsMu.RLock()
+	defer s.resultsMu.RUnlock()
+
+	results := make([]*models.MTRResult, 0, len(s.latestMTRResults))
+	for _, result := range s.latestMTRResults {
+		if result != nil {
+			results = append(results, result)
+		}
+	}
+	return results
+}
+
 // SetLatestResultsForTest injects probe results for testing purposes.
 // This method should only be used in tests.
 func (s *ProbeScheduler) SetLatestResultsForTest(tcpResults []*models.TCPProbeResult, udpResults []*models.UDPProbeResult) {
@@ -328,10 +392,10 @@ func (s *ProbeScheduler) UpdateProbeInterval(multiplier int) error {
 	s.interval = newInterval
 
 	logger.WithFields(map[string]interface{}{
-		"component":       "probe",
-		"multiplier":      multiplier,
-		"old_interval":    oldInterval.String(),
-		"new_interval":    newInterval.String(),
+		"component":    "probe",
+		"multiplier":   multiplier,
+		"old_interval": oldInterval.String(),
+		"new_interval": newInterval.String(),
 	}).Info("Probe interval updated due to resource degradation")
 
 	// Restart the ticker with new interval by stopping and starting goroutine
@@ -356,6 +420,7 @@ func (s *ProbeScheduler) ReloadConfig(probeConfigs []config.ProbeConfig) error {
 	// Create new pingers from the updated config
 	newTCPingers := make([]*TCPPinger, 0)
 	newUDPPingers := make([]*UDPPinger, 0)
+	newMTRProbes := make([]*MTRProbe, 0)
 
 	for _, cfg := range probeConfigs {
 		if cfg.Type == "tcp_ping" {
@@ -398,30 +463,51 @@ func (s *ProbeScheduler) ReloadConfig(probeConfigs []config.ProbeConfig) error {
 
 			pinger := NewUDPPinger(udpConfig)
 			newUDPPingers = append(newUDPPingers, pinger)
+		} else if cfg.Type == "mtr" {
+			mtrConfig := MTRProbeConfig{
+				Type:           cfg.Type,
+				Target:         cfg.Target,
+				MaxHops:        cfg.MaxHops,
+				TimeoutSeconds: cfg.TimeoutSeconds,
+				Interval:       cfg.Interval,
+				Count:          cfg.Count,
+				PacketSize:     cfg.PacketSize,
+			}
+			if mtrConfig.MaxHops == 0 {
+				mtrConfig.MaxHops = 30
+			}
+			if err := mtrConfig.Validate(); err != nil {
+				return fmt.Errorf("invalid mtr config for %s: %w", cfg.Target, err)
+			}
+			newMTRProbes = append(newMTRProbes, NewMTRProbe(mtrConfig))
 		}
 	}
 
 	// Atomically replace the pingers
 	s.tcpPingers = newTCPingers
 	s.udpPingers = newUDPPingers
+	s.mtrProbes = newMTRProbes
 
 	// Update base interval if probes exist
-	totalProbes := len(s.tcpPingers) + len(s.udpPingers)
+	totalProbes := len(s.tcpPingers) + len(s.udpPingers) + len(s.mtrProbes)
 	if totalProbes > 0 {
 		if len(s.tcpPingers) > 0 {
 			s.baseInterval = time.Duration(s.tcpPingers[0].config.Interval) * time.Second
 		} else if len(s.udpPingers) > 0 {
 			s.baseInterval = time.Duration(s.udpPingers[0].config.Interval) * time.Second
+		} else if len(s.mtrProbes) > 0 {
+			s.baseInterval = time.Duration(s.mtrProbes[0].config.Interval) * time.Second
 		}
 		// Reset current interval to base (will be adjusted by resource monitor if needed)
 		s.interval = s.baseInterval
 	}
 
 	logger.WithFields(map[string]interface{}{
-		"component":  "probe",
-		"tcp_count":  len(s.tcpPingers),
-		"udp_count":  len(s.udpPingers),
-		"interval":   s.interval.String(),
+		"component": "probe",
+		"tcp_count": len(s.tcpPingers),
+		"udp_count": len(s.udpPingers),
+		"mtr_count": len(s.mtrProbes),
+		"interval":  s.interval.String(),
 	}).Info("Probe configuration reloaded")
 
 	return nil

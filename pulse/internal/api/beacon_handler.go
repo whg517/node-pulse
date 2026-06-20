@@ -24,17 +24,17 @@ import (
 )
 
 var (
-	ErrInvalidLatency              = "ERR_INVALID_LATENCY"
-	ErrInvalidPacketLoss           = "ERR_INVALID_PACKET_LOSS"
-	ErrInvalidJitter               = "ERR_INVALID_JITTER"
-	ErrInvalidTimestamp            = "ERR_INVALID_TIMESTAMP"
-	ErrRateLimitExceeded           = "ERR_RATE_LIMIT_EXCEEDED"
-	ErrUnauthorizedNode            = "ERR_UNAUTHORIZED_NODE"
-	ErrCompressionCorrupted        = "ERR_COMPRESSION_CORRUPTED"
-	ErrInvalidConfig               = "ERR_INVALID_CONFIG"
-	ErrConfigConflict              = "ERR_CONFIG_CONFLICT"
-	ErrBeaconConfigNotFound        = "ERR_BEACON_CONFIG_NOT_FOUND"
-	ErrBeaconGroupNotFound         = "ERR_BEACON_GROUP_NOT_FOUND"
+	ErrInvalidLatency       = "ERR_INVALID_LATENCY"
+	ErrInvalidPacketLoss    = "ERR_INVALID_PACKET_LOSS"
+	ErrInvalidJitter        = "ERR_INVALID_JITTER"
+	ErrInvalidTimestamp     = "ERR_INVALID_TIMESTAMP"
+	ErrRateLimitExceeded    = "ERR_RATE_LIMIT_EXCEEDED"
+	ErrUnauthorizedNode     = "ERR_UNAUTHORIZED_NODE"
+	ErrCompressionCorrupted = "ERR_COMPRESSION_CORRUPTED"
+	ErrInvalidConfig        = "ERR_INVALID_CONFIG"
+	ErrConfigConflict       = "ERR_CONFIG_CONFLICT"
+	ErrBeaconConfigNotFound = "ERR_BEACON_CONFIG_NOT_FOUND"
+	ErrBeaconGroupNotFound  = "ERR_BEACON_GROUP_NOT_FOUND"
 )
 
 // BeaconHandler handles beacon heartbeat API requests
@@ -53,6 +53,28 @@ func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCach
 		batchWriter: batchWriter,
 		alertEngine: alertEngine,
 	}
+}
+
+func (h *BeaconHandler) beaconConfigQuerier() db.BeaconConfigsQuerier {
+	if h == nil || h.nodeQuerier == nil {
+		return nil
+	}
+	querier, ok := h.nodeQuerier.(db.BeaconConfigsQuerier)
+	if !ok {
+		return nil
+	}
+	return querier
+}
+
+func (h *BeaconHandler) mtrResultsQuerier() db.MTRResultsQuerier {
+	if h == nil || h.nodeQuerier == nil {
+		return nil
+	}
+	querier, ok := h.nodeQuerier.(db.MTRResultsQuerier)
+	if !ok {
+		return nil
+	}
+	return querier
 }
 
 // HandleHeartbeat handles POST /api/v1/beacon/heartbeat
@@ -95,8 +117,8 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 			Code:    ErrUnauthorizedNode,
 			Message: "Insufficient permissions: beacon role required",
 			Details: map[string]interface{}{
-				"role":      role,
-				"required":  "beacon",
+				"role":     role,
+				"required": "beacon",
 			},
 		})
 		return
@@ -134,7 +156,7 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 			Code:    ErrUnauthorizedNode,
 			Message: "Insufficient permissions: token node ID does not match request",
 			Details: map[string]interface{}{
-				"token_node_id": userID,
+				"token_node_id":   userID,
 				"request_node_id": req.NodeID,
 			},
 		})
@@ -309,8 +331,8 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 
 // CompressedHeartbeatRequest represents a compressed heartbeat payload
 type CompressedHeartbeatRequest struct {
-	Data     []byte `json:"data" binding:"required"`      // Gzip compressed JSON data
-	Checksum uint32 `json:"checksum" binding:"required"`  // CRC32 checksum
+	Data     []byte `json:"data" binding:"required"`     // Gzip compressed JSON data
+	Checksum uint32 `json:"checksum" binding:"required"` // CRC32 checksum
 }
 
 // HandleCompressedHeartbeat handles POST /api/v1/beacon/heartbeat/compressed
@@ -540,12 +562,14 @@ type BeaconConfig struct {
 // ProbeConfig represents a single probe configuration
 type ProbeConfig struct {
 	ID              string `json:"id"`
-	Type            string `json:"type"`       // TCP or UDP
+	Type            string `json:"type"` // TCP, UDP, or MTR
 	Target          string `json:"target"`
 	Port            int    `json:"port"`
 	IntervalSeconds int    `json:"interval_seconds"`
 	TimeoutSeconds  int    `json:"timeout_seconds"`
 	Count           int    `json:"count"`
+	MaxHops         int    `json:"max_hops,omitempty"`
+	PacketSize      int    `json:"packet_size,omitempty"`
 }
 
 // BeaconConfigUpdateRequest represents a request to update beacon config
@@ -553,6 +577,43 @@ type BeaconConfigUpdateRequest struct {
 	Probes          *[]ProbeConfig `json:"probes,omitempty"`
 	IntervalSeconds *int           `json:"interval_seconds,omitempty"`
 	TimeoutSeconds  *int           `json:"timeout_seconds,omitempty"`
+}
+
+// BeaconConfigAckRequest represents a beacon config apply acknowledgement.
+type BeaconConfigAckRequest struct {
+	NodeID       string `json:"node_id" binding:"required"`
+	Version      int    `json:"version" binding:"required"`
+	Status       string `json:"status" binding:"required"`
+	ErrorMessage string `json:"error_message,omitempty"`
+}
+
+// MTRHopRequest represents a single MTR hop reported by a beacon.
+type MTRHopRequest struct {
+	HopNumber  int     `json:"hop_number"`
+	IP         string  `json:"ip"`
+	Hostname   string  `json:"hostname,omitempty"`
+	ASNumber   string  `json:"as_number,omitempty"`
+	Sent       int     `json:"sent"`
+	Received   int     `json:"received"`
+	LossRate   float64 `json:"loss_rate"`
+	LastRTTMs  float64 `json:"last_rtt_ms"`
+	AvgRTTMs   float64 `json:"avg_rtt_ms"`
+	BestRTTMs  float64 `json:"best_rtt_ms"`
+	WorstRTTMs float64 `json:"worst_rtt_ms"`
+	StdDevMs   float64 `json:"std_dev_ms"`
+	Location   string  `json:"location,omitempty"`
+}
+
+// MTRResultRequest represents an MTR result reported by a beacon.
+type MTRResultRequest struct {
+	NodeID       string          `json:"node_id" binding:"required"`
+	ProbeID      string          `json:"probe_id,omitempty"`
+	Target       string          `json:"target" binding:"required"`
+	TotalHops    int             `json:"total_hops"`
+	Hops         []MTRHopRequest `json:"hops" binding:"required"`
+	CompletedAt  string          `json:"completed_at" binding:"required"`
+	Success      bool            `json:"success"`
+	ErrorMessage string          `json:"error_message,omitempty"`
 }
 
 // BeaconConfigResponse represents beacon config response
@@ -564,10 +625,10 @@ type BeaconConfigResponse struct {
 
 // ConfigHistoryEntry represents a config history entry
 type ConfigHistoryEntry struct {
-	Version   int           `json:"version"`
-	Config    BeaconConfig  `json:"config"`
-	ChangedAt time.Time     `json:"changed_at"`
-	ChangedBy string        `json:"changed_by"`
+	Version   int          `json:"version"`
+	Config    BeaconConfig `json:"config"`
+	ChangedAt time.Time    `json:"changed_at"`
+	ChangedBy string       `json:"changed_by"`
 }
 
 // ConfigHistoryResponse represents config history response
@@ -577,14 +638,12 @@ type ConfigHistoryResponse struct {
 	Timestamp string               `json:"timestamp"`
 }
 
-// In-memory beacon config store
-// TODO: Replace with database-backed store for production
-// Current implementation is in-memory only for MVP
-// Production migration: Add beacon_configs table with version history
+// In-memory beacon config store used only when a database-backed querier is not
+// wired, mainly for narrow handler tests.
 var (
-	beaconConfigStore     = make(map[string]*BeaconConfig)
-	beaconConfigHistory   = make(map[string][]ConfigHistoryEntry)
-	beaconConfigMutex     sync.RWMutex
+	beaconConfigStore   = make(map[string]*BeaconConfig)
+	beaconConfigHistory = make(map[string][]ConfigHistoryEntry)
+	beaconConfigMutex   sync.RWMutex
 )
 
 // GetBeaconConfig handles GET /api/v1/beacons/:id/config
@@ -603,11 +662,33 @@ func (h *BeaconHandler) GetBeaconConfig(c *gin.Context) {
 	beaconID := c.Param("id")
 
 	// Validate beacon exists
-	_, err := uuid.Parse(beaconID)
+	parsedBeaconID, err := uuid.Parse(beaconID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_BEACON_ID",
 			Message: "Invalid beacon ID format",
+		})
+		return
+	}
+
+	if querier := h.beaconConfigQuerier(); querier != nil {
+		config, err := querier.GetBeaconConfig(c.Request.Context(), parsedBeaconID)
+		if err != nil && !errors.Is(err, db.ErrBeaconConfigNotFound) {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Code:    "ERR_INTERNAL_SERVER",
+				Message: "Failed to get beacon config",
+				Details: err.Error(),
+			})
+			return
+		}
+		if errors.Is(err, db.ErrBeaconConfigNotFound) {
+			config = defaultDBBeaconConfig(parsedBeaconID)
+		}
+
+		c.JSON(http.StatusOK, BeaconConfigResponse{
+			Data:      fromDBBeaconConfig(config),
+			Message:   "Beacon config retrieved successfully",
+			Timestamp: time.Now().Format(time.RFC3339),
 		})
 		return
 	}
@@ -652,7 +733,7 @@ func (h *BeaconHandler) UpdateBeaconConfig(c *gin.Context) {
 	beaconID := c.Param("id")
 
 	// Validate beacon ID
-	_, err := uuid.Parse(beaconID)
+	parsedBeaconID, err := uuid.Parse(beaconID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_BEACON_ID",
@@ -678,6 +759,25 @@ func (h *BeaconHandler) UpdateBeaconConfig(c *gin.Context) {
 			Code:    ErrInvalidConfig,
 			Message: "Config validation failed",
 			Details: err.Error(),
+		})
+		return
+	}
+
+	if querier := h.beaconConfigQuerier(); querier != nil {
+		config, err := querier.UpsertBeaconConfig(c.Request.Context(), parsedBeaconID, toDBBeaconConfigUpdate(req, "system"))
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Code:    "ERR_INTERNAL_SERVER",
+				Message: "Failed to update beacon config",
+				Details: err.Error(),
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, BeaconConfigResponse{
+			Data:      fromDBBeaconConfig(config),
+			Message:   "Beacon config updated successfully",
+			Timestamp: time.Now().Format(time.RFC3339),
 		})
 		return
 	}
@@ -743,11 +843,40 @@ func (h *BeaconHandler) GetBeaconConfigHistory(c *gin.Context) {
 	beaconID := c.Param("id")
 
 	// Validate beacon ID
-	_, err := uuid.Parse(beaconID)
+	parsedBeaconID, err := uuid.Parse(beaconID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, models.ErrorResponse{
 			Code:    "ERR_INVALID_BEACON_ID",
 			Message: "Invalid beacon ID format",
+		})
+		return
+	}
+
+	if querier := h.beaconConfigQuerier(); querier != nil {
+		dbHistory, err := querier.GetBeaconConfigHistory(c.Request.Context(), parsedBeaconID, 50)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+				Code:    "ERR_INTERNAL_SERVER",
+				Message: "Failed to get beacon config history",
+				Details: err.Error(),
+			})
+			return
+		}
+
+		history := make([]ConfigHistoryEntry, 0, len(dbHistory))
+		for _, entry := range dbHistory {
+			history = append(history, ConfigHistoryEntry{
+				Version:   entry.Version,
+				Config:    fromDBBeaconConfig(&entry.Config),
+				ChangedAt: entry.ChangedAt,
+				ChangedBy: entry.ChangedBy,
+			})
+		}
+
+		c.JSON(http.StatusOK, ConfigHistoryResponse{
+			Data:      history,
+			Message:   "Config history retrieved successfully",
+			Timestamp: time.Now().Format(time.RFC3339),
 		})
 		return
 	}
@@ -770,8 +899,8 @@ func (h *BeaconHandler) GetBeaconConfigHistory(c *gin.Context) {
 
 // BatchConfigUpdateRequest represents a batch config update request
 type BatchConfigUpdateRequest struct {
-	BeaconIDs       []string               `json:"beacon_ids" binding:"required"`
-	Config          BeaconConfigUpdateRequest `json:"config" binding:"required"`
+	BeaconIDs []string                  `json:"beacon_ids" binding:"required"`
+	Config    BeaconConfigUpdateRequest `json:"config" binding:"required"`
 }
 
 // BatchConfigUpdateResponse represents batch config update response
@@ -834,6 +963,34 @@ func (h *BeaconHandler) BatchUpdateBeaconGroupConfig(c *gin.Context) {
 		Errors:       []string{},
 	}
 
+	if querier := h.beaconConfigQuerier(); querier != nil {
+		for _, beaconID := range req.BeaconIDs {
+			parsedBeaconID, err := uuid.Parse(beaconID)
+			if err != nil {
+				result.FailedCount++
+				result.FailedIDs = append(result.FailedIDs, beaconID)
+				result.Errors = append(result.Errors, "invalid beacon ID: "+beaconID)
+				continue
+			}
+
+			if _, err := querier.UpsertBeaconConfig(c.Request.Context(), parsedBeaconID, toDBBeaconConfigUpdate(req.Config, "batch:"+groupID)); err != nil {
+				result.FailedCount++
+				result.FailedIDs = append(result.FailedIDs, beaconID)
+				result.Errors = append(result.Errors, err.Error())
+				continue
+			}
+
+			result.SuccessCount++
+		}
+
+		c.JSON(http.StatusOK, BatchConfigUpdateResponse{
+			Data:      result,
+			Message:   "Batch config update completed",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
 	// Hold lock for entire batch operation to prevent race conditions
 	beaconConfigMutex.Lock()
 	defer beaconConfigMutex.Unlock()
@@ -892,6 +1049,179 @@ func (h *BeaconHandler) BatchUpdateBeaconGroupConfig(c *gin.Context) {
 	})
 }
 
+// AcknowledgeBeaconConfig handles POST /api/v1/beacon/config/ack.
+func (h *BeaconHandler) AcknowledgeBeaconConfig(c *gin.Context) {
+	var req BeaconConfigAckRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_INVALID_REQUEST",
+			Message: "Invalid request parameters",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	nodeID, err := uuid.Parse(req.NodeID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_INVALID_NODE_ID",
+			Message: "Invalid node ID format",
+		})
+		return
+	}
+	if req.Version < 1 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    ErrInvalidConfig,
+			Message: "Config version must be >= 1",
+		})
+		return
+	}
+	if req.Status != "applied" && req.Status != "failed" {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    ErrInvalidConfig,
+			Message: "Config ack status must be applied or failed",
+		})
+		return
+	}
+
+	if userID, err := middleware.GetUserID(c); err == nil && userID != "" && userID != req.NodeID {
+		c.JSON(http.StatusForbidden, models.ErrorResponse{
+			Code:    ErrUnauthorizedNode,
+			Message: "Insufficient permissions: token node ID does not match request",
+			Details: map[string]interface{}{
+				"token_node_id":   userID,
+				"request_node_id": req.NodeID,
+			},
+		})
+		return
+	}
+
+	querier := h.beaconConfigQuerier()
+	if querier == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "Beacon config acknowledgement received",
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	if err := querier.AcknowledgeBeaconConfig(c.Request.Context(), nodeID, req.Version, req.Status, req.ErrorMessage); err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to acknowledge beacon config",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "Beacon config acknowledgement received",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}
+
+// HandleMTRResult handles POST /api/v1/beacon/mtr.
+func (h *BeaconHandler) HandleMTRResult(c *gin.Context) {
+	var req MTRResultRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_INVALID_REQUEST",
+			Message: "Invalid request parameters",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	nodeID, err := uuid.Parse(req.NodeID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_INVALID_NODE_ID",
+			Message: "Invalid node ID format",
+		})
+		return
+	}
+
+	if userID, err := middleware.GetUserID(c); err == nil && userID != "" && userID != req.NodeID {
+		c.JSON(http.StatusForbidden, models.ErrorResponse{
+			Code:    ErrUnauthorizedNode,
+			Message: "Insufficient permissions: token node ID does not match request",
+			Details: map[string]interface{}{
+				"token_node_id":   userID,
+				"request_node_id": req.NodeID,
+			},
+		})
+		return
+	}
+
+	completedAt, err := time.Parse(time.RFC3339, req.CompletedAt)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_INVALID_TIMESTAMP",
+			Message: "Invalid completed_at format",
+			Details: "Must be RFC3339 format",
+		})
+		return
+	}
+
+	hops := make([]db.MTRHop, 0, len(req.Hops))
+	for _, hop := range req.Hops {
+		hops = append(hops, db.MTRHop{
+			HopNumber:  hop.HopNumber,
+			IP:         hop.IP,
+			Hostname:   hop.Hostname,
+			ASNumber:   hop.ASNumber,
+			Sent:       hop.Sent,
+			Received:   hop.Received,
+			LossRate:   hop.LossRate,
+			LastRTTMs:  hop.LastRTTMs,
+			AvgRTTMs:   hop.AvgRTTMs,
+			BestRTTMs:  hop.BestRTTMs,
+			WorstRTTMs: hop.WorstRTTMs,
+			StdDevMs:   hop.StdDevMs,
+			Location:   hop.Location,
+		})
+	}
+
+	querier := h.mtrResultsQuerier()
+	if querier == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "MTR result received",
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	result, err := querier.SaveMTRResult(c.Request.Context(), db.MTRResultInput{
+		NodeID:       nodeID,
+		ProbeID:      req.ProbeID,
+		Target:       req.Target,
+		Success:      req.Success,
+		TotalHops:    req.TotalHops,
+		Hops:         hops,
+		CompletedAt:  completedAt,
+		ErrorMessage: req.ErrorMessage,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to save MTR result",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"id":         result.ID.String(),
+			"node_id":    result.NodeID.String(),
+			"target":     result.Target,
+			"total_hops": result.TotalHops,
+		},
+		"message":   "MTR result received",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}
+
 // validateBeaconConfig validates beacon configuration
 func validateBeaconConfig(req *BeaconConfigUpdateRequest) error {
 	// Check interval is not too short (minimum 5 seconds)
@@ -914,19 +1244,101 @@ func validateBeaconConfig(req *BeaconConfigUpdateRequest) error {
 			if probe.TimeoutSeconds < 1 {
 				return errors.New("probe timeout too short: minimum 1 second required")
 			}
-			if probe.Type != "TCP" && probe.Type != "UDP" {
-				return errors.New("invalid probe type: must be TCP or UDP")
+			if probe.Type != "TCP" && probe.Type != "UDP" && probe.Type != "MTR" {
+				return errors.New("invalid probe type: must be TCP, UDP, or MTR")
 			}
 			if probe.Target == "" {
 				return errors.New("probe target cannot be empty")
 			}
-			if probe.Port < 1 || probe.Port > 65535 {
+			if probe.Type != "MTR" && (probe.Port < 1 || probe.Port > 65535) {
 				return errors.New("probe port must be between 1 and 65535")
+			}
+			if probe.Type == "MTR" {
+				if probe.MaxHops != 0 && (probe.MaxHops < 1 || probe.MaxHops > 64) {
+					return errors.New("mtr max_hops must be between 1 and 64")
+				}
+				if probe.PacketSize != 0 && (probe.PacketSize < 64 || probe.PacketSize > 1500) {
+					return errors.New("mtr packet_size must be between 64 and 1500")
+				}
 			}
 		}
 	}
 
 	return nil
+}
+
+func defaultDBBeaconConfig(beaconID uuid.UUID) *db.BeaconConfig {
+	return &db.BeaconConfig{
+		BeaconID:        beaconID,
+		Probes:          []db.BeaconProbeConfig{},
+		IntervalSeconds: 60,
+		TimeoutSeconds:  5,
+		Version:         1,
+		UpdatedAt:       time.Now(),
+	}
+}
+
+func fromDBBeaconConfig(config *db.BeaconConfig) BeaconConfig {
+	if config == nil {
+		return BeaconConfig{
+			Probes:          []ProbeConfig{},
+			IntervalSeconds: 60,
+			TimeoutSeconds:  5,
+			UpdatedAt:       time.Now(),
+			Version:         1,
+		}
+	}
+
+	probes := make([]ProbeConfig, 0, len(config.Probes))
+	for _, probe := range config.Probes {
+		probes = append(probes, ProbeConfig{
+			ID:              probe.ID,
+			Type:            probe.Type,
+			Target:          probe.Target,
+			Port:            probe.Port,
+			IntervalSeconds: probe.IntervalSeconds,
+			TimeoutSeconds:  probe.TimeoutSeconds,
+			Count:           probe.Count,
+			MaxHops:         probe.MaxHops,
+			PacketSize:      probe.PacketSize,
+		})
+	}
+
+	return BeaconConfig{
+		Probes:          probes,
+		IntervalSeconds: config.IntervalSeconds,
+		TimeoutSeconds:  config.TimeoutSeconds,
+		UpdatedAt:       config.UpdatedAt,
+		Version:         config.Version,
+	}
+}
+
+func toDBBeaconConfigUpdate(req BeaconConfigUpdateRequest, changedBy string) db.BeaconConfigUpdate {
+	update := db.BeaconConfigUpdate{
+		IntervalSeconds: req.IntervalSeconds,
+		TimeoutSeconds:  req.TimeoutSeconds,
+		ChangedBy:       changedBy,
+	}
+
+	if req.Probes != nil {
+		probes := make([]db.BeaconProbeConfig, 0, len(*req.Probes))
+		for _, probe := range *req.Probes {
+			probes = append(probes, db.BeaconProbeConfig{
+				ID:              probe.ID,
+				Type:            probe.Type,
+				Target:          probe.Target,
+				Port:            probe.Port,
+				IntervalSeconds: probe.IntervalSeconds,
+				TimeoutSeconds:  probe.TimeoutSeconds,
+				Count:           probe.Count,
+				MaxHops:         probe.MaxHops,
+				PacketSize:      probe.PacketSize,
+			})
+		}
+		update.Probes = &probes
+	}
+
+	return update
 }
 
 // GetConfigPreview handles POST /api/v1/beacons/:id/config/preview

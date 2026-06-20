@@ -163,6 +163,10 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			beacon.POST("/heartbeat", middleware.MTLSAuthMiddleware(), middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleHeartbeat)
 			// POST /api/v1/beacon/heartbeat/compressed - Receive compressed heartbeat data (FR-4.1.5)
 			beacon.POST("/heartbeat/compressed", middleware.MTLSAuthMiddleware(), middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleCompressedHeartbeat)
+			// POST /api/v1/beacon/config/ack - Receive server config apply acknowledgement
+			beacon.POST("/config/ack", middleware.MTLSAuthMiddleware(), middleware.JWTAuthMiddleware(jwtService), beaconHandler.AcknowledgeBeaconConfig)
+			// POST /api/v1/beacon/mtr - Receive MTR route-hop result
+			beacon.POST("/mtr", middleware.MTLSAuthMiddleware(), middleware.JWTAuthMiddleware(jwtService), beaconHandler.HandleMTRResult)
 		}
 
 		// Beacon config management routes (require auth) (FR-4.2.4)
@@ -374,6 +378,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// GET /api/v1/data/diagnosis - Get problem type diagnosis (all roles) (Story 7.4)
 		data.GET("/diagnosis", dataHandler.GetDiagnosisHandler)
+
+		// GET /api/v1/data/mtr - Get latest MTR route-hop result for a node
+		data.GET("/mtr", dataHandler.GetLatestMTRHandler)
 
 		// GET /api/v1/data/performance - Get performance metrics with targets (all roles) (Story 8.4)
 		data.GET("/performance", metricsHandler.GetPerformanceData)

@@ -454,88 +454,233 @@ func TestPulseClient_isRetryableError(t *testing.T) {
 
 // TestPulseClient_extractStatusCode tests extractStatusCode function
 func TestPulseClient_extractStatusCode(t *testing.T) {
-client := &PulseClient{}
+	client := &PulseClient{}
 
-tests := []struct {
-name           string
-err            error
-expectedStatus int
-}{
-{
-name:           "APIError with ERR_INVALID_REQUEST",
-err:            &APIError{Code: "ERR_INVALID_REQUEST", Message: "bad request"},
-expectedStatus: http.StatusBadRequest,
-},
-{
-name:           "APIError with ERR_UNAUTHORIZED",
-err:            &APIError{Code: "ERR_UNAUTHORIZED", Message: "unauthorized"},
-expectedStatus: http.StatusUnauthorized,
-},
-{
-name:           "APIError with ERR_NODE_EXISTS",
-err:            &APIError{Code: "ERR_NODE_EXISTS", Message: "exists"},
-expectedStatus: http.StatusConflict,
-},
-{
-name:           "APIError with ERR_NODE_NOT_FOUND",
-err:            &APIError{Code: "ERR_NODE_NOT_FOUND", Message: "not found"},
-expectedStatus: http.StatusNotFound,
-},
-{
-name:           "APIError with ERR_INTERNAL_SERVER",
-err:            &APIError{Code: "ERR_INTERNAL_SERVER", Message: "server error"},
-expectedStatus: http.StatusInternalServerError,
-},
-{
-name:           "APIError with unknown code",
-err:            &APIError{Code: "ERR_UNKNOWN", Message: "unknown"},
-expectedStatus: http.StatusInternalServerError,
-},
-{
-name:           "Network error (no status code)",
-err:            errors.New("connection refused"),
-expectedStatus: 0,
-},
+	tests := []struct {
+		name           string
+		err            error
+		expectedStatus int
+	}{
+		{
+			name:           "APIError with ERR_INVALID_REQUEST",
+			err:            &APIError{Code: "ERR_INVALID_REQUEST", Message: "bad request"},
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name:           "APIError with ERR_UNAUTHORIZED",
+			err:            &APIError{Code: "ERR_UNAUTHORIZED", Message: "unauthorized"},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name:           "APIError with ERR_NODE_EXISTS",
+			err:            &APIError{Code: "ERR_NODE_EXISTS", Message: "exists"},
+			expectedStatus: http.StatusConflict,
+		},
+		{
+			name:           "APIError with ERR_NODE_NOT_FOUND",
+			err:            &APIError{Code: "ERR_NODE_NOT_FOUND", Message: "not found"},
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "APIError with ERR_INTERNAL_SERVER",
+			err:            &APIError{Code: "ERR_INTERNAL_SERVER", Message: "server error"},
+			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name:           "APIError with unknown code",
+			err:            &APIError{Code: "ERR_UNKNOWN", Message: "unknown"},
+			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name:           "Network error (no status code)",
+			err:            errors.New("connection refused"),
+			expectedStatus: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			status, _ := client.extractStatusCode(tt.err)
+			assert.Equal(t, tt.expectedStatus, status)
+		})
+	}
 }
 
-for _, tt := range tests {
-t.Run(tt.name, func(t *testing.T) {
-status, _ := client.extractStatusCode(tt.err)
-assert.Equal(t, tt.expectedStatus, status)
-})
+func TestPulseClient_GetBeaconConfig_Success(t *testing.T) {
+	beaconID := "550e8400-e29b-41d4-a716-446655440000"
+
+	server := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/api/v1/beacons/"+beaconID+"/config", r.URL.Path)
+		assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(BeaconConfigResponse{
+			Data: BeaconConfigData{
+				Probes: []ProbeConfig{
+					{
+						ID:              "probe-1",
+						Type:            "TCP",
+						Target:          "example.com",
+						Port:            443,
+						IntervalSeconds: 60,
+						TimeoutSeconds:  5,
+						Count:           3,
+					},
+				},
+				IntervalSeconds: 60,
+				TimeoutSeconds:  5,
+				UpdatedAt:       time.Now(),
+				Version:         2,
+			},
+			Message:   "Beacon config retrieved successfully",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+	})
+	defer server.Close()
+
+	client := NewPulseClient(server.URL, "test-token", &http.Client{
+		Timeout: 30 * time.Second,
+	})
+
+	resp, err := client.GetBeaconConfig(context.Background(), beaconID)
+
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	assert.Equal(t, 2, resp.Data.Version)
+	require.Len(t, resp.Data.Probes, 1)
+	assert.Equal(t, "TCP", resp.Data.Probes[0].Type)
+	assert.Equal(t, "example.com", resp.Data.Probes[0].Target)
 }
+
+func TestPulseClient_GetBeaconConfig_Error(t *testing.T) {
+	server := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"code":    "ERR_INVALID_BEACON_ID",
+			"message": "Invalid beacon ID format",
+		})
+	})
+	defer server.Close()
+
+	client := NewPulseClient(server.URL, "", &http.Client{
+		Timeout: 30 * time.Second,
+	})
+
+	resp, err := client.GetBeaconConfig(context.Background(), "bad-id")
+
+	require.Error(t, err)
+	assert.Nil(t, resp)
+	var apiErr *APIError
+	require.True(t, errors.As(err, &apiErr))
+	assert.Equal(t, "ERR_INVALID_BEACON_ID", apiErr.Code)
+}
+
+func TestPulseClient_AcknowledgeBeaconConfig_Success(t *testing.T) {
+	server := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v1/beacon/config/ack", r.URL.Path)
+		assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
+
+		var req BeaconConfigAckRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		require.NoError(t, err)
+		assert.Equal(t, "550e8400-e29b-41d4-a716-446655440000", req.NodeID)
+		assert.Equal(t, 3, req.Version)
+		assert.Equal(t, "applied", req.Status)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"message": "Beacon config acknowledgement received",
+		})
+	})
+	defer server.Close()
+
+	client := NewPulseClient(server.URL, "test-token", &http.Client{
+		Timeout: 30 * time.Second,
+	})
+
+	err := client.AcknowledgeBeaconConfig(context.Background(), &BeaconConfigAckRequest{
+		NodeID:  "550e8400-e29b-41d4-a716-446655440000",
+		Version: 3,
+		Status:  "applied",
+	})
+
+	require.NoError(t, err)
+}
+
+func TestPulseClient_SendMTRResult_Success(t *testing.T) {
+	server := createTestServer(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/api/v1/beacon/mtr", r.URL.Path)
+		assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
+
+		var req MTRResultRequest
+		err := json.NewDecoder(r.Body).Decode(&req)
+		require.NoError(t, err)
+		assert.Equal(t, "example.com", req.Target)
+		require.Len(t, req.Hops, 1)
+		assert.Equal(t, "192.0.2.1", req.Hops[0].IP)
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"message": "MTR result received",
+		})
+	})
+	defer server.Close()
+
+	client := NewPulseClient(server.URL, "test-token", &http.Client{
+		Timeout: 30 * time.Second,
+	})
+
+	err := client.SendMTRResult(context.Background(), &MTRResultRequest{
+		NodeID:      "550e8400-e29b-41d4-a716-446655440000",
+		ProbeID:     "mtr-1",
+		Target:      "example.com",
+		CompletedAt: time.Now().Format(time.RFC3339),
+		Success:     true,
+		Hops: []MTRHop{
+			{HopNumber: 1, IP: "192.0.2.1", Sent: 10, Received: 10, AvgRTTMs: 1.2},
+		},
+	})
+
+	require.NoError(t, err)
 }
 
 // TestAPIError_Error tests APIError.Error() string method
 func TestAPIError_Error(t *testing.T) {
-// With code
-apiErr := &APIError{Code: "ERR_TEST", Message: "test message"}
-expected := "ERR_TEST: test message"
-if apiErr.Error() != expected {
-t.Errorf("Expected %q, got %q", expected, apiErr.Error())
-}
+	// With code
+	apiErr := &APIError{Code: "ERR_TEST", Message: "test message"}
+	expected := "ERR_TEST: test message"
+	if apiErr.Error() != expected {
+		t.Errorf("Expected %q, got %q", expected, apiErr.Error())
+	}
 
-// Without code (empty code)
-apiErr2 := &APIError{Code: "", Message: "just a message"}
-expected2 := "just a message"
-if apiErr2.Error() != expected2 {
-t.Errorf("Expected %q, got %q", expected2, apiErr2.Error())
-}
+	// Without code (empty code)
+	apiErr2 := &APIError{Code: "", Message: "just a message"}
+	expected2 := "just a message"
+	if apiErr2.Error() != expected2 {
+		t.Errorf("Expected %q, got %q", expected2, apiErr2.Error())
+	}
 }
 
 // TestNewPulseClient_WithHTTPClient tests NewPulseClient with custom http client
 func TestNewPulseClient_WithHTTPClient(t *testing.T) {
-customClient := &http.Client{Timeout: 5 * time.Second}
-c := NewPulseClient("http://localhost:6532", "test-token", customClient)
-if c == nil {
-t.Fatal("Expected non-nil PulseClient")
-}
+	customClient := &http.Client{Timeout: 5 * time.Second}
+	c := NewPulseClient("http://localhost:6532", "test-token", customClient)
+	if c == nil {
+		t.Fatal("Expected non-nil PulseClient")
+	}
 }
 
 // TestNewPulseClient_NilHTTPClient tests NewPulseClient with nil http client (creates default)
 func TestNewPulseClient_NilHTTPClient(t *testing.T) {
-c := NewPulseClient("http://localhost:6532", "test-token", nil)
-if c == nil {
-t.Fatal("Expected non-nil PulseClient")
-}
+	c := NewPulseClient("http://localhost:6532", "test-token", nil)
+	if c == nil {
+		t.Fatal("Expected non-nil PulseClient")
+	}
 }

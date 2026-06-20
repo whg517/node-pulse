@@ -89,3 +89,33 @@ func (p *PoolQuerier) UpdateProbe(ctx context.Context, probeID uuid.UUID, update
 func (p *PoolQuerier) DeleteProbe(ctx context.Context, probeID uuid.UUID) error {
 	return DeleteProbe(ctx, p.pool, probeID)
 }
+
+// GetBeaconConfig implements BeaconConfigsQuerier.
+func (p *PoolQuerier) GetBeaconConfig(ctx context.Context, beaconID uuid.UUID) (*BeaconConfig, error) {
+	return GetBeaconConfig(ctx, p.pool, beaconID)
+}
+
+// UpsertBeaconConfig implements BeaconConfigsQuerier.
+func (p *PoolQuerier) UpsertBeaconConfig(ctx context.Context, beaconID uuid.UUID, update BeaconConfigUpdate) (*BeaconConfig, error) {
+	return UpsertBeaconConfig(ctx, p.pool, beaconID, update)
+}
+
+// GetBeaconConfigHistory implements BeaconConfigsQuerier.
+func (p *PoolQuerier) GetBeaconConfigHistory(ctx context.Context, beaconID uuid.UUID, limit int) ([]BeaconConfigHistoryEntry, error) {
+	return GetBeaconConfigHistory(ctx, p.pool, beaconID, limit)
+}
+
+// AcknowledgeBeaconConfig implements BeaconConfigsQuerier.
+func (p *PoolQuerier) AcknowledgeBeaconConfig(ctx context.Context, beaconID uuid.UUID, version int, status string, errorMessage string) error {
+	return AcknowledgeBeaconConfig(ctx, p.pool, beaconID, version, status, errorMessage)
+}
+
+// SaveMTRResult implements MTRResultsQuerier.
+func (p *PoolQuerier) SaveMTRResult(ctx context.Context, input MTRResultInput) (*MTRResult, error) {
+	return SaveMTRResult(ctx, p.pool, input)
+}
+
+// GetLatestMTRResult implements MTRResultsQuerier.
+func (p *PoolQuerier) GetLatestMTRResult(ctx context.Context, nodeID uuid.UUID) (*MTRResult, error) {
+	return GetLatestMTRResult(ctx, p.pool, nodeID)
+}

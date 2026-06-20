@@ -33,6 +33,8 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		{"addNodeStatusFields", addNodeStatusFields},
 		{"createProbesTable", createProbesTable},
 		{"createProbesTrigger", createProbesTrigger},
+		{"createBeaconConfigTables", createBeaconConfigTables},
+		{"createMTRResultsTable", createMTRResultsTable},
 		{"createMetricsTable", createMetricsTable},
 		{"createAlertsTable", createAlertsTable},
 		{"createWebhooksTable", createWebhooksTable},
@@ -244,6 +246,93 @@ func addNodeStatusFields(ctx context.Context, pool *pgxpool.Pool) error {
 				CREATE INDEX idx_nodes_last_heartbeat ON nodes(last_heartbeat);
 			END IF;
 		END $$;
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createMTRResultsTable creates tables for route-hop/MTR snapshots reported by beacons.
+func createMTRResultsTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS mtr_results (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			node_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			probe_id VARCHAR(255),
+			target VARCHAR(255) NOT NULL,
+			success BOOLEAN NOT NULL,
+			total_hops INTEGER NOT NULL DEFAULT 0 CHECK (total_hops >= 0),
+			hops JSONB NOT NULL DEFAULT '[]',
+			completed_at TIMESTAMPTZ NOT NULL,
+			error_message TEXT,
+			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_mtr_results_node_completed
+			ON mtr_results(node_id, completed_at DESC);
+		CREATE INDEX IF NOT EXISTS idx_mtr_results_target
+			ON mtr_results(target);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createBeaconConfigTables creates persistent beacon config and history tables.
+func createBeaconConfigTables(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS beacon_configs (
+			beacon_id UUID PRIMARY KEY REFERENCES nodes(id) ON DELETE CASCADE,
+			probes JSONB NOT NULL DEFAULT '[]',
+			interval_seconds INTEGER NOT NULL DEFAULT 60 CHECK (interval_seconds >= 5),
+			timeout_seconds INTEGER NOT NULL DEFAULT 5 CHECK (timeout_seconds >= 1),
+			version INTEGER NOT NULL DEFAULT 1 CHECK (version >= 1),
+			last_ack_version INTEGER,
+			last_ack_at TIMESTAMPTZ,
+			last_ack_status VARCHAR(20),
+			last_ack_error TEXT,
+			updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+		);
+
+		DO $$
+		BEGIN
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='beacon_configs' AND column_name='last_ack_version'
+			) THEN
+				ALTER TABLE beacon_configs ADD COLUMN last_ack_version INTEGER;
+			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='beacon_configs' AND column_name='last_ack_at'
+			) THEN
+				ALTER TABLE beacon_configs ADD COLUMN last_ack_at TIMESTAMPTZ;
+			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='beacon_configs' AND column_name='last_ack_status'
+			) THEN
+				ALTER TABLE beacon_configs ADD COLUMN last_ack_status VARCHAR(20);
+			END IF;
+			IF NOT EXISTS (
+				SELECT 1 FROM information_schema.columns
+				WHERE table_name='beacon_configs' AND column_name='last_ack_error'
+			) THEN
+				ALTER TABLE beacon_configs ADD COLUMN last_ack_error TEXT;
+			END IF;
+		END $$;
+
+		CREATE TABLE IF NOT EXISTS beacon_config_history (
+			id BIGSERIAL PRIMARY KEY,
+			beacon_id UUID NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+			version INTEGER NOT NULL,
+			config JSONB NOT NULL,
+			changed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+			changed_by VARCHAR(255) NOT NULL DEFAULT 'system'
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_beacon_config_history_beacon_changed
+			ON beacon_config_history(beacon_id, changed_at DESC);
 	`
 
 	_, err := pool.Exec(ctx, query)
