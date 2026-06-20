@@ -28,41 +28,41 @@ const (
 
 // MetricData represents metrics for a single node
 type MetricData struct {
-	NodeID          string
-	Region          string
-	ISP             string  // ISP tag from node.tags->'isp'
-	Latency         float64
-	PacketLossRate  float64
-	Jitter          float64
-	DataPointCount  int
+	NodeID         string
+	Region         string
+	ISP            string // ISP tag from node.tags->'isp'
+	Latency        float64
+	PacketLossRate float64
+	Jitter         float64
+	DataPointCount int
 }
 
 // RegionalAnalysis represents analysis of a region
 type RegionalAnalysis struct {
-	Region      string
-	NodeCount   int
-	AvgLatency  float64
+	Region        string
+	NodeCount     int
+	AvgLatency    float64
 	AvgPacketLoss float64
-	AvgJitter   float64
-	Status      string // "normal" or "abnormal"
+	AvgJitter     float64
+	Status        string // "normal" or "abnormal"
 }
 
 // DiagnosisResult represents the diagnosis result
 type DiagnosisResult struct {
-	ProblemType  ProblemType `json:"problem_type"`
-	Confidence   ConfidenceLevel `json:"confidence"`
-	Analysis     DiagnosisAnalysis `json:"analysis"`
-	Recommendation string `json:"recommendation"`
-	Timestamp    string `json:"timestamp"`
+	ProblemType    ProblemType       `json:"problem_type"`
+	Confidence     ConfidenceLevel   `json:"confidence"`
+	Analysis       DiagnosisAnalysis `json:"analysis"`
+	Recommendation string            `json:"recommendation"`
+	Timestamp      string            `json:"timestamp"`
 }
 
 // DiagnosisAnalysis contains detailed analysis data
 type DiagnosisAnalysis struct {
-	NodesAnalyzed       int                       `json:"nodes_analyzed"`
-	AffectedNodes       []string                  `json:"affected_nodes"`
-	RegionsAnalyzed     []string                  `json:"regions_analyzed"`
-	Metrics             MetricAnalysis            `json:"metrics"`
-	RegionalComparison  map[string]RegionalStats  `json:"regional_comparison"`
+	NodesAnalyzed      int                      `json:"nodes_analyzed"`
+	AffectedNodes      []string                 `json:"affected_nodes"`
+	RegionsAnalyzed    []string                 `json:"regions_analyzed"`
+	Metrics            MetricAnalysis           `json:"metrics"`
+	RegionalComparison map[string]RegionalStats `json:"regional_comparison"`
 }
 
 // MetricAnalysis contains metric statistics
@@ -81,10 +81,10 @@ type MetricStats struct {
 
 // RegionalStats represents statistics for a region
 type RegionalStats struct {
-	AvgLatency     float64 `json:"avg_latency"`
-	AvgPacketLoss  float64 `json:"avg_packet_loss"`
-	AvgJitter      float64 `json:"avg_jitter"`
-	Status         string  `json:"status"`
+	AvgLatency    float64 `json:"avg_latency"`
+	AvgPacketLoss float64 `json:"avg_packet_loss"`
+	AvgJitter     float64 `json:"avg_jitter"`
+	Status        string  `json:"status"`
 }
 
 // DiagnosticEngine performs problem diagnosis
@@ -97,15 +97,15 @@ type DiagnosticEngine struct {
 	baselineCalculator *BaselineCalculator
 }
 
-// NewDiagnosticEngine creates a new diagnostic engine with hardcoded baselines
-// For production, consider using CalculateBaselinesFromHistory() to compute baselines from historical data
+// NewDiagnosticEngine creates a new diagnostic engine with conservative default baselines.
+// Request handlers can inject historical baselines with NewDiagnosticEngineWithBaselines.
 func NewDiagnosticEngine() *DiagnosticEngine {
 	return &DiagnosticEngine{
 		minNodes:           3,
 		timeWindow:         1 * time.Hour,
-		baselineLatency:    50.0,   // ms - TODO: Calculate from 7-day moving average
-		baselinePacketLoss: 0.01,   // 1% - TODO: Calculate from 7-day moving average
-		baselineJitter:     2.0,    // ms - TODO: Calculate from 7-day moving average
+		baselineLatency:    50.0,
+		baselinePacketLoss: 0.01,
+		baselineJitter:     2.0,
 	}
 }
 
@@ -599,50 +599,6 @@ func (e *DiagnosticEngine) calculateVariance(values []float64) float64 {
 	return variance
 }
 
-// ============================================================================
-// BASELINE CALCULATION NOTES
-// ============================================================================
-//
-// The diagnostic engine currently uses hardcoded baseline values for simplicity:
-// - Latency: 50ms
-// - Packet Loss: 1% (0.01)
-// - Jitter: 2ms
-//
-// For production use, baselines should be calculated from historical data.
-//
-// Future Enhancement: 7-Day Moving Average Baseline
-// --------------------------------------------------
-// To implement dynamic baseline calculation:
-//
-// 1. Create historical aggregation queries (7-day window):
-//    SELECT AVG(latency_ms), AVG(packet_loss_rate), AVG(jitter_ms)
-//    FROM metrics
-//    WHERE timestamp >= NOW() - INTERVAL '7 days'
-//      AND timestamp < NOW() - INTERVAL '1 hour'  -- Exclude current hour
-//    GROUP BY node_id
-//
-// 2. Calculate median across all healthy nodes (exclude currently affected nodes)
-//
-// 3. Use NewDiagnosticEngineWithBaselines() to inject computed baselines:
-//    engine := diagnostic.NewDiagnosticEngineWithBaselines(
-//        calculatedLatencyBaseline,
-//        calculatedPacketLossBaseline,
-//        calculatedJitterBaseline,
-//    )
-//
-// 4. Update baselines periodically (every 5-15 minutes) via background job
-//
-// Limitations:
-// - Requires sufficient historical data (7+ days of metrics)
-// - Excludes nodes with ongoing issues from baseline calculation
-// - Needs periodic recalculation to adapt to network changes
-//
-// Architectural Requirements:
-// - Background worker for periodic baseline updates
-// - Caching layer for computed baselines (Redis/database)
-// - Health detection to exclude problematic nodes from baseline
-// - Alerting if baseline deviates significantly from historical norms
-//
 // ============================================================================
 // ISP ROUTING DETECTION LIMITATIONS
 // ============================================================================

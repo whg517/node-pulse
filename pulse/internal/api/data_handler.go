@@ -949,6 +949,12 @@ type DiagnosisResponse struct {
 	Timestamp string                     `json:"timestamp"`
 }
 
+const (
+	defaultDiagnosisBaselineLatencyMs      = 50.0
+	defaultDiagnosisBaselinePacketLossRate = 0.01
+	defaultDiagnosisBaselineJitterMs       = 2.0
+)
+
 // GetDiagnosisHandler handles GET /api/v1/data/diagnosis
 // Returns problem type diagnosis based on multi-node comparison (Story 7.4)
 // @Summary		Get problem type diagnosis
@@ -976,7 +982,7 @@ func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 	}
 
 	// Query node metrics for the last 1 hour
-	ctx := context.Background()
+	ctx := c.Request.Context()
 	nodesData, err := h.queryNodesForDiagnosis(ctx, req.NodeIDs)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -997,8 +1003,9 @@ func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 		return
 	}
 
-	// Perform diagnosis
-	engine := diagnostic.NewDiagnosticEngine()
+	// Perform diagnosis with a 7-day historical baseline when available.
+	latencyBaseline, packetLossBaseline, jitterBaseline := h.calculateDiagnosisBaselines(ctx)
+	engine := diagnostic.NewDiagnosticEngineWithBaselines(latencyBaseline, packetLossBaseline, jitterBaseline)
 	result, err := engine.Diagnose(nodesData)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -1015,6 +1022,37 @@ func (h *DataHandler) GetDiagnosisHandler(c *gin.Context) {
 		Message:   "Diagnosis completed",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
+}
+
+func (h *DataHandler) calculateDiagnosisBaselines(ctx context.Context) (float64, float64, float64) {
+	if h.pool == nil {
+		return defaultDiagnosisBaselines()
+	}
+
+	const query = `
+		SELECT
+			COALESCE(AVG(latency_ms), 0),
+			COALESCE(AVG(packet_loss_rate), 0),
+			COALESCE(AVG(jitter_ms), 0),
+			COUNT(*)
+		FROM metrics
+		WHERE timestamp >= NOW() - INTERVAL '7 days'
+		  AND timestamp < NOW() - INTERVAL '1 hour'
+		  AND latency_ms > 0
+		  AND packet_loss_rate < 0.5
+	`
+
+	var latency, packetLoss, jitter float64
+	var dataPoints int
+	if err := h.pool.QueryRow(ctx, query).Scan(&latency, &packetLoss, &jitter, &dataPoints); err != nil || dataPoints == 0 {
+		return defaultDiagnosisBaselines()
+	}
+
+	return latency, packetLoss, jitter
+}
+
+func defaultDiagnosisBaselines() (float64, float64, float64) {
+	return defaultDiagnosisBaselineLatencyMs, defaultDiagnosisBaselinePacketLossRate, defaultDiagnosisBaselineJitterMs
 }
 
 // queryNodesForDiagnosis queries node metrics for diagnosis

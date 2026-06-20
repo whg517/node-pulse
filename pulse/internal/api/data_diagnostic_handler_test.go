@@ -321,6 +321,16 @@ func TestGetDiagnosisHandler_MissingNodeIDs(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
 
+func TestDataHandlerCalculateDiagnosisBaselines_DefaultsWithoutDB(t *testing.T) {
+	handler := NewDataHandler(nil, nil)
+
+	latency, packetLoss, jitter := handler.calculateDiagnosisBaselines(context.Background())
+
+	assert.Equal(t, defaultDiagnosisBaselineLatencyMs, latency)
+	assert.Equal(t, defaultDiagnosisBaselinePacketLossRate, packetLoss)
+	assert.Equal(t, defaultDiagnosisBaselineJitterMs, jitter)
+}
+
 func TestGetDiagnosisHandler_NoDataFound(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	testutil.SetupTestConfig()
