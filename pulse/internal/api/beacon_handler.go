@@ -557,6 +557,10 @@ type BeaconConfig struct {
 	TimeoutSeconds  int           `json:"timeout_seconds"`
 	UpdatedAt       time.Time     `json:"updated_at"`
 	Version         int           `json:"version"`
+	LastAckVersion  *int          `json:"last_ack_version,omitempty"`
+	LastAckAt       *time.Time    `json:"last_ack_at,omitempty"`
+	LastAckStatus   string        `json:"last_ack_status,omitempty"`
+	LastAckError    string        `json:"last_ack_error,omitempty"`
 }
 
 // ProbeConfig represents a single probe configuration
@@ -1310,6 +1314,10 @@ func fromDBBeaconConfig(config *db.BeaconConfig) BeaconConfig {
 		TimeoutSeconds:  config.TimeoutSeconds,
 		UpdatedAt:       config.UpdatedAt,
 		Version:         config.Version,
+		LastAckVersion:  config.LastAckVersion,
+		LastAckAt:       config.LastAckAt,
+		LastAckStatus:   config.LastAckStatus,
+		LastAckError:    config.LastAckError,
 	}
 }
 

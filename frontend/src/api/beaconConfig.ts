@@ -16,6 +16,10 @@ export interface BeaconConfigDTO {
   timeout_seconds: number
   updated_at: string
   version: number
+  last_ack_version?: number
+  last_ack_at?: string
+  last_ack_status?: 'applied' | 'failed' | ''
+  last_ack_error?: string
 }
 
 export interface ConfigHistoryEntry {

@@ -767,6 +767,15 @@
     "showHistory": "History",
     "hideHistory": "Hide History",
     "configHistory": "Configuration History",
+    "applyStatus": "Apply Status",
+    "applyStatusDetail": "Current v{{current}}, last acknowledged v{{acked}}",
+    "lastAckAt": "Last Ack",
+    "lastAckVersion": "Ack Version",
+    "ackStatus": {
+      "applied": "Applied",
+      "failed": "Failed",
+      "pending": "Pending"
+    },
     "templates": "Config Templates",
     "saveAsTemplate": "Save as Template",
     "applyTemplate": "Apply Template",

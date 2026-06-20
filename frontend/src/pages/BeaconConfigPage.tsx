@@ -19,6 +19,29 @@ function emptyProbe(): ProbeConfigDTO {
   }
 }
 
+type ConfigAckState = 'applied' | 'failed' | 'pending'
+
+function getConfigAckState(config: BeaconConfigDTO): ConfigAckState {
+  if (config.last_ack_status === 'failed' && config.last_ack_version === config.version) {
+    return 'failed'
+  }
+  if (config.last_ack_status === 'applied' && (config.last_ack_version ?? 0) >= config.version) {
+    return 'applied'
+  }
+  return 'pending'
+}
+
+function getAckBadgeClass(state: ConfigAckState): string {
+  switch (state) {
+    case 'applied':
+      return 'bg-healthy-bg text-healthy'
+    case 'failed':
+      return 'bg-destructive/10 text-destructive'
+    default:
+      return 'bg-warning-bg text-warning-text'
+  }
+}
+
 export default function BeaconConfigPage() {
   const { t } = useTranslation()
   const [nodes, setNodes] = useState<NodeDTO[]>([])
@@ -232,6 +255,35 @@ export default function BeaconConfigPage() {
             <div className="mt-2 text-xs text-muted-foreground">
               {t('beaconConfig.version')}: {config.version} · {t('beaconConfig.updated')}: {new Date(config.updated_at).toLocaleString()}
             </div>
+            <div className="mt-4 border-t border-border pt-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-foreground">{t('beaconConfig.applyStatus')}</h4>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t('beaconConfig.applyStatusDetail', {
+                      current: config.version,
+                      acked: config.last_ack_version ?? t('common.none'),
+                    })}
+                  </p>
+                </div>
+                <span className={`inline-flex w-fit items-center rounded-full px-2.5 py-1 text-xs font-medium ${getAckBadgeClass(getConfigAckState(config))}`}>
+                  {t(`beaconConfig.ackStatus.${getConfigAckState(config)}`)}
+                </span>
+              </div>
+              <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                <div>
+                  <span className="font-medium text-foreground">{t('beaconConfig.lastAckAt')}: </span>
+                  {config.last_ack_at ? new Date(config.last_ack_at).toLocaleString() : t('common.none')}
+                </div>
+                <div>
+                  <span className="font-medium text-foreground">{t('beaconConfig.lastAckVersion')}: </span>
+                  {config.last_ack_version ?? t('common.none')}
+                </div>
+              </div>
+              {getConfigAckState(config) === 'failed' && config.last_ack_error && (
+                <p className="mt-2 text-xs text-destructive">{config.last_ack_error}</p>
+              )}
+            </div>
           </div>
 
           {/* Probe List */}
@@ -351,12 +403,20 @@ export default function BeaconConfigPage() {
                 {history.map((entry) => (
                   <div key={entry.version} className="p-3 flex items-center justify-between text-sm">
                     <div>
-                      <span className="font-medium text-foreground">
-                        v{entry.version}
-                      </span>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-medium text-foreground">
+                          v{entry.version}
+                        </span>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${getAckBadgeClass(getConfigAckState(entry.config))}`}>
+                          {t(`beaconConfig.ackStatus.${getConfigAckState(entry.config)}`)}
+                        </span>
+                      </div>
                       <span className="ml-2 text-muted-foreground">
                         {entry.config.probes.length} {t('beaconConfig.probes')}
                       </span>
+                      {entry.config.last_ack_error && (
+                        <p className="mt-1 text-xs text-destructive">{entry.config.last_ack_error}</p>
+                      )}
                     </div>
                     <div className="text-xs text-muted-foreground">
                       {entry.changed_by} · {new Date(entry.changed_at).toLocaleString()}

@@ -761,6 +761,15 @@
     "showHistory": "历史记录",
     "hideHistory": "隐藏历史",
     "configHistory": "配置历史",
+    "applyStatus": "应用状态",
+    "applyStatusDetail": "当前 v{{current}}，最近确认 v{{acked}}",
+    "lastAckAt": "最近确认",
+    "lastAckVersion": "确认版本",
+    "ackStatus": {
+      "applied": "已应用",
+      "failed": "应用失败",
+      "pending": "等待应用"
+    },
     "templates": "配置模板",
     "saveAsTemplate": "保存为模板",
     "applyTemplate": "应用模板",
