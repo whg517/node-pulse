@@ -35,18 +35,22 @@ interface FormErrors {
   tags?: string
 }
 
+const EMPTY_FORM_DATA: FormData = {
+  name: '',
+  ip: '',
+  region: '',
+  tags: '',
+}
+
 export function NodeDialog({ mode, node, open, onSubmit, onCancel }: NodeDialogProps) {
   const { t } = useTranslation()
-  const [formData, setFormData] = useState<FormData>({
-    name: '',
-    ip: '',
-    region: '',
-    tags: '',
-  })
+  const [formData, setFormData] = useState<FormData>(EMPTY_FORM_DATA)
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
+    if (!open) return
+
     if (node && mode === 'edit') {
       setFormData({
         name: node.name,
@@ -54,8 +58,13 @@ export function NodeDialog({ mode, node, open, onSubmit, onCancel }: NodeDialogP
         region: node.region,
         tags: node.tags.join(', '),
       })
+    } else {
+      setFormData(EMPTY_FORM_DATA)
     }
-  }, [node, mode])
+
+    setErrors({})
+    setIsSubmitting(false)
+  }, [node, mode, open])
 
   const validate = (): boolean => {
     const newErrors: FormErrors = {}

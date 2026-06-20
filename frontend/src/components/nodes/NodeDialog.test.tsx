@@ -220,6 +220,25 @@ describe('NodeDialog', () => {
         expect(screen.getByText('Creating...')).toBeInTheDocument()
       })
     })
+
+    it('resets fields and validation errors when reopened', async () => {
+      const { rerender } = render(
+        <NodeDialog mode="create" open={true} onSubmit={vi.fn()} onCancel={vi.fn()} />
+      )
+
+      fireEvent.change(getInputByName('Name'), { target: { value: 'Draft Node' } })
+      fireEvent.click(screen.getByText('Create Node'))
+
+      await waitFor(() => {
+        expect(screen.getByText('IP address is required')).toBeInTheDocument()
+      })
+
+      rerender(<NodeDialog mode="create" open={false} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+      rerender(<NodeDialog mode="create" open={true} onSubmit={vi.fn()} onCancel={vi.fn()} />)
+
+      expect((getInputByName('Name') as HTMLInputElement).value).toBe('')
+      expect(screen.queryByText('IP address is required')).not.toBeInTheDocument()
+    })
   })
 
   describe('Edit Mode', () => {
