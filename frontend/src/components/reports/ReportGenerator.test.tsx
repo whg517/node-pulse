@@ -1,10 +1,11 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { ReportGenerator } from './ReportGenerator'
-import { fetchHistory, fetchLatestMTR, fetchMetrics } from '@/api/data'
+import { fetchDiagnosis, fetchHistory, fetchLatestMTR, fetchMetrics } from '@/api/data'
 import type { NodeDTO } from '@/api/types'
 
 vi.mock('@/api/data', () => ({
+  fetchDiagnosis: vi.fn(() => Promise.resolve({ data: null })),
   fetchHistory: vi.fn(() => Promise.resolve({ data: [] })),
   fetchLatestMTR: vi.fn(() => Promise.resolve(null)),
   fetchMetrics: vi.fn(() => Promise.resolve({ data: [] })),
@@ -51,6 +52,7 @@ vi.mock('./HealthReportPDF', () => ({
   ),
 }))
 
+const mockFetchDiagnosis = fetchDiagnosis as ReturnType<typeof vi.fn>
 const mockFetchHistory = fetchHistory as ReturnType<typeof vi.fn>
 const mockFetchLatestMTR = fetchLatestMTR as ReturnType<typeof vi.fn>
 const mockFetchMetrics = fetchMetrics as ReturnType<typeof vi.fn>
@@ -71,6 +73,7 @@ const nodes: NodeDTO[] = [
 describe('ReportGenerator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetchDiagnosis.mockResolvedValue({ data: null })
     mockFetchHistory.mockResolvedValue({ data: [] })
     mockFetchLatestMTR.mockResolvedValue(null)
     mockFetchMetrics.mockResolvedValue({ data: [] })
@@ -169,5 +172,68 @@ describe('ReportGenerator', () => {
     expect(screen.getByText('198.51.100.1')).toBeInTheDocument()
     expect(screen.getByText('Regional Hub')).toBeInTheDocument()
     expect(screen.queryByText('203.0.113.1')).not.toBeInTheDocument()
+  })
+
+  it('uses server diagnosis for multi-node PDF root cause', async () => {
+    mockFetchMetrics.mockResolvedValue({
+      data: [
+        {
+          node_id: 'node-1',
+          latency_ms: 88,
+          packet_loss_rate: 2.5,
+          jitter_ms: 14,
+          timestamp: '2024-01-01T12:00:00Z',
+        },
+      ],
+    })
+    mockFetchHistory.mockResolvedValue({
+      data: [
+        {
+          node_id: 'node-1',
+          metric: 'latency',
+          data_points: [{ timestamp: '2024-01-01T12:00:00Z', value: 88 }],
+        },
+      ],
+    })
+    mockFetchLatestMTR.mockResolvedValue(null)
+    mockFetchDiagnosis.mockResolvedValue({
+      data: {
+        problem_type: 'cross_border_link',
+        confidence: 'high',
+        recommendation: 'Review the international transit path.',
+        timestamp: '2024-01-01T12:00:00Z',
+        analysis: {
+          nodes_analyzed: 3,
+          affected_nodes: ['node-1', 'node-2'],
+          regions_analyzed: ['ap-southeast', 'us-east'],
+        },
+      },
+      message: 'Diagnosis completed',
+      timestamp: '2024-01-01T12:00:00Z',
+    })
+
+    render(
+      <ReportGenerator
+        nodes={[
+          ...nodes,
+          { id: 'node-2', name: 'US Edge', ip: '198.51.100.2', region: 'us-east', tags: [], status: 'online', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+          { id: 'node-3', name: 'EU Edge', ip: '203.0.113.3', region: 'eu-west', tags: [], status: 'online', created_at: '2024-01-01T00:00:00Z', updated_at: '2024-01-01T00:00:00Z' },
+        ]}
+        onSubmit={vi.fn()}
+        defaultNodeIds={['node-1', 'node-2', 'node-3']}
+      />
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'PDF' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Generate Report' }))
+
+    await waitFor(() => {
+      expect(mockFetchDiagnosis).toHaveBeenCalledWith(['node-1', 'node-2', 'node-3'])
+    })
+
+    expect(await screen.findByTestId('pdf-preview')).toBeInTheDocument()
+    expect(screen.getByText('Server diagnosis indicates a cross-border link issue.')).toBeInTheDocument()
+    expect(screen.getByText('Affected nodes: 2 of 3 analyzed.')).toBeInTheDocument()
+    expect(screen.getByText('Review the international transit path.')).toBeInTheDocument()
   })
 })

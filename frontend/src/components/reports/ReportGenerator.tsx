@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeDTO } from '../../api/types'
-import { fetchHistory, fetchLatestMTR, fetchMetrics } from '@/api/data'
+import { fetchDiagnosis, fetchHistory, fetchLatestMTR, fetchMetrics, type DiagnosisResultDTO } from '@/api/data'
 import { HealthReportPDF, type HealthMetrics, type MTRHop, type RootCauseAnalysis, type TimelineEvent } from './HealthReportPDF'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -274,6 +274,39 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     }
   }
 
+  const getServerDiagnosisCause = (problemType: string): string => {
+    switch (problemType) {
+      case 'node_local_failure': return t('reports.serverDiagnosisNodeLocal')
+      case 'cross_border_link': return t('reports.serverDiagnosisCrossBorder')
+      case 'isp_routing': return t('reports.serverDiagnosisIspRouting')
+      default: return t('reports.serverDiagnosisUnknown')
+    }
+  }
+
+  const mapServerDiagnosisToRootCause = (diagnosis: DiagnosisResultDTO): RootCauseAnalysis => ({
+    probableCause: getServerDiagnosisCause(diagnosis.problem_type),
+    confidence: diagnosis.confidence === 'high' || diagnosis.confidence === 'medium' || diagnosis.confidence === 'low'
+      ? diagnosis.confidence
+      : 'medium',
+    impact: t('reports.serverDiagnosisImpact', {
+      affected: diagnosis.analysis?.affected_nodes?.length ?? 0,
+      analyzed: diagnosis.analysis?.nodes_analyzed ?? 0,
+    }),
+    recommendation: diagnosis.recommendation,
+  })
+
+  const fetchReportDiagnosis = async (nodeIds: string[]): Promise<DiagnosisResultDTO | null> => {
+    if (nodeIds.length < 3) return null
+
+    try {
+      const response = await fetchDiagnosis(nodeIds)
+      return response.data
+    } catch (err) {
+      console.error('Failed to fetch report diagnosis:', err)
+      return null
+    }
+  }
+
   const generateTimelineEvents = (metrics: HealthMetrics): TimelineEvent[] => {
     const events: TimelineEvent[] = []
     const addMetricEvent = (
@@ -335,15 +368,16 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
         const reportPeriod = getReportPeriod()
 
         try {
-          const [reportMetrics, mtrPath] = await Promise.all([
+          const [reportMetrics, mtrPath, serverDiagnosis] = await Promise.all([
             fetchReportMetrics(selectedNode.id, reportPeriod),
             fetchReportMTRPath(selectedNode.id),
+            fetchReportDiagnosis(selectedNodeIds),
           ])
           setPdfReportData({
             node: selectedNode,
             metrics: reportMetrics,
             mtrPath,
-            rootCause: generateRootCauseAnalysis(reportMetrics, mtrPath),
+            rootCause: serverDiagnosis ? mapServerDiagnosisToRootCause(serverDiagnosis) : generateRootCauseAnalysis(reportMetrics, mtrPath),
             timeline: generateTimelineEvents(reportMetrics),
             reportPeriod,
           })
