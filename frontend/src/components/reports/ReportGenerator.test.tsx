@@ -1,16 +1,27 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { ReportGenerator } from './ReportGenerator'
-import { fetchLatestMTR } from '@/api/data'
+import { fetchHistory, fetchLatestMTR, fetchMetrics } from '@/api/data'
 import type { NodeDTO } from '@/api/types'
 
 vi.mock('@/api/data', () => ({
+  fetchHistory: vi.fn(() => Promise.resolve({ data: [] })),
   fetchLatestMTR: vi.fn(() => Promise.resolve(null)),
+  fetchMetrics: vi.fn(() => Promise.resolve({ data: [] })),
 }))
 
 vi.mock('./HealthReportPDF', () => ({
-  HealthReportPDF: ({ mtrPath }: { mtrPath?: Array<{ hop: number; ip: string; location?: string; avgLatency: number; lossRate: number }> }) => (
+  HealthReportPDF: ({
+    metrics,
+    mtrPath,
+  }: {
+    metrics: { latency: { current: number }; packetLoss: { current: number }; jitter: { current: number } }
+    mtrPath?: Array<{ hop: number; ip: string; location?: string; avgLatency: number; lossRate: number }>
+  }) => (
     <div data-testid="pdf-preview">
+      <div>{metrics.latency.current} ms latency</div>
+      <div>{metrics.packetLoss.current}% packet loss</div>
+      <div>{metrics.jitter.current} ms jitter</div>
       {(mtrPath || []).map((hop) => (
         <div key={hop.hop}>
           <span>{hop.ip}</span>
@@ -23,7 +34,9 @@ vi.mock('./HealthReportPDF', () => ({
   ),
 }))
 
+const mockFetchHistory = fetchHistory as ReturnType<typeof vi.fn>
 const mockFetchLatestMTR = fetchLatestMTR as ReturnType<typeof vi.fn>
+const mockFetchMetrics = fetchMetrics as ReturnType<typeof vi.fn>
 
 const nodes: NodeDTO[] = [
   {
@@ -41,10 +54,38 @@ const nodes: NodeDTO[] = [
 describe('ReportGenerator', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetchHistory.mockResolvedValue({ data: [] })
     mockFetchLatestMTR.mockResolvedValue(null)
+    mockFetchMetrics.mockResolvedValue({ data: [] })
   })
 
-  it('uses latest MTR data in PDF preview', async () => {
+  it('uses live metrics and latest MTR data in PDF preview', async () => {
+    mockFetchMetrics.mockResolvedValue({
+      data: [
+        {
+          node_id: 'node-1',
+          latency_ms: 88,
+          packet_loss_rate: 2.5,
+          jitter_ms: 14,
+          timestamp: '2024-01-01T12:00:00Z',
+        },
+      ],
+    })
+    mockFetchHistory.mockImplementation((query: { metrics: string[] }) => {
+      const metric = query.metrics[0]
+      return Promise.resolve({
+        data: [
+          {
+            node_id: 'node-1',
+            metric,
+            data_points: [
+              { timestamp: '2024-01-01T11:00:00Z', value: metric === 'latency' ? 42 : metric === 'packet_loss_rate' ? 0.2 : 7 },
+              { timestamp: '2024-01-01T12:00:00Z', value: metric === 'latency' ? 48 : metric === 'packet_loss_rate' ? 0.3 : 8 },
+            ],
+          },
+        ],
+      })
+    })
     mockFetchLatestMTR.mockResolvedValue({
       target: 'example.com',
       totalHops: 2,
@@ -92,10 +133,15 @@ describe('ReportGenerator', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Generate Report' }))
 
     await waitFor(() => {
+      expect(mockFetchMetrics).toHaveBeenCalledWith(['node-1'])
       expect(mockFetchLatestMTR).toHaveBeenCalledWith('node-1')
     })
+    expect(mockFetchHistory).toHaveBeenCalledTimes(3)
 
     expect(await screen.findByTestId('pdf-preview')).toBeInTheDocument()
+    expect(screen.getByText('88 ms latency')).toBeInTheDocument()
+    expect(screen.getByText('2.5% packet loss')).toBeInTheDocument()
+    expect(screen.getByText('14 ms jitter')).toBeInTheDocument()
     expect(screen.getByText('192.0.2.1')).toBeInTheDocument()
     expect(screen.getByText('gateway.local')).toBeInTheDocument()
     expect(screen.getByText('198.51.100.1')).toBeInTheDocument()

@@ -8,7 +8,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeDTO } from '../../api/types'
-import { fetchLatestMTR } from '@/api/data'
+import { fetchHistory, fetchLatestMTR, fetchMetrics } from '@/api/data'
 import { HealthReportPDF, type HealthMetrics, type MTRHop, type RootCauseAnalysis, type TimelineEvent } from './HealthReportPDF'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -144,6 +144,94 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     }))
   }
 
+  const getReportPeriod = () =>
+    dateRange === 'custom'
+      ? { start: customStartDate!, end: customEndDate! }
+      : {
+          start: new Date(Date.now() - (dateRange === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000).toISOString(),
+          end: new Date().toISOString(),
+        }
+
+  const getTrend = (current: number, baseline: number): HealthMetrics['latency']['trend'] => {
+    if (baseline === 0) return current === 0 ? 'stable' : 'degraded'
+    const change = (current - baseline) / baseline
+    if (change > 0.05) return 'degraded'
+    if (change < -0.05) return 'improved'
+    return 'stable'
+  }
+
+  const fetchReportMetrics = async (
+    nodeId: string,
+    reportPeriod: { start: string; end: string }
+  ): Promise<HealthMetrics> => {
+    const aggregation = dateRange === '7d' || dateRange === '30d' ? '5m' : '1m'
+    const [metricsResult, latencyResult, lossResult, jitterResult] = await Promise.all([
+      fetchMetrics([nodeId]),
+      fetchHistory({
+        node_ids: [nodeId],
+        start_time: reportPeriod.start,
+        end_time: reportPeriod.end,
+        metrics: ['latency'],
+        aggregation,
+      }),
+      fetchHistory({
+        node_ids: [nodeId],
+        start_time: reportPeriod.start,
+        end_time: reportPeriod.end,
+        metrics: ['packet_loss_rate'],
+        aggregation,
+      }),
+      fetchHistory({
+        node_ids: [nodeId],
+        start_time: reportPeriod.start,
+        end_time: reportPeriod.end,
+        metrics: ['jitter'],
+        aggregation,
+      }),
+    ])
+
+    const currentMetrics = metricsResult.data.find((metric) => metric.node_id === nodeId)
+    const toPoints = (result: Awaited<ReturnType<typeof fetchHistory>>, metricName: string) =>
+      result.data.find((series) => series.metric === metricName)?.data_points || []
+    const average = (points: Array<{ value: number }>, fallback: number) =>
+      points.length === 0 ? fallback : points.reduce((sum, point) => sum + point.value, 0) / points.length
+    const latestValue = (points: Array<{ value: number }>, fallback = 0) =>
+      currentMetrics ? fallback : points.at(-1)?.value ?? fallback
+
+    const latencyData = toPoints(latencyResult, 'latency')
+    const lossData = toPoints(lossResult, 'packet_loss_rate')
+    const jitterData = toPoints(jitterResult, 'jitter')
+    const currentLatency = currentMetrics?.latency_ms ?? latestValue(latencyData)
+    const currentLoss = currentMetrics?.packet_loss_rate ?? latestValue(lossData)
+    const currentJitter = currentMetrics?.jitter_ms ?? latestValue(jitterData)
+    const totalProbes = Math.max(latencyData.length, lossData.length, jitterData.length)
+    const failedProbes = lossData.filter((point) => point.value > 0).length
+
+    return {
+      latency: {
+        current: currentLatency,
+        baseline: average(latencyData, currentLatency),
+        trend: getTrend(currentLatency, average(latencyData, currentLatency)),
+        data: latencyData,
+      },
+      packetLoss: {
+        current: currentLoss,
+        baseline: average(lossData, currentLoss),
+        trend: getTrend(currentLoss, average(lossData, currentLoss)),
+        data: lossData,
+      },
+      jitter: {
+        current: currentJitter,
+        baseline: average(jitterData, currentJitter),
+        trend: getTrend(currentJitter, average(jitterData, currentJitter)),
+        data: jitterData,
+      },
+      uptime: totalProbes === 0 ? 100 : ((totalProbes - failedProbes) / totalProbes) * 100,
+      totalProbes,
+      failedProbes,
+    }
+  }
+
   const generateRootCauseAnalysis = (metrics: HealthMetrics): RootCauseAnalysis => {
     const degradedMetrics = [
       metrics.latency.trend === 'degraded' ? 'latency' : null,
@@ -217,41 +305,13 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
       const selectedNode = nodes.find((n) => n.id === selectedNodeIds[0])
       if (selectedNode) {
         setIsPreparingPdf(true)
-        // PDF preview still uses locally summarized metrics until report metrics endpoints are wired in.
-        const reportMetrics: HealthMetrics = {
-          latency: {
-            current: 45.2,
-            baseline: 42.1,
-            trend: 'stable' as const,
-            data: [],
-          },
-          packetLoss: {
-            current: 0.5,
-            baseline: 0.3,
-            trend: 'degraded' as const,
-            data: [],
-          },
-          jitter: {
-            current: 12.3,
-            baseline: 11.8,
-            trend: 'stable' as const,
-            data: [],
-          },
-          uptime: 99.5,
-          totalProbes: 10080,
-          failedProbes: 50,
-        }
-
-        const reportPeriod =
-          dateRange === 'custom'
-            ? { start: customStartDate!, end: customEndDate! }
-            : {
-                start: new Date(Date.now() - (dateRange === '7d' ? 7 : 30) * 24 * 60 * 60 * 1000).toISOString(),
-                end: new Date().toISOString(),
-              }
+        const reportPeriod = getReportPeriod()
 
         try {
-          const mtrPath = await fetchReportMTRPath(selectedNode.id)
+          const [reportMetrics, mtrPath] = await Promise.all([
+            fetchReportMetrics(selectedNode.id, reportPeriod),
+            fetchReportMTRPath(selectedNode.id),
+          ])
           setPdfReportData({
             node: selectedNode,
             metrics: reportMetrics,
