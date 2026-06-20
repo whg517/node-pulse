@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { NodeDTO } from '../../api/types'
 import { fetchDiagnosis, fetchHistory, fetchLatestMTR, fetchMetrics, type DiagnosisResultDTO } from '@/api/data'
+import { getAlertRecords, type AlertRecordDTO } from '@/api/alertRecords'
 import { HealthReportPDF, type HealthMetrics, type MTRHop, type RootCauseAnalysis, type TimelineEvent } from './HealthReportPDF'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
@@ -307,7 +308,59 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     }
   }
 
-  const generateTimelineEvents = (metrics: HealthMetrics): TimelineEvent[] => {
+  const getAlertMetricLabel = (metric: AlertRecordDTO['metric']): string => {
+    switch (metric) {
+      case 'latency': return t('metrics.latency')
+      case 'packet_loss_rate': return t('metrics.packetLoss')
+      case 'jitter': return t('metrics.jitter')
+    }
+  }
+
+  const getAlertStatusLabel = (status: AlertRecordDTO['status']): string => {
+    switch (status) {
+      case 'pending': return t('alertHistory.pending')
+      case 'in_progress': return t('alertHistory.inProgress')
+      case 'resolved': return t('alertHistory.resolved')
+    }
+  }
+
+  const mapAlertLevelToSeverity = (level: AlertRecordDTO['level']): TimelineEvent['severity'] => {
+    switch (level) {
+      case 'P0': return 'critical'
+      case 'P1': return 'warning'
+      case 'P2': return 'info'
+    }
+  }
+
+  const fetchReportAlertEvents = async (
+    nodeId: string,
+    reportPeriod: { start: string; end: string }
+  ): Promise<TimelineEvent[]> => {
+    try {
+      const response = await getAlertRecords({
+        node_id: nodeId,
+        start_time: reportPeriod.start,
+        end_time: reportPeriod.end,
+        limit: 20,
+        offset: 0,
+      })
+
+      return response.data.map((record) => ({
+        timestamp: record.created_at,
+        event: t('reports.alertTimelineEvent', {
+          level: record.level,
+          metric: getAlertMetricLabel(record.metric),
+          status: getAlertStatusLabel(record.status),
+        }),
+        severity: mapAlertLevelToSeverity(record.level),
+      }))
+    } catch (err) {
+      console.error('Failed to fetch report alert records:', err)
+      return []
+    }
+  }
+
+  const generateTimelineEvents = (metrics: HealthMetrics, alertEvents: TimelineEvent[] = []): TimelineEvent[] => {
     const events: TimelineEvent[] = []
     const addMetricEvent = (
       data: Array<{ timestamp: string; value: number }>,
@@ -350,7 +403,9 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
       100
     )
 
-    return events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+    return [...events, ...alertEvents]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 20)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -368,17 +423,18 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
         const reportPeriod = getReportPeriod()
 
         try {
-          const [reportMetrics, mtrPath, serverDiagnosis] = await Promise.all([
+          const [reportMetrics, mtrPath, serverDiagnosis, alertTimeline] = await Promise.all([
             fetchReportMetrics(selectedNode.id, reportPeriod),
             fetchReportMTRPath(selectedNode.id),
             fetchReportDiagnosis(selectedNodeIds),
+            fetchReportAlertEvents(selectedNode.id, reportPeriod),
           ])
           setPdfReportData({
             node: selectedNode,
             metrics: reportMetrics,
             mtrPath,
             rootCause: serverDiagnosis ? mapServerDiagnosisToRootCause(serverDiagnosis) : generateRootCauseAnalysis(reportMetrics, mtrPath),
-            timeline: generateTimelineEvents(reportMetrics),
+            timeline: generateTimelineEvents(reportMetrics, alertTimeline),
             reportPeriod,
           })
           setShowPdfPreview(true)

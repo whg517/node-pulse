@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { vi } from 'vitest'
 import { ReportGenerator } from './ReportGenerator'
 import { fetchDiagnosis, fetchHistory, fetchLatestMTR, fetchMetrics } from '@/api/data'
+import { getAlertRecords } from '@/api/alertRecords'
 import type { NodeDTO } from '@/api/types'
 
 vi.mock('@/api/data', () => ({
@@ -9,6 +10,10 @@ vi.mock('@/api/data', () => ({
   fetchHistory: vi.fn(() => Promise.resolve({ data: [] })),
   fetchLatestMTR: vi.fn(() => Promise.resolve(null)),
   fetchMetrics: vi.fn(() => Promise.resolve({ data: [] })),
+}))
+
+vi.mock('@/api/alertRecords', () => ({
+  getAlertRecords: vi.fn(() => Promise.resolve({ data: [] })),
 }))
 
 vi.mock('./HealthReportPDF', () => ({
@@ -56,6 +61,7 @@ const mockFetchDiagnosis = fetchDiagnosis as ReturnType<typeof vi.fn>
 const mockFetchHistory = fetchHistory as ReturnType<typeof vi.fn>
 const mockFetchLatestMTR = fetchLatestMTR as ReturnType<typeof vi.fn>
 const mockFetchMetrics = fetchMetrics as ReturnType<typeof vi.fn>
+const mockGetAlertRecords = getAlertRecords as ReturnType<typeof vi.fn>
 
 const nodes: NodeDTO[] = [
   {
@@ -77,6 +83,7 @@ describe('ReportGenerator', () => {
     mockFetchHistory.mockResolvedValue({ data: [] })
     mockFetchLatestMTR.mockResolvedValue(null)
     mockFetchMetrics.mockResolvedValue({ data: [] })
+    mockGetAlertRecords.mockResolvedValue({ data: [] })
   })
 
   it('uses live metrics and latest MTR data in PDF preview', async () => {
@@ -140,6 +147,20 @@ describe('ReportGenerator', () => {
         },
       ],
     })
+    mockGetAlertRecords.mockResolvedValue({
+      data: [
+        {
+          id: 'alert-1',
+          alert_event_id: 'event-1',
+          node_id: 'node-1',
+          metric: 'packet_loss_rate',
+          level: 'P0',
+          status: 'pending',
+          created_at: '2024-01-01T12:30:00Z',
+          updated_at: '2024-01-01T12:30:00Z',
+        },
+      ],
+    })
 
     render(
       <ReportGenerator
@@ -155,6 +176,13 @@ describe('ReportGenerator', () => {
     await waitFor(() => {
       expect(mockFetchMetrics).toHaveBeenCalledWith(['node-1'])
       expect(mockFetchLatestMTR).toHaveBeenCalledWith('node-1')
+      expect(mockGetAlertRecords).toHaveBeenCalledWith({
+        node_id: 'node-1',
+        start_time: expect.any(String),
+        end_time: expect.any(String),
+        limit: 20,
+        offset: 0,
+      })
     })
     expect(mockFetchHistory).toHaveBeenCalledTimes(3)
 
@@ -165,6 +193,7 @@ describe('ReportGenerator', () => {
     expect(screen.getByText('Latency threshold exceeded (520.0ms)')).toBeInTheDocument()
     expect(screen.getByText('Packet loss threshold exceeded (6.0%)')).toBeInTheDocument()
     expect(screen.getByText('Jitter threshold exceeded (120.0ms)')).toBeInTheDocument()
+    expect(screen.getByText('P0 alert: Packet Loss is Pending')).toBeInTheDocument()
     expect(screen.getAllByText('critical').length).toBeGreaterThan(0)
     expect(screen.getByText('Packet loss concentrated at hop 2 (198.51.100.1), reaching 10.0%.')).toBeInTheDocument()
     expect(screen.getByText('192.0.2.1')).toBeInTheDocument()
