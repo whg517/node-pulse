@@ -382,6 +382,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// GET /api/v1/data/mtr - Get latest MTR route-hop result for a node
 		data.GET("/mtr", dataHandler.GetLatestMTRHandler)
 
+		// GET /api/v1/data/mtr/history - Get historical MTR route-hop results for a node
+		data.GET("/mtr/history", dataHandler.GetMTRHistoryHandler)
+
 		// GET /api/v1/data/performance - Get performance metrics with targets (all roles) (Story 8.4)
 		data.GET("/performance", metricsHandler.GetPerformanceData)
 

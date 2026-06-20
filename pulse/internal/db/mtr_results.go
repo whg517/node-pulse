@@ -56,10 +56,20 @@ type MTRResultInput struct {
 	ErrorMessage string
 }
 
+// MTRResultQuery contains filters for listing route trace snapshots.
+type MTRResultQuery struct {
+	NodeID    uuid.UUID
+	Target    string
+	StartTime *time.Time
+	EndTime   *time.Time
+	Limit     int
+}
+
 // MTRResultsQuerier defines MTR result persistence operations.
 type MTRResultsQuerier interface {
 	SaveMTRResult(ctx context.Context, input MTRResultInput) (*MTRResult, error)
 	GetLatestMTRResult(ctx context.Context, nodeID uuid.UUID) (*MTRResult, error)
+	GetMTRResults(ctx context.Context, query MTRResultQuery) ([]MTRResult, error)
 }
 
 // SaveMTRResult persists an MTR result.
@@ -123,4 +133,61 @@ func GetLatestMTRResult(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUI
 		return nil, err
 	}
 	return &result, nil
+}
+
+// GetMTRResults returns MTR results for a node ordered from newest to oldest.
+func GetMTRResults(ctx context.Context, pool *pgxpool.Pool, query MTRResultQuery) ([]MTRResult, error) {
+	limit := query.Limit
+	if limit <= 0 {
+		limit = 20
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	var startArg any
+	if query.StartTime != nil {
+		startArg = *query.StartTime
+	}
+	var endArg any
+	if query.EndTime != nil {
+		endArg = *query.EndTime
+	}
+
+	rows, err := pool.Query(ctx, `
+		SELECT id, node_id, COALESCE(probe_id, ''), target, success, total_hops, hops,
+			completed_at, COALESCE(error_message, ''), created_at
+		FROM mtr_results
+		WHERE node_id = $1
+		  AND ($2 = '' OR target = $2)
+		  AND ($3::timestamptz IS NULL OR completed_at >= $3)
+		  AND ($4::timestamptz IS NULL OR completed_at <= $4)
+		ORDER BY completed_at DESC
+		LIMIT $5
+	`, query.NodeID, query.Target, startArg, endArg, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	results := make([]MTRResult, 0)
+	for rows.Next() {
+		var result MTRResult
+		var hopsJSON []byte
+		if err := rows.Scan(
+			&result.ID, &result.NodeID, &result.ProbeID, &result.Target, &result.Success,
+			&result.TotalHops, &hopsJSON, &result.CompletedAt, &result.ErrorMessage, &result.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(hopsJSON, &result.Hops); err != nil {
+			return nil, err
+		}
+		results = append(results, result)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return results, nil
 }

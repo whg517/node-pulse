@@ -119,3 +119,8 @@ func (p *PoolQuerier) SaveMTRResult(ctx context.Context, input MTRResultInput) (
 func (p *PoolQuerier) GetLatestMTRResult(ctx context.Context, nodeID uuid.UUID) (*MTRResult, error) {
 	return GetLatestMTRResult(ctx, p.pool, nodeID)
 }
+
+// GetMTRResults implements MTRResultsQuerier.
+func (p *PoolQuerier) GetMTRResults(ctx context.Context, query MTRResultQuery) ([]MTRResult, error) {
+	return GetMTRResults(ctx, p.pool, query)
+}

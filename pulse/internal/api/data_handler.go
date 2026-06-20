@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -66,6 +67,13 @@ type MTRResultResponse struct {
 	Timestamp string        `json:"timestamp"`
 }
 
+// MTRHistoryResponse represents historical MTR route-hop snapshots.
+type MTRHistoryResponse struct {
+	Data      []db.MTRResult `json:"data"`
+	Message   string         `json:"message"`
+	Timestamp string         `json:"timestamp"`
+}
+
 // GetLatestMTRHandler handles GET /api/v1/data/mtr.
 func (h *DataHandler) GetLatestMTRHandler(c *gin.Context) {
 	nodeIDRaw := c.Query("node_id")
@@ -105,6 +113,91 @@ func (h *DataHandler) GetLatestMTRHandler(c *gin.Context) {
 		Message:   "MTR result retrieved successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
+}
+
+// GetMTRHistoryHandler handles GET /api/v1/data/mtr/history.
+func (h *DataHandler) GetMTRHistoryHandler(c *gin.Context) {
+	nodeID, err := uuid.Parse(c.Query("node_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid node_id",
+			"details": "node_id must be a valid UUID",
+		})
+		return
+	}
+	if h.pool == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Database unavailable",
+		})
+		return
+	}
+
+	limit := 20
+	if rawLimit := c.Query("limit"); rawLimit != "" {
+		parsedLimit, err := strconv.Atoi(rawLimit)
+		if err != nil || parsedLimit < 1 || parsedLimit > 100 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid limit",
+				"details": "limit must be an integer between 1 and 100",
+			})
+			return
+		}
+		limit = parsedLimit
+	}
+
+	startTime, ok := parseOptionalRFC3339Query(c, "start_time")
+	if !ok {
+		return
+	}
+	endTime, ok := parseOptionalRFC3339Query(c, "end_time")
+	if !ok {
+		return
+	}
+	if startTime != nil && endTime != nil && startTime.After(*endTime) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid time range",
+			"details": "start_time must be before end_time",
+		})
+		return
+	}
+
+	results, err := db.GetMTRResults(c.Request.Context(), h.pool, db.MTRResultQuery{
+		NodeID:    nodeID,
+		Target:    c.Query("target"),
+		StartTime: startTime,
+		EndTime:   endTime,
+		Limit:     limit,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to query MTR history",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, MTRHistoryResponse{
+		Data:      results,
+		Message:   "MTR history retrieved successfully",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
+func parseOptionalRFC3339Query(c *gin.Context, key string) (*time.Time, bool) {
+	raw := c.Query(key)
+	if raw == "" {
+		return nil, true
+	}
+
+	parsed, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Invalid " + key,
+			"details": key + " must be RFC3339 format",
+		})
+		return nil, false
+	}
+	return &parsed, true
 }
 
 // GetHistoryHandler handles GET /api/v1/data/history
