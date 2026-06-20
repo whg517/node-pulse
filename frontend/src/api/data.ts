@@ -5,7 +5,7 @@
  * historical data, and exporting data from the Pulse backend.
  */
 
-import { apiClient } from './client'
+import { apiClient, NotFoundError } from './client'
 import type {
   MetricsDTO,
   HistoryQueryDTO,
@@ -282,4 +282,103 @@ export async function fetchDiagnosis(
   return apiClient<DiagnosisApiResponse>(
     `/api/v1/data/diagnosis?${params}`
   )
+}
+
+export interface MTRHopDTO {
+  hop_number: number
+  ip: string
+  hostname?: string
+  as_number?: string
+  sent: number
+  received: number
+  loss_rate: number
+  last_rtt_ms: number
+  avg_rtt_ms: number
+  best_rtt_ms: number
+  worst_rtt_ms: number
+  std_dev_ms: number
+  location?: string
+}
+
+export interface MTRResultDTO {
+  id: string
+  node_id: string
+  probe_id?: string
+  target: string
+  success: boolean
+  total_hops: number
+  hops: MTRHopDTO[]
+  completed_at: string
+  error_message?: string
+  created_at: string
+}
+
+export interface MTRHopData {
+  hopNumber: number
+  ip: string
+  hostname?: string
+  asNumber?: string
+  sent: number
+  received: number
+  lossRate: number
+  lastRTTMs: number
+  avgRTTMs: number
+  bestRTTMs: number
+  worstRTTMs: number
+  stdDevMs: number
+  location?: string
+}
+
+export interface MTRResultData {
+  target: string
+  totalHops: number
+  hops: MTRHopData[]
+  completedAt: string
+  success: boolean
+  errorMessage?: string
+}
+
+interface MTRApiResponse {
+  data: MTRResultDTO
+  message: string
+  timestamp: string
+}
+
+function mapMTRResult(result: MTRResultDTO): MTRResultData {
+  return {
+    target: result.target,
+    totalHops: result.total_hops,
+    completedAt: result.completed_at,
+    success: result.success,
+    errorMessage: result.error_message,
+    hops: (result.hops || []).map((hop) => ({
+      hopNumber: hop.hop_number,
+      ip: hop.ip,
+      hostname: hop.hostname,
+      asNumber: hop.as_number,
+      sent: hop.sent,
+      received: hop.received,
+      lossRate: hop.loss_rate,
+      lastRTTMs: hop.last_rtt_ms,
+      avgRTTMs: hop.avg_rtt_ms,
+      bestRTTMs: hop.best_rtt_ms,
+      worstRTTMs: hop.worst_rtt_ms,
+      stdDevMs: hop.std_dev_ms,
+      location: hop.location,
+    })),
+  }
+}
+
+export async function fetchLatestMTR(nodeId: string): Promise<MTRResultData | null> {
+  const params = new URLSearchParams({ node_id: nodeId })
+
+  try {
+    const response = await apiClient<MTRApiResponse>(`/api/v1/data/mtr?${params}`)
+    return mapMTRResult(response.data)
+  } catch (err) {
+    if (err instanceof NotFoundError) {
+      return null
+    }
+    throw err
+  }
 }

@@ -11,7 +11,7 @@ import { useTimezone } from '@/hooks/useTimezone'
 import MetricCard from '@/components/dashboard/MetricCard'
 import ProblemDiagnosis, { type ProblemType, type ConfidenceLevel } from '@/components/dashboard/ProblemDiagnosis'
 import TrendChart, { type TimeRange, type DataPoint } from '@/components/dashboard/TrendChart'
-import { fetchHistory } from '@/api/data'
+import { fetchHistory, fetchLatestMTR, type MTRResultData } from '@/api/data'
 import MTRVisualization from '@/components/nodes/MTRVisualization'
 
 export default function NodeDetailPage() {
@@ -34,6 +34,9 @@ export default function NodeDetailPage() {
   const [baselines, setBaselines] = useState<{ latency_ms?: number; packet_loss_rate?: number; jitter_ms?: number }>({})
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [historyError, setHistoryError] = useState<string | null>(null)
+  const [mtrData, setMTRData] = useState<MTRResultData | null>(null)
+  const [isLoadingMTR, setIsLoadingMTR] = useState(false)
+  const [mtrError, setMTRError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -76,6 +79,39 @@ export default function NodeDetailPage() {
     }
     fetchHistoricalData()
   }, [id, timeRange, t])
+
+  useEffect(() => {
+    if (!id) return
+
+    let isCancelled = false
+
+    const fetchMTRData = async () => {
+      setIsLoadingMTR(true)
+      setMTRError(null)
+      try {
+        const result = await fetchLatestMTR(id)
+        if (!isCancelled) {
+          setMTRData(result)
+        }
+      } catch (err) {
+        console.error('Failed to fetch MTR data:', err)
+        if (!isCancelled) {
+          setMTRData(null)
+          setMTRError(err instanceof Error ? err.message : t('errors.failedToLoad'))
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingMTR(false)
+        }
+      }
+    }
+
+    fetchMTRData()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [id, t])
 
   const getProblemType = (): ProblemType => {
     if (!metrics || !nodeStatus) return 'none'
@@ -245,14 +281,11 @@ export default function NodeDetailPage() {
           </CardContent>
         </Card>
 
-        {/* MTR */}
-        <Card>
-          <CardContent className="p-6">
-            <h2 className="text-lg font-semibold mb-4">{t('mtr.title')}</h2>
-            <MTRVisualization />
-            <p className="mt-3 text-sm text-muted-foreground">{t('nodes.mtrBackendNote')}</p>
-          </CardContent>
-        </Card>
+        <MTRVisualization
+          data={mtrData}
+          isLoading={isLoadingMTR}
+          error={mtrError}
+        />
       </div>
     </div>
   )

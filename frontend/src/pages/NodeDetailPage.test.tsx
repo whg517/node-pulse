@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import NodeDetailPage from './NodeDetailPage'
 import { useNodeDetail } from '../hooks/useNodeDetail'
-import { fetchHistory } from '../api/data'
+import { fetchHistory, fetchLatestMTR } from '../api/data'
 
 vi.mock('../i18n', () => ({
   default: {},
@@ -21,6 +21,7 @@ vi.mock('../hooks/useNodeDetail')
 
 vi.mock('../api/data', () => ({
   fetchHistory: vi.fn(() => Promise.resolve({ data: [] })),
+  fetchLatestMTR: vi.fn(() => Promise.resolve(null)),
 }))
 
 // Mock useBreadcrumb — NodeDetailPage uses useSetBreadcrumbLabel
@@ -39,6 +40,7 @@ vi.mock('../components/layout/useBreadcrumb', () => ({
 
 const mockUseNodeDetail = useNodeDetail as ReturnType<typeof vi.mocked<typeof useNodeDetail>>
 const mockFetchHistory = fetchHistory as ReturnType<typeof vi.fn>
+const mockFetchLatestMTR = fetchLatestMTR as ReturnType<typeof vi.fn>
 
 async function renderNodeDetailPage() {
   render(
@@ -52,12 +54,17 @@ async function renderNodeDetailPage() {
   await waitFor(() => {
     expect(mockFetchHistory).toHaveBeenCalledTimes(3)
   })
+
+  await waitFor(() => {
+    expect(mockFetchLatestMTR).toHaveBeenCalledWith('node-1')
+  })
 }
 
 describe('NodeDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockFetchHistory.mockResolvedValue({ data: [] })
+    mockFetchLatestMTR.mockResolvedValue(null)
   })
 
   it('renders loading state', async () => {
@@ -330,6 +337,75 @@ describe('NodeDetailPage', () => {
 
     expect(screen.getByText('Problem Diagnosis')).toBeInTheDocument()
     expect(screen.getByText(/Note: Current diagnosis uses client-side analysis/)).toBeInTheDocument()
+  })
+
+  it('renders latest MTR path data', async () => {
+    const mockNode = {
+      id: 'node-1',
+      name: 'Test Node',
+      ip: '192.168.1.1',
+      region: 'us-east',
+      tags: [],
+      status: 'online',
+    }
+
+    const mockNodeStatus = {
+      status: 'online',
+      last_heartbeat: '2024-01-01T12:00:00Z',
+    }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: null,
+      isLoading: false,
+      error: null,
+      isPolling: true,
+      refetch: vi.fn(),
+    })
+
+    mockFetchLatestMTR.mockResolvedValue({
+      target: 'example.com',
+      totalHops: 2,
+      completedAt: '2024-01-01T12:00:00Z',
+      success: true,
+      hops: [
+        {
+          hopNumber: 1,
+          ip: '192.0.2.1',
+          hostname: 'gateway.local',
+          asNumber: 'AS64500',
+          sent: 10,
+          received: 10,
+          lossRate: 0,
+          lastRTTMs: 1.2,
+          avgRTTMs: 1.4,
+          bestRTTMs: 1.1,
+          worstRTTMs: 1.8,
+          stdDevMs: 0.2,
+          location: 'LAN',
+        },
+        {
+          hopNumber: 2,
+          ip: '198.51.100.1',
+          sent: 10,
+          received: 9,
+          lossRate: 10,
+          lastRTTMs: 32.4,
+          avgRTTMs: 35.1,
+          bestRTTMs: 31.8,
+          worstRTTMs: 42.7,
+          stdDevMs: 3.3,
+        },
+      ],
+    })
+
+    await renderNodeDetailPage()
+
+    expect(screen.getByText('example.com')).toBeInTheDocument()
+    expect(screen.getByText('192.0.2.1')).toBeInTheDocument()
+    expect(screen.getByText('198.51.100.1')).toBeInTheDocument()
+    expect(screen.getByText('10.0%')).toBeInTheDocument()
   })
 
   it('formats last heartbeat timestamp correctly', async () => {
