@@ -1,10 +1,10 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import NodeDetailPage from './NodeDetailPage'
 import { useNodeDetail } from '../hooks/useNodeDetail'
-import { fetchDiagnosis, fetchHistory, fetchLatestMTR } from '../api/data'
+import { fetchDiagnosis, fetchHistory, fetchLatestMTR, fetchMTRHistory } from '../api/data'
 import { fetchNodes } from '../api/nodes'
 
 vi.mock('../i18n', () => ({
@@ -24,6 +24,7 @@ vi.mock('../api/data', () => ({
   fetchDiagnosis: vi.fn(() => Promise.resolve({ data: null })),
   fetchHistory: vi.fn(() => Promise.resolve({ data: [] })),
   fetchLatestMTR: vi.fn(() => Promise.resolve(null)),
+  fetchMTRHistory: vi.fn(() => Promise.resolve([])),
 }))
 
 vi.mock('../api/nodes', () => ({
@@ -48,6 +49,7 @@ const mockUseNodeDetail = useNodeDetail as ReturnType<typeof vi.mocked<typeof us
 const mockFetchDiagnosis = fetchDiagnosis as ReturnType<typeof vi.fn>
 const mockFetchHistory = fetchHistory as ReturnType<typeof vi.fn>
 const mockFetchLatestMTR = fetchLatestMTR as ReturnType<typeof vi.fn>
+const mockFetchMTRHistory = fetchMTRHistory as ReturnType<typeof vi.fn>
 const mockFetchNodes = fetchNodes as ReturnType<typeof vi.fn>
 
 async function renderNodeDetailPage() {
@@ -66,6 +68,10 @@ async function renderNodeDetailPage() {
   await waitFor(() => {
     expect(mockFetchLatestMTR).toHaveBeenCalledWith('node-1')
   })
+
+  await waitFor(() => {
+    expect(mockFetchMTRHistory).toHaveBeenCalledWith('node-1', 10)
+  })
 }
 
 describe('NodeDetailPage', () => {
@@ -74,6 +80,7 @@ describe('NodeDetailPage', () => {
     mockFetchDiagnosis.mockResolvedValue({ data: null })
     mockFetchHistory.mockResolvedValue({ data: [] })
     mockFetchLatestMTR.mockResolvedValue(null)
+    mockFetchMTRHistory.mockResolvedValue([])
     mockFetchNodes.mockResolvedValue({
       data: {
         nodes: [
@@ -489,6 +496,94 @@ describe('NodeDetailPage', () => {
     expect(screen.getByText('192.0.2.1')).toBeInTheDocument()
     expect(screen.getByText('198.51.100.1')).toBeInTheDocument()
     expect(screen.getByText('10.0%')).toBeInTheDocument()
+  })
+
+  it('switches between MTR history snapshots', async () => {
+    const mockNode = {
+      id: 'node-1',
+      name: 'Test Node',
+      ip: '192.168.1.1',
+      region: 'us-east',
+      tags: [],
+      status: 'online',
+    }
+
+    const mockNodeStatus = {
+      status: 'online',
+      last_heartbeat: '2024-01-01T12:00:00Z',
+    }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: null,
+      isLoading: false,
+      error: null,
+      isPolling: true,
+      refetch: vi.fn(),
+    })
+
+    const latestSnapshot = {
+      id: 'mtr-latest',
+      nodeId: 'node-1',
+      target: 'latest.example.com',
+      totalHops: 1,
+      completedAt: '2024-01-02T12:00:00Z',
+      createdAt: '2024-01-02T12:00:01Z',
+      success: true,
+      hops: [
+        {
+          hopNumber: 1,
+          ip: '203.0.113.10',
+          sent: 10,
+          received: 10,
+          lossRate: 0,
+          lastRTTMs: 8,
+          avgRTTMs: 8.4,
+          bestRTTMs: 7.8,
+          worstRTTMs: 9.2,
+          stdDevMs: 0.4,
+        },
+      ],
+    }
+
+    const previousSnapshot = {
+      id: 'mtr-previous',
+      nodeId: 'node-1',
+      target: 'previous.example.com',
+      totalHops: 1,
+      completedAt: '2024-01-01T12:00:00Z',
+      createdAt: '2024-01-01T12:00:01Z',
+      success: true,
+      hops: [
+        {
+          hopNumber: 1,
+          ip: '198.51.100.20',
+          sent: 10,
+          received: 8,
+          lossRate: 20,
+          lastRTTMs: 48,
+          avgRTTMs: 52.4,
+          bestRTTMs: 44.1,
+          worstRTTMs: 71.6,
+          stdDevMs: 9.5,
+        },
+      ],
+    }
+
+    mockFetchLatestMTR.mockResolvedValue(latestSnapshot)
+    mockFetchMTRHistory.mockResolvedValue([latestSnapshot, previousSnapshot])
+
+    await renderNodeDetailPage()
+
+    expect(screen.getByText('MTR History')).toBeInTheDocument()
+    expect(screen.getByText('203.0.113.10')).toBeInTheDocument()
+
+    fireEvent.change(screen.getByLabelText('Select MTR snapshot'), {
+      target: { value: 'mtr-previous' },
+    })
+
+    expect(screen.getByText('198.51.100.20')).toBeInTheDocument()
   })
 
   it('formats last heartbeat timestamp correctly', async () => {

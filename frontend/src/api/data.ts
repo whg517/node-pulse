@@ -330,12 +330,16 @@ export interface MTRHopData {
 }
 
 export interface MTRResultData {
+  id: string
+  nodeId: string
+  probeId?: string
   target: string
   totalHops: number
   hops: MTRHopData[]
   completedAt: string
   success: boolean
   errorMessage?: string
+  createdAt: string
 }
 
 interface MTRApiResponse {
@@ -344,13 +348,23 @@ interface MTRApiResponse {
   timestamp: string
 }
 
+interface MTRHistoryApiResponse {
+  data: MTRResultDTO[]
+  message: string
+  timestamp: string
+}
+
 function mapMTRResult(result: MTRResultDTO): MTRResultData {
   return {
+    id: result.id,
+    nodeId: result.node_id,
+    probeId: result.probe_id,
     target: result.target,
     totalHops: result.total_hops,
     completedAt: result.completed_at,
     success: result.success,
     errorMessage: result.error_message,
+    createdAt: result.created_at,
     hops: (result.hops || []).map((hop) => ({
       hopNumber: hop.hop_number,
       ip: hop.ip,
@@ -381,4 +395,16 @@ export async function fetchLatestMTR(nodeId: string): Promise<MTRResultData | nu
     }
     throw err
   }
+}
+
+export async function fetchMTRHistory(
+  nodeId: string,
+  limit = 10
+): Promise<MTRResultData[]> {
+  const params = new URLSearchParams({
+    node_id: nodeId,
+    limit: String(limit),
+  })
+  const response = await apiClient<MTRHistoryApiResponse>(`/api/v1/data/mtr/history?${params}`)
+  return response.data.map(mapMTRResult)
 }

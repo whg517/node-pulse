@@ -11,7 +11,7 @@ import { useTimezone } from '@/hooks/useTimezone'
 import MetricCard from '@/components/dashboard/MetricCard'
 import ProblemDiagnosis, { type ProblemType, type ConfidenceLevel } from '@/components/dashboard/ProblemDiagnosis'
 import TrendChart, { type TimeRange, type DataPoint } from '@/components/dashboard/TrendChart'
-import { fetchDiagnosis, fetchHistory, fetchLatestMTR, type DiagnosisResultDTO, type MTRResultData } from '@/api/data'
+import { fetchDiagnosis, fetchHistory, fetchLatestMTR, fetchMTRHistory, type DiagnosisResultDTO, type MTRResultData } from '@/api/data'
 import { fetchNodes } from '@/api/nodes'
 import MTRVisualization from '@/components/nodes/MTRVisualization'
 
@@ -27,6 +27,10 @@ function mapApiProblemToUi(problemType: string): ProblemType {
 function mapApiConfidence(confidence: string): ConfidenceLevel {
   if (confidence === 'high' || confidence === 'medium' || confidence === 'low') return confidence
   return 'medium'
+}
+
+function getMTRSnapshotKey(snapshot: MTRResultData): string {
+  return snapshot.id || `${snapshot.target}-${snapshot.completedAt}`
 }
 
 export default function NodeDetailPage() {
@@ -50,6 +54,8 @@ export default function NodeDetailPage() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [historyError, setHistoryError] = useState<string | null>(null)
   const [mtrData, setMTRData] = useState<MTRResultData | null>(null)
+  const [mtrHistory, setMTRHistory] = useState<MTRResultData[]>([])
+  const [selectedMTRId, setSelectedMTRId] = useState<string | null>(null)
   const [isLoadingMTR, setIsLoadingMTR] = useState(false)
   const [mtrError, setMTRError] = useState<string | null>(null)
   const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResultDTO | null>(null)
@@ -105,14 +111,30 @@ export default function NodeDetailPage() {
       setIsLoadingMTR(true)
       setMTRError(null)
       try {
-        const result = await fetchLatestMTR(id)
+        const [latestResult, historyResult] = await Promise.all([
+          fetchLatestMTR(id),
+          fetchMTRHistory(id, 10).catch((err) => {
+            console.error('Failed to fetch MTR history:', err)
+            return [] as MTRResultData[]
+          }),
+        ])
+
         if (!isCancelled) {
-          setMTRData(result)
+          const snapshots = latestResult && !historyResult.some((item) => getMTRSnapshotKey(item) === getMTRSnapshotKey(latestResult))
+            ? [latestResult, ...historyResult]
+            : historyResult
+          const selectedSnapshot = snapshots[0] || latestResult
+
+          setMTRHistory(snapshots)
+          setSelectedMTRId(selectedSnapshot ? getMTRSnapshotKey(selectedSnapshot) : null)
+          setMTRData(selectedSnapshot)
         }
       } catch (err) {
         console.error('Failed to fetch MTR data:', err)
         if (!isCancelled) {
           setMTRData(null)
+          setMTRHistory([])
+          setSelectedMTRId(null)
           setMTRError(err instanceof Error ? err.message : t('errors.failedToLoad'))
         }
       } finally {
@@ -199,6 +221,14 @@ export default function NodeDetailPage() {
       if (diffHours < 24) return t('time.hoursAgo', { count: diffHours })
       return formatTime(date)
     } catch { return 'N/A' }
+  }
+
+  const handleMTRSnapshotChange = (snapshotId: string) => {
+    setSelectedMTRId(snapshotId)
+    const snapshot = mtrHistory.find((item) => getMTRSnapshotKey(item) === snapshotId)
+    if (snapshot) {
+      setMTRData(snapshot)
+    }
   }
 
   if (isLoading) {
@@ -339,11 +369,42 @@ export default function NodeDetailPage() {
           </CardContent>
         </Card>
 
-        <MTRVisualization
-          data={mtrData}
-          isLoading={isLoadingMTR}
-          error={mtrError}
-        />
+        <div className="space-y-3">
+          {mtrHistory.length > 1 && (
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-sm font-semibold">{t('mtr.history')}</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">{t('mtr.historyCount', { count: mtrHistory.length })}</p>
+                  </div>
+                  <select
+                    aria-label={t('mtr.selectSnapshot')}
+                    value={selectedMTRId ?? ''}
+                    onChange={(event) => handleMTRSnapshotChange(event.target.value)}
+                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground shadow-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20 sm:w-auto sm:min-w-80"
+                  >
+                    {mtrHistory.map((snapshot, index) => {
+                      const snapshotKey = getMTRSnapshotKey(snapshot)
+                      const label = `${index === 0 ? `${t('mtr.latest')} - ` : ''}${snapshot.target} - ${formatTime(snapshot.completedAt)}`
+                      return (
+                        <option key={snapshotKey} value={snapshotKey}>
+                          {label}
+                        </option>
+                      )
+                    })}
+                  </select>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <MTRVisualization
+            data={mtrData}
+            isLoading={isLoadingMTR}
+            error={mtrError}
+          />
+        </div>
       </div>
     </div>
   )
