@@ -43,14 +43,15 @@ describe('ExportForm', () => {
       expect(submitButton).toBeDisabled()
     })
 
-    it('allows both CSV and Excel format options', () => {
+    it('shows Excel as planned but unavailable', () => {
       render(<ExportForm {...defaultProps} />)
 
       const csvOption = screen.getByDisplayValue('csv')
       const excelOption = screen.getByDisplayValue('excel')
 
       expect(csvOption).not.toBeDisabled()
-      expect(excelOption).not.toBeDisabled()
+      expect(excelOption).toBeDisabled()
+      expect(screen.getByText('CSV is the only export format supported by the current backend.')).toBeInTheDocument()
     })
   })
 
@@ -240,7 +241,7 @@ describe('ExportForm', () => {
   })
 
   describe('Format Selection', () => {
-    it('allows selection between CSV and Excel formats', () => {
+    it('keeps CSV selected and Excel disabled', () => {
       render(<ExportForm {...defaultProps} />)
 
       const csvRadio = screen.getByDisplayValue('csv')
@@ -248,21 +249,8 @@ describe('ExportForm', () => {
       expect(csvRadio).toBeEnabled()
 
       const excelRadio = screen.getByDisplayValue('excel')
-      expect(excelRadio).toBeEnabled()
-    })
-
-    it('switches format selection', async () => {
-      const user = userEvent.setup()
-      render(<ExportForm {...defaultProps} />)
-
-      const csvRadio = screen.getByDisplayValue('csv')
-      const excelRadio = screen.getByDisplayValue('excel')
-
-      expect(csvRadio).toBeChecked()
-
-      await user.click(excelRadio)
-      expect(excelRadio).toBeChecked()
-      expect(csvRadio).not.toBeChecked()
+      expect(excelRadio).toBeDisabled()
+      expect(excelRadio).not.toBeChecked()
     })
   })
 

@@ -76,6 +76,12 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
     { key: 'comparison' as const, label: t('reports.comparisonReport') },
   ]
 
+  const formatOptions = [
+    { value: 'csv' as const, label: t('reports.csv'), disabled: false, hint: '' },
+    { value: 'pdf' as const, label: t('reports.pdf'), disabled: false, hint: '' },
+    { value: 'excel' as const, label: t('reports.excel'), disabled: true, hint: t('reports.excelUnavailable') },
+  ]
+
   const toggleNode = (nodeId: string) => {
     setSelectedNodeIds((prev) =>
       prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId]
@@ -672,26 +678,26 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
           {t('reports.selectFormat')} <span className="text-destructive">*</span>
         </label>
         <div className="flex flex-wrap gap-2">
-          {[
-            { value: 'csv' as const, label: t('reports.csv') },
-            { value: 'pdf' as const, label: t('reports.pdf') },
-            { value: 'excel' as const, label: t('reports.excel') },
-          ].map((option) => (
+          {formatOptions.map((option) => (
             <button
               key={option.value}
               type="button"
               onClick={() => setFormat(option.value)}
-              disabled={loading || isPreparingPdf}
+              disabled={loading || isPreparingPdf || option.disabled}
+              title={option.hint || undefined}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 format === option.value
                   ? 'bg-primary text-white'
-                  : 'bg-muted text-muted-foreground hover:bg-accent/10'
+                  : option.disabled
+                    ? 'cursor-not-allowed bg-muted text-muted-foreground/60'
+                    : 'bg-muted text-muted-foreground hover:bg-accent/10'
               }`}
             >
               {option.label}
             </button>
           ))}
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">{t('reports.formatAvailabilityHint')}</p>
       </div>
 
       {/* Report Options */}

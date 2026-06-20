@@ -32,6 +32,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
   const [selectedMetrics, setSelectedMetrics] = useState<ExportMetric[]>(['latency'])
   const [format, setFormat] = useState<'csv' | 'excel'>('csv')
   const [errors, setErrors] = useState<FormErrors>({})
+  const excelSupported = false
 
   /**
    * Calculate time range based on selection
@@ -318,19 +319,21 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
             />
             <span className="text-sm text-foreground">CSV</span>
           </label>
-          <label className="flex items-center space-x-2 cursor-pointer">
+          <label className="flex items-center space-x-2 cursor-not-allowed opacity-60">
             <input
               type="radio"
               name="format"
               value="excel"
               checked={format === 'excel'}
               onChange={() => setFormat('excel')}
-              disabled={loading}
+              disabled={loading || !excelSupported}
               className="h-4 w-4 text-primary focus:ring-primary border-border"
             />
             <span className="text-sm text-foreground">Excel</span>
+            <span className="text-xs text-muted-foreground">{t('dataExport.excelUnavailable')}</span>
           </label>
         </div>
+        <p className="mt-2 text-xs text-muted-foreground">{t('dataExport.csvOnlyHint')}</p>
       </div>
 
       {/* Submit Button */}

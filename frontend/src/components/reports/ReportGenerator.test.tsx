@@ -86,6 +86,19 @@ describe('ReportGenerator', () => {
     mockGetAlertRecords.mockResolvedValue({ data: [] })
   })
 
+  it('shows Excel report export as unavailable', () => {
+    render(
+      <ReportGenerator
+        nodes={nodes}
+        onSubmit={vi.fn()}
+        defaultNodeIds={['node-1']}
+      />
+    )
+
+    expect(screen.getByRole('button', { name: 'Excel' })).toBeDisabled()
+    expect(screen.getByText('CSV export and PDF preview are available now. Excel export is planned for a later version.')).toBeInTheDocument()
+  })
+
   it('uses live metrics and latest MTR data in PDF preview', async () => {
     mockFetchMetrics.mockResolvedValue({
       data: [
