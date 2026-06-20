@@ -11,8 +11,23 @@ import { useTimezone } from '@/hooks/useTimezone'
 import MetricCard from '@/components/dashboard/MetricCard'
 import ProblemDiagnosis, { type ProblemType, type ConfidenceLevel } from '@/components/dashboard/ProblemDiagnosis'
 import TrendChart, { type TimeRange, type DataPoint } from '@/components/dashboard/TrendChart'
-import { fetchHistory, fetchLatestMTR, type MTRResultData } from '@/api/data'
+import { fetchDiagnosis, fetchHistory, fetchLatestMTR, type DiagnosisResultDTO, type MTRResultData } from '@/api/data'
+import { fetchNodes } from '@/api/nodes'
 import MTRVisualization from '@/components/nodes/MTRVisualization'
+
+function mapApiProblemToUi(problemType: string): ProblemType {
+  switch (problemType) {
+    case 'node_local_failure': return 'node_local'
+    case 'cross_border_link': return 'cross_border_link'
+    case 'isp_routing': return 'carrier_routing'
+    default: return 'none'
+  }
+}
+
+function mapApiConfidence(confidence: string): ConfidenceLevel {
+  if (confidence === 'high' || confidence === 'medium' || confidence === 'low') return confidence
+  return 'medium'
+}
 
 export default function NodeDetailPage() {
   const { t } = useTranslation()
@@ -37,6 +52,7 @@ export default function NodeDetailPage() {
   const [mtrData, setMTRData] = useState<MTRResultData | null>(null)
   const [isLoadingMTR, setIsLoadingMTR] = useState(false)
   const [mtrError, setMTRError] = useState<string | null>(null)
+  const [diagnosisResult, setDiagnosisResult] = useState<DiagnosisResultDTO | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -113,6 +129,39 @@ export default function NodeDetailPage() {
     }
   }, [id, t])
 
+  useEffect(() => {
+    if (!id) return
+
+    let isCancelled = false
+
+    const fetchServerDiagnosis = async () => {
+      try {
+        const { data } = await fetchNodes()
+        const nodeIds = data.nodes.map((n) => n.id)
+        if (nodeIds.length < 3) {
+          if (!isCancelled) setDiagnosisResult(null)
+          return
+        }
+
+        const diagnosis = await fetchDiagnosis(nodeIds)
+        if (!isCancelled) {
+          setDiagnosisResult(diagnosis.data)
+        }
+      } catch (err) {
+        console.error('Failed to fetch server diagnosis:', err)
+        if (!isCancelled) {
+          setDiagnosisResult(null)
+        }
+      }
+    }
+
+    fetchServerDiagnosis()
+
+    return () => {
+      isCancelled = true
+    }
+  }, [id])
+
   const getProblemType = (): ProblemType => {
     if (!metrics || !nodeStatus) return 'none'
     const { packet_loss_rate, latency_ms } = metrics
@@ -129,6 +178,14 @@ export default function NodeDetailPage() {
     const score = Math.max(metrics.packet_loss_rate / 10, metrics.latency_ms / 200, metrics.jitter_ms / 50)
     if (score > 2) return 'medium'
     return 'low'
+  }
+
+  const getDiagnosisDetails = (): string => {
+    if (diagnosisResult) {
+      return `${diagnosisResult.recommendation}\n\n${t('nodes.diagnosisNodesAnalyzed', { count: diagnosisResult.analysis?.nodes_analyzed ?? 0 })}`
+    }
+
+    return metrics ? `${t('metrics.latency')}: ${metrics.latency_ms}ms, ${t('metrics.packetLoss')}: ${metrics.packet_loss_rate}%, ${t('metrics.jitter')}: ${metrics.jitter_ms}ms` : t('errors.notFound')
   }
 
   const formatTimestamp = (timestamp: string | undefined): string => {
@@ -273,8 +330,9 @@ export default function NodeDetailPage() {
           <CardContent className="p-6">
             <h2 className="text-lg font-semibold mb-4">{t('nodes.problemDiagnosis')}</h2>
             <ProblemDiagnosis
-              problemType={getProblemType()} confidence={getConfidence()}
-              details={metrics ? `${t('metrics.latency')}: ${metrics.latency_ms}ms, ${t('metrics.packetLoss')}: ${metrics.packet_loss_rate}%, ${t('metrics.jitter')}: ${metrics.jitter_ms}ms` : t('errors.notFound')}
+              problemType={diagnosisResult ? mapApiProblemToUi(diagnosisResult.problem_type) : getProblemType()}
+              confidence={diagnosisResult ? mapApiConfidence(diagnosisResult.confidence) : getConfidence()}
+              details={getDiagnosisDetails()}
               isExpanded={false}
             />
             <p className="mt-4 text-sm text-muted-foreground italic">{t('nodes.diagnosisNote')}</p>

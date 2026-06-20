@@ -232,7 +232,7 @@
     "medium": "中",
     "low": "低",
     "noProblem": "未检测到问题",
-    "diagnosisNote": "注意：当前诊断使用客户端分析节点指标。更高级的诊断引擎将提供跨节点比较、历史模式分析和路由路径检测，以实现更准确的问题定位。",
+    "diagnosisNote": "注意：当近期节点数据充足时，诊断会使用服务端跨节点分析；否则回退到本地指标检查。",
     "serverDiagnosisTitle": "跨节点诊断（服务端）",
     "serverDiagnosisSubtitle": "基于最近一小时的聚合指标（缓存/数据库）。需至少三个已选节点且有近期数据。",
     "serverDiagnosisLoading": "正在运行服务端诊断…",

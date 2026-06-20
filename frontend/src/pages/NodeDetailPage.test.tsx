@@ -4,7 +4,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { vi } from 'vitest'
 import NodeDetailPage from './NodeDetailPage'
 import { useNodeDetail } from '../hooks/useNodeDetail'
-import { fetchHistory, fetchLatestMTR } from '../api/data'
+import { fetchDiagnosis, fetchHistory, fetchLatestMTR } from '../api/data'
+import { fetchNodes } from '../api/nodes'
 
 vi.mock('../i18n', () => ({
   default: {},
@@ -20,8 +21,13 @@ vi.mock('../hooks/useTheme', () => ({
 vi.mock('../hooks/useNodeDetail')
 
 vi.mock('../api/data', () => ({
+  fetchDiagnosis: vi.fn(() => Promise.resolve({ data: null })),
   fetchHistory: vi.fn(() => Promise.resolve({ data: [] })),
   fetchLatestMTR: vi.fn(() => Promise.resolve(null)),
+}))
+
+vi.mock('../api/nodes', () => ({
+  fetchNodes: vi.fn(() => Promise.resolve({ data: { nodes: [] } })),
 }))
 
 // Mock useBreadcrumb — NodeDetailPage uses useSetBreadcrumbLabel
@@ -39,8 +45,10 @@ vi.mock('../components/layout/useBreadcrumb', () => ({
 }))
 
 const mockUseNodeDetail = useNodeDetail as ReturnType<typeof vi.mocked<typeof useNodeDetail>>
+const mockFetchDiagnosis = fetchDiagnosis as ReturnType<typeof vi.fn>
 const mockFetchHistory = fetchHistory as ReturnType<typeof vi.fn>
 const mockFetchLatestMTR = fetchLatestMTR as ReturnType<typeof vi.fn>
+const mockFetchNodes = fetchNodes as ReturnType<typeof vi.fn>
 
 async function renderNodeDetailPage() {
   render(
@@ -63,8 +71,17 @@ async function renderNodeDetailPage() {
 describe('NodeDetailPage', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetchDiagnosis.mockResolvedValue({ data: null })
     mockFetchHistory.mockResolvedValue({ data: [] })
     mockFetchLatestMTR.mockResolvedValue(null)
+    mockFetchNodes.mockResolvedValue({
+      data: {
+        nodes: [
+          { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' },
+          { id: 'node-2', name: 'Peer Node', ip: '192.168.1.2', region: 'us-east', tags: [], status: 'online' },
+        ],
+      },
+    })
   })
 
   it('renders loading state', async () => {
@@ -336,7 +353,73 @@ describe('NodeDetailPage', () => {
     await renderNodeDetailPage()
 
     expect(screen.getByText('Problem Diagnosis')).toBeInTheDocument()
-    expect(screen.getByText(/Note: Current diagnosis uses client-side analysis/)).toBeInTheDocument()
+    expect(screen.getByText(/server-side cross-node analysis/)).toBeInTheDocument()
+  })
+
+  it('renders server diagnosis result when enough nodes are available', async () => {
+    const mockNode = {
+      id: 'node-1',
+      name: 'Test Node',
+      ip: '192.168.1.1',
+      region: 'us-east',
+      tags: [],
+      status: 'online',
+    }
+
+    const mockNodeStatus = {
+      status: 'online',
+      last_heartbeat: '2024-01-01T12:00:00Z',
+    }
+
+    const mockMetrics = {
+      node_id: 'node-1',
+      latency_ms: 45,
+      packet_loss_rate: 0,
+      jitter_ms: 5,
+      timestamp: '2024-01-01T12:00:00Z',
+    }
+
+    mockUseNodeDetail.mockReturnValue({
+      node: mockNode as any,
+      nodeStatus: mockNodeStatus as any,
+      metrics: mockMetrics as any,
+      isLoading: false,
+      error: null,
+      isPolling: true,
+      refetch: vi.fn(),
+    })
+
+    mockFetchNodes.mockResolvedValue({
+      data: {
+        nodes: [
+          { id: 'node-1', name: 'Test Node', ip: '192.168.1.1', region: 'us-east', tags: [], status: 'online' },
+          { id: 'node-2', name: 'Peer Node A', ip: '192.168.1.2', region: 'us-east', tags: [], status: 'online' },
+          { id: 'node-3', name: 'Peer Node B', ip: '192.168.1.3', region: 'eu-west', tags: [], status: 'online' },
+        ],
+      },
+    })
+    mockFetchDiagnosis.mockResolvedValue({
+      data: {
+        problem_type: 'cross_border_link',
+        confidence: 'high',
+        recommendation: 'Server detected a regional link issue.',
+        timestamp: '2024-01-01T12:00:00Z',
+        analysis: {
+          nodes_analyzed: 3,
+          affected_nodes: ['node-1'],
+          regions_analyzed: ['us-east', 'eu-west'],
+        },
+      },
+      message: 'Diagnosis completed',
+      timestamp: '2024-01-01T12:00:00Z',
+    })
+
+    await renderNodeDetailPage()
+
+    await waitFor(() => {
+      expect(mockFetchDiagnosis).toHaveBeenCalledWith(['node-1', 'node-2', 'node-3'])
+    })
+    expect(screen.getByText('Cross-Border Link Issue')).toBeInTheDocument()
   })
 
   it('renders latest MTR path data', async () => {
