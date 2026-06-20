@@ -159,7 +159,7 @@ export function NodeDialog({ mode, node, open, onSubmit, onCancel }: NodeDialogP
               value={formData.name}
               onChange={handleChange}
               disabled={isSubmitting}
-              placeholder="e.g., Production Server 1"
+              placeholder={t('nodes.namePlaceholder')}
             />
             {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
           </div>
@@ -172,7 +172,7 @@ export function NodeDialog({ mode, node, open, onSubmit, onCancel }: NodeDialogP
               value={formData.ip}
               onChange={handleChange}
               disabled={isSubmitting}
-              placeholder="e.g., 192.168.1.100"
+              placeholder={t('nodes.ipPlaceholder')}
               className="font-mono"
             />
             {errors.ip && <p className="text-sm text-destructive">{errors.ip}</p>}
@@ -186,7 +186,7 @@ export function NodeDialog({ mode, node, open, onSubmit, onCancel }: NodeDialogP
               value={formData.region}
               onChange={handleChange}
               disabled={isSubmitting}
-              placeholder="e.g., us-east-1"
+              placeholder={t('nodes.regionPlaceholder')}
             />
             {errors.region && <p className="text-sm text-destructive">{errors.region}</p>}
           </div>
@@ -200,7 +200,7 @@ export function NodeDialog({ mode, node, open, onSubmit, onCancel }: NodeDialogP
               onChange={handleChange}
               disabled={isSubmitting}
               rows={3}
-              placeholder="e.g., production, critical, backend (comma-separated)"
+              placeholder={t('nodes.tagsPlaceholder')}
             />
             <p className="text-xs text-muted-foreground">{t('nodes.tagsHint')}</p>
             {errors.tags && <p className="text-sm text-destructive">{errors.tags}</p>}

@@ -28,6 +28,10 @@ describe('NodeDialog', () => {
 
       expect(screen.getByText('Add New Node')).toBeInTheDocument()
       expect(screen.getByText('Create Node')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('e.g., Production Server 1')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('e.g., 192.168.1.100')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('e.g., us-east-1')).toBeInTheDocument()
+      expect(screen.getByPlaceholderText('e.g., production, critical, backend (comma-separated)')).toBeInTheDocument()
     })
 
     it('validates required fields', async () => {
