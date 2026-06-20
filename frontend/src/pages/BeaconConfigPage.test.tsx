@@ -15,6 +15,14 @@ const translations: Record<string, string> = {
   'beaconConfig.version': 'Version',
   'beaconConfig.updated': 'Updated',
   'beaconConfig.probes': 'Probes',
+  'beaconConfig.probe': 'Probe',
+  'beaconConfig.probeType': 'Type',
+  'beaconConfig.probeTarget': 'Target',
+  'beaconConfig.probeTargetPlaceholder': 'IP or domain',
+  'beaconConfig.probePort': 'Port',
+  'beaconConfig.probeIntervalSeconds': 'Interval (s)',
+  'beaconConfig.probeTimeoutSeconds': 'Timeout (s)',
+  'beaconConfig.probeCount': 'Count',
   'beaconConfig.showHistory': 'History',
   'beaconConfig.hideHistory': 'Hide History',
   'beaconConfig.configHistory': 'Configuration History',
@@ -130,5 +138,36 @@ describe('BeaconConfigPage', () => {
     expect(screen.getByText('v2')).toBeInTheDocument()
     expect(screen.getByText('Failed')).toBeInTheDocument()
     expect(screen.getByText('failed to parse config')).toBeInTheDocument()
+  })
+
+  it('renders localized probe field labels', async () => {
+    mockFetchBeaconConfig.mockResolvedValueOnce({
+      data: {
+        probes: [{ id: 'probe-1', type: 'TCP', target: 'example.com', port: 443, interval_seconds: 60, timeout_seconds: 5, count: 3 }],
+        interval_seconds: 60,
+        timeout_seconds: 5,
+        updated_at: '2024-01-02T12:00:00Z',
+        version: 3,
+        last_ack_version: 3,
+        last_ack_at: '2024-01-02T12:01:00Z',
+        last_ack_status: 'applied',
+      },
+      message: 'ok',
+      timestamp: '2024-01-02T12:02:00Z',
+    })
+
+    render(<BeaconConfigPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Probe #1')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText('Type')).toBeInTheDocument()
+    expect(screen.getByText('Target')).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('IP or domain')).toBeInTheDocument()
+    expect(screen.getByText('Port')).toBeInTheDocument()
+    expect(screen.getByText('Interval (s)')).toBeInTheDocument()
+    expect(screen.getByText('Timeout (s)')).toBeInTheDocument()
+    expect(screen.getByText('Count')).toBeInTheDocument()
   })
 })

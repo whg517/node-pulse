@@ -322,7 +322,7 @@ export default function BeaconConfigPage() {
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Type</label>
+                        <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probeType')}</label>
                         <select
                           value={probe.type}
                           onChange={(e) => handleProbeChange(i, 'type', e.target.value)}
@@ -333,17 +333,17 @@ export default function BeaconConfigPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Target</label>
+                        <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probeTarget')}</label>
                         <input
                           type="text"
                           value={probe.target}
                           onChange={(e) => handleProbeChange(i, 'target', e.target.value)}
-                          placeholder="IP or domain"
+                          placeholder={t('beaconConfig.probeTargetPlaceholder')}
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Port</label>
+                        <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probePort')}</label>
                         <input
                           type="number"
                           min={1}
@@ -354,7 +354,7 @@ export default function BeaconConfigPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Interval (s)</label>
+                        <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probeIntervalSeconds')}</label>
                         <input
                           type="number"
                           min={5}
@@ -364,7 +364,7 @@ export default function BeaconConfigPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Timeout (s)</label>
+                        <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probeTimeoutSeconds')}</label>
                         <input
                           type="number"
                           min={1}
@@ -374,7 +374,7 @@ export default function BeaconConfigPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-xs text-muted-foreground mb-1">Count</label>
+                        <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probeCount')}</label>
                         <input
                           type="number"
                           min={1}
