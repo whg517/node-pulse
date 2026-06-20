@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useExportStore } from './exportStore'
-import { createExport, getExportStatus } from '../api/export'
+import { createExport, getExportStatus, listExports } from '../api/export'
 import type { ExportTask, CreateExportRequest } from '../types/export'
 
 // Mock localStorage with proper storage interface for zustand persist
@@ -33,12 +33,14 @@ vi.mock('../api/export', () => ({
   createExport: vi.fn(),
   getExportStatus: vi.fn(),
   downloadExport: vi.fn(),
+  listExports: vi.fn(),
 }))
 
 describe('useExportStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    vi.mocked(listExports).mockResolvedValue({ data: [], message: 'ok', timestamp: '2024-01-01T00:00:00Z' })
     // Clear localStorage before each test
     localStorage.clear()
   })
@@ -231,6 +233,32 @@ describe('useExportStore', () => {
       await act(async () => {
         await expect(result.current.pollExportStatus(mockExportTask.id)).resolves.toBeUndefined()
       })
+    })
+  })
+
+  describe('fetchExportHistory', () => {
+    it('loads active and completed exports from backend', async () => {
+      const completedTask = {
+        ...mockExportTask,
+        id: 'export-completed',
+        status: 'completed' as const,
+      }
+      vi.mocked(listExports).mockResolvedValueOnce({
+        data: [mockExportTask, completedTask],
+        message: 'ok',
+        timestamp: '2024-01-01T00:00:00Z',
+      })
+      vi.mocked(getExportStatus).mockResolvedValue({ data: mockExportTask, message: 'ok', timestamp: '2024-01-01T00:00:00Z' })
+
+      const { result } = renderHook(() => useExportStore())
+
+      await act(async () => {
+        await result.current.fetchExportHistory()
+      })
+
+      expect(result.current.currentExports).toHaveLength(1)
+      expect(result.current.exportHistory).toHaveLength(1)
+      expect(result.current.exportHistory[0].id).toBe('export-completed')
     })
   })
 })

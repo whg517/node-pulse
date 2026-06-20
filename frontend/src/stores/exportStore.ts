@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand'
-import { createExport, getExportStatus, downloadExport } from '../api/export'
+import { createExport, getExportStatus, downloadExport, listExports } from '../api/export'
 import type { ExportTask, CreateExportRequest } from '../types/export'
 
 interface ExportStore {
@@ -188,13 +188,32 @@ export const useExportStore = create<ExportStore>()((set, get) => ({
       },
 
       /**
-       * Fetch export history from localStorage
-       * (In a real app, this would fetch from the backend)
+       * Fetch export tasks from backend and split them into active/history lists.
        */
       fetchExportHistory: async () => {
-        // History is already loaded from localStorage via persist middleware
-        // This is a placeholder for future backend integration
         set({ error: null })
+
+        try {
+          const response = await listExports()
+          const tasks = response.data ?? []
+          const activeTasks = tasks.filter((task) => task.status === 'pending' || task.status === 'processing')
+          const historyTasks = tasks.filter((task) => task.status === 'completed' || task.status === 'failed')
+
+          set({
+            currentExports: activeTasks,
+            exportHistory: historyTasks,
+          })
+          saveHistoryToStorage(historyTasks)
+
+          activeTasks.forEach((task) => {
+            void get().pollExportStatus(task.id)
+          })
+        } catch (error) {
+          const fallbackHistory = loadHistoryFromStorage()
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to fetch export history'
+          set({ exportHistory: fallbackHistory, error: errorMessage })
+        }
       },
 
       /**

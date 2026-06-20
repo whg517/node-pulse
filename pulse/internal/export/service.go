@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"sync"
 	"time"
@@ -165,6 +166,37 @@ func (s *ExportService) GetExport(exportID string) (*models.ExportTask, error) {
 	}
 
 	return task, nil
+}
+
+// ListExports returns recent export tasks for a user in newest-first order.
+func (s *ExportService) ListExports(userID string, limit int) []*models.ExportTask {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	tasks := make([]*models.ExportTask, 0, len(s.tasks))
+	for _, task := range s.tasks {
+		if userID != "" && task.UserID != userID {
+			continue
+		}
+		taskCopy := *task
+		tasks = append(tasks, &taskCopy)
+	}
+
+	sort.Slice(tasks, func(i, j int) bool {
+		return tasks[i].CreatedAt.After(tasks[j].CreatedAt)
+	})
+
+	if len(tasks) > limit {
+		return tasks[:limit]
+	}
+	return tasks
 }
 
 // processExport processes the export task asynchronously

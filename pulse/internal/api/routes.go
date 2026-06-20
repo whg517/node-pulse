@@ -396,6 +396,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		exports.Use(middleware.JWTAuthMiddleware(jwtService))
 		exports.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
+			// GET /api/v1/data/export - List export tasks (admin only)
+			exports.GET("", exportHandler.ListExportsHandler)
+
 			// POST /api/v1/data/export - Create export task (admin only)
 			exports.POST("", exportHandler.CreateExportHandler)
 

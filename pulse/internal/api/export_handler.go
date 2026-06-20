@@ -173,6 +173,68 @@ type GetExportStatusResponse struct {
 	Timestamp string            `json:"timestamp"`
 }
 
+// ListExportsResponse represents the response for listing export tasks.
+type ListExportsResponse struct {
+	Data      []models.ExportTask `json:"data"`
+	Message   string              `json:"message"`
+	Timestamp string              `json:"timestamp"`
+}
+
+// ListExportsHandler handles GET /api/v1/data/export.
+// @Summary		List export tasks
+// @Description	Returns recent export tasks for the current admin user.
+// @Tags			Export
+// @Accept			json
+// @Produce		json
+// @Param			limit	query	int	false	"Maximum number of tasks to return"	default(50)
+// @Success		200	{object}	ListExportsResponse	"Export task list"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}	"Forbidden (requires admin role)"
+// @Security		BearerAuth
+// @Router			/data/export [get]
+func (h *ExportHandler) ListExportsHandler(c *gin.Context) {
+	userID, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error":   "Unauthorized",
+			"details": "User not authenticated",
+		})
+		return
+	}
+
+	userIDStr, ok := userID.(string)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Internal server error",
+			"details": "Invalid user ID format",
+		})
+		return
+	}
+
+	limit := 50
+	if rawLimit := c.Query("limit"); rawLimit != "" {
+		if _, err := fmt.Sscanf(rawLimit, "%d", &limit); err != nil || limit < 1 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error":   "Invalid limit",
+				"details": "limit must be a positive integer",
+			})
+			return
+		}
+	}
+
+	tasks := h.exportService.ListExports(userIDStr, limit)
+	responseTasks := make([]models.ExportTask, 0, len(tasks))
+	for _, task := range tasks {
+		responseTasks = append(responseTasks, *task)
+	}
+
+	c.JSON(http.StatusOK, ListExportsResponse{
+		Data:      responseTasks,
+		Message:   "Export tasks retrieved",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
 // GetExportStatusHandler handles GET /api/v1/data/export/:id
 // Returns the status of an export task
 // @Summary		Get export task status

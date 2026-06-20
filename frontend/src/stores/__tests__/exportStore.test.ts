@@ -9,6 +9,7 @@ vi.mock('../../api/export', () => ({
   createExport: vi.fn(),
   getExportStatus: vi.fn(),
   downloadExport: vi.fn(),
+  listExports: vi.fn(),
 }))
 
 const mockExportTask: ExportTask = {
@@ -34,6 +35,7 @@ describe('useExportStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useFakeTimers()
+    vi.mocked(exportApi.listExports).mockResolvedValue({ data: [], message: 'ok', timestamp: '2024-01-01T00:00:00Z' })
     // Reset store state
     useExportStore.setState({
       currentExports: [],
@@ -191,7 +193,14 @@ describe('useExportStore', () => {
   })
 
   describe('fetchExportHistory', () => {
-    it('clears error on fetch', async () => {
+    it('loads active and completed exports from backend', async () => {
+      const processingTask = { ...mockExportTask, status: 'processing' as const }
+      vi.mocked(exportApi.listExports).mockResolvedValueOnce({
+        data: [processingTask, mockCompletedTask],
+        message: 'ok',
+        timestamp: '2024-01-01T00:00:00Z',
+      })
+      vi.mocked(exportApi.getExportStatus).mockResolvedValue({ data: processingTask })
       useExportStore.setState({ error: 'Old error' })
       const { result } = renderHook(() => useExportStore())
 
@@ -200,6 +209,9 @@ describe('useExportStore', () => {
       })
 
       expect(result.current.error).toBeNull()
+      expect(result.current.currentExports).toHaveLength(1)
+      expect(result.current.exportHistory).toHaveLength(1)
+      expect(result.current.exportHistory[0].id).toBe('export-1')
     })
   })
 

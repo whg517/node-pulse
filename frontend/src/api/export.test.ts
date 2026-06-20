@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { createExport, getExportStatus, downloadExport } from './export'
+import { createExport, getExportStatus, downloadExport, listExports } from './export'
 import { apiClient } from './client'
 import type { ExportTask, CreateExportRequest } from '../types/export'
 
@@ -172,6 +172,20 @@ describe('Export API', () => {
 
       expect(response.data.status).toBe('failed')
       expect(response.data.error).toBe('No data found for specified time range')
+    })
+  })
+
+  describe('listExports', () => {
+    it('lists recent export tasks with default limit', async () => {
+      vi.mocked(apiClient).mockResolvedValueOnce({
+        data: [],
+        message: 'Export tasks retrieved',
+        timestamp: '2024-01-01T00:00:00Z',
+      })
+
+      await listExports()
+
+      expect(apiClient).toHaveBeenCalledWith('/api/v1/data/export?limit=50')
     })
   })
 

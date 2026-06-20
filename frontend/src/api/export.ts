@@ -97,6 +97,19 @@ export async function getExportStatus(
 }
 
 /**
+ * List recent export tasks for the current admin user.
+ *
+ * @param limit - Maximum number of tasks to return
+ * @returns Recent export tasks, newest first
+ */
+export async function listExports(
+  limit = 50
+): Promise<{ data: ExportTask[]; message: string; timestamp: string }> {
+  const params = new URLSearchParams({ limit: String(limit) })
+  return apiClient(`/api/v1/data/export?${params}`)
+}
+
+/**
  * Download exported file
  *
  * Downloads the exported CSV file as a blob.

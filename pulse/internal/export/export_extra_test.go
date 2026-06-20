@@ -160,6 +160,42 @@ func TestExportService_UpdateTaskStatus(t *testing.T) {
 	assert.Equal(t, "processing", found.Status)
 }
 
+func TestExportService_ListExports(t *testing.T) {
+	svc := NewExportService(nil)
+	defer svc.Shutdown()
+
+	now := time.Now()
+	svc.mu.Lock()
+	svc.tasks["old"] = &models.ExportTask{
+		ID:        "old",
+		UserID:    "user-1",
+		Status:    "completed",
+		CreatedAt: now.Add(-2 * time.Hour),
+	}
+	svc.tasks["new"] = &models.ExportTask{
+		ID:        "new",
+		UserID:    "user-1",
+		Status:    "failed",
+		CreatedAt: now,
+	}
+	svc.tasks["other-user"] = &models.ExportTask{
+		ID:        "other-user",
+		UserID:    "user-2",
+		Status:    "completed",
+		CreatedAt: now.Add(time.Hour),
+	}
+	svc.mu.Unlock()
+
+	tasks := svc.ListExports("user-1", 10)
+	require.Len(t, tasks, 2)
+	assert.Equal(t, "new", tasks[0].ID)
+	assert.Equal(t, "old", tasks[1].ID)
+
+	limited := svc.ListExports("user-1", 1)
+	require.Len(t, limited, 1)
+	assert.Equal(t, "new", limited[0].ID)
+}
+
 func TestExportService_UpdateTaskStatus_Completed(t *testing.T) {
 	svc := NewExportService(nil)
 	defer svc.Shutdown()
