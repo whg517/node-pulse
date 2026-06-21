@@ -49,6 +49,22 @@ export interface AlertNoteDTO {
 }
 
 /**
+ * Alert timeline item data transfer object
+ */
+export interface AlertTimelineItemDTO {
+  id: string
+  type: 'created' | 'status_changed' | 'note'
+  title: string
+  content?: string
+  status?: AlertRecordStatus
+  from_status?: AlertRecordStatus | ''
+  to_status?: AlertRecordStatus
+  user_id?: string
+  user_name?: string
+  created_at: string
+}
+
+/**
  * Filter parameters for alert records query
  * All fields are optional
  */
@@ -222,4 +238,16 @@ export async function getAlertNotes(
   id: string
 ): Promise<{ data: AlertNoteDTO[]; message: string; timestamp: string }> {
   return apiClient(`/api/v1/alerts/records/${id}/notes`)
+}
+
+/**
+ * Fetch merged timeline items for an alert record
+ *
+ * @param id - Alert record ID
+ * @returns Timeline containing created, status-change, and note events
+ */
+export async function getAlertTimeline(
+  id: string
+): Promise<{ data: AlertTimelineItemDTO[]; message: string; timestamp: string }> {
+  return apiClient(`/api/v1/alerts/records/${id}/timeline`)
 }

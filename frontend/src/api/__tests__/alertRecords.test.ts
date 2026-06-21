@@ -4,6 +4,7 @@ import {
   updateAlertRecordStatus,
   addAlertNote,
   getAlertNotes,
+  getAlertTimeline,
   isValidStatusTransition,
 } from '../alertRecords'
 import { apiClient } from '../client'
@@ -249,6 +250,25 @@ describe('AlertRecords API', () => {
 
       expect(apiClient).toHaveBeenCalledWith('/api/v1/alerts/records/record-1/notes')
       expect(result.data).toEqual(mockNotes)
+    })
+  })
+
+  describe('getAlertTimeline', () => {
+    it('fetches merged timeline for an alert record', async () => {
+      const mockTimeline = [
+        { id: 'created-record-1', type: 'created', title: 'Alert created', created_at: '2024-01-01T10:00:00Z' },
+        { id: 'history-1', type: 'status_changed', title: 'Status changed', from_status: 'pending', to_status: 'in_progress', created_at: '2024-01-01T10:05:00Z' },
+      ]
+      vi.mocked(apiClient).mockResolvedValueOnce({
+        data: mockTimeline,
+        message: 'Timeline retrieved',
+        timestamp: '2024-01-01T10:05:00Z',
+      })
+
+      const result = await getAlertTimeline('record-1')
+
+      expect(apiClient).toHaveBeenCalledWith('/api/v1/alerts/records/record-1/timeline')
+      expect(result.data).toEqual(mockTimeline)
     })
   })
 

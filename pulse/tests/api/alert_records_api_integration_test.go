@@ -105,6 +105,13 @@ func setupAlertRecordsAPITest(t *testing.T) (*gin.Engine, *pgxpool.Pool, func())
 		handler.GetAlertNotesHandler(c)
 	})
 
+	router.GET("/api/v1/alerts/records/:id/timeline", func(c *gin.Context) {
+		// Mock authenticated user
+		c.Set("user_id", "test-user-id")
+		c.Set("role", "admin")
+		handler.GetAlertTimelineHandler(c)
+	})
+
 	return router, pool, cleanup
 }
 
@@ -493,6 +500,74 @@ func TestAlertRecordNotesHandlers(t *testing.T) {
 	jsonBody, _ = json.Marshal(reqBody)
 	req, _ = http.NewRequest("POST", "/api/v1/alerts/records/"+uuid.New().String()+"/notes", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
+}
+
+func TestAlertRecordTimelineHandler(t *testing.T) {
+	router, pool, cleanup := setupAlertRecordsAPITest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	nodeUUID := uuid.New()
+	err := db.CreateNode(ctx, pool, nodeUUID, "Test Node Timeline", "192.168.1.4", "us-east", nil)
+	require.NoError(t, err)
+
+	alertEvent := &models.AlertEvent{
+		ID:           uuid.New().String(),
+		NodeID:       nodeUUID.String(),
+		Metric:       "packet_loss_rate",
+		Threshold:    1.0,
+		CurrentValue: 5.0,
+		Level:        "P0",
+		CreatedAt:    time.Now(),
+	}
+	alertEventsQuerier := db.NewAlertEventsQuerier(pool)
+	err = alertEventsQuerier.CreateAlertEvent(ctx, alertEvent)
+	require.NoError(t, err)
+
+	record := &models.AlertRecord{
+		AlertEventID: alertEvent.ID,
+		NodeID:       nodeUUID.String(),
+		Metric:       alertEvent.Metric,
+		Level:        alertEvent.Level,
+		Status:       "pending",
+	}
+	err = db.CreateAlertRecord(ctx, pool, record)
+	require.NoError(t, err)
+
+	reqBody := map[string]string{"status": "in_progress", "note": "Started incident bridge"}
+	jsonBody, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest("PUT", "/api/v1/alerts/records/"+record.ID+"/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	require.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	req, _ = http.NewRequest("GET", "/api/v1/alerts/records/"+record.ID+"/timeline", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	var response map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	timeline := response["data"].([]interface{})
+	require.Len(t, timeline, 3)
+
+	assert.Equal(t, "created", timeline[0].(map[string]interface{})["type"])
+	assert.Equal(t, "status_changed", timeline[1].(map[string]interface{})["type"])
+	assert.Equal(t, "pending", timeline[1].(map[string]interface{})["from_status"])
+	assert.Equal(t, "in_progress", timeline[1].(map[string]interface{})["to_status"])
+	assert.Equal(t, "note", timeline[2].(map[string]interface{})["type"])
+	assert.Equal(t, "Started incident bridge", timeline[2].(map[string]interface{})["content"])
+
+	req, _ = http.NewRequest("GET", "/api/v1/alerts/records/"+uuid.New().String()+"/timeline", nil)
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 

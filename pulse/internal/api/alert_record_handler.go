@@ -219,6 +219,23 @@ func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 	}
 
 	// Update alert record status
+	currentRecord, err := db.GetAlertRecordByID(ctx, pool, recordID)
+	if err != nil {
+		if errors.Is(err, db.ErrAlertRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    "ERR_RECORD_NOT_FOUND",
+				"message": "Alert record not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "ERR_GET_RECORD",
+			"message": "Failed to retrieve alert record",
+			"details": gin.H{"error": err.Error()},
+		})
+		return
+	}
+
 	if err := db.UpdateAlertRecordStatus(ctx, pool, recordID, req.Status); err != nil {
 		// Check if it's a "not found" error
 		if errors.Is(err, db.ErrAlertRecordNotFound) {
@@ -247,9 +264,18 @@ func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 		return
 	}
 
+	userID := c.GetString("user_id")
+	if _, err := db.CreateAlertStatusHistory(ctx, pool, recordID, currentRecord.Status, req.Status, &userID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "ERR_CREATE_STATUS_HISTORY",
+			"message": "Status was updated, but failed to create alert status history",
+			"details": gin.H{"error": err.Error()},
+		})
+		return
+	}
+
 	var createdNote *models.AlertNote
 	if strings.TrimSpace(req.Note) != "" {
-		userID := c.GetString("user_id")
 		note, err := db.CreateAlertNote(ctx, pool, recordID, &userID, req.Note)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
@@ -409,6 +435,52 @@ func (h *AlertRecordHandler) GetAlertNotesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"data":      notes,
 		"message":   "Alert notes retrieved successfully",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}
+
+// GetAlertTimelineHandler lists merged lifecycle timeline items for an alert record.
+// @Summary		List alert record timeline
+// @Description	Retrieves the created event, status changes, and notes for an alert record ordered oldest-first.
+// @Tags			Alert Records
+// @Produce		json
+// @Param			id	path	string	true	"Alert record ID"
+// @Success		200	{object}	map[string]interface{}	"Alert timeline"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		404	{object}	map[string]interface{}	"Alert record not found"
+// @Failure		500	{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/records/{id}/timeline [get]
+func (h *AlertRecordHandler) GetAlertTimelineHandler(c *gin.Context) {
+	recordID := c.Param("id")
+	if recordID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "ERR_MISSING_RECORD_ID",
+			"message": "Missing alert record ID",
+		})
+		return
+	}
+
+	timeline, err := db.GetAlertTimeline(c.Request.Context(), h.pool, recordID)
+	if err != nil {
+		if errors.Is(err, db.ErrAlertRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    "ERR_RECORD_NOT_FOUND",
+				"message": "Alert record not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "ERR_GET_TIMELINE",
+			"message": "Failed to retrieve alert timeline",
+			"details": gin.H{"error": err.Error()},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":      timeline,
+		"message":   "Alert timeline retrieved successfully",
 		"timestamp": time.Now().Format(time.RFC3339),
 	})
 }

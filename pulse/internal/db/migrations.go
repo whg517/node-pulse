@@ -42,6 +42,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		{"createAlertSuppressionsTable", createAlertSuppressionsTable},
 		{"createWebhookLogsTable", createWebhookLogsTable},
 		{"createAlertRecordsTable", createAlertRecordsTable},
+		{"createAlertStatusHistoryTable", createAlertStatusHistoryTable},
 		{"createAlertNotesTable", createAlertNotesTable},
 		{"seedAdminUser", seedAdminUser},
 	}
@@ -546,6 +547,30 @@ func createAlertRecordsTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_alert_records_created_at ON alert_records(created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_alert_records_node_created ON alert_records(node_id, created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_alert_records_status_created ON alert_records(status, created_at DESC);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createAlertStatusHistoryTable creates alert_status_history for lifecycle timelines.
+func createAlertStatusHistoryTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS alert_status_history (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			alert_id UUID NOT NULL REFERENCES alert_records(id) ON DELETE CASCADE,
+			from_status VARCHAR,
+			to_status VARCHAR NOT NULL,
+			user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+			user_name VARCHAR(255) NOT NULL DEFAULT 'System',
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			CONSTRAINT chk_alert_status_history_from_status CHECK (from_status IS NULL OR from_status IN ('pending', 'in_progress', 'resolved')),
+			CONSTRAINT chk_alert_status_history_to_status CHECK (to_status IN ('pending', 'in_progress', 'resolved'))
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_alert_status_history_alert_id ON alert_status_history(alert_id, created_at ASC);
+		CREATE INDEX IF NOT EXISTS idx_alert_status_history_user_id ON alert_status_history(user_id);
+		CREATE INDEX IF NOT EXISTS idx_alert_status_history_created_at ON alert_status_history(created_at DESC);
 	`
 
 	_, err := pool.Exec(ctx, query)

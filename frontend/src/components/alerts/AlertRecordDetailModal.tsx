@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import type { AlertRecordDTO, AlertRecordStatus } from '@/api/alertRecords'
+import { getAlertTimeline } from '@/api/alertRecords'
+import type { AlertRecordDTO, AlertRecordStatus, AlertTimelineItemDTO } from '@/api/alertRecords'
 import type { NodeDTO } from '@/api/types'
 
 interface AlertRecordDetailModalProps {
@@ -26,6 +27,8 @@ export function AlertRecordDetailModal({ record, nodes, canEdit, open, onClose, 
   const { t } = useTranslation()
   const navigate = useNavigate()
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false)
+  const [timeline, setTimeline] = useState<AlertTimelineItemDTO[]>([])
   const [error, setError] = useState<string | null>(null)
 
   const node = nodes.find((n) => n.id === record.node_id)
@@ -59,6 +62,45 @@ export function AlertRecordDetailModal({ record, nodes, canEdit, open, onClose, 
       default: return metric
     }
   }
+
+  const formatLocalTime = (value: string) => new Date(value).toLocaleString()
+  const formatUTCTime = (value: string) => new Date(value).toLocaleString('en-US', {
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }) + ' UTC'
+
+  const getTimelineTitle = (item: AlertTimelineItemDTO) => {
+    if (item.type === 'created') return t('alerts.timelineCreated', 'Alert created')
+    if (item.type === 'status_changed') return t('alerts.timelineStatusChanged', 'Status changed')
+    if (item.type === 'note') return t('alerts.timelineNoteAdded', 'Note added')
+    return item.title
+  }
+
+  useEffect(() => {
+    if (!open || !record.id) return
+
+    let cancelled = false
+    setIsTimelineLoading(true)
+    void getAlertTimeline(record.id)
+      .then((response) => {
+        if (!cancelled) setTimeline(response.data || [])
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err instanceof Error ? err.message : t('alerts.timelineLoadFailed', 'Failed to load alert timeline'))
+      })
+      .finally(() => {
+        if (!cancelled) setIsTimelineLoading(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [open, record.id, t])
 
   const handleStatusUpdate = async (newStatus: AlertRecordStatus) => {
     setIsUpdating(true)
@@ -124,12 +166,56 @@ export function AlertRecordDetailModal({ record, nodes, canEdit, open, onClose, 
           <div className="flex gap-6">
             <div>
               <p className="text-sm font-medium text-muted-foreground">{t('alerts.created', 'Created')}</p>
-              <p className="text-sm">{new Date(record.created_at).toLocaleString()}</p>
+              <p className="text-sm">{formatLocalTime(record.created_at)}</p>
             </div>
             {record.updated_at !== record.created_at && (
               <div>
                 <p className="text-sm font-medium text-muted-foreground">{t('alerts.updated', 'Updated')}</p>
-                <p className="text-sm">{new Date(record.updated_at).toLocaleString()}</p>
+                <p className="text-sm">{formatLocalTime(record.updated_at)}</p>
+              </div>
+            )}
+          </div>
+
+          <div className="pt-4 border-t">
+            <p className="text-sm font-medium text-muted-foreground mb-3">{t('alerts.timeline', 'Timeline')}</p>
+            {isTimelineLoading && (
+              <div className="text-sm text-muted-foreground">{t('common.loading', 'Loading...')}</div>
+            )}
+            {!isTimelineLoading && timeline.length === 0 && (
+              <div className="text-sm text-muted-foreground">{t('alerts.noTimelineEvents', 'No timeline events yet')}</div>
+            )}
+            {!isTimelineLoading && timeline.length > 0 && (
+              <div className="space-y-3">
+                {timeline.map((item, index) => (
+                  <div key={item.id} className="flex gap-3">
+                    <div className="flex flex-col items-center pt-1">
+                      <span className="h-2 w-2 rounded-full bg-primary" />
+                      {index < timeline.length - 1 && <span className="mt-1 min-h-8 w-px flex-1 bg-border" />}
+                    </div>
+                    <div className="min-w-0 flex-1 pb-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-foreground">{getTimelineTitle(item)}</p>
+                        {item.type === 'status_changed' && item.to_status && (
+                          <Badge variant={statusVariant(item.to_status)}>{statusLabel(item.to_status)}</Badge>
+                        )}
+                      </div>
+                      {item.type === 'status_changed' && (
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {statusLabel(item.from_status || 'pending')} -&gt; {statusLabel(item.to_status || item.status || 'pending')}
+                          {item.user_name ? ` by ${item.user_name}` : ''}
+                        </p>
+                      )}
+                      {item.type === 'note' && item.content && (
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">
+                          {item.content}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {formatLocalTime(item.created_at)} | {formatUTCTime(item.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>

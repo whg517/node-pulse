@@ -465,6 +465,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// GET /api/v1/alerts/records/:id/notes - List alert investigation notes (all roles)
 		alertRecords.GET("/:id/notes", alertRecordHandler.GetAlertNotesHandler)
 
+		// GET /api/v1/alerts/records/:id/timeline - List merged alert lifecycle timeline (all roles)
+		alertRecords.GET("/:id/timeline", alertRecordHandler.GetAlertTimelineHandler)
+
 		// Webhook management routes (require admin auth only) (Story 5.2)
 		webhookQuerier := db.NewWebhookQuerier(pool)
 		var webhookLogsQuerier db.WebhookLogsQuerier

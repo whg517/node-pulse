@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -195,6 +196,42 @@ func UpdateAlertRecordStatus(ctx context.Context, pool *pgxpool.Pool, id string,
 	return nil
 }
 
+// CreateAlertStatusHistory stores a status transition for an alert record.
+func CreateAlertStatusHistory(ctx context.Context, pool *pgxpool.Pool, alertID string, fromStatus string, toStatus string, userID *string) (*models.AlertStatusHistory, error) {
+	if _, err := GetAlertRecordByID(ctx, pool, alertID); err != nil {
+		return nil, err
+	}
+
+	userIDValue, userName := resolveAlertActor(ctx, pool, userID)
+	history := &models.AlertStatusHistory{
+		AlertID:    alertID,
+		FromStatus: fromStatus,
+		ToStatus:   toStatus,
+		UserName:   userName,
+	}
+
+	query := `
+		INSERT INTO alert_status_history (alert_id, from_status, to_status, user_id, user_name)
+		VALUES ($1, NULLIF($2, ''), $3, $4, $5)
+		RETURNING id, alert_id, COALESCE(from_status, ''), to_status, COALESCE(user_id::text, ''), user_name, created_at
+	`
+
+	err := pool.QueryRow(ctx, query, alertID, fromStatus, toStatus, userIDValue, userName).Scan(
+		&history.ID,
+		&history.AlertID,
+		&history.FromStatus,
+		&history.ToStatus,
+		&history.UserID,
+		&history.UserName,
+		&history.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create alert status history: %w", err)
+	}
+
+	return history, nil
+}
+
 // CreateAlertNote creates an operator note for an alert record.
 func CreateAlertNote(ctx context.Context, pool *pgxpool.Pool, alertID string, userID *string, content string) (*models.AlertNote, error) {
 	content = strings.TrimSpace(content)
@@ -206,19 +243,7 @@ func CreateAlertNote(ctx context.Context, pool *pgxpool.Pool, alertID string, us
 		return nil, err
 	}
 
-	var userIDValue interface{}
-	userName := "System"
-	if userID != nil && strings.TrimSpace(*userID) != "" {
-		parsedUserID, err := uuid.Parse(strings.TrimSpace(*userID))
-		if err == nil {
-			var username string
-			err = pool.QueryRow(ctx, `SELECT username FROM users WHERE user_id = $1`, parsedUserID).Scan(&username)
-			if err == nil {
-				userIDValue = parsedUserID
-				userName = username
-			}
-		}
-	}
+	userIDValue, userName := resolveAlertActor(ctx, pool, userID)
 
 	note := &models.AlertNote{
 		AlertID:  alertID,
@@ -245,6 +270,87 @@ func CreateAlertNote(ctx context.Context, pool *pgxpool.Pool, alertID string, us
 	}
 
 	return note, nil
+}
+
+// GetAlertTimeline returns a merged lifecycle timeline ordered oldest-first.
+func GetAlertTimeline(ctx context.Context, pool *pgxpool.Pool, alertID string) ([]models.AlertTimelineItem, error) {
+	record, err := GetAlertRecordByID(ctx, pool, alertID)
+	if err != nil {
+		return nil, err
+	}
+
+	items := []models.AlertTimelineItem{
+		{
+			ID:        "created-" + record.ID,
+			Type:      "created",
+			Title:     "Alert created",
+			Status:    record.Status,
+			CreatedAt: record.CreatedAt,
+		},
+	}
+
+	historyRows, err := pool.Query(ctx, `
+		SELECT id, alert_id, COALESCE(from_status, ''), to_status, COALESCE(user_id::text, ''), user_name, created_at
+		FROM alert_status_history
+		WHERE alert_id = $1
+		ORDER BY created_at ASC, id ASC
+	`, alertID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query alert status history: %w", err)
+	}
+	defer historyRows.Close()
+
+	for historyRows.Next() {
+		var history models.AlertStatusHistory
+		if err := historyRows.Scan(
+			&history.ID,
+			&history.AlertID,
+			&history.FromStatus,
+			&history.ToStatus,
+			&history.UserID,
+			&history.UserName,
+			&history.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan alert status history: %w", err)
+		}
+
+		items = append(items, models.AlertTimelineItem{
+			ID:         history.ID,
+			Type:       "status_changed",
+			Title:      "Status changed",
+			Status:     history.ToStatus,
+			FromStatus: history.FromStatus,
+			ToStatus:   history.ToStatus,
+			UserID:     history.UserID,
+			UserName:   history.UserName,
+			CreatedAt:  history.CreatedAt,
+		})
+	}
+	if err := historyRows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating alert status history: %w", err)
+	}
+
+	notes, err := GetAlertNotes(ctx, pool, alertID)
+	if err != nil {
+		return nil, err
+	}
+	for _, note := range notes {
+		items = append(items, models.AlertTimelineItem{
+			ID:        note.ID,
+			Type:      "note",
+			Title:     "Note added",
+			Content:   note.Content,
+			UserID:    note.UserID,
+			UserName:  note.UserName,
+			CreatedAt: note.CreatedAt,
+		})
+	}
+
+	sort.SliceStable(items, func(i, j int) bool {
+		return items[i].CreatedAt.Before(items[j].CreatedAt)
+	})
+
+	return items, nil
 }
 
 // GetAlertNotes retrieves notes for an alert record ordered oldest-first.
@@ -285,6 +391,24 @@ func GetAlertNotes(ctx context.Context, pool *pgxpool.Pool, alertID string) ([]m
 	}
 
 	return notes, nil
+}
+
+func resolveAlertActor(ctx context.Context, pool *pgxpool.Pool, userID *string) (interface{}, string) {
+	if userID == nil || strings.TrimSpace(*userID) == "" {
+		return nil, "System"
+	}
+
+	parsedUserID, err := uuid.Parse(strings.TrimSpace(*userID))
+	if err != nil {
+		return nil, "System"
+	}
+
+	var username string
+	if err := pool.QueryRow(ctx, `SELECT username FROM users WHERE user_id = $1`, parsedUserID).Scan(&username); err != nil {
+		return nil, "System"
+	}
+
+	return parsedUserID, username
 }
 
 // AlertRecordFilters represents filter parameters for querying alert records

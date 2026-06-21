@@ -25,6 +25,31 @@ type AlertNote struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// AlertStatusHistory represents a persisted status transition for an alert record.
+type AlertStatusHistory struct {
+	ID         string    `json:"id"`
+	AlertID    string    `json:"alert_id"`
+	FromStatus string    `json:"from_status,omitempty"`
+	ToStatus   string    `json:"to_status"`
+	UserID     string    `json:"user_id,omitempty"`
+	UserName   string    `json:"user_name"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
+// AlertTimelineItem represents a merged alert lifecycle event for UI timelines.
+type AlertTimelineItem struct {
+	ID         string    `json:"id"`
+	Type       string    `json:"type"`
+	Title      string    `json:"title"`
+	Content    string    `json:"content,omitempty"`
+	Status     string    `json:"status,omitempty"`
+	FromStatus string    `json:"from_status,omitempty"`
+	ToStatus   string    `json:"to_status,omitempty"`
+	UserID     string    `json:"user_id,omitempty"`
+	UserName   string    `json:"user_name,omitempty"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 // IsValidStatus checks if the status is valid
 func (a *AlertRecord) IsValidStatus() bool {
 	switch a.Status {

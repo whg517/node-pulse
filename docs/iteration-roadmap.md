@@ -127,13 +127,23 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 
 ### P2.2 Alert Timeline UX
 
-**Status:** Next.
+**Status:** Partially completed.
 
 **Scope:**
 
 - Display persisted status changes and notes together.
 - Show UTC and user timezone.
 - Ensure mobile alert detail uses persisted backend data.
+
+**Completed:**
+
+- Persist alert status-change history.
+- Expose merged alert timeline API for created, status-change, and note events.
+- Display merged timeline in desktop alert detail with local and UTC timestamps.
+
+**Remaining:**
+
+- Wire mobile alert detail to the persisted timeline API.
 
 ## 5. Phase 3 - Beacon Transport Integrity
 
@@ -238,9 +248,9 @@ Completed implementation slices:
 2. P1.2 Alert Notes API.
 3. P1.3 Webhook Test Delivery.
 4. P2.1 Pulse Alert Event Stream.
+5. P2.2 Alert Timeline UX backend and desktop detail slice.
 
 Next implementation slice:
 
-1. P2.2 Alert Timeline UX.
-2. Persist and expose status-change history if current data is not sufficient.
-3. Render status changes and notes together in alert detail views with UTC and local timezone display.
+1. P2.2 Mobile Alert Timeline Wiring.
+2. Then continue to Phase 3 Beacon Transport Integrity.

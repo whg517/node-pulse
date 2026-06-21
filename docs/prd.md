@@ -47,6 +47,8 @@ This PRD uses explicit status labels so product scope, roadmap, and code stay al
 - System health page for database, scheduler, alert engine, webhook delivery, and suppression health.
 - Authenticated Pulse WebSocket event stream for alert-created, alert-status-updated, and alert-note-created events.
 - Dashboard alert stream consumption with browser notification support and polling fallback.
+- Persisted alert status history and a unified alert timeline API for created, status-change, and note events.
+- Desktop alert record detail timeline with local time and UTC display.
 - English and Simplified Chinese UI foundation with timezone preferences.
 - Pulse Prometheus metrics and Beacon Prometheus metrics.
 - OpenTelemetry tracing integration for Pulse and Beacon HTTP paths.
@@ -54,7 +56,7 @@ This PRD uses explicit status labels so product scope, roadmap, and code stay al
 ### 3.2 Partially Supported Capabilities
 
 - **Cross-border transport optimization:** Compression, CRC, and priority cache utilities exist, and Pulse exposes a compressed heartbeat endpoint, but Beacon does not yet use compression/resume upload in its runtime heartbeat path.
-- **Alert timeline UX:** Alert note persistence and realtime note events exist, but the UI still needs a unified status-change and note timeline.
+- **Alert timeline UX:** Alert note persistence, status history, realtime note events, and desktop timeline UI exist, but mobile detail still needs to consume the persisted timeline API.
 - **Webhook operations:** Delivery retries and manual test delivery exist, but endpoint health state, queue depth enforcement, delivery history UI, success-rate UI, timeout metrics, and unhealthy recovery checks are incomplete.
 - **Scheduled reports:** The Reports page can create schedules in local frontend state, but there is no server-side schedule persistence, execution, PDF generation job, or email delivery.
 - **Excel export:** The UI acknowledges Excel as unavailable and backend export supports CSV only.
