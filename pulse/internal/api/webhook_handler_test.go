@@ -2,7 +2,9 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,6 +18,11 @@ import (
 )
 
 func setupWebhookHandlerTest() (*gin.Engine, *db.MockWebhookQuerier) {
+	router, mockQuerier, _ := setupWebhookHandlerTestWithHandler()
+	return router, mockQuerier
+}
+
+func setupWebhookHandlerTestWithHandler() (*gin.Engine, *db.MockWebhookQuerier, *WebhookHandler) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
@@ -31,8 +38,9 @@ func setupWebhookHandlerTest() (*gin.Engine, *db.MockWebhookQuerier) {
 	router.PUT("/webhooks/:id", handler.UpdateWebhookHandler)
 	router.DELETE("/webhooks/:id", handler.DeleteWebhookHandler)
 	router.POST("/webhooks/preview", handler.PreviewWebhookEventHandler)
+	router.POST("/webhooks/:id/test", handler.TestWebhookHandler)
 
-	return router, mockQuerier
+	return router, mockQuerier, handler
 }
 
 func TestCreateWebhookHandler_ValidHTTPSURL(t *testing.T) {
@@ -230,6 +238,77 @@ func TestPreviewWebhookEventHandler_CustomFormat(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "Alert preview-alert-1 on preview-node-1", response.Data.Payload["text"])
 	assert.Equal(t, "P1", response.Data.Payload["severity"])
+}
+
+func TestTestWebhookHandler_Success(t *testing.T) {
+	router, mockQuerier, handler := setupWebhookHandlerTestWithHandler()
+
+	webhook := &models.Webhook{
+		ID:      "test-id",
+		URL:     "https://example.com/webhook",
+		Enabled: true,
+	}
+	mockQuerier.Webhooks[webhook.ID] = webhook
+
+	handler.testSender = func(ctx context.Context, event *models.AlertEvent, target *models.Webhook, baseURL string) error {
+		assert.Equal(t, webhook.ID, target.ID)
+		assert.NotEmpty(t, event.ID)
+		assert.NotEmpty(t, baseURL)
+		return nil
+	}
+
+	req := httptest.NewRequest("POST", "/webhooks/test-id/test", nil)
+	req.Host = "pulse.example.com"
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.TestWebhookResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, "test-id", response.Data.WebhookID)
+	assert.Equal(t, "success", response.Data.Status)
+}
+
+func TestTestWebhookHandler_DeliveryFailure(t *testing.T) {
+	router, mockQuerier, handler := setupWebhookHandlerTestWithHandler()
+
+	webhook := &models.Webhook{
+		ID:      "test-id",
+		URL:     "https://example.com/webhook",
+		Enabled: true,
+	}
+	mockQuerier.Webhooks[webhook.ID] = webhook
+	handler.testSender = func(context.Context, *models.AlertEvent, *models.Webhook, string) error {
+		return errors.New("endpoint rejected request")
+	}
+
+	req := httptest.NewRequest("POST", "/webhooks/test-id/test", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadGateway, w.Code)
+
+	var response models.TestWebhookResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, "test-id", response.Data.WebhookID)
+	assert.Equal(t, "failure", response.Data.Status)
+	assert.Contains(t, response.Data.Error, "endpoint rejected request")
+}
+
+func TestTestWebhookHandler_NotFound(t *testing.T) {
+	router, _, _ := setupWebhookHandlerTestWithHandler()
+
+	req := httptest.NewRequest("POST", "/webhooks/non-existent/test", nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }
 
 func TestGetWebhookByIDHandler_Success(t *testing.T) {

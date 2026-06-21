@@ -5,7 +5,9 @@ interface WebhooksTableProps {
   webhooks: Webhook[]
   onEdit: (id: string) => void
   onDelete: (id: string) => void
+  onTest?: (id: string) => void
   onToggleEnabled: (id: string, enabled: boolean) => void
+  testingWebhookId?: string | null
   canEdit: boolean
 }
 
@@ -13,7 +15,9 @@ export function WebhooksTable({
   webhooks,
   onEdit,
   onDelete,
+  onTest,
   onToggleEnabled,
+  testingWebhookId,
   canEdit,
 }: WebhooksTableProps) {
   const { t } = useTranslation()
@@ -128,6 +132,16 @@ export function WebhooksTable({
                 </td>
                 {canEdit && (
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {onTest && (
+                      <button
+                        type="button"
+                        onClick={() => onTest(webhook.id)}
+                        disabled={testingWebhookId === webhook.id}
+                        className="text-primary hover:text-primary disabled:cursor-wait disabled:opacity-60 mr-4"
+                      >
+                        {testingWebhookId === webhook.id ? t('webhooks.testing') : t('webhooks.testWebhook')}
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => onToggleEnabled(webhook.id, !webhook.enabled)}

@@ -40,11 +40,25 @@ type WebhookPreviewData struct {
 	Payload map[string]any `json:"payload"`
 }
 
+// WebhookTestData represents a manual webhook test delivery result.
+type WebhookTestData struct {
+	WebhookID string `json:"webhook_id"`
+	Status    string `json:"status"`
+	Error     string `json:"error,omitempty"`
+}
+
 // PreviewWebhookEventResponse represents a successful webhook payload preview response.
 type PreviewWebhookEventResponse struct {
 	Data      WebhookPreviewData `json:"data"`
 	Message   string             `json:"message"`
 	Timestamp string             `json:"timestamp"`
+}
+
+// TestWebhookResponse represents a manual webhook test delivery response.
+type TestWebhookResponse struct {
+	Data      WebhookTestData `json:"data"`
+	Message   string          `json:"message"`
+	Timestamp string          `json:"timestamp"`
 }
 
 // CreateWebhookResponse represents successful webhook creation response

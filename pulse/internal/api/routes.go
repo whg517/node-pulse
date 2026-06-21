@@ -449,9 +449,19 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// PUT /api/v1/alerts/records/:id/status - Update alert record status (all roles)
 		alertRecords.PUT("/:id/status", alertRecordHandler.UpdateAlertRecordStatusHandler)
 
+		// POST /api/v1/alerts/records/:id/notes - Add alert investigation note (all roles)
+		alertRecords.POST("/:id/notes", alertRecordHandler.AddAlertNoteHandler)
+
+		// GET /api/v1/alerts/records/:id/notes - List alert investigation notes (all roles)
+		alertRecords.GET("/:id/notes", alertRecordHandler.GetAlertNotesHandler)
+
 		// Webhook management routes (require admin auth only) (Story 5.2)
 		webhookQuerier := db.NewWebhookQuerier(pool)
-		webhookHandler := NewWebhookHandler(webhookQuerier)
+		var webhookLogsQuerier db.WebhookLogsQuerier
+		if pool != nil {
+			webhookLogsQuerier = db.NewWebhookLogsQuerier(pool)
+		}
+		webhookHandler := NewWebhookHandler(webhookQuerier, webhookLogsQuerier)
 
 		// Webhooks group with auth and RBAC middleware (admin only)
 		webhooks := v1.Group("/webhooks")
@@ -469,6 +479,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// POST /api/v1/webhooks/preview - Preview rendered webhook payload (admin only)
 		webhooks.POST("/preview", webhookHandler.PreviewWebhookEventHandler)
+
+		// POST /api/v1/webhooks/:id/test - Send a sample delivery to one webhook (admin only)
+		webhooks.POST("/:id/test", webhookHandler.TestWebhookHandler)
 
 		// PUT /api/v1/webhooks/:id - Update webhook configuration (admin only)
 		webhooks.PUT("/:id", webhookHandler.UpdateWebhookHandler)

@@ -1,1324 +1,308 @@
 # Product Requirements Document - NodePulse
 
-**作者:** Kevin
-**日期:** 2026-06-14 (文档同步版本)
-**版本:** 3.8 (BMAD 标准)
+**Owner:** Kevin
+**Date:** 2026-06-21
+**Version:** 4.0
+**Status:** Current implementation baseline and next-phase product design
 
-## 1. 项目背景与成功准则
-
-NodePulse 是一个专为海外网络监控设计的系统，通过分布式 Beacon 节点采集多维网络指标，并由中心化 Pulse 平台进行数据聚合与故障诊断。其核心价值在于**利用多协议探测技术，自动区分节点本地故障、跨境链路问题及运营商路由异常**。
-
-### 1.1 成功准则
-*   **运维效率**：通过告警链接在 30 秒内定位故障根因。新增路由深度分析，可精确定位故障发生在第几跳（Hop）。
-*   **诊断准确性**：基于多点比对及路由跳数分析，对跨境链路及运营商故障的自动识别准确率达 95% 以上。
-*   **可视化完备性**：提供从全局地图到微观路由跳数的全流程可视化，满足从主管到一线运维的不同视角需求。
+## 1. Product Context
 
-### 1.2 目标用户
-- **主要用户:**
-  - 海外运维工程师：负责海外节点日常监控、异常排查、网络优化
-  - 网络优化专员：基于工具数据制定跨境链路优化方案
-  - DevOps 团队
-- **次要用户:**
-  - 运维管理人员：掌握海外节点整体性能态势，评估网络质量
-  - CTO/工程经理、值班工程师
+NodePulse is a distributed network monitoring system for overseas infrastructure. Beacon agents run on monitored nodes, collect network metrics and route traces, and report to the Pulse platform. Pulse aggregates data, evaluates alert rules, serves operational APIs, and provides a web UI for monitoring, diagnosis, reporting, and configuration.
 
-## 2. 产品范围 (Product Scope)
+The product goal is not only to show whether a node is online. It should help operators answer three questions quickly:
 
-### 2.1 MVP 范围 (当前版本)
-
-**范围内**
-- Beacon 节点注册和管理
-- 实时指标收集和可视化
-- 路由偏差检测
-- MTR 路径分析和可视化
-- 手动警报路由
-- Beacon 双工作模式(独立/注册)
-- 探测任务配置文件定义(独立模式)
-- Server 探测任务下发(注册模式)
-- Beacon Prometheus metrics 暴露
-- 跨境传输优化(数据压缩、断点续传)
-- 多时区展示和时区自动适配
-- 中英双语界面切换(支持跨时区团队协作)
-- PDF 报告双语支持
-- TCP/ICMP Ping 协议探测(UDP/Iperf3 推迟至 v2.0)
-
-**范围外**
-- UDP/Iperf3 多协议支持(推迟至 v2.0)
-- 自动警报路由(推迟至 v2.0)
-- 多区域部署(推迟至 v2.0)
-- AI 驱动的分析(推迟至 v3.0)
-- 配置热更新(推迟至 v2.0)
-- 配置模板和批量管理(推迟至 v2.0)
-
-### 2.2 增长阶段 (Growth Phase)
-
-**关键功能**
-- 多协议关联分析
-- 基于 Webhook 的警报集成(Slack、PagerDuty)
-- 跨区域基线对比
-- 高级异常检测算法
-- 集中式探测任务配置管理
-- 动态配置下发与热更新
-- 中英双语界面切换
-- PDF 报告双语和本地化支持
+- Is the problem local to one node, regional, or cross-border?
+- Which route hop or network segment is likely responsible?
+- What should the operator do next, and how can the result be shared?
 
-## 3. 核心用户旅程 (User Journeys)
+## 2. Requirement Status Model
 
-### 3.1 运维主管：全网态势监控与决策
-主管打开"全局态势大屏"，通过地图一眼发现新加坡区域呈现黄色。点击异常节点进入详情页，通过"7天基线对比"和"MTR 路径图"确认是国际出口拥塞，随即在系统中导出"诊断报告"发送给运营商协调排查。
+This PRD uses explicit status labels so product scope, roadmap, and code stay aligned.
 
-**价值:** 缩短 MTTR(平均修复时间)从 30 分钟至 10 分钟
+- **Supported:** Implemented in the current codebase and usable through an API, Beacon behavior, or UI path.
+- **Partially supported:** Core pieces exist, but the end-to-end workflow is incomplete or not production-ready.
+- **Planned:** Desired in the next product phase but not yet implemented.
+- **Deferred:** Deliberately outside the current roadmap.
 
-### 3.2 运维工程师：节点快速扩容与压测
-工程师需要新增一个美国节点。他进入"节点管理"，点击"添加"，复制系统生成的一键启动脚本并在服务器运行。随后他在"压测管理"中设置了凌晨 2 点的带宽探测任务，以评估新节点的链路容量。
+## 3. Current Product Scope
 
-**价值:** 支持快速网络扩展,每节点部署时间 <5 分钟
+### 3.1 Supported Capabilities
 
-### 3.3 海外运维工程师 - 日常巡检与报告生成
+- User authentication, sessions, refresh-token rotation, RBAC, admin user management, and API key management.
+- Beacon authentication by API key exchange for JWT.
+- Beacon standalone and registered modes.
+- Local Beacon probe configuration with hot reload.
+- Server-managed Beacon probe configuration with version history and config acknowledgements.
+- TCP, UDP, and MTR probe execution in Beacon.
+- Heartbeat reporting from Beacon to Pulse.
+- MTR result upload, persistence, latest-route query, and history query.
+- Real-time metrics query and historical metrics query.
+- Multi-node comparison and rule-based diagnosis API.
+- Dashboard overview with metrics cards, world map, top anomalies, trend charts, and alert stream UI.
+- Node management, node detail, route visualization, and comparison UI.
+- Alert rules and alert records.
+- Webhook CRUD, webhook payload rendering preview, retrying webhook delivery, and delivery log persistence.
+- Data export as CSV.
+- Report preview/print workflow using live metrics, latest MTR, alert context, and diagnosis output.
+- System health page for database, scheduler, alert engine, webhook delivery, and suppression health.
+- English and Simplified Chinese UI foundation with timezone preferences.
+- Pulse Prometheus metrics and Beacon Prometheus metrics.
+- OpenTelemetry tracing integration for Pulse and Beacon HTTP paths.
 
-运维工程师每天早上启动"NodePulse Dashboard"，首先查看"全球健康地图"确认无红色区域(严重故障)。然后打开"健康报告生成器"，选择"亚太区域"和"过去24小时"，一键生成包含节点在线率、平均延迟、丢包趋势、跨境链路质量评估的 PDF 报告，通过邮件发送给团队。
+### 3.2 Partially Supported Capabilities
 
-**关键操作:**
-- 查看全球健康地图
-- 生成区域健康报告
-- 配置定时报告(每日/每周/每月)
-- 导出 PDF 并邮件发送
+- **Cross-border transport optimization:** Compression, CRC, and priority cache utilities exist, and Pulse exposes a compressed heartbeat endpoint, but Beacon does not yet use compression/resume upload in its runtime heartbeat path.
+- **Real-time alert push:** Frontend WebSocket and browser notification services exist, but Pulse does not expose a `/ws` or equivalent event stream endpoint.
+- **Mobile alert handling:** A mobile alert detail component exists, but backend alert note routes are missing and status updates currently ignore note content.
+- **Webhook operations:** Delivery retries exist, but manual test delivery, endpoint health state, queue depth enforcement, delivery history UI, success-rate UI, timeout metrics, and unhealthy recovery checks are incomplete.
+- **Scheduled reports:** The Reports page can create schedules in local frontend state, but there is no server-side schedule persistence, execution, PDF generation job, or email delivery.
+- **Excel export:** The UI acknowledges Excel as unavailable and backend export supports CSV only.
+- **Configuration rollback:** Beacon config history can be viewed, but rollback-to-version is not implemented.
+- **Internationalization:** The main framework is present, but some operational strings remain hardcoded.
+- **Accessibility:** UI components generally use labels and semantic primitives, but WCAG 2.1 AA has not been fully audited or enforced.
 
-**价值:** 每日巡检时间从 30 分钟缩短至 5 分钟，自动化报告生成节省 80% 时间
+### 3.3 Planned Capabilities
 
-### 3.4 网络优化专员 - 优化评估与性能对比
+- End-to-end compressed and resumable Beacon upload.
+- Pulse alert event streaming for dashboard and browser notifications.
+- Alert notes and status timeline persistence.
+- Webhook test send, health state, delivery statistics, and history view.
+- Server-side report schedules with email delivery.
+- XLSX export.
+- Config rollback.
+- Production hardening for TLS/mTLS defaults, health endpoints, backup, and load-test gates.
+- Better diagnostic recommendations and owner attribution.
 
-网络优化专员需要评估新开通的"新加坡-东京"跨境专线质量。他在 NodePulse 中选择"性能对比分析"，设置对比基准为"优化前一周"和"优化后当前时段"，系统自动生成对比图表：延迟降低 35%、丢包率从 2% 降至 0.1%、抖动减少 60%。专员将对比图表导出为 PDF，作为优化成果证明提交给管理层。
+### 3.4 Deferred Capabilities
 
-**关键操作:**
-- 选择对比时间范围(优化前/后)
-- 选择对比指标(延迟/丢包/抖动/吞吐量)
-- 生成对比图表和统计摘要
-- 导出 PDF 证明材料
+- Iperf3 throughput testing and MTU path discovery.
+- AI-driven diagnosis.
+- Multi-region Pulse deployment.
+- Public SEO optimization.
 
-**价值:** 量化优化效果，用数据驱动网络决策
+## 4. Primary User Journeys
 
-### 3.5 运维管理人员 - 应急响应与实时告警
+### 4.1 Operations Dashboard
 
-凌晨 3 点，运维人员收到手机推送的 NodePulse 告警："新加坡节点 #3 严重丢包(85%)"。他立即点击推送链接跳转到移动端诊断页面，查看 MTR 路径图发现第 6 跳(运营商网关)丢包严重。他在告警中添加备注："已联系运营商"，标记状态为"处理中"。10 分钟后故障恢复，他收到恢复通知并关闭告警。
-
-**关键操作:**
-- 接收移动端实时推送(包含故障级别、影响节点、跳转链接)
-- 查看移动端 MTR 路径图和关键指标
-- 添加处理备注和状态更新
-- 订阅告警恢复通知
+An operator opens the dashboard, reviews global node health, checks the top anomaly list, drills into a degraded node, reviews recent metrics and MTR path data, and determines whether the issue is local, regional, or route-related.
 
-**价值:** 应急响应时间从 15 分钟缩短至 3 分钟，移动端支持随时随地处理故障
+**Success criteria:**
 
-### 3.6 DevOps 工程师 - 独立部署 Beacon 与现有监控集成
+- Dashboard loads the current node and metric picture within 3 seconds in a normal deployment.
+- Operator can reach node detail from dashboard map, table, or anomaly list.
+- Node detail shows metrics history, diagnosis, and latest MTR data when available.
 
-DevOps 工程师需要在边缘环境中快速部署一个独立的 beacon,不连接到 central pulse server,而是直接暴露 Prometheus metrics 供现有的 Prometheus 抓取。
-
-**部署步骤:**
-1. 下载 beacon 二进制文件到目标服务器
-2. 编写探测任务配置文件(指定目标 IP、协议、间隔)
-3. 启动 beacon: `./beacon --config=/path/to/beacon.yaml --mode=standalone`
-4. 配置 Prometheus 抓取目标: `http://beacon-server:9090/metrics`
-5. 在 Grafana 中导入预定义的仪表板查看 beacon metrics
-
-**关键操作:**
-- 通过配置文件定义探测任务
-- 启动时指定独立模式
-- 暴露 /metrics 端点供 Prometheus 抓取
-- 在现有 Grafana 中可视化指标
-
-**价值:**
-- 无需部署完整的 Pulse Server 即可获得网络监控能力
-- 与现有可观测体系无缝集成
-- 支持边缘环境快速部署
-
-### 3.7 跨国团队协作 - 多时区与多语言协作
-
-跨国网络运维团队分布在新加坡(UTC+8)、伦敦(UTC+0)、纽约(UTC-5)三个地区,需要协同处理网络故障。
-
-**协作场景:**
-新加坡工程师在凌晨 2 点收到告警,发现北美区域节点异常。他:
-1. 打开 Dashboard,切换到英文界面(便于与英美团队沟通)
-2. 将显示时区切换为 UTC(统一时间标准)
-3. 查看北美节点的 MTR 路径图,确认第 6 跳丢包 80%
-4. 导出英文版 PDF 诊断报告(UTC 时区)
-5. 将报告链接发送给英美团队的 Slack 频道
-
-**关键操作:**
-- 切换界面语言(中文/英文)
-- 切换显示时区(UTC/节点本地/用户本地)
-- 查看跨时区节点数据
-- 导出本地化 PDF 报告
-
-**价值:**
-- 支持 24x7 全球团队协作
-- 统一时间标准避免时区混淆
-- 多语言支持降低沟通成本
-
-## 4. 功能需求 (Functional Requirements)
-
-### 4.1 Pulse Beacon (多协议探测端)
-
-**FR-4.1.1 [必须] 多协议探测**
-
-Beacon 应支持多种网络协议进行探测,以实现全面的网络诊断能力。
-
-**MVP 范围协议:**
-- **TCP/ICMP Ping:** 基础连通性检测,测量延迟、丢包率
-- **MTR 逐跳分析:** 路由路径探测和跳数分析
-
-**v2.0 增强协议(当前范围外):**
-- **UDP Ping:** UDP 协议连通性检测
-- **Iperf3 吞吐量测试:** 带宽容量评估
-- **MTU 路径探测:** 路径 MTU 发现
-
-**配置管理:**
-- Beacon 应支持配置文件定义探测任务
-- 配置文件应支持:目标端点列表、探测协议(TCP/ICMP/MTR)、测量间隔、超时设置
-- Beacon 应在启动时加载配置文件
-
-**可追溯性:** 基础技术能力 - 支持所有用户旅程的网络探测需求
-
-**FR-4.1.2 [必须] 双工作模式配置管理**
-
-Beacon 应支持两种工作模式,通过启动参数 `--mode` 指定:
-
-**独立模式:**
-- Beacon 应从本地配置文件加载探测任务定义
-- 配置文件应支持:目标端点列表、探测协议、测量间隔、超时设置
-- Beacon 应在启动时验证配置文件格式和内容
-- Beacon 应在配置变更时支持热重载(通过操作系统信号)
-
-**注册模式:**
-- Beacon 应在启动时向 Pulse Server 注册并提供 Node-Token
-- Beacon 应从 Server 获取分配的探测任务配置
-- Beacon 应定期(默认:60秒)检查配置更新
-- Beacon 应在收到新配置时应用变更并确认
-- Beacon 应在 Server 不可用时使用缓存配置继续运行(降级模式)
-
-**降级模式定义:**
-- **进入条件**: 连续 3 次心跳失败或 Server 连接超时
-- **行为**: 使用本地缓存的最后有效配置继续运行,保持探测任务执行
-- **退出条件**: 成功完成一次心跳并收到 Server 确认
-- **状态指示**: `beacon_mode` 指标显示 "degraded",日志记录降级原因
-
-**配置优先级:**
-- 注册模式下:Server 下发配置优先级 > 本地默认配置
-- 独立模式下:仅使用本地配置文件,忽略 Server 配置
-
-**验收标准:**
-
-*独立模式场景:*
-- 假设配置文件定义了 5 个探测目标
-- 当 Beacon 以 `--mode=standalone` 启动
-- 则 Beacon 加载配置文件中的所有探测任务
-- 并且 Beacon 暴露 /metrics 端点供 Prometheus 抓取
-- 并且 Beacon 不尝试连接 Pulse Server
-
-*注册模式场景:*
-- 假设 Beacon 配置了有效的 Node-Token
-- 当 Beacon 以 `--mode=registered` 启动
-- 则 Beacon 向 Server 注册并接收探测任务配置
-- 并且 Beacon 忽略本地配置文件中的任务定义
-- 并且 Beacon 每 60 秒检查配置更新
-
-*配置更新场景:*
-- 假设 Beacon 运行在注册模式
-- 当 Server 下发新的探测任务配置
-- 则 Beacon 在 60 秒内应用新配置
-- 并且 Beacon 向 Server 发送配置确认
-- 并且探测任务使用新配置执行
-
-**FR-4.1.3 [必须] 运行时状态查询**
-- Beacon 应支持运行时状态查询命令
-- 状态应包括:运行时间、活跃探测任务数、最后心跳时间、错误计数
-
-**验收标准:**
-- 假设 Beacon 正在运行
-- 当用户执行状态命令
-- 则系统显示:运行时间、活跃探测、最后心跳、错误计数
-
-**可追溯性:** 运维操作需求 - 支持 journeys 2, 6 的节点状态监控
-
-**FR-4.1.4 [必须] 工作模式状态监控**
-
-Beacon 应暴露当前工作模式和配置状态,便于运维监控和故障排查。
-
-**状态信息:**
-- 当前工作模式(standalone/registered/degraded)
-- 配置来源(local_config/server_provided/cached)
-- 最后配置更新时间
-- 最后成功连接 Server 时间(仅注册模式)
-- 配置版本号(仅注册模式)
-
-**验收标准:**
-- 假设 Beacon 运行在注册模式
-- 当用户查询 Beacon 状态或抓取 metrics
-- 则 metrics 包含 `beacon_mode` 标签指示当前模式
-- 并且包含 `beacon_config_source` 指示配置来源
-- 并且包含 `beacon_config_version` 指示配置版本
-- 并且配置变更时 metrics 自动更新
-
-**FR-4.1.5 [必须] 跨境传输优化**
-
-Beacon 应支持数据压缩和断点续传,确保跨境网络波动时的数据完整性和传输效率。
-
-**数据压缩:**
-- Beacon 应在向 Server 上报探测数据前应用压缩算法
-- 压缩算法应支持可配置的压缩级别(0-9,默认:6)
-- Beacon 应在压缩失败时降级为未压缩模式并记录错误
-- Beacon 应在 metrics 中暴露压缩率统计
-- 压缩率应 ≥ 70%
-
-**断点续传:**
-- Beacon 应在网络中断时缓存未发送的数据(最大 10MB)
-- Beacon 应使用本地持久化缓存保存缓存数据
-- Beacon 应在网络恢复后自动续传缓存数据(按时间顺序)
-- Beacon 应支持缓存满时的淘汰策略(FIFO:淘汰最旧数据)
-- Beacon 应在续传完成后向 Server 发送数据完整性校验
-
-**配置参数:**
-- `compression.enabled`: 是否启用压缩(默认:true)
-- `compression.algorithm`: 压缩算法(gzip/zstd,默认:gzip)
-- `compression.level`: 压缩级别(0-9,默认:6)
-- `resume.cache_max_size`: 最大缓存大小(默认:10MB)
-- `resume.cache_path`: 缓存文件路径(默认:/var/lib/beacon/cache)
-
-**验收标准:**
-
-*数据压缩场景:*
-- 假设 Beacon 配置启用 GZIP 压缩(级别 6)
-- 当 Beacon 上报 1MB 原始探测数据
-- 则压缩后数据大小 ≤ 300KB(压缩率 ≥ 70%)
-- 并且 Server 成功解压并处理数据
-- 并且 `beacon_compression_ratio` metric 记录压缩率
-
-*断点续传场景:*
-- 假设 Beacon 与 Server 连接中断
-- 当 Beacon 生成探测数据无法发送
-- 则 Beacon 将数据缓存到本地存储
-- 并且缓存大小不超过配置的上限(10MB)
-- 当网络恢复,Beacon 重新连接 Server
-- 则 Beacon 自动续传所有缓存数据(按时间顺序)
-- 并且续传完成后校验数据完整性
-
-*缓存淘汰场景:*
-- 假设 Beacon 缓存已满(10MB)
-- 当新的探测数据需要缓存
-- 则 Beacon 淘汰最旧的缓存数据(FIFO)
-- 并且 `beacon_cache_evictions_total` counter 记录淘汰次数
-
-**FR-4.1.6 [必须] 数据完整性校验**
-
-Beacon 应在跨境传输中确保数据完整性,防止压缩或传输过程中的静默数据损坏。
-
-**校验机制:**
-- Beacon 应在压缩前为每个数据包计算 CRC32 校验和
-- Server 应在解压后验证校验和,丢弃损坏的数据包
-- 损坏数据包应触发告警指标: `beacon_compression_corruption_total`
-
-**错误处理:**
-- 校验失败的数据包应被丢弃并记录到错误日志
-- Server 应暴露压缩完整性指标: `pulse_compression_correlation_errors_total`
-- 连续3次校验失败应触发告警,提示可能的数据传输问题
-
-**验收标准:**
-
-*数据完整性校验场景:*
-- 假设压缩导致数据损坏
-- 当 Server 解压数据包
-- 则系统检测到 CRC32 不匹配
-- 并且丢弃损坏数据包
-- 并且 `beacon_compression_corruption_total` counter 递增
-- 并且触发数据完整性告警
-
-**可追溯性:** 质量增强 - 支持跨境数据传输需求 (Journey 7)
-
-**FR-4.1.7 [必须] 优先级缓存管理**
-
-Beacon 应实现基于数据类型的优先级缓存策略,确保关键告警数据在缓存满时优先保留。
-
-> **注意**: 本节中的优先级标签 (Cache-P0/P1/P2) 用于数据缓存策略,与 FR-4.3.8 中的告警严重级别 (Alert-P0/P1/P2) 是独立的分类体系。
-
-**缓存优先级定义 (Cache Priority):**
-- **Cache-P0 (最高)**: 告警数据 (alert, anomaly detected)
-- **Cache-P1**: 心跳包 (heartbeat, keep-alive)
-- **Cache-P2**: 常规探测数据 (latency, loss, jitter)
-
-**缓存策略:**
-- 告警数据应永不因缓存满而被丢弃,即使需要淘汰旧的常规数据
-- 心跳包应跳过压缩和缓存,直接发送(最快路径)
-- 缓存满时,应优先保留最近30分钟的告警数据
-- 常规探测数据按 FIFO 策略淘汰
-
-**配置参数:**
-- `resume.alert_priority_mode`: 是否启用优先级模式(默认:true)
-- `resume.alert_reserve_percent`: 为告警预留的缓存百分比(默认:30%)
-- `heartbeat.bypass_cache`: 心跳是否绕过缓存(默认:true)
-
-**验收标准:**
-
-*优先级缓存场景:*
-- 假设 Beacon 缓存已使用 95%
-- 当新的告警数据需要缓存
-- 则系统淘汰最旧的常规探测数据(即使告警数据更旧)
-- 并且告警数据成功缓存
-- 并且 `beacon_cache_priority_preserved_total` 指标递增
-
-*心跳直发场景:*
-- 假设 Beacon 需要发送心跳包
-- 当心跳包生成
-- 则心跳包跳过压缩和缓存
-- 并且心跳包直接通过网络发送
-- 并且发送延迟 ≤ 50ms
-
-**可追溯性:** 增强功能 - 提升告警可靠性 (Journey 5)
-
-### 4.2 Pulse Server (中心管理端)
-
-**FR-4.2.1 [必须] 智能诊断引擎**
-
-Server 应实现基于规则的网络故障自动诊断,帮助运维人员快速定位问题根因。
-
-**路由绕路识别:**
-- 对比当前 MTR 路径与 7 天历史基线
-- 检测路由跳数变化 > 20% 或 AS 路径变化
-- 识别绕路类型:运营商绕路、国际出口绕路、CDN 绕路
-- 触发告警并标注绕路类型
-
-**带宽容量异常判定:**
-- 基于同区域 Beacon 的吞吐量测试数据对比
-- 检测带宽利用率 > 90% 持续 5 分钟
-- 识别瓶颈类型:最后一公里、国际链路、目标服务器
-- 提供带宽容量评估报告
-
-**跨区域比对逻辑:**
-- 对比同一区域内 3+ Beacon 的实时数据
-- 计算本地故障 vs 跨境链路问题的概率
-- 使用多数投票算法确定故障范围
-- 输出诊断结论和置信度
-
-**诊断性能要求:**
-- 诊断分析时间 ≤ 5 秒(从数据采集完成到结论输出)
-- 故障检测准确率 ≥ 95%(基于人工验证样本)
-- 支持并发诊断多个节点
-
-**验收标准:**
-- 假设发生跨境链路故障(丢包率突增)
-- 当 Server 收到 3+ Beacon 的数据
-- 则系统在 5 秒内完成诊断分析
-- 并且输出故障类型(本地/跨境/运营商路由)
-- 并且准确率 ≥ 95%
-
-**FR-4.2.2 [必须] 数据中心**
-*   基于缓存策略的 7 天内存缓存,支持路由快照存储
-*   数据查询 API 支持 JSON 响应格式
-
-**缓存新鲜度监控:**
-- Server 应检测和处理缓存数据的时效性
-- 路由快照应包含 TTL(Time-To-Live)字段,过期自动重新获取
-- 网络拓扑变更(AS路径变化)时应触发相关缓存失效
-- Server 应暴露缓存新鲜度指标: `pulse_cache_stale_hits_total`
-
-**缓存失效机制:**
-- 当检测到路由跳数变化超过 20% 时,应标记相关缓存为过期
-- 超过 1 小时未更新的路由快照应自动标记为 stale
-- 查询时如果检测到 stale 数据,应异步触发重新探测并返回警告头
-
-**验收标准:**
-- 假设有效的 API 令牌
-- 当客户端请求指标端点
-- 则系统返回包含请求数据的 JSON 响应
-- 并且响应时间 P99 ≤ 500ms
-
-- 假设路由拓扑发生重大变化(跳数变化 >20%)
-- 当 Server 检测到变化
-- 则标记相关缓存为过期
-- 并且 `pulse_cache_invalidations_total` 指标递增
-- 并且下次查询触发重新探测
-
-**FR-4.2.3 [必须] 系统自观测**
-
-Server 应暴露全面的 Prometheus 指标,用于监控自身的运行状态、性能和资源使用情况。
-
-**必需的系统指标:**
-
-**资源使用指标:**
-- `pulse_server_memory_usage_bytes`: 服务器内存使用量(gauge)
-- `pulse_server_cpu_usage_percent`: 服务器 CPU 使用率(gauge)
-- `pulse_server_goroutines`: Goroutine 数量(gauge)
-- `pulse_server_heap_alloc_bytes`: 堆内存分配量(gauge)
-
-**API 性能指标:**
-- `pulse_api_requests_total{endpoint, status_code}`: API 请求总数(counter)
-- `pulse_api_response_time_seconds{endpoint}`: API 响应时间(histogram)
-- `pulse_api_active_connections`: 当前活跃连接数(gauge)
-
-**数据队列指标:**
-- `pulse_webhook_queue_depth`: Webhook 队列深度(gauge)
-- `pulse_webhook_delivery_success_total`: Webhook 投递成功总数(counter)
-- `pulse_webhook_delivery_failed_total`: Webhook 投递失败总数(counter)
-
-**Beacon 连接指标:**
-- `pulse_beacons_connected`: 已连接 Beacon 数量(gauge)
-- `pulse_beacons_disconnected_total`: Beacon 断连总数(counter)
-
-**指标更新频率:**
-- Gauge 类型指标每 15 秒更新一次
-- Counter 类型指标在事件发生时立即递增
-- Histogram 类型指标自动计算分位数(P50, P95, P99)
-
-**验收标准:**
-- 假设 Prometheus 配置了 Server 的 `/metrics` 端点
-- 当访问 `/metrics` 端点
-- 则响应包含所有 11 个必需指标
-- 并且指标遵循 Prometheus 命名规范
-- 并且指标每 15 秒更新一次
-
-**可追溯性:** 运维需求 - 支持 SC-1.4 (99.9% 正常运行时间)
-
-**FR-4.2.4 [必须] 探测任务配置管理**
-
-Server 应提供集中式的探测任务配置管理功能,支持动态下发和版本控制。
-
-**配置管理功能:**
-- Server 应支持为每个 Beacon 或 Beacon 组分配探测任务配置
-- 配置应包含:目标端点列表、探测协议、测量间隔、超时设置、优先级
-- Server 应支持配置版本管理和历史记录(保留最近 10 个版本)
-- Server 应支持配置模板以简化批量 Beacon 配置
-
-**配置下发机制:**
-- Beacon 注册时 Server 应立即下发初始配置
-- Server 应支持配置推送(Beacon 主动拉取或 Server 推送)
-- Server 应在配置变更时通知受影响的 Beacons
-- Server 应记录每个 Beacon 的配置确认状态
-
-**配置验证:**
-- Server 应在保存配置前验证配置格式
-- Server 应检测配置冲突(如:间隔过短导致资源耗尽)
-- Server 应提供配置预览功能,在应用前显示预期影响
-
-**API 端点:**
-- `POST /api/beacons/{id}/config` - 更新 Beacon 配置
-- `GET /api/beacons/{id}/config` - 查询当前配置
-- `GET /api/beacons/{id}/config/history` - 查询配置历史
-- `POST /api/beacon-groups/{gid}/config` - 批量更新配置
-
-**验收标准:**
-
-*配置下发场景:*
-- 假设 Beacon 向 Server 注册
-- 当 Beacon 请求配置
-- 则 Server 在 1 秒内返回该 Beacon 的探测任务配置
-- 并且配置包含所有必需字段(目标、协议、间隔)
-- 并且配置包含版本号和更新时间戳
-
-*配置更新场景:*
-- 假设运维人员通过 Dashboard 更新 Beacon 配置
-- 当配置保存并触发下发
-- 则 Server 在 5 秒内通知所有受影响的 Beacons
-- 并且 Beacons 在 60 秒内应用新配置
-- 并且 Server 记录配置版本历史
-
-*配置验证场景:*
-- 假设运维人员提交无效配置(如:间隔 < 10 秒)
-- 当 Server 验证配置
-- 则 Server 拒绝配置并返回详细错误信息
-- 并且错误信息说明哪些字段无效及原因
-
-### 4.3 Pulse 看板 (Web UI 核心模块)
-
-#### A. 全局态势大屏 (Global Dashboard)
-
-**FR-4.3.1 [必须] 健康分布地图**
-
-Dashboard 应提供全球节点地理分布可视化,实时展示所有 Beacon 的健康状态。
-
-**可视化要求:**
-- 基于地图组件展示全球节点分布
-- 节点健康状态颜色编码:绿色(健康)、黄色(警告)、红色(严重)、灰色(离线)
-- 节点图标支持缩放:1-1000+ 节点自动调整显示密度
-- 地理位置精度:城市级
-- 实时更新:地图数据每 5 秒刷新一次
-
-**交互功能:**
-- 点击节点图标直接跳转到节点详情页
-- 悬停显示节点简要信息(名称、位置、ISP、当前状态)
-- 支持地图缩放和平移操作
-- 支持按健康状态筛选节点显示
-
-**验收标准:**
-- 假设 Dashboard 显示 50+ 全球节点
-- 当用户查看健康分布地图
-- 则地图显示所有节点的地理位置和健康状态
-- 并且节点颜色准确反映当前健康状态
-- 并且点击节点图标在 1 秒内跳转到详情页
-- 并且悬停显示节点简要信息
-
-**FR-4.3.2 [必须] 核心指标看板**
-
-Dashboard 应提供实时网络健康态势总览,汇总关键指标和异常信息。
-
-**指标汇总:**
-- 在线率:当前在线 Beacon 数量 / 总 Beacon 数量
-- 异常率:当前异常 Beacon 数量 / 总 Beacon 数量
-- 24h 告警趋势:折线图显示最近 24 小时告警数量趋势
-- Top 5 延迟节点:按平均延迟降序排列的榜单
-- Top 5 丢包节点:按丢包率降序排列的榜单
-
-**数据刷新:**
-- 支持 5s/10s/30s 自动刷新频率设置
-- 用户可手动刷新(立即刷新按钮)
-- 数据缓存 ≤10 秒减少服务器负载
-
-**验收标准:**
-- 假设用户打开 Dashboard
-- 当用户访问核心指标看板
-- 则显示在线率、异常率、告警趋势和 Top 榜单
-- 并且数据每 5 秒自动更新(默认设置)
-- 并且用户可切换刷新频率或手动刷新
-
-**FR-4.3.3 [必须] 告警流水线**
-
-Dashboard 应实时展示最新告警流,提供快速访问告警详情的入口。
-
-**展示要求:**
-- 显示最新 10 条活跃告警
-- 自动滚动展示(新告警从顶部插入)
-- 每条告警显示:级别(P0/P1/P2)、节点名、异常类型、触发时间、当前状态
-
-**交互要求:**
-- 点击告警直接跳转到节点详情页
-- 告警状态标识:未处理(红)、处理中(黄)、已恢复(灰)
-- 支持按级别、节点、状态筛选告警
-
-**性能要求:**
-- 告警推送延迟 ≤ 3 秒(从触发到显示)
-- 列表刷新频率:5 秒
-
-**验收标准:**
-- 假设系统有 15 条活跃告警
-- 当用户查看告警流水线
-- 则显示最新 10 条告警
-- 并且每 5 秒自动更新列表
-- 并且点击告警在 1 秒内跳转到节点详情页
-
-**可追溯性:** UI组件 - 可与 FR-4.3.2 或 FR-4.3.13 合并
-
-**FR-4.3.4 [必须] 多指标时序图表**
-
-Dashboard 应提供多维度网络指标的时序图表,支持趋势分析和基线对比。
-
-**图表功能:**
-- 支持延迟、丢包率、抖动三种指标类型
-- 可同时显示最多 3 个指标
-- 时间范围选择:最近 1 小时、6 小时、24 小时、7 天
-- 7 天基线数据叠加显示(虚线或半透明)
-
-**交互要求:**
-- 支持缩放和平移时序图
-- 悬停显示数据点详细信息(时间戳、数值)
-- 支持图表导出为 PNG 图片
-
-**性能要求:**
-- 图表渲染时间 ≤ 2 秒(7 天数据)
-- 数据点粒度:1 分钟(最近 24 小时)、5 分钟(7 天)
-- 缩放和响应时间 ≤ 500ms
-
-**验收标准:**
-- 假设用户查看某节点最近 7 天的延迟趋势
-- 当用户选择时间范围和指标类型
-- 则系统在 2 秒内渲染时序图
-- 并且显示 7 天基线对比数据
-- 并且用户可缩放和导出图表
-
-**FR-4.3.5 [必须] 可视化路由拓扑**
-
-Dashboard 应图形化展示 MTR 路径,标注每一跳的详细信息和风险状态。
-
-**可视化要求:**
-- 显示完整 MTR 路径(从源到目标)
-- 每跳包含:IP 地址、AS 号、延迟趋势图(最近 10 分钟)、丢包率
-- 地理位置信息(城市、国家,如可用)
-
-**高风险标注:**
-- 红框标注条件:
-  - 丢包率 ≥ 10%
-  - 延迟 ≥ 200ms
-  - 延迟抖动 ≥ 50ms
-  - 连续 3 次探测超时
-- 黄色标注:丢包率 5-10% 或延迟 100-200ms
-
-**交互要求:**
-- 悬停显示该跳详细信息(IP、AS、地理位置)
-- 点击跳数显示历史趋势(7 天)
-
-**验收标准:**
-- 假设 MTR 检测到第 6 跳丢包率 15%
-- 当用户查看路由拓扑
-- 则第 6 跳显示红框标注
-- 并且悬停显示 IP、AS 和地理位置信息
-
-#### B. 节点详情与深度诊断 (Node Analysis)
-
-> 本节功能在上文 A. 全局态势大屏 中已详细定义,此处为节点详情页的引用说明。
-> - 多指标时序图表参见 **FR-4.3.4**
-> - 可视化路由拓扑参见 **FR-4.3.5**
-
-**FR-4.3.6 [应该] 诊断报告导出**
-
-Dashboard 应支持一键生成节点异常诊断报告,用于故障分析和文档归档。
-
-**报告内容(必需的 6 个部分):**
-
-1. **节点基本信息**
-   - 节点 ID、名称、地理位置(国家/城市)
-   - ISP 信息、节点标签
-   - 异常时间段和时间线
-
-2. **关键指标快照**
-   - 延迟指标:最小/最大/平均值、P50/P95/P99
-   - 丢包率指标:最小/最大/平均值、峰值时间
-   - 抖动指标:最小/最大/平均值、抖动峰值
-   - 可用性指标:在线率、离线时长、离线次数
-
-3. **MTR 路径可视化**
-   - 完整路由跳数拓扑图
-   - 每跳详细信息(IP、AS 号、地理位置)
-   - 问题跳数高亮标注(丢包/延迟/抖动超标)
-
-4. **7 天基线对比**
-   - 同时间段历史基线数据
-   - 当前指标 vs 基线偏差
-   - 异常程度量化(百分比变化)
-
-5. **根因分析摘要**
-   - 自动诊断结论(本地故障/跨境链路/运营商路由)
-   - 可能的原因分析
-   - 建议的排查方向
-
-6. **事件时间线**
-   - 异常开始时间
-   - 告警触发时间
-   - 恢复时间(如已恢复)
-   - 处理记录和备注
-
-**导出格式和性能:**
-
-- **格式:** PDF(A4 纵向,最多 5 页)
-- **文件大小:** ≤ 2MB
-- **生成时间:** ≤ 10 秒
-- **语言支持:** 中英文双语
-- **包含图表:** MTR 路径图、指标趋势图
-
-**验收标准:**
-- 假设节点出现异常(丢包率 > 5%)
-- 当用户点击"导出诊断报告"按钮
-- 则系统在 10 秒内生成 PDF 报告
-- 并且 PDF 包含所有 6 个必需部分
-- 并且文件大小 ≤ 2MB
-- 并且报告支持中英文双语
-
-#### C. 配置与告警管理 (Management)
-
-**FR-4.3.7 [必须] 引导式节点注册**
-
-Dashboard 应提供向导式的节点注册流程,简化新 Beacon 的部署流程。
-
-**向导式注册流程:**
-- 步骤 1:输入节点基本信息(名称、地理位置、ISP 信息)
-- 步骤 2:配置节点标签(用途、环境、优先级)
-- 步骤 3:生成部署脚本(包含 Node-Token 预配置)
-
-**可视化节点管理:**
-- 地图界面显示所有已注册节点
-- 支持节点标签可视化管理(颜色编码)
-- 支持 ISP 信息批量编辑
-
-**一键部署脚本生成:**
-- 自动生成 Beacon 部署脚本(包含 Node-Token、Server URL)
-- 脚本支持 Linux/macOS/Windows
-- 脚本语法验证:100% (生成前检查)
-
-**验收标准:**
-- 假设运维人员需要添加新节点
-- 当用户完成引导式注册流程
-- 则系统在 2 秒内生成部署脚本
-- 并且脚本包含所有必需参数(Node-Token、Server URL、标签)
-- 并且脚本可直接执行无需手动修改
-
-**FR-4.3.8 [必须] 告警策略编辑器**
-
-Dashboard 应提供图形化告警策略配置界面,支持多级阈值和告警抑制规则。
-
-**阈值配置:**
-- 支持三级告警级别配置:
-  - P0 严重:延迟 ≥ 500ms 或丢包率 ≥ 20%
-  - P1 警告:延迟 ≥ 200ms 或丢包率 ≥ 10%
-  - P2 提示:延迟 ≥ 100ms 或丢包率 ≥ 5%
-- 支持自定义阈值和持续时长
-- 支持按节点标签分组配置策略
-
-**告警抑制:**
-- 支持配置抑制规则(如:同一节点 10 分钟内只告警一次)
-- 支持维护窗口配置(抑制维护期内的告警)
-- 支持依赖关系配置(上游节点故障时抑制下游告警)
-
-**界面要求:**
-- 提供策略模板(默认、严格、宽松)
-- 实时验证配置有效性
-- 显示策略影响范围(受影响的节点数量)
-
-**验收标准:**
-- 假设用户配置 P0 延迟阈值 ≥ 500ms
-- 当节点延迟达到 500ms 并持续 2 分钟
-- 则触发 P0 告警
-- 并且告警包含节点信息和阈值
-
-**FR-4.3.9 [必须] Webhook 集成管理**
-
-Dashboard 应支持第三方系统集成,通过 Webhook 推送告警到外部系统。
-
-**Webhook 配置:**
-- 支持配置多个 Webhook URL
-- 支持选择告警级别过滤(P0/P1/P2)
-- 支持自定义 HTTP headers
-
-**推送监控:**
-- 显示推送历史记录(最近 100 条)
-- 显示推送成功率(成功/失败总数)
-- 显示推送延迟(最新 10 次)
-
-**连通性测试:**
-- 支持手动测试 Webhook 连通性
-- 测试响应时间 ≤ 3 秒
-- 显示测试结果(HTTP 状态码、响应时间)
-
-**重试与错误处理:**
-- Webhook 推送失败时应自动重试,最多 3 次,间隔为 1s、2s、4s(指数退避)
-- 连续 3 次失败的 Webhook 端点应标记为 "不健康" 状态
-- 不健康的 Webhook 端点应在 5 分钟后自动恢复探测
-- 单次推送超时时间为 10 秒
-- 重试期间新告警应排队等待,队列深度不超过 100 条
-
-**验收标准:**
-- 假设用户配置 Webhook URL 并触发告警
-- 当告警触发
-- 则系统在 5 秒内推送 Webhook
-- 并且推送成功率 ≥ 99.5%
-- 并且推送历史记录可见
-
-*重试场景:*
-- 假设 Webhook 端点返回 5xx 错误
-- 当首次推送失败
-- 则系统按指数退避策略重试(1s、2s、4s)
-- 并且如果 3 次重试均失败,则标记端点为 "不健康"
-- 并且 `pulse_webhook_unhealthy_total` 指标递增
-- 并且 5 分钟后自动恢复探测
-
-*超时场景:*
-- 假设 Webhook 端点响应缓慢
-- 当单次推送超过 10 秒未响应
-- 则系统取消当前请求并触发重试
-- 并且 `pulse_webhook_timeout_total` 指标递增
-
-**FR-4.3.10 [应该] 系统 Pulse 监控**
-- Dashboard 应展示系统 Pulse 监控:内存使用、API 吞吐量、Webhook 队列深度
-
-**验收标准:**
-- 假设管理员用户访问
-- 当用户查看系统 Pulse 页面
-- 则系统显示:内存消耗、请求/秒、webhook 队列大小
-- 并且指标实时更新
-
-**可追溯性:** 运维需求 - 支持 SC-1.4 (99.9% 正常运行时间)
-
-**FR-4.3.11 [必须] 定时健康报告生成**
-- Dashboard 应支持按区域和时间范围生成健康报告
-- 报告应包含:节点在线率、平均延迟、丢包率、异常事件汇总、跨境链路质量评估
-- 报告应支持导出为 PDF 格式
-- 报告应支持定时自动生成(每日/每周/每月)并发送邮件
-
-**验收标准:**
-- 假设用户选择"亚太区域"和"过去24小时"
-- 当用户点击"生成报告"
-- 则系统在 5 秒内生成包含所有必需指标的 PDF 报告
-- 并且报告包含节点在线率、平均延迟、丢包率、异常事件汇总
-- 并且报告包含跨境链路质量评估
-- 并且用户可以配置定时自动生成并发送邮件
-
-**FR-4.3.12 [应该] 性能对比分析**
-- Dashboard 应支持选择两个时间范围进行性能对比
-- 对比应包括:延迟变化百分比、丢包率变化、抖动变化、吞吐量变化
-- 对比结果应以图表和统计摘要形式展示
-- 用户应能导出对比结果为 PDF
-
-**验收标准:**
-- 假设用户选择"优化前一周"和"优化后当前时段"
-- 当用户点击"生成对比"
-- 则系统生成包含所有指标的对比图表
-- 并且图表显示延迟、丢包率、抖动、吞吐量的变化百分比
-- 并且提供统计摘要(平均值、中位数、P95、P99)
-- 并且用户可以导出为 PDF
-
-**FR-4.3.13 [必须] 实时告警推送与移动端支持**
-- Dashboard 应支持实时告警推送到移动设备
-- 告警应包含:故障级别、影响节点、简要描述、跳转链接
-- 移动端应支持查看 MTR 路径图和关键指标
-- 用户应支持添加处理备注和状态更新
-- 系统应支持告警恢复通知订阅
-
-**跨时区事件时间线:**
-- 告警详情应同时显示 UTC 时间戳和用户本地时间戳
-- 事件时间线应支持"统一 UTC 视图"模式(便于跨国团队协作)
-- 所有时间戳应明确标注时区缩写(UTC, CST, EST 等)
-- 审计日志应记录时间戳转换历史(便于追溯时区混淆问题)
-
-**协作功能:**
-- 跨时区团队应能共享统一 UTC 时间线的链接
-- 评论和备注应包含发布时的 UTC 时间戳
-- 导出报告时应提供"统一 UTC 时间"和"多时区对照"两种格式
-
-**验收标准:**
-- 假设紧急告警触发
-- 当用户收到移动端推送
-- 则推送内容包含故障级别和跳转链接
-- 并且点击链接直接跳转到移动端诊断页面
-- 并且用户可以添加处理备注
-
-- 假设新加坡团队(UTC+8)和伦敦团队(UTC+0)协同处理告警
-- 当用户切换到"统一 UTC 视图"
-- 则所有时间戳显示为 UTC 时间
-- 并且每个事件旁边显示本地时间对照
-- 并且共享链接包含 UTC 时间线参数
-
-**FR-4.3.14 [应该] 国际化与时区支持**
-
-Dashboard 应支持多时区展示和中英双语切换,适配海外团队使用习惯。
-
-**多时区支持:**
-- Dashboard 应自动检测 Beacon 节点的时区(通过 IP 地理位置或用户配置)
-- Dashboard 应支持用户手动切换显示时区(UTC/节点本地时间/用户本地时间)
-- Dashboard 应在所有时间戳显示中明确标注时区(如:"2026-02-05 10:30:00 UTC")
-
-**多语言支持:**
-- Dashboard 应支持中文和英文界面切换
-- 切换响应时间 ≤ 500ms
-- 翻译覆盖率应 ≥ 95%(排除技术术语)
-- 翻译文件应支持外部维护(不重新编译代码)
-
-**验收标准:**
-- 假设用户切换显示时区为 UTC
-- 当时区切换完成
-- 则所有时间戳在 1 秒内更新为 UTC 时区
-- 并且时区缩写正确显示(如:"UTC", "CST", "EST")
-
-- 假设用户切换界面语言为英文
-- 当语言切换完成
-- 则所有界面文本在 500ms 内更新为英文
-- 并且翻译覆盖率 ≥ 95%
-
-## 5. 非功能性需求 (Non-Functional Requirements)
-
-### 5.1 资源与性能限制
-
-**NFR-5.1.1 [必须] 吞吐量测试约束**
-*   带宽压测最小执行间隔 ≥ 1 小时
-*   压测时允许 Beacon 内存瞬时升至 128MB
-
-**验收标准:**
-- 假设 Beacon 配置用于吞吐量测试
-- 当测试执行
-- 则 Beacon 内存保持 ≤ 128MB
-- 并且后续测试间隔 ≥ 1 小时
-
-**NFR-5.1.2 [必须] Pulse Server 性能**
-*   单机支持 50+ Beacon 并发上报
-*   API 响应时间 P99 ≤ 500ms
-*   仪表盘查询时间 P99 ≤ 300ms
-
-**验收标准:**
-- 假设 50 Beacon 并发上报数据
-- 当 Server 处理请求
-- 则所有请求在 500ms 内完成
-- 并且仪表盘查询在 300ms 内返回
-
-**NFR-5.1.3 [应该] 压缩传输性能**
-- 数据压缩率应 ≥ 70%(GZIP 级别 6)
-- 压缩/解压开销应 ≤ 50ms 每 1MB 数据
-- 压缩功能应支持 100+ 并发 Beacon 不降级
-
-**验收标准:**
-- 假设 100 Beacon 并发上报数据
-- 当所有 Beacon 启用压缩
-- 则 Server 成功处理所有压缩数据
-- 并且压缩率 ≥ 70%
-- 并且压缩/解压延迟 ≤ 50ms 每 1MB
-
-**NFR-5.1.4 [应该] 并发连接**
-- Server 应支持 50+ 并发 Beacon 连接而不降级
-
-**验收标准:**
-- 假设 50 Beacon 同时连接
-- 当所有 Beacon 上报数据
-- 则 Server 成功处理所有连接
-- 并且响应时间 P99 ≤ 500ms
-
-### 5.2 安全性要求
-
-**NFR-5.2.1 [必须] 加密传输**
-*   所有通信强制使用 TLS 1.2+
-
-**NFR-5.2.2 [必须] 接入控制**
-*   API 仅接受携带有效 Node-Token 的请求
-*   `/metrics` 接口建议配置基础认证（Basic Auth）或内网访问限制
-
-### 5.3 稳定性要求
-
-**NFR-5.3.1 [必须] 正常运行时间目标**
-*   Pulse Server 可用性目标: 99.9% (每月停机时间 < 43.2 分钟)
-
-**NFR-5.3.2 [必须] 启动校验**
-*   Beacon 启动时校验 `beacon.yaml`
-*   Pulse 启动时校验数据库连接及缓存配置
-
-**NFR-5.3.3 [应该] 备份自动化**
-*   Server 应支持配置数据自动备份(每日备份到 S3 或本地存储)
-*   备份保留期: 30 天
-
-**验收标准:**
-- 假设配置了自动备份
-- 当每日备份时间到达
-- 则系统自动备份配置数据到指定存储
-- 并且保留最近 30 天的备份
-
-### 5.4 UI/UX 体验
-
-**NFR-5.4.1 [必须] 响应式设计**
-*   适配 PC 端（主要运维环境）及 移动端（紧急告警查看）
-
-**NFR-5.4.2 [必须] 数据刷新**
-*   仪表盘支持 5s/10s/30s 自动刷新频率设置
-
-**NFR-5.4.3 [必须] 加载性能**
-*   首屏加载时间 ≤ 3s，单节点历史查询响应 ≤ 1s
-
-**验收标准:**
-- 假设用户首次访问 Dashboard
-- 当页面加载
-- 则首屏在 3 秒内完成加载
-- 并且单节点历史查询在 1 秒内返回
-
-**NFR-5.4.4 [必须] 浏览器兼容性**
-
-Dashboard 应支持主流现代浏览器,确保运维团队可以在各种设备上访问。
-
-**支持的浏览器版本:**
-- **Chrome:** 90+ (推荐使用最新版本)
-- **Firefox:** 88+ (Extended Support Release)
-- **Safari:** 14+ (macOS 和 iOS)
-- **Edge:** 90+ (Chromium 内核)
-
-**渐进增强策略:**
-- 核心功能(仪表盘、告警查看)应在所有支持的浏览器中可用
-- 高级功能(地图可视化、图表)应在现代浏览器中优化显示
-- 降级方案: 不支持 ES6+ 的浏览器显示功能受限但仍可查看告警列表
-
-**验收标准:**
-- 假设用户使用 Chrome 90+ 访问 Dashboard
-- 当用户登录
-- 则所有核心功能正常工作
-- 并且地图和图表可视化正常显示
-
-**NFR-5.4.5 [必须] 无障碍访问**
-
-Dashboard 应遵循 WCAG 2.1 Level AA 无障碍标准,确保所有运维人员(包括残障人士)都能有效使用系统。
-
-**键盘导航:**
-- 所有交互元素(按钮、链接、表单控件)应可通过键盘访问
-- 支持 Tab 键顺序导航
-- 支持 Enter/Space 键激活控件
-- 焦点指示器清晰可见(2px 实线边框或高亮)
-
-**屏幕阅读器支持:**
-- 所有图标和图像应提供 `alt` 文本或 ARIA 标签
-- 动态内容更新应通过 ARIA live regions 宣布
-- 表单控件应提供 `aria-label` 或 `<label>` 关联
-- 图表数据应提供文本表格备选方案
-
-**颜色对比度:**
-- 文本与背景对比度至少 4.5:1 (正常文本)
-- 大文本(18pt+)对比度至少 3:1
-- 告警状态颜色应辅以图标或文本标签(红/黄/绿)
-- 地图和图表应包含图例说明
-
-**验收标准:**
-- 假设运维人员使用键盘或屏幕阅读器访问
-- 当用户导航 Dashboard
-- 则所有功能均可通过键盘操作
-- 并且屏幕阅读器能正确读取内容
-- 并且颜色对比度符合 WCAG 2.1 AA 标准
-
-**NFR-5.4.6 [应该] SEO 优化策略**
-
-**SEO 要求:** 不适用 - 内部网络监控工具
-
-**说明:**
-- NodePulse 是内部运维工具,需要身份验证才能访问
-- 不面向公众搜索引擎,无需 SEO 优化
-- Dashboard 通过认证后访问,不依赖搜索引擎流量
-
-**技术考虑:**
-- 使用语义化 HTML 改善可访问性(间接有助于内部搜索)
-- Meta 标签仅用于内部文档系统索引(如有)
-
-### 5.5 可观测性接口 (Prometheus Metrics)
-
-#### Pulse Beacon 指标:
-
-**NFR-5.5.1 [必须] Prometheus 指标 - Beacon**
-
-**现有指标(保留):**
-- `beacon_up`: 节点运行状态(gauge)
-- `beacon_rtt_ms`: 实时往返时间(histogram)
-- `beacon_packet_loss_ratio`: 实时丢包率(gauge)
-- `beacon_throughput_mbps`: 实时吞吐量(gauge)
-- `beacon_hop_count`: 总路由跳数(gauge)
-
-**新增指标(工作模式相关):**
-- `beacon_mode{mode="standalone|registered|degraded"}`: 当前工作模式(gauge)
-- `beacon_config_source{source="local_config|server_provided|cached"}`: 配置来源(gauge)
-- `beacon_config_version`: 配置版本号(仅注册模式)(gauge)
-- `beacon_last_config_update_time`: 最后配置更新时间戳(gauge)
-- `beacon_server_connection_success`: Server 连接成功次数(counter)
-- `beacon_server_connection_failure`: Server 连接失败次数(counter)
-
-**新增指标(探测任务相关):**
-- `beacon_active_probes`: 当前活跃探测任务数(gauge)
-- `beacon_probe_total{probe_type="ping|mtr|iperf3"}`: 探测任务执行总数(counter)
-- `beacon_probe_duration_seconds{probe_type="ping|mtr|iperf3"}`: 探测任务执行时间(histogram)
-- `beacon_probe_failure_total{probe_type="ping|mtr|iperf3",error_type="timeout|network_error"}`: 探测失败次数(counter)
-
-**新增指标(性能相关):**
-- `beacon_memory_usage_bytes`: 内存使用量(gauge)
-- `beacon_cpu_usage_percent`: CPU 使用率百分比(gauge)
-
-**新增指标(跨境传输优化相关):**
-- `beacon_compression_ratio`: 压缩率(压缩后大小/原始大小)(gauge)
-- `beacon_compression_duration_seconds`: 压缩执行时间(histogram)
-- `beacon_decompression_duration_seconds`: 解压执行时间(Server 端)(histogram)
-- `beacon_cache_size_bytes`: 断点续传缓存大小(gauge)
-- `beacon_cache_items_count`: 缓存数据条目数(gauge)
-- `beacon_cache_evictions_total`: 缓存淘汰次数(counter)
-- `beacon_resume_upload_bytes_total`: 续传成功字节数(counter)
-
-**验收标准:**
-- 假设 Prometheus 抓取器配置
-- 当抓取 /metrics 端点
-- 则响应包含所有必需指标:
-  - 基础指标 5 个: `beacon_up`, `beacon_rtt_ms`, `beacon_packet_loss_ratio`, `beacon_throughput_mbps`, `beacon_hop_count`
-  - 工作模式指标 6 个: `beacon_mode`, `beacon_config_source`, `beacon_config_version`, `beacon_last_config_update_time`, `beacon_server_connection_success`, `beacon_server_connection_failure`
-  - 探测任务指标 4 个: `beacon_active_probes`, `beacon_probe_total`, `beacon_probe_duration_seconds`, `beacon_probe_failure_total`
-  - 性能指标 2 个: `beacon_memory_usage_bytes`, `beacon_cpu_usage_percent`
-  - 跨境传输指标 7 个: `beacon_compression_ratio`, `beacon_compression_duration_seconds`, `beacon_decompression_duration_seconds`, `beacon_cache_size_bytes`, `beacon_cache_items_count`, `beacon_cache_evictions_total`, `beacon_resume_upload_bytes_total`
-  - **合计: 24 个核心指标**
-- 并且指标遵循 Prometheus 命名约定
-- 并且所有指标包含必需的标签
-- 并且独立模式和注册模式下都暴露完整的 metrics
-- 注: `beacon_self_health_status` (FR-4.1.8) 为额外健康检查指标,不计入核心指标数量
-
-**FR-4.1.8 [必须] Beacon 自健康监控**
-
-Beacon 应监控自身的服务健康状况,特别是独立模式下的可观测性端点健康。
-
-**自健康检查:**
-- Beacon 应监控 `/metrics` 和 `/health` 端点的可访问性
-- 如果 metrics 端点响应失败,Beacon 应记录到本地日志
-- Beacon 应暴露 `beacon_self_health_status` 指标(0=健康, 1=degraded, 2=unhealthy)
-
-**端点健康状态:**
-- Beacon 应定期(每30秒)检查自己的 HTTP 端点健康
-- 如果端点连续3次检查失败,应设置为 degraded 状态
-- 独立模式下,Beacon 应提供 `/health` 端点返回自身服务状态
-
-**验收标准:**
-
-*自健康监控场景:*
-- 假设 Beacon 的 /metrics 端点因内部错误停止响应
-- 当 Beacon 执行自健康检查
-- 则检测到端点不可用
-- 并且 `beacon_self_health_status` 设置为 2 (unhealthy)
-- 并且错误记录到本地日志
-- 并且 /health 端点返回 unhealthy 状态
-
-#### Pulse Server 指标:
-
-**NFR-5.5.2 [必须] Prometheus 指标 - Server**
-
-- `pulse_nodes_total`: 系统注册的 Beacon 总数(gauge)
-- `pulse_nodes_online`: 当前在线（心跳正常）的 Beacon 数量(gauge)
-- `pulse_api_requests_total{endpoint="/data/metrics|/data/alerts",status_code="200|400|500"}`: 系统接收到的上报/查询请求总数(counter)
-- `pulse_cache_items_count`: 当前内存缓存中的数据条目总数(gauge)
-- `pulse_webhook_deliveries_total{result="success|failure"}`: Webhook 告警推送总数(counter)
-- `pulse_diagnostics_total`: 系统执行的诊断分析次数(counter)
-
-### 5.6 合规性要求 (Compliance)
-
-**NFR-5.6.1 [必须] GDPR 合规**
-*   系统应遵守 GDPR 数据最小化原则
-*   仅收集网络监控所需的指标
-*   不存储个人身份信息(PII)
-
-**NFR-5.6.2 [必须] 数据保留策略**
-*   监控数据保留期: 7 天(内存缓存)
-*   配置数据保留期: 永久
-*   审计日志保留期: 90 天
-
-**NFR-5.6.3 [应该] 数据导出**
-*   用户应能导出所有监控数据(JSON/CSV 格式)
-*   数据导出响应时间 ≤ 10 秒(单节点 7 天数据)
-
-### 5.7 可维护性要求 (Maintainability)
-
-**NFR-5.7.1 [必须] 配置验证**
-*   Beacon 启动时验证配置文件格式和内容
-*   Server 保存配置前验证配置有效性
-
-**NFR-5.7.2 [必须] 健康检查端点**
-*   Beacon 应暴露 `/healthz` 端点(返回 200 表示健康)
-*   Server 应暴露 `/healthz` 端点(检查数据库连接、缓存状态)
-
-**NFR-5.7.3 [应该] 诊断日志**
-*   Beacon 应支持详细的诊断日志(可配置日志级别: DEBUG/INFO/WARN/ERROR)
-*   日志应包含:时间戳、级别、消息、上下文信息
-
-**NFR-5.7.4 [应该] 配置管理界面**
-*   Dashboard 应提供配置版本历史查看
-*   Dashboard 应支持配置回滚到历史版本
-
-### 5.8 国际化 (Internationalization)
-
-**NFR-5.8.1 [必须] 时区支持**
-*   Dashboard 应支持至少 20 个常用时区
-*   时区切换响应时间 ≤ 1 秒
-*   时区数据应使用 IANA 时区数据库
-
-**验收标准:**
-- 假设用户切换时区
-- 当切换操作完成
-- 则所有时间戳在 1 秒内更新为新时区
-- 并且时区缩写正确显示(如:UTC, CST, EST)
-
-**NFR-5.8.2 [应该] 多语言支持**
-*   Dashboard 应支持中文和英文
-*   语言切换响应时间 ≤ 500ms
-*   翻译覆盖率应 ≥ 95%(排除技术术语)
-*   翻译文件应支持外部维护(不重新编译代码)
-
-**验收标准:**
-- 假设用户切换语言
-- 当语言切换完成
-- 则所有界面文本在 500ms 内更新
-- 并且翻译覆盖率 ≥ 95%
-
-**NFR-5.8.3 [应该] 本地化格式**
-*   日期格式应支持中文(YYYY年MM月DD日)和英文(MM/DD/YYYY)
-*   数字格式应支持千分位分隔符(中文:逗号,英文:逗号)
-*   时间格式应支持 24 小时制和 12 小时制(AM/PM)
-
-**验收标准:**
-- 假设用户选择英文界面
-- 当查看仪表板
-- 则日期显示为 "MM/DD/YYYY" 格式
-- 并且数字显示千分位分隔符(如:1,234.56)
-- 并且时间可选择 12 小时制(AM/PM)
-
-### 5.9 隐私与安全 (Privacy & Security)
-
-**NFR-5.9.1 [必须] 数据最小化**
-*   系统应遵守 GDPR 数据最小化原则
-*   仅收集网络监控所需的指标
-
-**验收标准:**
-- 假设系统设计审查
-- 当评估收集的数据
-- 则所有数据字段都证明用于监控目的
-- 并且没有个人数据在没有明确目的的情况下存储
-
-## 6. 技术标准与集成 (Technical Constraints)
-
-### 6.1 技术栈 (技术栈)
-*   **Backend (后端):** Go 1.23+
-*   **Frontend (前端):** React 19、TypeScript 5、Vite 7、React Router 7
-*   **UI 与样式:** Tailwind CSS 4、shadcn/ui v4、Radix UI primitives
-*   **前端状态与数据:** Zustand 5、TanStack Query 5、Axios API client
-*   **图表与地图:** Recharts、react-simple-maps
-*   **国际化库:** i18next、react-i18next(用于中英双语支持)
-*   **时区库:** 时区处理库(用于时区转换)
-*   **架构文档:** 当前实现架构见 `docs/architecture.md`; UI 设计系统见 `docs/ui-design.md`
-
-### 6.2 部署模型 (部署模型)
-*   前端支持静态文件托管，支持通过环境变量配置
-*   Beacon 支持 standalone 和 registered 两种部署模式
-
-### 6.3 外部依赖 (外部依赖)
-*   **Beacon 包:** fping、iperf3
-*   **操作系统:** Linux(Ubuntu 20.04+、RHEL 8+)、macOS 11+
-*   **压缩库:** zlib(GZIP)、zstd(ZSTD 压缩)
-
-## 7. 成功标准映射 (Success Criteria Mapping)
-
-| 成功标准 | 映射的功能需求 |
-|---------|--------------|
-| SC-1.1: 30秒故障定位 | FR-4.3.1(地图)、FR-4.3.5(MTR路径)、FR-4.3.6(报告导出) |
-| SC-1.2: 95%自动故障检测 | FR-4.2.1(路由偏差)、FR-4.2.2(容量异常)、FR-4.2.3(跨区域关联) |
-| SC-1.3: 完整可视化覆盖 | FR-4.3.1(地图)、FR-4.3.3(多指标图表)、FR-4.3.5(路径拓扑)、FR-4.3.14(国际化时区) |
-| SC-1.4: 99.9%正常运行时间 | NFR-5.3.1(正常运行时间目标)、NFR-5.3.3(备份自动化) |
-| SC-1.5: 10+节点采用 | FR-4.3.7(引导式注册)、FR-4.1.2(双模式配置)、FR-4.2.4(探测任务管理) |
-| SC-1.6: 70%调查时间减少 | FR-4.3.2(仪表板指标)、FR-4.3.4(基线对比)、FR-4.3.5(MTR路径)、FR-4.3.11(健康报告)、FR-4.3.12(性能对比)、FR-4.3.13(实时告警推送) |
-
-## 8. 用户旅程到功能需求映射
-
-| 用户旅程 | 映射的功能需求 |
-|--------------|------------|
-| 旅程1: 运维经理 - 全球监控 | FR-4.3.1(地图)、FR-4.3.2(仪表板指标)、FR-4.3.4(基线)、FR-4.3.5(MTR路径)、FR-4.3.6(报告导出) |
-| 旅程2: DevOps工程师 - 节点扩展 | FR-4.3.7(节点注册)、FR-4.3.8(警报配置)、FR-4.1.2(配置管理) |
-| 旅程3: 海外运维工程师 - 日常巡检 | FR-4.3.11(健康报告生成)、FR-4.3.2(仪表板指标)、FR-4.3.6(报告导出) |
-| 旅程4: 网络优化专员 - 优化评估 | FR-4.3.12(性能对比)、FR-4.3.3(时序图表)、FR-4.3.4(基线对比) |
-| 旅程5: 运维管理人员 - 应急响应 | FR-4.3.13(实时告警推送)、FR-4.3.5(MTR路径)、FR-4.3.9(Webhook集成) |
-| 旅程6: DevOps工程师 - 独立部署 | FR-4.1.2(独立模式配置)、FR-4.1.4(工作模式监控)、NFR-5.5.1(Prometheus metrics) |
-| 旅程7: 跨国团队协作 | FR-4.3.14(国际化时区)、FR-4.3.6(报告导出)、FR-4.1.5(跨境传输优化) |
-
-## 9. 术语表 (Glossary)
-
-| 术语 | 定义 |
-|-----|------|
-| **Beacon** | 分布式网络探测节点,负责执行网络探测任务并上报数据 |
-| **Pulse** | 中心管理平台,负责数据聚合、分析和可视化 |
-| **MTR** | My traceroute - 结合 ping 和 traceroute 的网络诊断工具 |
-| **RTT** | Round Trip Time - 网络往返时延 |
-| **MTU** | Maximum Transmission Unit - 通过网络传输的最大数据包大小 |
-| **RTO** | Recovery Time Objective - 灾难后恢复服务的目标时间 |
-| **RPO** | Recovery Point Objective - 以时间度量的可接受数据丢失 |
-| **SLA** | Service Level Agreement - 承诺的服务质量指标 |
-| **时区** | 地理区域的统一时间标准,NodePulse 支持自动检测和手动切换 |
-| **压缩率** | 压缩后数据大小与原始数据大小的比值,用于衡量压缩效率 |
-| **断点续传** | 网络中断时缓存数据,恢复后继续传输的机制 |
-| **国际化** | 软件适配不同语言和地区习惯的能力 |
-| **本地化** | 将软件翻译为特定语言并适配当地文化习惯的过程 |
-
-## 10. 版本历史 (Version History)
-
-| 版本 | 日期 | 作者 | 更改 |
-|---------|------|--------|---------|
-| 3.8 | 2026-06-14 | Codex | **文档同步:** 更新当前前端技术栈，新增架构文档引用，并将 UI 设计文档同步到 shadcn/ui + Recharts 实现。 |
-| 3.7 | 2026-02-17 | Kevin | **PRD Review 修复:** (1) 修复重复 FR 编号(FR-4.3.4/4.3.5 重复 → 改为引用说明); (2) 完善 FR-4.1.2 降级模式定义(进入/退出条件); (3) 添加 FR-4.1.7 优先级术语说明(Cache-P0/P1/P2 vs Alert-P0/P1/P2); (4) 添加 FR-4.3.9 Webhook 重试与超时验收标准; (5) 完善 NFR-5.5.1 指标计数说明(24 个核心指标 + self_health_status) |
-| 3.6 | 2026-02-06 | Kevin | **PRD 范围调整:** 移除 Section 6.4 数据模型(属于技术架构文档,不属于 PRD 范围) |
-| 3.5 | 2026-02-06 | Kevin | **PRD 范围调整:** 移除 Section 6.4 API 规范(属于技术架构文档,不属于 PRD 范围),将原 Section 6.5 数据模型重新编号为 6.4 |
-| 3.4 | 2026-02-06 | Kevin | **PRD Validation Fixes - Phase 2:** (1) 添加 7 个 FR 的可追溯性说明(FR-4.1.1, FR-4.1.3, FR-4.1.6, FR-4.1.7, FR-4.2.3, FR-4.3.3, FR-4.3.10); (2) 修复 3 处实现泄漏(SIGHUP → 操作系统信号,GZIP/ZSTD → 压缩率≥70%,文件/数据库 → 本地持久化缓存); (3) 完善 FR-4.1.5 压缩描述,添加压缩率指标 |
-| 3.3 | 2026-02-06 | Kevin | **PRD Validation Fixes:** (1) 解决 i18n 范围冲突(双语支持移入 MVP 范围); (2) 解决多协议范围冲突(TCP/ICMP/MTR 在 MVP,UDP/Iperf3 推迟至 v2.0); (3) 新增浏览器兼容性(NFR-5.4.4)、无障碍访问(NFR-5.4.5)、SEO 策略(NFR-5.4.6); (4) 完善 FR-4.2.1、FR-4.2.3、FR-4.3.6 可测量性; (5) 新增 API 规范(Section 6.4)、数据模型(Section 6.5); (6) 添加 8 个 FR 的验收标准 |
-| 3.2 | 2026-02-05 | Kevin | 新增海外场景适配:跨境传输优化(压缩/断点续传)、国际化支持(多时区/双语)、24 个 Beacon metrics、新增用户旅程7 |
-| 3.1 | 2026-02-05 | Kevin | 新增 Beacon 双工作模式(独立/注册)、Server 探测任务管理、增强 Prometheus metrics(16 个指标)、新增用户旅程6 |
-| 3.0 | 2026-02-05 | Kevin | 整合新需求:更新目标用户,新增3个用户旅程,添加健康报告生成、性能对比分析、实时告警推送功能需求 |
-| 2.0 | 2026-02-05 | Kevin | 重组为 BMAD 标准,添加产品范围,增强带有验收标准的功能需求 |
-| 1.0 | 2026-01-15 | Kevin | 全栈实现的初始 PRD |
+### 4.2 Alert Response
+
+An on-call operator sees a new alert, opens the alert or node detail, updates status, adds an investigation note, and receives or shares subsequent recovery context.
+
+**Success criteria:**
+
+- New alert is visible in the dashboard stream within 5 seconds after Pulse records it.
+- Alert status can move through pending, in progress, and resolved states.
+- Notes are persisted with author and UTC timestamp.
+- Mobile layout supports status update and note-taking.
+
+### 4.3 Beacon Deployment And Configuration
+
+A DevOps engineer creates or selects a node, configures probes, starts Beacon in standalone or registered mode, and verifies that metrics and config acknowledgements are visible.
+
+**Success criteria:**
+
+- Standalone Beacon runs local probes and exposes `/metrics` without Pulse authentication.
+- Registered Beacon authenticates, pulls server-managed probe config, applies updates, and acknowledges the active version.
+- Invalid probe config is rejected before it can degrade a Beacon.
+
+### 4.4 Network Diagnosis And Reporting
+
+A network specialist compares nodes across regions, uses MTR and metric history to identify likely ownership, and generates a report for handoff.
+
+**Success criteria:**
+
+- Multi-node comparison supports latency, packet loss, and jitter.
+- Diagnosis output includes problem type, confidence, and recommendation.
+- Report preview includes node info, key metrics, MTR path, baseline comparison, root cause summary, and event timeline.
+
+### 4.5 Integrations
+
+An operator configures webhooks, previews payloads, sends a test delivery, monitors success/failure, and relies on retry behavior during incidents.
+
+**Success criteria:**
+
+- Webhook URLs are validated and protected against SSRF.
+- Operators can preview and test payloads before enabling a webhook.
+- Delivery attempts are logged with status, retry count, and error.
+- Unhealthy endpoints are visible and retried later.
+
+## 5. Functional Requirements
+
+### FR-1 Beacon Runtime
+
+**Supported**
+
+- Beacon must load `beacon.yaml` and validate node identity, Pulse server, API key requirements, metrics settings, logging settings, and probe configuration.
+- Beacon must support standalone and registered modes.
+- Beacon must support TCP, UDP, and MTR probes.
+- Beacon must expose Prometheus metrics when enabled.
+- Registered Beacon must authenticate with Pulse using an API key and JWT.
+- Registered Beacon must report aggregated heartbeat metrics.
+- Registered Beacon must fetch server-managed config periodically and acknowledge applied or failed versions.
+- Beacon must upload MTR results to Pulse when MTR probes are configured.
+
+**Planned**
+
+- Beacon must expose `/healthz` with self-health status.
+- Beacon must set mode/config-source metrics from real runtime state rather than defaults.
+- Beacon must send compressed payloads when enabled.
+- Beacon must persist failed uploads locally and resume them in order when Pulse is reachable.
+- Beacon must expose cache, compression, corruption, and resume-upload metrics from active runtime providers.
+
+### FR-2 Pulse Data And Diagnosis
+
+**Supported**
+
+- Pulse must persist nodes, metrics, alert rules, alert records, MTR results, users, sessions, API keys, exports, webhook configs, and webhook logs.
+- Pulse must provide JSON APIs for latest metrics, history, comparison, diagnosis, latest MTR, and MTR history.
+- Pulse must evaluate alert rules asynchronously from incoming heartbeat data.
+- Pulse must run scheduled cleanup for metrics and alert suppression data.
+
+**Planned**
+
+- Pulse must expose event streaming for new alerts and status updates.
+- Pulse must support alert notes with author, content, and timestamps.
+- Pulse must support route-change cache freshness indicators when enough route history exists.
+- Pulse must provide explicit diagnostic owner attribution: local node, regional link, carrier route, cross-border link, target service, or unknown.
+
+### FR-3 Web UI
+
+**Supported**
+
+- The UI must provide authenticated operational pages for dashboard, nodes, probes, Beacon config, alerts, reports, exports, webhooks, system health, preferences, sessions, and users.
+- The UI must use shared layout components, i18n, timezone preferences, and dark-mode compatible styling.
+- The dashboard must include global map, summary metrics, trends, top anomalies, node table, and alert stream UI.
+- Node detail must show metrics, diagnosis, MTR path visualization, and report navigation.
+- Beacon config UI must support editing, validation, history view, and local templates.
+- Reports UI must provide PDF preview/print and CSV export workflows.
+
+**Planned**
+
+- Replace hardcoded operational strings with locale keys.
+- Add accessible text alternatives for chart-heavy views.
+- Add alert notes/timeline UI backed by API persistence.
+- Connect alert stream to Pulse event streaming.
+- Add webhook delivery history/statistics and test-send UI.
+- Add config rollback UI.
+
+### FR-4 Alerts And Integrations
+
+**Supported**
+
+- Operators must manage alert rules for latency, packet loss, and jitter.
+- Pulse must create alert records when rules are triggered.
+- Operators must update alert record status.
+- Pulse must send alert webhooks to enabled endpoints with retries.
+- Operators must create, edit, delete, and preview webhook payloads.
+
+**Planned**
+
+- Alert record status update must support optional note content.
+- Operators must add and view alert notes independently of status changes.
+- Webhook configs must support custom headers and severity filters.
+- Operators must send manual test payloads and see HTTP status, latency, and response summary.
+- Pulse must mark repeatedly failing webhooks unhealthy and retry health checks later.
+
+### FR-5 Reports And Exports
+
+**Supported**
+
+- Operators must export metrics as CSV for up to 50 nodes and up to 7 days.
+- Operators must view export status and download completed CSV files.
+- Operators must generate printable report previews from current frontend data and Pulse APIs.
+
+**Planned**
+
+- Pulse must generate XLSX exports.
+- Pulse must persist report schedules and run daily, weekly, or monthly jobs.
+- Pulse must send scheduled reports by email.
+- Reports must include concise recommended actions and likely owner.
+
+### FR-6 Administration And Security
+
+**Supported**
+
+- Pulse must support username/password login, refresh-token rotation, logout, session listing, session revocation, role-based permissions, and admin user management.
+- Pulse must support API key lifecycle for Beacon authentication.
+- Pulse must apply CSRF protection to selected mutation endpoints.
+- Pulse must validate webhook URLs against SSRF rules before delivery.
+
+**Planned**
+
+- Production mode must default mTLS to strict unless explicitly disabled.
+- Password reset must deliver reset emails through a configured provider.
+- Mutation endpoints should consistently apply CSRF where browser-authenticated flows can reach them.
+- Metrics endpoints must have documented production protection options.
+
+## 6. Non-Functional Requirements
+
+### NFR-1 Performance
+
+- Pulse should support at least 50 concurrent Beacons reporting without sustained degradation.
+- Pulse API P99 should be no more than 500 ms for heartbeat and ordinary operational queries under the target load.
+- Dashboard data queries should normally return within 300 ms server time.
+- Single-node history query should return within 1 second for the supported time window.
+- Compression/decompression overhead should be no more than 50 ms per 1 MB after the compressed-upload path is active.
+
+### NFR-2 Reliability
+
+- Pulse should target 99.9% monthly availability for a single-region deployment.
+- Heartbeat ingestion should avoid blocking on durable writes where possible.
+- Beacon should keep probing in degraded network conditions and resume upload once Pulse is reachable.
+- Pulse should gracefully shut down background workers, schedulers, exporters, and database connections.
+
+### NFR-3 Security
+
+- Production traffic should use TLS 1.2 or newer.
+- Beacon-to-Pulse traffic should support mTLS and production defaults should be strict.
+- API keys and refresh tokens must be stored hashed.
+- Access tokens must not be stored in localStorage.
+- Webhook delivery must reject private, loopback, link-local, and otherwise unsafe URLs.
+- Password reset responses must avoid user enumeration.
+
+### NFR-4 Observability
+
+- Pulse must expose Prometheus metrics for API requests, response time, active connections, runtime resources, Beacon connectivity, webhook delivery, and auth events.
+- Beacon must expose Prometheus metrics for availability, RTT, packet loss, jitter, active probes, probe counts, probe duration, failures, resource usage, and runtime mode.
+- Pulse and Beacon should propagate W3C trace context on Beacon-to-Pulse HTTP calls.
+- Health endpoints should distinguish healthy, degraded, and unhealthy states.
+
+### NFR-5 Accessibility And Internationalization
+
+- The UI should meet WCAG 2.1 AA for forms, dialogs, navigation, tables, and critical workflows.
+- The UI must support English and Simplified Chinese.
+- The UI must support at least 20 common IANA timezones.
+- Timestamps in incident workflows should be available in local time and UTC.
+
+### NFR-6 Data Retention And Backup
+
+- Metrics retention defaults to 7 days.
+- Authentication audit log retention target is 90 days.
+- Export files are temporary artifacts and should be cleaned automatically.
+- Configuration data should be backed up daily with a 30-day retention target in a later production-hardening phase.
+
+## 7. Release Roadmap Baseline
+
+The active roadmap is maintained in `docs/iteration-roadmap.md`. This PRD defines product intent and requirement status; the roadmap defines implementation order.
+
+Immediate roadmap themes:
+
+1. Make the current product safe and internally consistent.
+2. Close partially supported workflows that already have UI/API fragments.
+3. Add production-hardening gates for security, health, and performance.
+4. Expand exports, reports, and integration workflows.
+
+## 8. Version History
+
+| Version | Date | Change |
+| --- | --- | --- |
+| 4.0 | 2026-06-21 | Rebuilt PRD around current implementation baseline, explicit status labels, and next-phase requirements. |
+| 3.8 | 2026-06-14 | Previous synchronized PRD with mixed MVP and future-scope requirements. |

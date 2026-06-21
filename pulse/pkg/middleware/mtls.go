@@ -64,9 +64,9 @@ func InitMTLSConfig() {
 
 		// Handle backward compatibility with boolean values
 		if mode == "" {
-			// Check server mode - mTLS is MANDATORY for production
+			// Check server mode - mTLS is mandatory for production/release.
 			serverMode := getEnvOrDefault("PULSE_SERVER_MODE", "debug")
-			if serverMode == "production" {
+			if serverMode == "production" || serverMode == "release" {
 				mode = "strict"
 			} else {
 				mode = "disabled"
@@ -152,7 +152,7 @@ func loadTrustedCACerts() []string {
 		// In development, we may allow self-signed certs
 		// In production, this should be configured properly
 		serverMode := getEnvOrDefault("PULSE_SERVER_MODE", "debug")
-		if serverMode != "production" {
+		if serverMode != "production" && serverMode != "release" {
 			// Development mode - allow self-signed (no CA verification)
 			caCerts = []string{} // Empty = no CA verification
 		}

@@ -30,6 +30,7 @@ export interface WebhooksActions {
   createWebhook: (request: CreateWebhookRequest) => Promise<Webhook>
   updateWebhook: (id: string, request: UpdateWebhookRequest) => Promise<Webhook>
   deleteWebhook: (id: string) => Promise<void>
+  testWebhook: (id: string) => Promise<webhooksAPI.TestWebhookResponse>
   toggleWebhookEnabled: (id: string, enabled: boolean) => Promise<Webhook>
   findWebhookById: (id: string) => Webhook | undefined
 }
@@ -160,6 +161,10 @@ export const useWebhooksStore = create<WebhooksStore>((set, get) => ({
       error: null,
       hasLoaded: true,
     }))
+  },
+
+  testWebhook: async (id) => {
+    return webhooksAPI.testWebhook(id)
   },
 
   toggleWebhookEnabled: async (id, enabled) => {

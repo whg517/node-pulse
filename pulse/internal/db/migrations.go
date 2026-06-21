@@ -42,6 +42,7 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool) error {
 		{"createAlertSuppressionsTable", createAlertSuppressionsTable},
 		{"createWebhookLogsTable", createWebhookLogsTable},
 		{"createAlertRecordsTable", createAlertRecordsTable},
+		{"createAlertNotesTable", createAlertNotesTable},
 		{"seedAdminUser", seedAdminUser},
 	}
 
@@ -545,6 +546,28 @@ func createAlertRecordsTable(ctx context.Context, pool *pgxpool.Pool) error {
 		CREATE INDEX IF NOT EXISTS idx_alert_records_created_at ON alert_records(created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_alert_records_node_created ON alert_records(node_id, created_at DESC);
 		CREATE INDEX IF NOT EXISTS idx_alert_records_status_created ON alert_records(status, created_at DESC);
+	`
+
+	_, err := pool.Exec(ctx, query)
+	return err
+}
+
+// createAlertNotesTable creates alert_notes table for operator investigation notes.
+func createAlertNotesTable(ctx context.Context, pool *pgxpool.Pool) error {
+	query := `
+		CREATE TABLE IF NOT EXISTS alert_notes (
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			alert_id UUID NOT NULL REFERENCES alert_records(id) ON DELETE CASCADE,
+			user_id UUID REFERENCES users(user_id) ON DELETE SET NULL,
+			user_name VARCHAR(255) NOT NULL DEFAULT 'System',
+			content TEXT NOT NULL,
+			created_at TIMESTAMPTZ DEFAULT NOW(),
+			CONSTRAINT chk_alert_note_content_not_empty CHECK (length(trim(content)) > 0)
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_alert_notes_alert_id ON alert_notes(alert_id, created_at ASC);
+		CREATE INDEX IF NOT EXISTS idx_alert_notes_user_id ON alert_notes(user_id);
+		CREATE INDEX IF NOT EXISTS idx_alert_notes_created_at ON alert_notes(created_at DESC);
 	`
 
 	_, err := pool.Exec(ctx, query)

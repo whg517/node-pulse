@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -187,6 +188,7 @@ func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 	// Parse request body
 	var req struct {
 		Status string `json:"status" binding:"required"`
+		Note   string `json:"note,omitempty"`
 	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -236,6 +238,18 @@ func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 		return
 	}
 
+	if strings.TrimSpace(req.Note) != "" {
+		userID := c.GetString("user_id")
+		if _, err := db.CreateAlertNote(ctx, pool, recordID, &userID, req.Note); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"code":    "ERR_CREATE_NOTE",
+				"message": "Status was updated, but failed to create alert note",
+				"details": gin.H{"error": err.Error()},
+			})
+			return
+		}
+	}
+
 	// Get updated record
 	record, err := db.GetAlertRecordByID(ctx, pool, recordID)
 	if err != nil {
@@ -247,9 +261,135 @@ func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 		return
 	}
 
+	notes, err := db.GetAlertNotes(ctx, pool, recordID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "ERR_GET_NOTES",
+			"message": "Failed to retrieve alert notes",
+			"details": gin.H{"error": err.Error()},
+		})
+		return
+	}
+	record.Notes = notes
+
 	c.JSON(http.StatusOK, gin.H{
 		"data":      record,
 		"message":   "Alert record status updated successfully",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}
+
+// AddAlertNoteHandler creates an operator note for an alert record.
+// @Summary		Add alert record note
+// @Description	Adds an operator note to an alert record without changing its status.
+// @Tags			Alert Records
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string	true	"Alert record ID"
+// @Param			request	body		object	true	"Note request"
+// @Success		200	{object}	map[string]interface{}	"Alert note added"
+// @Failure		400	{object}	map[string]interface{}	"Invalid request"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		404	{object}	map[string]interface{}	"Alert record not found"
+// @Failure		500	{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/records/{id}/notes [post]
+func (h *AlertRecordHandler) AddAlertNoteHandler(c *gin.Context) {
+	recordID := c.Param("id")
+	if recordID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "ERR_MISSING_RECORD_ID",
+			"message": "Missing alert record ID",
+		})
+		return
+	}
+
+	var req struct {
+		Note string `json:"note" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "ERR_INVALID_BODY",
+			"message": "Invalid request body. Note field is required",
+			"details": gin.H{"error": err.Error()},
+		})
+		return
+	}
+
+	userID := c.GetString("user_id")
+	note, err := db.CreateAlertNote(c.Request.Context(), h.pool, recordID, &userID, req.Note)
+	if err != nil {
+		if errors.Is(err, db.ErrAlertRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    "ERR_RECORD_NOT_FOUND",
+				"message": "Alert record not found",
+			})
+			return
+		}
+		if errors.Is(err, db.ErrAlertNoteEmpty) {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code":    "ERR_EMPTY_NOTE",
+				"message": "Note content cannot be empty",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "ERR_CREATE_NOTE",
+			"message": "Failed to create alert note",
+			"details": gin.H{"error": err.Error()},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":      note,
+		"message":   "Alert note added successfully",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}
+
+// GetAlertNotesHandler lists notes for an alert record.
+// @Summary		List alert record notes
+// @Description	Retrieves notes for an alert record ordered oldest-first.
+// @Tags			Alert Records
+// @Produce		json
+// @Param			id	path	string	true	"Alert record ID"
+// @Success		200	{object}	map[string]interface{}	"Alert notes"
+// @Failure		401	{object}	map[string]interface{}	"Unauthorized"
+// @Failure		404	{object}	map[string]interface{}	"Alert record not found"
+// @Failure		500	{object}	map[string]interface{}	"Internal server error"
+// @Security		BearerAuth
+// @Router			/alerts/records/{id}/notes [get]
+func (h *AlertRecordHandler) GetAlertNotesHandler(c *gin.Context) {
+	recordID := c.Param("id")
+	if recordID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "ERR_MISSING_RECORD_ID",
+			"message": "Missing alert record ID",
+		})
+		return
+	}
+
+	notes, err := db.GetAlertNotes(c.Request.Context(), h.pool, recordID)
+	if err != nil {
+		if errors.Is(err, db.ErrAlertRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    "ERR_RECORD_NOT_FOUND",
+				"message": "Alert record not found",
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "ERR_GET_NOTES",
+			"message": "Failed to retrieve alert notes",
+			"details": gin.H{"error": err.Error()},
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data":      notes,
+		"message":   "Alert notes retrieved successfully",
 		"timestamp": time.Now().Format(time.RFC3339),
 	})
 }

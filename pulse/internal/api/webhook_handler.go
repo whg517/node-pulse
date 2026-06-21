@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -15,13 +16,23 @@ import (
 
 // WebhookHandler handles webhook-related HTTP requests
 type WebhookHandler struct {
-	querier db.WebhookQuerier
+	querier     db.WebhookQuerier
+	logsQuerier db.WebhookLogsQuerier
+	testSender  webhookTestSender
 }
 
+type webhookTestSender func(context.Context, *models.AlertEvent, *models.Webhook, string) error
+
 // NewWebhookHandler creates a new webhook handler
-func NewWebhookHandler(querier db.WebhookQuerier) *WebhookHandler {
+func NewWebhookHandler(querier db.WebhookQuerier, logsQuerier ...db.WebhookLogsQuerier) *WebhookHandler {
+	var logs db.WebhookLogsQuerier = noopWebhookLogsQuerier{}
+	if len(logsQuerier) > 0 && logsQuerier[0] != nil {
+		logs = logsQuerier[0]
+	}
+
 	return &WebhookHandler{
-		querier: querier,
+		querier:     querier,
+		logsQuerier: logs,
 	}
 }
 
@@ -188,6 +199,68 @@ func (h *WebhookHandler) PreviewWebhookEventHandler(c *gin.Context) {
 	})
 }
 
+// TestWebhookHandler handles POST /api/v1/webhooks/:id/test
+// @Summary		Send a test webhook delivery
+// @Description	Sends a sample alert event to a configured webhook endpoint. Admin role required.
+// @Tags			Webhooks
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string						true	"Webhook ID"
+// @Success		200	{object}	models.TestWebhookResponse	"Webhook test delivered successfully"
+// @Failure		401	{object}	map[string]interface{}		"Unauthorized"
+// @Failure		403	{object}	map[string]interface{}		"Forbidden (requires admin role)"
+// @Failure		404	{object}	map[string]interface{}		"Webhook not found"
+// @Failure		502	{object}	models.TestWebhookResponse	"Webhook test delivery failed"
+// @Security		BearerAuth
+// @Router			/webhooks/{id}/test [post]
+func (h *WebhookHandler) TestWebhookHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	webhook, err := h.querier.GetWebhookByID(c.Request.Context(), id)
+	if err != nil {
+		if err.Error() == "webhook not found" {
+			c.JSON(http.StatusNotFound, gin.H{
+				"code":    "ERR_NOT_FOUND",
+				"message": "Webhook configuration not found",
+			})
+			return
+		}
+
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "ERR_INTERNAL",
+			"message": "Failed to retrieve webhook configuration",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	alertEvent := sampleWebhookAlertEvent()
+	alertEvent.ID = "test-alert-" + time.Now().UTC().Format("20060102150405")
+
+	err = h.sendTestWebhook(c.Request.Context(), alertEvent, webhook, requestBaseURL(c))
+	if err != nil {
+		c.JSON(http.StatusBadGateway, models.TestWebhookResponse{
+			Data: models.WebhookTestData{
+				WebhookID: webhook.ID,
+				Status:    "failure",
+				Error:     err.Error(),
+			},
+			Message:   "Webhook test delivery failed",
+			Timestamp: time.Now().Format(time.RFC3339),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.TestWebhookResponse{
+		Data: models.WebhookTestData{
+			WebhookID: webhook.ID,
+			Status:    "success",
+		},
+		Message:   "Webhook test delivered successfully",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
 // GetWebhookByIDHandler handles GET /api/v1/webhooks/:id
 // @Summary		Get webhook by ID
 // @Description	Retrieves a webhook configuration by its ID. Admin role required.
@@ -338,6 +411,25 @@ func (h *WebhookHandler) DeleteWebhookHandler(c *gin.Context) {
 		Message:   "Webhook configuration deleted successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
+}
+
+func (h *WebhookHandler) sendTestWebhook(ctx context.Context, alertEvent *models.AlertEvent, webhook *models.Webhook, baseURL string) error {
+	if h.testSender != nil {
+		return h.testSender(ctx, alertEvent, webhook, baseURL)
+	}
+
+	service := webhooksvc.NewPushService(h.querier, h.logsQuerier, baseURL)
+	return service.SendWebhook(ctx, alertEvent, webhook)
+}
+
+type noopWebhookLogsQuerier struct{}
+
+func (noopWebhookLogsQuerier) CreateWebhookLog(context.Context, *models.WebhookLog) error {
+	return nil
+}
+
+func (noopWebhookLogsQuerier) CountRecentWebhookLogs(context.Context, *int64, *int64, int) error {
+	return nil
 }
 
 func sampleWebhookAlertEvent() *models.AlertEvent {

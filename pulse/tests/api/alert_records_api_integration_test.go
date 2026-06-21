@@ -91,6 +91,20 @@ func setupAlertRecordsAPITest(t *testing.T) (*gin.Engine, *pgxpool.Pool, func())
 		handler.UpdateAlertRecordStatusHandler(c)
 	})
 
+	router.POST("/api/v1/alerts/records/:id/notes", func(c *gin.Context) {
+		// Mock authenticated user
+		c.Set("user_id", "test-user-id")
+		c.Set("role", "admin")
+		handler.AddAlertNoteHandler(c)
+	})
+
+	router.GET("/api/v1/alerts/records/:id/notes", func(c *gin.Context) {
+		// Mock authenticated user
+		c.Set("user_id", "test-user-id")
+		c.Set("role", "admin")
+		handler.GetAlertNotesHandler(c)
+	})
+
 	return router, pool, cleanup
 }
 
@@ -383,4 +397,104 @@ func TestUpdateAlertRecordStatusHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, "ERR_INVALID_STATUS_TRANSITION", response4["code"])
+}
+
+func TestAlertRecordNotesHandlers(t *testing.T) {
+	router, pool, cleanup := setupAlertRecordsAPITest(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	nodeUUID := uuid.New()
+	err := db.CreateNode(ctx, pool, nodeUUID, "Test Node Notes", "192.168.1.3", "us-east", nil)
+	require.NoError(t, err)
+
+	alertEvent := &models.AlertEvent{
+		ID:           uuid.New().String(),
+		NodeID:       nodeUUID.String(),
+		Metric:       "latency",
+		Threshold:    100.0,
+		CurrentValue: 150.0,
+		Level:        "P1",
+		CreatedAt:    time.Now(),
+	}
+	alertEventsQuerier := db.NewAlertEventsQuerier(pool)
+	err = alertEventsQuerier.CreateAlertEvent(ctx, alertEvent)
+	require.NoError(t, err)
+
+	record := &models.AlertRecord{
+		AlertEventID: alertEvent.ID,
+		NodeID:       nodeUUID.String(),
+		Metric:       alertEvent.Metric,
+		Level:        alertEvent.Level,
+		Status:       "pending",
+	}
+	err = db.CreateAlertRecord(ctx, pool, record)
+	require.NoError(t, err)
+
+	reqBody := map[string]string{"status": "in_progress", "note": "Investigating carrier route"}
+	jsonBody, _ := json.Marshal(reqBody)
+	req, _ := http.NewRequest("PUT", "/api/v1/alerts/records/"+record.ID+"/status", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	var statusResponse map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &statusResponse)
+	require.NoError(t, err)
+	statusData := statusResponse["data"].(map[string]interface{})
+	notes := statusData["notes"].([]interface{})
+	require.Len(t, notes, 1)
+	firstNote := notes[0].(map[string]interface{})
+	assert.Equal(t, "Investigating carrier route", firstNote["content"])
+	assert.Equal(t, "System", firstNote["user_name"])
+
+	reqBody = map[string]string{"note": "Carrier confirmed maintenance"}
+	jsonBody, _ = json.Marshal(reqBody)
+	req, _ = http.NewRequest("POST", "/api/v1/alerts/records/"+record.ID+"/notes", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	var addResponse map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &addResponse)
+	require.NoError(t, err)
+	addedNote := addResponse["data"].(map[string]interface{})
+	assert.Equal(t, "Carrier confirmed maintenance", addedNote["content"])
+
+	req, _ = http.NewRequest("GET", "/api/v1/alerts/records/"+record.ID+"/notes", nil)
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, w.Body.String())
+
+	var listResponse map[string]interface{}
+	err = json.Unmarshal(w.Body.Bytes(), &listResponse)
+	require.NoError(t, err)
+	listData := listResponse["data"].([]interface{})
+	require.Len(t, listData, 2)
+	assert.Equal(t, "Investigating carrier route", listData[0].(map[string]interface{})["content"])
+	assert.Equal(t, "Carrier confirmed maintenance", listData[1].(map[string]interface{})["content"])
+
+	reqBody = map[string]string{"note": "   "}
+	jsonBody, _ = json.Marshal(reqBody)
+	req, _ = http.NewRequest("POST", "/api/v1/alerts/records/"+record.ID+"/notes", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+
+	reqBody = map[string]string{"note": "This should not attach"}
+	jsonBody, _ = json.Marshal(reqBody)
+	req, _ = http.NewRequest("POST", "/api/v1/alerts/records/"+uuid.New().String()+"/notes", bytes.NewBuffer(jsonBody))
+	req.Header.Set("Content-Type", "application/json")
+	w = httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusNotFound, w.Code)
 }

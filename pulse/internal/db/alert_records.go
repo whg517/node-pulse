@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,6 +18,7 @@ import (
 var (
 	ErrAlertRecordNotFound     = errors.New("alert record not found")
 	ErrInvalidStatusTransition = errors.New("invalid status transition")
+	ErrAlertNoteEmpty          = errors.New("alert note content is empty")
 )
 
 // CreateAlertRecord creates a new alert record in the database
@@ -191,6 +193,98 @@ func UpdateAlertRecordStatus(ctx context.Context, pool *pgxpool.Pool, id string,
 	}
 
 	return nil
+}
+
+// CreateAlertNote creates an operator note for an alert record.
+func CreateAlertNote(ctx context.Context, pool *pgxpool.Pool, alertID string, userID *string, content string) (*models.AlertNote, error) {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return nil, ErrAlertNoteEmpty
+	}
+
+	if _, err := GetAlertRecordByID(ctx, pool, alertID); err != nil {
+		return nil, err
+	}
+
+	var userIDValue interface{}
+	userName := "System"
+	if userID != nil && strings.TrimSpace(*userID) != "" {
+		parsedUserID, err := uuid.Parse(strings.TrimSpace(*userID))
+		if err == nil {
+			var username string
+			err = pool.QueryRow(ctx, `SELECT username FROM users WHERE user_id = $1`, parsedUserID).Scan(&username)
+			if err == nil {
+				userIDValue = parsedUserID
+				userName = username
+			}
+		}
+	}
+
+	note := &models.AlertNote{
+		AlertID:  alertID,
+		UserName: userName,
+		Content:  content,
+	}
+
+	query := `
+		INSERT INTO alert_notes (alert_id, user_id, user_name, content)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, alert_id, COALESCE(user_id::text, ''), user_name, content, created_at
+	`
+
+	err := pool.QueryRow(ctx, query, alertID, userIDValue, userName, content).Scan(
+		&note.ID,
+		&note.AlertID,
+		&note.UserID,
+		&note.UserName,
+		&note.Content,
+		&note.CreatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create alert note: %w", err)
+	}
+
+	return note, nil
+}
+
+// GetAlertNotes retrieves notes for an alert record ordered oldest-first.
+func GetAlertNotes(ctx context.Context, pool *pgxpool.Pool, alertID string) ([]models.AlertNote, error) {
+	if _, err := GetAlertRecordByID(ctx, pool, alertID); err != nil {
+		return nil, err
+	}
+
+	rows, err := pool.Query(ctx, `
+		SELECT id, alert_id, COALESCE(user_id::text, ''), user_name, content, created_at
+		FROM alert_notes
+		WHERE alert_id = $1
+		ORDER BY created_at ASC, id ASC
+	`, alertID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query alert notes: %w", err)
+	}
+	defer rows.Close()
+
+	notes := make([]models.AlertNote, 0)
+	for rows.Next() {
+		var note models.AlertNote
+		if err := rows.Scan(
+			&note.ID,
+			&note.AlertID,
+			&note.UserID,
+			&note.UserName,
+			&note.Content,
+			&note.CreatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("failed to scan alert note: %w", err)
+		}
+		notes = append(notes, note)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating alert notes: %w", err)
+	}
+
+	return notes, nil
 }
 
 // AlertRecordFilters represents filter parameters for querying alert records

@@ -3,11 +3,17 @@ package middleware
 import (
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
+
+func resetMTLSForTest() {
+	mTLSConfig = nil
+	mTLSConfigOnce = sync.Once{}
+}
 
 // TestMTLSConfig_ModeDisabled tests that mTLS is disabled in disabled mode
 func TestMTLSConfig_ModeDisabled(t *testing.T) {
@@ -79,7 +85,7 @@ func TestMTLSConfig_ModeStrict_NoTLS(t *testing.T) {
 // TestMTLSConfig_GetMTLSConfig tests the GetMTLSConfig helper function
 func TestMTLSConfig_GetMTLSConfig(t *testing.T) {
 	// Reset to nil
-	SetMTLSConfig(nil)
+	resetMTLSForTest()
 
 	config := GetMTLSConfig()
 	assert.NotNil(t, config, "Should return non-nil config")
@@ -91,6 +97,36 @@ func TestMTLSConfig_GetMTLSConfig(t *testing.T) {
 
 	config = GetMTLSConfig()
 	assert.Equal(t, "warn", config.Mode, "Should return the custom config")
+}
+
+func TestInitMTLSConfig_DefaultsStrictInReleaseMode(t *testing.T) {
+	resetMTLSForTest()
+	t.Setenv("PULSE_SERVER_MODE", "release")
+	t.Setenv("PULSE_MTLS_ENABLED", "")
+
+	InitMTLSConfig()
+
+	assert.Equal(t, "strict", GetMTLSConfig().Mode, "release mode should default mTLS to strict")
+}
+
+func TestInitMTLSConfig_DefaultsDisabledInDebugMode(t *testing.T) {
+	resetMTLSForTest()
+	t.Setenv("PULSE_SERVER_MODE", "debug")
+	t.Setenv("PULSE_MTLS_ENABLED", "")
+
+	InitMTLSConfig()
+
+	assert.Equal(t, "disabled", GetMTLSConfig().Mode, "debug mode should default mTLS to disabled")
+}
+
+func TestInitMTLSConfig_ExplicitModeOverridesReleaseDefault(t *testing.T) {
+	resetMTLSForTest()
+	t.Setenv("PULSE_SERVER_MODE", "release")
+	t.Setenv("PULSE_MTLS_ENABLED", "warn")
+
+	InitMTLSConfig()
+
+	assert.Equal(t, "warn", GetMTLSConfig().Mode, "explicit mTLS mode should override release default")
 }
 
 // TestMTLSConfig_ModeValues tests valid mode values

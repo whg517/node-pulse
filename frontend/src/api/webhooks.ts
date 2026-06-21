@@ -38,6 +38,15 @@ export interface PreviewWebhookPayloadResponse {
   }
 }
 
+export interface TestWebhookResponse {
+  data: {
+    webhook_id: string
+    status: 'success' | 'failure'
+    error?: string
+  }
+  message: string
+}
+
 /**
  * Fetch all webhooks from the API
  *
@@ -114,5 +123,17 @@ export async function previewWebhookPayload(
   return apiClient<PreviewWebhookPayloadResponse>('/api/v1/webhooks/preview', {
     method: 'POST',
     body: JSON.stringify(request),
+  })
+}
+
+/**
+ * Send a sample alert payload to a configured webhook.
+ *
+ * @param id - Webhook ID to test
+ * @returns Delivery result from the backend
+ */
+export async function testWebhook(id: string): Promise<TestWebhookResponse> {
+  return apiClient<TestWebhookResponse>(`/api/v1/webhooks/${id}/test`, {
+    method: 'POST',
   })
 }

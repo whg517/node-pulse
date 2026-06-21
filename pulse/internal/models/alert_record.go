@@ -4,14 +4,25 @@ import "time"
 
 // AlertRecord represents a tracked alert with lifecycle status
 type AlertRecord struct {
-	ID           string    `json:"id"`
-	AlertEventID string    `json:"alert_event_id"`
-	NodeID       string    `json:"node_id"`
-	Metric       string    `json:"metric"`
-	Level        string    `json:"level"`
-	Status       string    `json:"status"` // pending, in_progress, resolved
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
+	ID           string      `json:"id"`
+	AlertEventID string      `json:"alert_event_id"`
+	NodeID       string      `json:"node_id"`
+	Metric       string      `json:"metric"`
+	Level        string      `json:"level"`
+	Status       string      `json:"status"` // pending, in_progress, resolved
+	CreatedAt    time.Time   `json:"created_at"`
+	UpdatedAt    time.Time   `json:"updated_at"`
+	Notes        []AlertNote `json:"notes,omitempty"`
+}
+
+// AlertNote represents an operator note attached to an alert record.
+type AlertNote struct {
+	ID        string    `json:"id"`
+	AlertID   string    `json:"alert_id"`
+	UserID    string    `json:"user_id,omitempty"`
+	UserName  string    `json:"user_name"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 // IsValidStatus checks if the status is valid

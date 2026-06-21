@@ -1,6 +1,6 @@
 import { useCallback, useEffect } from 'react'
 import { useWebhooksStore } from '../stores/webhooksStore'
-import type { CreateWebhookRequest, UpdateWebhookRequest } from '../api/webhooks'
+import type { CreateWebhookRequest, TestWebhookResponse, UpdateWebhookRequest } from '../api/webhooks'
 
 export interface UseWebhooksResult {
   webhooks: ReturnType<typeof useWebhooksStore.getState>['webhooks']
@@ -10,6 +10,7 @@ export interface UseWebhooksResult {
   createWebhook: (request: CreateWebhookRequest) => Promise<void>
   updateWebhook: (id: string, request: UpdateWebhookRequest) => Promise<void>
   deleteWebhook: (id: string) => Promise<void>
+  testWebhook: (id: string) => Promise<TestWebhookResponse>
   toggleWebhookEnabled: (id: string, enabled: boolean) => Promise<void>
   getWebhookById: (id: string) => ReturnType<typeof useWebhooksStore.getState>['webhooks'][number] | undefined
 }
@@ -22,6 +23,7 @@ export function useWebhooks(): UseWebhooksResult {
   const createWebhookAction = useWebhooksStore((state) => state.createWebhook)
   const updateWebhookAction = useWebhooksStore((state) => state.updateWebhook)
   const deleteWebhookAction = useWebhooksStore((state) => state.deleteWebhook)
+  const testWebhookAction = useWebhooksStore((state) => state.testWebhook)
   const toggleWebhookEnabledAction = useWebhooksStore((state) => state.toggleWebhookEnabled)
   const findWebhookById = useWebhooksStore((state) => state.findWebhookById)
 
@@ -46,6 +48,10 @@ export function useWebhooks(): UseWebhooksResult {
     await deleteWebhookAction(id)
   }, [deleteWebhookAction])
 
+  const testWebhook = useCallback(async (id: string) => {
+    return testWebhookAction(id)
+  }, [testWebhookAction])
+
   const toggleWebhookEnabled = useCallback(async (id: string, enabled: boolean) => {
     await toggleWebhookEnabledAction(id, enabled)
   }, [toggleWebhookEnabledAction])
@@ -62,6 +68,7 @@ export function useWebhooks(): UseWebhooksResult {
     createWebhook,
     updateWebhook,
     deleteWebhook,
+    testWebhook,
     toggleWebhookEnabled,
     getWebhookById,
   }
