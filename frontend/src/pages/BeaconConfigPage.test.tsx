@@ -3,7 +3,7 @@ import '@testing-library/jest-dom'
 import { vi } from 'vitest'
 import BeaconConfigPage from './BeaconConfigPage'
 import { fetchNodes } from '../api/nodes'
-import { fetchBeaconConfig, fetchConfigHistory } from '../api/beaconConfig'
+import { fetchBeaconConfig, fetchConfigHistory, updateBeaconConfig } from '../api/beaconConfig'
 
 const translations: Record<string, string> = {
   'beaconConfig.title': 'Beacon Configuration',
@@ -23,6 +23,14 @@ const translations: Record<string, string> = {
   'beaconConfig.probeIntervalSeconds': 'Interval (s)',
   'beaconConfig.probeTimeoutSeconds': 'Timeout (s)',
   'beaconConfig.probeCount': 'Count',
+  'beaconConfig.validationErrorSummary': 'Fix invalid Beacon configuration fields before saving.',
+  'beaconConfig.errorGlobalIntervalMin': 'Default interval must be at least 5 seconds.',
+  'beaconConfig.errorGlobalTimeoutMin': 'Default timeout must be at least 1 second.',
+  'beaconConfig.errorProbeTargetRequired': 'Target is required.',
+  'beaconConfig.errorProbePortRange': 'Port must be between 1 and 65535.',
+  'beaconConfig.errorProbeIntervalMin': 'Interval must be at least 5 seconds.',
+  'beaconConfig.errorProbeTimeoutMin': 'Timeout must be at least 1 second.',
+  'beaconConfig.errorProbeCountRange': 'Count must be between 1 and 100.',
   'beaconConfig.showHistory': 'History',
   'beaconConfig.hideHistory': 'Hide History',
   'beaconConfig.configHistory': 'Configuration History',
@@ -72,6 +80,7 @@ vi.mock('../stores/settingsStore', () => ({
 const mockFetchNodes = fetchNodes as ReturnType<typeof vi.fn>
 const mockFetchBeaconConfig = fetchBeaconConfig as ReturnType<typeof vi.fn>
 const mockFetchConfigHistory = fetchConfigHistory as ReturnType<typeof vi.fn>
+const mockUpdateBeaconConfig = updateBeaconConfig as ReturnType<typeof vi.fn>
 
 describe('BeaconConfigPage', () => {
   beforeEach(() => {
@@ -169,5 +178,40 @@ describe('BeaconConfigPage', () => {
     expect(screen.getByText('Interval (s)')).toBeInTheDocument()
     expect(screen.getByText('Timeout (s)')).toBeInTheDocument()
     expect(screen.getByText('Count')).toBeInTheDocument()
+  })
+
+  it('blocks save and shows field errors for invalid probe configuration', async () => {
+    mockFetchBeaconConfig.mockResolvedValueOnce({
+      data: {
+        probes: [{ id: 'probe-1', type: 'TCP', target: '', port: 70000, interval_seconds: 2, timeout_seconds: 0, count: 101 }],
+        interval_seconds: 3,
+        timeout_seconds: 0,
+        updated_at: '2024-01-02T12:00:00Z',
+        version: 3,
+        last_ack_version: 3,
+        last_ack_at: '2024-01-02T12:01:00Z',
+        last_ack_status: 'applied',
+      },
+      message: 'ok',
+      timestamp: '2024-01-02T12:02:00Z',
+    })
+
+    render(<BeaconConfigPage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Probe #1')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Fix invalid Beacon configuration fields before saving.')).toBeInTheDocument()
+    expect(screen.getByText('Default interval must be at least 5 seconds.')).toBeInTheDocument()
+    expect(screen.getByText('Default timeout must be at least 1 second.')).toBeInTheDocument()
+    expect(screen.getByText('Target is required.')).toBeInTheDocument()
+    expect(screen.getByText('Port must be between 1 and 65535.')).toBeInTheDocument()
+    expect(screen.getByText('Interval must be at least 5 seconds.')).toBeInTheDocument()
+    expect(screen.getByText('Timeout must be at least 1 second.')).toBeInTheDocument()
+    expect(screen.getByText('Count must be between 1 and 100.')).toBeInTheDocument()
+    expect(mockUpdateBeaconConfig).not.toHaveBeenCalled()
   })
 })

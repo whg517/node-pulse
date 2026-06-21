@@ -19,6 +19,18 @@ function emptyProbe(): ProbeConfigDTO {
   }
 }
 
+type ProbeValidationField = 'target' | 'port' | 'interval_seconds' | 'timeout_seconds' | 'count'
+
+interface BeaconConfigValidationErrors {
+  interval_seconds?: string
+  timeout_seconds?: string
+  probes: Record<string, Partial<Record<ProbeValidationField, string>>>
+}
+
+function emptyValidationErrors(): BeaconConfigValidationErrors {
+  return { probes: {} }
+}
+
 type ConfigAckState = 'applied' | 'failed' | 'pending'
 
 function getConfigAckState(config: BeaconConfigDTO): ConfigAckState {
@@ -52,6 +64,7 @@ export default function BeaconConfigPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
+  const [validationErrors, setValidationErrors] = useState<BeaconConfigValidationErrors>(emptyValidationErrors)
   const [showHistory, setShowHistory] = useState(false)
 
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -81,6 +94,7 @@ export default function BeaconConfigPage() {
       ])
       setConfig(cfgRes.data)
       setHistory(histRes.data ?? [])
+      setValidationErrors(emptyValidationErrors())
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
     } finally {
@@ -92,25 +106,84 @@ export default function BeaconConfigPage() {
     if (selectedNodeId) void loadConfig()
   }, [selectedNodeId, loadConfig])
 
+  const clearValidation = () => {
+    setValidationErrors(emptyValidationErrors())
+    setError(null)
+    setSaveMessage(null)
+  }
+
+  const validateConfig = (nextConfig: BeaconConfigDTO) => {
+    const nextErrors = emptyValidationErrors()
+
+    if (!Number.isFinite(nextConfig.interval_seconds) || nextConfig.interval_seconds < 5) {
+      nextErrors.interval_seconds = t('beaconConfig.errorGlobalIntervalMin')
+    }
+    if (!Number.isFinite(nextConfig.timeout_seconds) || nextConfig.timeout_seconds < 1) {
+      nextErrors.timeout_seconds = t('beaconConfig.errorGlobalTimeoutMin')
+    }
+
+    nextConfig.probes.forEach((probe) => {
+      const probeErrors: Partial<Record<ProbeValidationField, string>> = {}
+      if (!probe.target.trim()) {
+        probeErrors.target = t('beaconConfig.errorProbeTargetRequired')
+      }
+      if (!Number.isInteger(probe.port) || probe.port < 1 || probe.port > 65535) {
+        probeErrors.port = t('beaconConfig.errorProbePortRange')
+      }
+      if (!Number.isInteger(probe.interval_seconds) || probe.interval_seconds < 5) {
+        probeErrors.interval_seconds = t('beaconConfig.errorProbeIntervalMin')
+      }
+      if (!Number.isInteger(probe.timeout_seconds) || probe.timeout_seconds < 1) {
+        probeErrors.timeout_seconds = t('beaconConfig.errorProbeTimeoutMin')
+      }
+      if (!Number.isInteger(probe.count) || probe.count < 1 || probe.count > 100) {
+        probeErrors.count = t('beaconConfig.errorProbeCountRange')
+      }
+      if (Object.keys(probeErrors).length > 0) {
+        nextErrors.probes[probe.id] = probeErrors
+      }
+    })
+
+    return {
+      errors: nextErrors,
+      isValid: !nextErrors.interval_seconds &&
+        !nextErrors.timeout_seconds &&
+        Object.keys(nextErrors.probes).length === 0,
+    }
+  }
+
+  const getProbeError = (probeId: string, field: ProbeValidationField) => validationErrors.probes[probeId]?.[field]
+
   const handleProbeChange = (index: number, field: keyof ProbeConfigDTO, value: string | number) => {
     if (!config) return
     const probes = [...config.probes]
     probes[index] = { ...probes[index], [field]: value }
     setConfig({ ...config, probes })
+    clearValidation()
   }
 
   const handleAddProbe = () => {
     if (!config) return
     setConfig({ ...config, probes: [...config.probes, emptyProbe()] })
+    clearValidation()
   }
 
   const handleRemoveProbe = (index: number) => {
     if (!config) return
     setConfig({ ...config, probes: config.probes.filter((_, i) => i !== index) })
+    clearValidation()
   }
 
   const handleSave = async () => {
     if (!config || !selectedNodeId) return
+    const validation = validateConfig(config)
+    setValidationErrors(validation.errors)
+    if (!validation.isValid) {
+      setError(t('beaconConfig.validationErrorSummary'))
+      setSaveMessage(null)
+      return
+    }
+
     setIsSaving(true)
     setError(null)
     setSaveMessage(null)
@@ -164,6 +237,7 @@ export default function BeaconConfigPage() {
       interval_seconds: template.interval_seconds,
       timeout_seconds: template.timeout_seconds,
     })
+    clearValidation()
   }
 
   return (
@@ -235,9 +309,15 @@ export default function BeaconConfigPage() {
                   type="number"
                   min={5}
                   value={config.interval_seconds}
-                  onChange={(e) => setConfig({ ...config, interval_seconds: Number(e.target.value) })}
+                  onChange={(e) => {
+                    setConfig({ ...config, interval_seconds: Number(e.target.value) })
+                    clearValidation()
+                  }}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
                 />
+                {validationErrors.interval_seconds && (
+                  <p className="mt-1 text-xs text-destructive">{validationErrors.interval_seconds}</p>
+                )}
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1">
@@ -247,9 +327,15 @@ export default function BeaconConfigPage() {
                   type="number"
                   min={1}
                   value={config.timeout_seconds}
-                  onChange={(e) => setConfig({ ...config, timeout_seconds: Number(e.target.value) })}
+                  onChange={(e) => {
+                    setConfig({ ...config, timeout_seconds: Number(e.target.value) })
+                    clearValidation()
+                  }}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
                 />
+                {validationErrors.timeout_seconds && (
+                  <p className="mt-1 text-xs text-destructive">{validationErrors.timeout_seconds}</p>
+                )}
               </div>
             </div>
             <div className="mt-2 text-xs text-muted-foreground">
@@ -341,6 +427,9 @@ export default function BeaconConfigPage() {
                           placeholder={t('beaconConfig.probeTargetPlaceholder')}
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
+                        {getProbeError(probe.id, 'target') && (
+                          <p className="mt-1 text-xs text-destructive">{getProbeError(probe.id, 'target')}</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probePort')}</label>
@@ -352,6 +441,9 @@ export default function BeaconConfigPage() {
                           onChange={(e) => handleProbeChange(i, 'port', Number(e.target.value))}
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
+                        {getProbeError(probe.id, 'port') && (
+                          <p className="mt-1 text-xs text-destructive">{getProbeError(probe.id, 'port')}</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probeIntervalSeconds')}</label>
@@ -362,6 +454,9 @@ export default function BeaconConfigPage() {
                           onChange={(e) => handleProbeChange(i, 'interval_seconds', Number(e.target.value))}
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
+                        {getProbeError(probe.id, 'interval_seconds') && (
+                          <p className="mt-1 text-xs text-destructive">{getProbeError(probe.id, 'interval_seconds')}</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probeTimeoutSeconds')}</label>
@@ -372,6 +467,9 @@ export default function BeaconConfigPage() {
                           onChange={(e) => handleProbeChange(i, 'timeout_seconds', Number(e.target.value))}
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
+                        {getProbeError(probe.id, 'timeout_seconds') && (
+                          <p className="mt-1 text-xs text-destructive">{getProbeError(probe.id, 'timeout_seconds')}</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs text-muted-foreground mb-1">{t('beaconConfig.probeCount')}</label>
@@ -383,6 +481,9 @@ export default function BeaconConfigPage() {
                           onChange={(e) => handleProbeChange(i, 'count', Number(e.target.value))}
                           className="w-full rounded-md border border-input bg-background px-2 py-1 text-xs"
                         />
+                        {getProbeError(probe.id, 'count') && (
+                          <p className="mt-1 text-xs text-destructive">{getProbeError(probe.id, 'count')}</p>
+                        )}
                       </div>
                     </div>
                   </div>
