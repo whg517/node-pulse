@@ -166,3 +166,20 @@ This roadmap captures the remaining product work identified from the recent code
 3. H3 i18n cleanup pass for the most visible remaining pages.
 4. H4 full regression pass.
 5. M1 Excel export support or M2 report recommendations, depending on operator priority.
+
+---
+
+## 6. Progress Log
+
+### 2026-06-21
+
+Completed:
+- Added this roadmap as the active iteration task list.
+- Added server-rendered Webhook payload preview for event format templates.
+- Added Beacon configuration validation before save.
+- Localized remaining hardcoded retry actions on major pages.
+
+Still open:
+- Webhook test delivery to an actual endpoint.
+- Remaining i18n cleanup beyond retry actions.
+- Full regression pass across frontend, Pulse, Beacon, and E2E.
