@@ -82,7 +82,7 @@ export default function WebhooksPage() {
       {error && (
         <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error.message}
-          <Button variant="link" size="sm" onClick={reload}>Retry</Button>
+          <Button variant="link" size="sm" onClick={reload}>{t('common.retry')}</Button>
         </div>
       )}
 

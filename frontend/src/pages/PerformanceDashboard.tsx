@@ -59,7 +59,7 @@ export default function PerformanceDashboard() {
       {error && (
         <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error.message}
-          <Button variant="link" size="sm" onClick={refetch}>Retry</Button>
+          <Button variant="link" size="sm" onClick={refetch}>{t('common.retry')}</Button>
         </div>
       )}
 

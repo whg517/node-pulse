@@ -107,7 +107,7 @@ export default function NodeManagementPage() {
       {error && (
         <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error.message}
-          <Button variant="link" size="sm" onClick={loadNodes} className="ml-2">Retry</Button>
+          <Button variant="link" size="sm" onClick={loadNodes} className="ml-2">{t('common.retry')}</Button>
         </div>
       )}
 

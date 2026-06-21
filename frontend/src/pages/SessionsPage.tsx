@@ -56,7 +56,7 @@ export default function SessionsPage() {
         <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {error}
           <Button variant="link" size="sm" onClick={loadSessions} className="ml-2">
-            Retry
+            {t('common.retry')}
           </Button>
         </div>
       )}
