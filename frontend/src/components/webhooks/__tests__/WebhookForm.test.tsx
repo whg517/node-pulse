@@ -141,4 +141,27 @@ describe('WebhookForm', () => {
     expect(value).toContain('"version"')
     expect(value).toContain('"1.0"')
   })
+
+  it('previews rendered payload with current event format', async () => {
+    const onPreview = vi.fn().mockResolvedValue({
+      text: 'Alert preview-alert-1 on preview-node-1',
+      severity: 'P1',
+    })
+    render(
+      <WebhookForm
+        mode="create"
+        onSubmit={vi.fn()}
+        onPreview={onPreview}
+        onCancel={vi.fn()}
+      />
+    )
+
+    fireEvent.click(screen.getByText('Preview Payload'))
+
+    await waitFor(() => {
+      expect(onPreview).toHaveBeenCalledWith(expect.objectContaining({ version: '1.0' }))
+    })
+    expect(await screen.findByText('Rendered sample payload')).toBeInTheDocument()
+    expect(screen.getByText(/preview-alert-1/)).toBeInTheDocument()
+  })
 })

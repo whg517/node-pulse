@@ -7,17 +7,18 @@ import {
 } from '@/components/ui/dialog'
 import { WebhookForm } from './WebhookForm'
 import type { Webhook } from '../../stores/webhooksStore'
-import type { CreateWebhookRequest } from '../../api/webhooks'
+import type { CreateWebhookRequest, WebhookEventFormat } from '../../api/webhooks'
 
 interface WebhookDialogProps {
   mode: 'create' | 'edit'
   initialData?: Webhook
   open: boolean
   onSubmit: (data: CreateWebhookRequest) => Promise<void>
+  onPreview?: (eventFormat: WebhookEventFormat) => Promise<WebhookEventFormat>
   onCancel: () => void
 }
 
-export function WebhookDialog({ mode, initialData, open, onSubmit, onCancel }: WebhookDialogProps) {
+export function WebhookDialog({ mode, initialData, open, onSubmit, onPreview, onCancel }: WebhookDialogProps) {
   const { t } = useTranslation()
 
   return (
@@ -28,7 +29,7 @@ export function WebhookDialog({ mode, initialData, open, onSubmit, onCancel }: W
             {mode === 'create' ? t('webhooks.addWebhook') : t('webhooks.editWebhook')}
           </DialogTitle>
         </DialogHeader>
-        <WebhookForm mode={mode} initialData={initialData} onSubmit={onSubmit} onCancel={onCancel} />
+        <WebhookForm mode={mode} initialData={initialData} onSubmit={onSubmit} onPreview={onPreview} onCancel={onCancel} />
       </DialogContent>
     </Dialog>
   )

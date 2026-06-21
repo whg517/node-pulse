@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
+	webhooksvc "github.com/whg517/node-pulse/pulse/internal/webhook"
 )
 
 // WebhookHandler handles webhook-related HTTP requests
@@ -140,6 +141,49 @@ func (h *WebhookHandler) GetWebhooksHandler(c *gin.Context) {
 			Webhooks: webhooks,
 		},
 		Message:   "Webhook configurations retrieved successfully",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
+// PreviewWebhookEventHandler handles POST /api/v1/webhooks/preview
+// @Summary		Preview webhook payload
+// @Description	Renders a webhook event format with a sample alert event. Admin role required.
+// @Tags			Webhooks
+// @Accept			json
+// @Produce		json
+// @Param			request	body		models.PreviewWebhookEventRequest	true	"Webhook preview request"
+// @Success		200		{object}	models.PreviewWebhookEventResponse	"Rendered webhook payload"
+// @Failure		400		{object}	map[string]interface{}				"Validation failed"
+// @Failure		401		{object}	map[string]interface{}				"Unauthorized"
+// @Failure		403		{object}	map[string]interface{}				"Forbidden (requires admin role)"
+// @Security		BearerAuth
+// @Router			/webhooks/preview [post]
+func (h *WebhookHandler) PreviewWebhookEventHandler(c *gin.Context) {
+	var req models.PreviewWebhookEventRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "ERR_VALIDATION",
+			"message": "Validation failed",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	payload, err := webhooksvc.RenderAlertEvent(requestBaseURL(c), sampleWebhookAlertEvent(), req.EventFormat)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    "ERR_INVALID_EVENT_FORMAT",
+			"message": "Invalid webhook event format",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, models.PreviewWebhookEventResponse{
+		Data: models.WebhookPreviewData{
+			Payload: payload,
+		},
+		Message:   "Webhook payload preview rendered successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
@@ -294,4 +338,37 @@ func (h *WebhookHandler) DeleteWebhookHandler(c *gin.Context) {
 		Message:   "Webhook configuration deleted successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
+}
+
+func sampleWebhookAlertEvent() *models.AlertEvent {
+	return &models.AlertEvent{
+		ID:           "preview-alert-1",
+		NodeID:       "preview-node-1",
+		Metric:       "latency",
+		Threshold:    100,
+		CurrentValue: 150,
+		Level:        "P1",
+		CreatedAt:    time.Date(2026, 6, 21, 9, 30, 0, 0, time.UTC),
+	}
+}
+
+func requestBaseURL(c *gin.Context) string {
+	proto := c.GetHeader("X-Forwarded-Proto")
+	if proto == "" {
+		if c.Request.TLS != nil {
+			proto = "https"
+		} else {
+			proto = "http"
+		}
+	}
+
+	host := c.GetHeader("X-Forwarded-Host")
+	if host == "" {
+		host = c.Request.Host
+	}
+	if host == "" {
+		host = "localhost"
+	}
+
+	return fmt.Sprintf("%s://%s", proto, host)
 }

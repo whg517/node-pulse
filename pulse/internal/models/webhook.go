@@ -20,14 +20,31 @@ type CreateWebhookRequest struct {
 
 // UpdateWebhookRequest represents request to update a webhook
 type UpdateWebhookRequest struct {
-	URL         *string        `json:"url,omitempty" binding:"omitempty,url"`
+	URL         *string         `json:"url,omitempty" binding:"omitempty,url"`
 	EventFormat *map[string]any `json:"event_format,omitempty"`
-	Enabled     *bool          `json:"enabled,omitempty"`
+	Enabled     *bool           `json:"enabled,omitempty"`
+}
+
+// PreviewWebhookEventRequest represents a request to render a webhook payload preview.
+type PreviewWebhookEventRequest struct {
+	EventFormat map[string]any `json:"event_format,omitempty"`
 }
 
 // WebhookData represents webhook data in response
 type WebhookData struct {
 	Webhook *Webhook `json:"webhook"`
+}
+
+// WebhookPreviewData represents a rendered webhook payload preview.
+type WebhookPreviewData struct {
+	Payload map[string]any `json:"payload"`
+}
+
+// PreviewWebhookEventResponse represents a successful webhook payload preview response.
+type PreviewWebhookEventResponse struct {
+	Data      WebhookPreviewData `json:"data"`
+	Message   string             `json:"message"`
+	Timestamp string             `json:"timestamp"`
 }
 
 // CreateWebhookResponse represents successful webhook creation response

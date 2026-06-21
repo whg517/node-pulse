@@ -12,6 +12,7 @@ interface WebhookFormProps {
   mode: 'create' | 'edit'
   initialData?: Webhook
   onSubmit: (data: CreateWebhookRequest) => Promise<void>
+  onPreview?: (eventFormat: WebhookEventFormat) => Promise<WebhookEventFormat>
   onCancel: () => void
 }
 
@@ -33,7 +34,7 @@ const DEFAULT_EVENT_FORMAT = {
   },
 }
 
-export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFormProps) {
+export function WebhookForm({ mode, initialData, onSubmit, onPreview, onCancel }: WebhookFormProps) {
   const { t } = useTranslation()
   const [url, setUrl] = useState(initialData?.url || '')
   const [eventFormat, setEventFormat] = useState(
@@ -45,6 +46,9 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isPreviewing, setIsPreviewing] = useState(false)
+  const [previewPayload, setPreviewPayload] = useState<WebhookEventFormat | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
 
   const validate = () => {
     const newErrors: Record<string, string> = {}
@@ -65,6 +69,26 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
 
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
+  }
+
+  const parseEventFormat = (): WebhookEventFormat | null => {
+    if (!eventFormat.trim()) {
+      setErrors((prev) => ({ ...prev, eventFormat: t('webhooks.errorFormatRequired') }))
+      return null
+    }
+
+    try {
+      const parsed = JSON.parse(eventFormat) as WebhookEventFormat
+      setErrors((prev) => {
+        const next = { ...prev }
+        delete next.eventFormat
+        return next
+      })
+      return parsed
+    } catch {
+      setErrors((prev) => ({ ...prev, eventFormat: t('webhooks.errorFormatInvalid') }))
+      return null
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -90,6 +114,26 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
   const resetToDefault = () => {
     setEventFormat(JSON.stringify(DEFAULT_EVENT_FORMAT, null, 2))
     setErrors({})
+    setPreviewPayload(null)
+    setPreviewError(null)
+  }
+
+  const handlePreview = async () => {
+    if (!onPreview) return
+
+    const parsedEventFormat = parseEventFormat()
+    if (!parsedEventFormat) return
+
+    setIsPreviewing(true)
+    setPreviewError(null)
+    try {
+      const payload = await onPreview(parsedEventFormat)
+      setPreviewPayload(payload)
+    } catch (error) {
+      setPreviewError(error instanceof Error ? error.message : t('webhooks.previewError'))
+    } finally {
+      setIsPreviewing(false)
+    }
   }
 
   return (
@@ -114,9 +158,16 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
           <Label htmlFor="event-format">
             {t('webhooks.eventFormat')} (JSON) <span className="text-destructive">*</span>
           </Label>
-          <Button type="button" variant="link" size="sm" onClick={resetToDefault}>
-            {t('webhooks.resetToDefault')}
-          </Button>
+          <div className="flex items-center gap-2">
+            {onPreview && (
+              <Button type="button" variant="outline" size="sm" onClick={handlePreview} disabled={isPreviewing || isSubmitting}>
+                {isPreviewing ? t('webhooks.previewing') : t('webhooks.previewPayload')}
+              </Button>
+            )}
+            <Button type="button" variant="link" size="sm" onClick={resetToDefault}>
+              {t('webhooks.resetToDefault')}
+            </Button>
+          </div>
         </div>
         <Textarea
           id="event-format"
@@ -144,6 +195,17 @@ export function WebhookForm({ mode, initialData, onSubmit, onCancel }: WebhookFo
             <li>{'{{.BaseURL}}'} - {t('webhooks.varBaseUrl', 'Base URL of NodePulse')}</li>
           </ul>
         </details>
+        {previewError && (
+          <p className="text-sm text-destructive">{previewError}</p>
+        )}
+        {previewPayload && (
+          <div className="space-y-2 rounded-md border border-border bg-muted/30 p-3">
+            <p className="text-xs font-medium text-muted-foreground">{t('webhooks.previewTitle')}</p>
+            <pre className="max-h-64 overflow-auto rounded bg-background p-3 text-xs text-foreground">
+              {JSON.stringify(previewPayload, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center gap-3">

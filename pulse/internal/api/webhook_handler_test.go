@@ -30,6 +30,7 @@ func setupWebhookHandlerTest() (*gin.Engine, *db.MockWebhookQuerier) {
 	router.GET("/webhooks/:id", handler.GetWebhookByIDHandler)
 	router.PUT("/webhooks/:id", handler.UpdateWebhookHandler)
 	router.DELETE("/webhooks/:id", handler.DeleteWebhookHandler)
+	router.POST("/webhooks/preview", handler.PreviewWebhookEventHandler)
 
 	return router, mockQuerier
 }
@@ -177,6 +178,58 @@ func TestGetWebhooksHandler_Success(t *testing.T) {
 	err := json.Unmarshal(w.Body.Bytes(), &response)
 	require.NoError(t, err)
 	assert.Len(t, response.Data.Webhooks, 2)
+}
+
+func TestPreviewWebhookEventHandler_DefaultFormat(t *testing.T) {
+	router, _ := setupWebhookHandlerTest()
+
+	req := httptest.NewRequest("POST", "/webhooks/preview", bytes.NewBuffer([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+	req.Host = "pulse.example.com"
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.PreviewWebhookEventResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+
+	alert, ok := response.Data.Payload["alert"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "preview-alert-1", alert["id"])
+	assert.Equal(t, "latency", alert["metric"])
+	assert.Equal(t, float64(100), alert["threshold"])
+
+	links, ok := response.Data.Payload["links"].(map[string]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "http://pulse.example.com/nodes/preview-node-1", links["alert_details"])
+}
+
+func TestPreviewWebhookEventHandler_CustomFormat(t *testing.T) {
+	router, _ := setupWebhookHandlerTest()
+
+	reqBody := models.PreviewWebhookEventRequest{
+		EventFormat: map[string]interface{}{
+			"text":     "Alert {{.AlertID}} on {{.NodeID}}",
+			"severity": "{{.Level}}",
+		},
+	}
+	body, _ := json.Marshal(reqBody)
+	req := httptest.NewRequest("POST", "/webhooks/preview", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response models.PreviewWebhookEventResponse
+	err := json.Unmarshal(w.Body.Bytes(), &response)
+	require.NoError(t, err)
+	assert.Equal(t, "Alert preview-alert-1 on preview-node-1", response.Data.Payload["text"])
+	assert.Equal(t, "P1", response.Data.Payload["severity"])
 }
 
 func TestGetWebhookByIDHandler_Success(t *testing.T) {

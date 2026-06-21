@@ -467,6 +467,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// POST /api/v1/webhooks - Create webhook configuration (admin only)
 		webhooks.POST("", webhookHandler.CreateWebhookHandler)
 
+		// POST /api/v1/webhooks/preview - Preview rendered webhook payload (admin only)
+		webhooks.POST("/preview", webhookHandler.PreviewWebhookEventHandler)
+
 		// PUT /api/v1/webhooks/:id - Update webhook configuration (admin only)
 		webhooks.PUT("/:id", webhookHandler.UpdateWebhookHandler)
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { CreateWebhookRequest } from '@/api/webhooks'
+import { previewWebhookPayload, type CreateWebhookRequest, type WebhookEventFormat } from '@/api/webhooks'
 import { useAuthStore } from '@/stores/authStore'
 import { useWebhooks } from '@/hooks/useWebhooks'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -60,6 +60,11 @@ export default function WebhooksPage() {
     setSelectedWebhookId(null)
   }
 
+  const handlePreview = async (eventFormat: WebhookEventFormat) => {
+    const response = await previewWebhookPayload({ event_format: eventFormat })
+    return response.data.payload
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -90,7 +95,7 @@ export default function WebhooksPage() {
       )}
 
       {dialogOpen && (
-        <WebhookDialog mode={dialogMode} open={dialogOpen} initialData={selectedWebhook} onSubmit={handleSubmit} onCancel={() => { setDialogOpen(false); setSelectedWebhookId(null) }} />
+        <WebhookDialog mode={dialogMode} open={dialogOpen} initialData={selectedWebhook} onSubmit={handleSubmit} onPreview={handlePreview} onCancel={() => { setDialogOpen(false); setSelectedWebhookId(null) }} />
       )}
 
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>

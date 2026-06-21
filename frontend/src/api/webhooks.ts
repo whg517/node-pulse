@@ -28,6 +28,16 @@ export interface UpdateWebhookRequest {
   enabled?: boolean
 }
 
+export interface PreviewWebhookPayloadRequest {
+  event_format?: WebhookEventFormat
+}
+
+export interface PreviewWebhookPayloadResponse {
+  data: {
+    payload: WebhookEventFormat
+  }
+}
+
 /**
  * Fetch all webhooks from the API
  *
@@ -88,5 +98,21 @@ export async function deleteWebhook(
 ): Promise<{ message: string }> {
   return apiClient<{ message: string }>(`/api/v1/webhooks/${id}`, {
     method: 'DELETE',
+  })
+}
+
+/**
+ * Render a webhook payload preview using a sample alert event.
+ *
+ * @param request - Event format to render
+ * @returns Rendered payload preview
+ * @throws ValidationError if the event format is invalid
+ */
+export async function previewWebhookPayload(
+  request: PreviewWebhookPayloadRequest
+): Promise<PreviewWebhookPayloadResponse> {
+  return apiClient<PreviewWebhookPayloadResponse>('/api/v1/webhooks/preview', {
+    method: 'POST',
+    body: JSON.stringify(request),
   })
 }
