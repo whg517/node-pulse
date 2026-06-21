@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
+	"github.com/whg517/node-pulse/pulse/internal/realtime"
 	"github.com/whg517/node-pulse/pulse/internal/suppression"
 	"github.com/whg517/node-pulse/pulse/internal/webhook"
 )
@@ -29,6 +30,7 @@ type AlertEngine struct {
 	alertEventsQuerier       db.AlertEventsQuerier
 	suppressionService       *suppression.Service
 	webhookPushService       *webhook.PushService
+	realtimeHub              *realtime.Hub
 	metricChannel            chan *MetricData
 	workerPoolSize           int
 	ctx                      context.Context
@@ -97,6 +99,12 @@ func (e *AlertEngine) getPool() *pgxpool.Pool {
 // Pass nil to disable URL validation (useful in tests with http:// servers).
 func (e *AlertEngine) WithWebhookURLValidator(fn func(string) error) *AlertEngine {
 	e.webhookPushService.WithURLValidator(fn)
+	return e
+}
+
+// WithRealtimeHub enables websocket broadcasts for alert lifecycle events.
+func (e *AlertEngine) WithRealtimeHub(hub *realtime.Hub) *AlertEngine {
+	e.realtimeHub = hub
 	return e
 }
 
@@ -246,6 +254,9 @@ func (e *AlertEngine) evaluateMetric(data *MetricData) {
 					slog.Debug("Alert record created",
 						"record_id", alertRecord.ID,
 						"alert_event_id", alertEvent.ID)
+					if e.realtimeHub != nil {
+						e.realtimeHub.BroadcastAlertRecord(realtime.EventAlertNew, alertRecord)
+					}
 				}
 
 				// Record suppression for future alerts

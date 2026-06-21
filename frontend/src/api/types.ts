@@ -141,7 +141,7 @@ export interface AlertRecordDTO {
   node_id: string
   metric: string
   level: string
-  status: 'pending' | 'processing' | 'resolved'
+  status: 'pending' | 'in_progress' | 'resolved'
   created_at: string
   updated_at: string
 }

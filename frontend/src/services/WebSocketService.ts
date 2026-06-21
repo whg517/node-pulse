@@ -38,10 +38,12 @@ export type WebSocketEvent =
   | 'alert:updated'
   | 'alert:resolved'
   | 'alert:acknowledged'
+  | 'alert:note_created'
   | 'node:online'
   | 'node:offline'
   | 'system:heartbeat'
   | 'system:error'
+  | 'pong'
 
 export interface WebSocketMessage<T = unknown> {
   type: WebSocketEvent
@@ -117,13 +119,11 @@ function buildWebSocketUrl(): string {
   const state = useAuthStore.getState()
   const token = state.accessToken
   
-  // Convert HTTP URL to WebSocket URL
-  const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-  
-  // Use environment variable for API base if available
-  const baseUrl = API_BASE_URL.replace(/^https?:/, '')
-  
-  let url = `${wsProtocol}//${window.location.host}${baseUrl}/ws`
+  const apiUrl = new URL(API_BASE_URL || window.location.origin, window.location.origin)
+  apiUrl.protocol = apiUrl.protocol === 'https:' ? 'wss:' : 'ws:'
+  apiUrl.pathname = '/ws'
+  apiUrl.search = ''
+  let url = apiUrl.toString()
   
   // Add token if available
   if (token) {

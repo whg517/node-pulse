@@ -45,6 +45,8 @@ This PRD uses explicit status labels so product scope, roadmap, and code stay al
 - Data export as CSV.
 - Report preview/print workflow using live metrics, latest MTR, alert context, and diagnosis output.
 - System health page for database, scheduler, alert engine, webhook delivery, and suppression health.
+- Authenticated Pulse WebSocket event stream for alert-created, alert-status-updated, and alert-note-created events.
+- Dashboard alert stream consumption with browser notification support and polling fallback.
 - English and Simplified Chinese UI foundation with timezone preferences.
 - Pulse Prometheus metrics and Beacon Prometheus metrics.
 - OpenTelemetry tracing integration for Pulse and Beacon HTTP paths.
@@ -52,9 +54,8 @@ This PRD uses explicit status labels so product scope, roadmap, and code stay al
 ### 3.2 Partially Supported Capabilities
 
 - **Cross-border transport optimization:** Compression, CRC, and priority cache utilities exist, and Pulse exposes a compressed heartbeat endpoint, but Beacon does not yet use compression/resume upload in its runtime heartbeat path.
-- **Real-time alert push:** Frontend WebSocket and browser notification services exist, but Pulse does not expose a `/ws` or equivalent event stream endpoint.
-- **Mobile alert handling:** A mobile alert detail component exists, but backend alert note routes are missing and status updates currently ignore note content.
-- **Webhook operations:** Delivery retries exist, but manual test delivery, endpoint health state, queue depth enforcement, delivery history UI, success-rate UI, timeout metrics, and unhealthy recovery checks are incomplete.
+- **Alert timeline UX:** Alert note persistence and realtime note events exist, but the UI still needs a unified status-change and note timeline.
+- **Webhook operations:** Delivery retries and manual test delivery exist, but endpoint health state, queue depth enforcement, delivery history UI, success-rate UI, timeout metrics, and unhealthy recovery checks are incomplete.
 - **Scheduled reports:** The Reports page can create schedules in local frontend state, but there is no server-side schedule persistence, execution, PDF generation job, or email delivery.
 - **Excel export:** The UI acknowledges Excel as unavailable and backend export supports CSV only.
 - **Configuration rollback:** Beacon config history can be viewed, but rollback-to-version is not implemented.
@@ -64,9 +65,8 @@ This PRD uses explicit status labels so product scope, roadmap, and code stay al
 ### 3.3 Planned Capabilities
 
 - End-to-end compressed and resumable Beacon upload.
-- Pulse alert event streaming for dashboard and browser notifications.
-- Alert notes and status timeline persistence.
-- Webhook test send, health state, delivery statistics, and history view.
+- Unified alert status and note timeline UI.
+- Webhook health state, delivery statistics, and history view.
 - Server-side report schedules with email delivery.
 - XLSX export.
 - Config rollback.
@@ -183,14 +183,15 @@ An operator configures webhooks, previews payloads, sends a test delivery, monit
 - Node detail must show metrics, diagnosis, MTR path visualization, and report navigation.
 - Beacon config UI must support editing, validation, history view, and local templates.
 - Reports UI must provide PDF preview/print and CSV export workflows.
+- Dashboard alert stream must consume Pulse realtime events and keep polling as fallback.
+- Webhook management UI must support payload preview and manual test delivery.
 
 **Planned**
 
 - Replace hardcoded operational strings with locale keys.
 - Add accessible text alternatives for chart-heavy views.
 - Add alert notes/timeline UI backed by API persistence.
-- Connect alert stream to Pulse event streaming.
-- Add webhook delivery history/statistics and test-send UI.
+- Add webhook delivery history/statistics UI.
 - Add config rollback UI.
 
 ### FR-4 Alerts And Integrations
@@ -200,15 +201,15 @@ An operator configures webhooks, previews payloads, sends a test delivery, monit
 - Operators must manage alert rules for latency, packet loss, and jitter.
 - Pulse must create alert records when rules are triggered.
 - Operators must update alert record status.
+- Alert record status update must support optional note content.
+- Operators must add and view alert notes independently of status changes.
 - Pulse must send alert webhooks to enabled endpoints with retries.
-- Operators must create, edit, delete, and preview webhook payloads.
+- Operators must create, edit, delete, preview webhook payloads, and send manual test payloads.
 
 **Planned**
 
-- Alert record status update must support optional note content.
-- Operators must add and view alert notes independently of status changes.
 - Webhook configs must support custom headers and severity filters.
-- Operators must send manual test payloads and see HTTP status, latency, and response summary.
+- Operators must see webhook test response latency and response summary.
 - Pulse must mark repeatedly failing webhooks unhealthy and retry health checks later.
 
 ### FR-5 Reports And Exports
@@ -234,10 +235,10 @@ An operator configures webhooks, previews payloads, sends a test delivery, monit
 - Pulse must support API key lifecycle for Beacon authentication.
 - Pulse must apply CSRF protection to selected mutation endpoints.
 - Pulse must validate webhook URLs against SSRF rules before delivery.
+- Production mode must default mTLS to strict unless explicitly disabled.
 
 **Planned**
 
-- Production mode must default mTLS to strict unless explicitly disabled.
 - Password reset must deliver reset emails through a configured provider.
 - Mutation endpoints should consistently apply CSRF where browser-authenticated flows can reach them.
 - Metrics endpoints must have documented production protection options.

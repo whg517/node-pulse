@@ -34,13 +34,13 @@ export interface AlertRecord {
   nodeId: string
   metric: string
   level: string
-  status: 'pending' | 'processing' | 'resolved'
+  status: 'pending' | 'in_progress' | 'resolved'
   timestamp: string
 }
 
 export interface AlertFilter {
   level?: 'P0' | 'P1' | 'P2' | 'all'
-  status?: 'pending' | 'processing' | 'resolved' | 'all'
+  status?: 'pending' | 'in_progress' | 'resolved' | 'all'
   nodeId?: string | null
   searchQuery?: string
 }

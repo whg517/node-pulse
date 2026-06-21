@@ -11,17 +11,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/whg517/node-pulse/pulse/internal/db"
+	"github.com/whg517/node-pulse/pulse/internal/models"
+	"github.com/whg517/node-pulse/pulse/internal/realtime"
 )
 
 // AlertRecordHandler handles alert record-related HTTP requests
 type AlertRecordHandler struct {
-	pool *pgxpool.Pool
+	pool        *pgxpool.Pool
+	realtimeHub *realtime.Hub
 }
 
 // NewAlertRecordHandler creates a new alert record handler
-func NewAlertRecordHandler(pool *pgxpool.Pool) *AlertRecordHandler {
+func NewAlertRecordHandler(pool *pgxpool.Pool, realtimeHub ...*realtime.Hub) *AlertRecordHandler {
+	var hub *realtime.Hub
+	if len(realtimeHub) > 0 {
+		hub = realtimeHub[0]
+	}
+
 	return &AlertRecordHandler{
-		pool: pool,
+		pool:        pool,
+		realtimeHub: hub,
 	}
 }
 
@@ -238,9 +247,11 @@ func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 		return
 	}
 
+	var createdNote *models.AlertNote
 	if strings.TrimSpace(req.Note) != "" {
 		userID := c.GetString("user_id")
-		if _, err := db.CreateAlertNote(ctx, pool, recordID, &userID, req.Note); err != nil {
+		note, err := db.CreateAlertNote(ctx, pool, recordID, &userID, req.Note)
+		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"code":    "ERR_CREATE_NOTE",
 				"message": "Status was updated, but failed to create alert note",
@@ -248,6 +259,7 @@ func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 			})
 			return
 		}
+		createdNote = note
 	}
 
 	// Get updated record
@@ -271,6 +283,10 @@ func (h *AlertRecordHandler) UpdateAlertRecordStatusHandler(c *gin.Context) {
 		return
 	}
 	record.Notes = notes
+	h.broadcastRecordStatus(record)
+	if createdNote != nil && h.realtimeHub != nil {
+		h.realtimeHub.BroadcastAlertNote(createdNote)
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"data":      record,
@@ -346,6 +362,9 @@ func (h *AlertRecordHandler) AddAlertNoteHandler(c *gin.Context) {
 		"message":   "Alert note added successfully",
 		"timestamp": time.Now().Format(time.RFC3339),
 	})
+	if h.realtimeHub != nil {
+		h.realtimeHub.BroadcastAlertNote(note)
+	}
 }
 
 // GetAlertNotesHandler lists notes for an alert record.
@@ -392,4 +411,16 @@ func (h *AlertRecordHandler) GetAlertNotesHandler(c *gin.Context) {
 		"message":   "Alert notes retrieved successfully",
 		"timestamp": time.Now().Format(time.RFC3339),
 	})
+}
+
+func (h *AlertRecordHandler) broadcastRecordStatus(record *models.AlertRecord) {
+	if h.realtimeHub == nil || record == nil {
+		return
+	}
+
+	eventType := realtime.EventAlertUpdated
+	if record.Status == "resolved" {
+		eventType = realtime.EventAlertResolved
+	}
+	h.realtimeHub.BroadcastAlertRecord(eventType, record)
 }

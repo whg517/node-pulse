@@ -90,6 +90,38 @@ describe('useAlertsStore', () => {
     expect(result.current.alertRecords).toEqual(mockRecords)
   })
 
+  it('should upsert alert records from realtime events', () => {
+    const { result } = renderHook(() => useAlertsStore())
+
+    act(() => {
+      result.current.upsertAlertRecord({
+        id: 'record-1',
+        nodeId: 'node-1',
+        metric: 'latency',
+        level: 'P1',
+        status: 'pending',
+        timestamp: '2024-01-01T00:00:00Z',
+      })
+    })
+
+    expect(result.current.alertRecords).toHaveLength(1)
+
+    act(() => {
+      result.current.upsertAlertRecord({
+        id: 'record-1',
+        nodeId: 'node-1',
+        metric: 'latency',
+        level: 'P1',
+        status: 'in_progress',
+        timestamp: '2024-01-01T00:01:00Z',
+      })
+    })
+
+    expect(result.current.alertRecords).toHaveLength(1)
+    expect(result.current.alertRecords[0].status).toBe('in_progress')
+    expect(result.current.alertRecords[0].timestamp).toBe('2024-01-01T00:01:00Z')
+  })
+
   it('should add alert rule', async () => {
     const { result } = renderHook(() => useAlertsStore())
 

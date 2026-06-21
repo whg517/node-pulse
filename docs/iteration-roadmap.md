@@ -19,7 +19,7 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 
 **Goal:** Make requirements and roadmap trustworthy again.
 
-**Status:** In progress.
+**Status:** Completed.
 
 **Scope:**
 
@@ -37,6 +37,8 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 
 ### P1.1 Production mTLS Mode Alignment
 
+**Status:** Completed.
+
 **Problem:** Production mode in config is `release`, but mTLS default strict-mode detection checks for `production`.
 
 **Scope:**
@@ -51,6 +53,8 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 - Debug/test modes continue to default to disabled.
 
 ### P1.2 Alert Notes API
+
+**Status:** Completed.
 
 **Problem:** Frontend alert mobile/detail flows support notes, but Pulse has no `/alerts/records/:id/notes` routes and status update ignores `note`.
 
@@ -73,6 +77,8 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 
 ### P1.3 Webhook Test Delivery
 
+**Status:** Completed.
+
 **Problem:** Payload preview exists, but operators cannot send a manual test delivery before enabling a webhook.
 
 **Scope:**
@@ -90,6 +96,8 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 
 ### P1.4 Regression Gate
 
+**Status:** Completed for P1 implementation slice.
+
 **Scope:**
 
 - Run focused Go tests for touched Pulse packages.
@@ -99,6 +107,8 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 ## 4. Phase 2 - Real-Time Incident Flow
 
 ### P2.1 Pulse Alert Event Stream
+
+**Status:** Completed for the first production path.
 
 **Problem:** Frontend connects to `/ws`, but Pulse does not expose an event stream.
 
@@ -116,6 +126,8 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 - Connection failure degrades gracefully.
 
 ### P2.2 Alert Timeline UX
+
+**Status:** Next.
 
 **Scope:**
 
@@ -220,10 +232,15 @@ This roadmap is based on the current implementation baseline. It prioritizes clo
 
 ## 9. Current Sprint
 
-Target first implementation slice:
+Completed implementation slices:
 
 1. P1.1 Production mTLS Mode Alignment.
 2. P1.2 Alert Notes API.
-3. Focused Go tests for changed Pulse packages.
+3. P1.3 Webhook Test Delivery.
+4. P2.1 Pulse Alert Event Stream.
 
-P1.3 Webhook Test Delivery follows after alert notes because it touches both backend and frontend workflow surfaces.
+Next implementation slice:
+
+1. P2.2 Alert Timeline UX.
+2. Persist and expose status-change history if current data is not sufficient.
+3. Render status changes and notes together in alert detail views with UTC and local timezone display.

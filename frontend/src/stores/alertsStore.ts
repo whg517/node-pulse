@@ -13,6 +13,7 @@ export interface AlertsState {
 export interface AlertsActions {
   setAlertRules: (rules: AlertRule[]) => void
   setAlertRecords: (records: AlertRecord[]) => void
+  upsertAlertRecord: (record: AlertRecord) => void
   addAlertRule: (request: CreateAlertRuleRequest) => Promise<void>
   updateAlertRule: (id: string, updates: UpdateAlertRuleRequest) => Promise<void>
   removeAlertRule: (id: string) => Promise<void>
@@ -45,6 +46,19 @@ export const useAlertsStore = create<AlertsStore>((set) => ({
 
   setAlertRecords: (records: AlertRecord[]) => {
     set({ alertRecords: records })
+  },
+
+  upsertAlertRecord: (record: AlertRecord) => {
+    set((state) => {
+      const existingIndex = state.alertRecords.findIndex((item) => item.id === record.id)
+      if (existingIndex === -1) {
+        return { alertRecords: [record, ...state.alertRecords] }
+      }
+
+      const alertRecords = [...state.alertRecords]
+      alertRecords[existingIndex] = { ...alertRecords[existingIndex], ...record }
+      return { alertRecords }
+    })
   },
 
   addAlertRule: async (request: CreateAlertRuleRequest) => {

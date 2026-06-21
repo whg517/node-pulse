@@ -22,6 +22,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/export"
 	"github.com/whg517/node-pulse/pulse/internal/health"
+	"github.com/whg517/node-pulse/pulse/internal/realtime"
 	"github.com/whg517/node-pulse/pulse/pkg/metrics"
 	"github.com/whg517/node-pulse/pulse/pkg/middleware"
 )
@@ -85,6 +86,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	// Initialize JWT service with RS256
 	jwtService := auth.NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, 15, pool)
 
+	// Initialize realtime event hub for dashboard alert stream
+	realtimeHub := realtime.NewHub()
+
 	// Initialize auth handler
 	authHandler := auth.NewAuthHandler(
 		pool,
@@ -111,6 +115,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	if pool != nil {
 		alertEngineConfig := alert.DefaultEngineConfig()
 		alertEngine = alert.NewAlertEngine(pool, alertQuerier, alertEngineConfig)
+		alertEngine.WithRealtimeHub(realtimeHub)
 		alertEngine.Start()
 	}
 
@@ -143,6 +148,11 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 	// Prometheus metrics endpoint (public)
 	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Realtime websocket endpoint. The frontend passes JWT access tokens as a
+	// query parameter because browser WebSocket APIs cannot set auth headers.
+	realtimeHandler := realtime.NewHandler(realtimeHub, jwtService)
+	router.GET("/ws", realtimeHandler.ServeWS)
 
 	// API v1 routes
 	v1 := router.Group("/api/v1")
@@ -437,7 +447,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		alerts.DELETE("/rules/:id", alertHandler.DeleteAlertRuleHandler)
 
 		// Alert record management routes (require auth) (Story 6.1)
-		alertRecordHandler := NewAlertRecordHandler(pool)
+		alertRecordHandler := NewAlertRecordHandler(pool, realtimeHub)
 
 		// Alert records group with auth middleware
 		alertRecords := v1.Group("/alerts/records")
