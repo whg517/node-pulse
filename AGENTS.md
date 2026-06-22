@@ -12,6 +12,17 @@ This is a monorepo for **Node-Pulse**, a distributed network monitoring system w
 - **`e2e/`** - Playwright end-to-end test suite
 - **`docs/`** - Project documentation (PRD, auth design, UI design)
 
+## Development Workflow
+
+Follow `docs/development-workflow.md` for all code and documentation changes:
+
+- Develop in Git worktrees under `.worktree/`.
+- Start from `main`, then create a branch named `<type>-<name>`.
+- Squash-merge completed work back to `main`.
+- Required completion gates: `golangci-lint`, Go build, frontend lint, and frontend build.
+- Use standardized Conventional Commit messages with the allowed types in the workflow document.
+- Do not use the `chore` type for branches or commits.
+
 ## Common Commands
 
 ### Beacon (Monitoring Agent)

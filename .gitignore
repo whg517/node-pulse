@@ -53,6 +53,9 @@ coverage.html
 go.work
 go.work.sum
 
+# Repository-local Git worktrees
+.worktree/
+
 # Dependency directories
 vendor/
 

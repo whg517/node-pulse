@@ -129,6 +129,14 @@ PULSE_SERVER_MODE=release
 
 ## Development
 
+Development must follow the repository workflow in [`docs/development-workflow.md`](docs/development-workflow.md):
+
+- Use Git worktrees under `.worktree/`.
+- Create development branches from `main` using `<type>-<name>`.
+- Squash-merge completed work back to `main`.
+- Pass Go lint, Go build, frontend lint, and frontend build before merge.
+- Use standardized commit messages and do not use the `chore` type.
+
 ### Beacon
 
 ```bash
