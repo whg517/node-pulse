@@ -114,7 +114,7 @@ func TestExecute_WithConfigFlag(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	cmd := GetRootCmd()
 	cmd.SetArgs([]string{"--config", tmpFile.Name(), "--help"})

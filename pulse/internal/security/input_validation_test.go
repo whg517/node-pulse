@@ -6,10 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func intPtr(i int) *int {
-	return &i
-}
-
 func TestValidateInput_RequiredField(t *testing.T) {
 	data := map[string]interface{}{}
 	rules := []ValidationRule{

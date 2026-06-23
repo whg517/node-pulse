@@ -67,6 +67,14 @@ jobs:
           go-version-file: beacon/go.mod
           cache-dependency-path: beacon/go.sum
 
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          install-only: true
+
+      - name: Lint beacon
+        run: make lint
+
       - name: Run beacon tests
         run: make test
 
@@ -104,6 +112,14 @@ jobs:
         with:
           go-version-file: pulse/go.mod
           cache-dependency-path: pulse/go.sum
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          install-only: true
+
+      - name: Lint pulse
+        run: make lint
 
       - name: Run pulse unit tests
         run: make test-unit

@@ -664,8 +664,7 @@ func TestErrorHandler_WithAppError(t *testing.T) {
 // ---- MTLs config tests ----
 
 func TestInitMTLSConfig_Disabled(t *testing.T) {
-	_ = os.Setenv("PULSE_MTLS_ENABLED", "disabled")
-	defer os.Unsetenv("PULSE_MTLS_ENABLED")
+	t.Setenv("PULSE_MTLS_ENABLED", "disabled")
 
 	// Reset once
 	mTLSConfigOnce = *new(sync.Once)
@@ -678,8 +677,7 @@ func TestInitMTLSConfig_Disabled(t *testing.T) {
 }
 
 func TestInitMTLSConfig_BooleanTrue(t *testing.T) {
-	_ = os.Setenv("PULSE_MTLS_ENABLED", "true")
-	defer os.Unsetenv("PULSE_MTLS_ENABLED")
+	t.Setenv("PULSE_MTLS_ENABLED", "true")
 
 	mTLSConfigOnce = *new(sync.Once)
 	mTLSConfig = nil
@@ -691,8 +689,7 @@ func TestInitMTLSConfig_BooleanTrue(t *testing.T) {
 }
 
 func TestInitMTLSConfig_BooleanFalse(t *testing.T) {
-	_ = os.Setenv("PULSE_MTLS_ENABLED", "false")
-	defer os.Unsetenv("PULSE_MTLS_ENABLED")
+	t.Setenv("PULSE_MTLS_ENABLED", "false")
 
 	mTLSConfigOnce = *new(sync.Once)
 	mTLSConfig = nil
@@ -704,16 +701,14 @@ func TestInitMTLSConfig_BooleanFalse(t *testing.T) {
 }
 
 func TestGetEnvOrDefault(t *testing.T) {
-	_ = os.Setenv("TEST_ENV_VAR", "testvalue")
-	defer os.Unsetenv("TEST_ENV_VAR")
+	t.Setenv("TEST_ENV_VAR", "testvalue")
 
 	assert.Equal(t, "testvalue", getEnvOrDefault("TEST_ENV_VAR", "default"))
 	assert.Equal(t, "default", getEnvOrDefault("NONEXISTENT_ENV_VAR", "default"))
 }
 
 func TestGetEnvInt(t *testing.T) {
-	_ = os.Setenv("TEST_INT_ENV", "42")
-	defer os.Unsetenv("TEST_INT_ENV")
+	t.Setenv("TEST_INT_ENV", "42")
 
 	assert.Equal(t, 42, getEnvInt("TEST_INT_ENV", 0))
 	assert.Equal(t, 10, getEnvInt("NONEXISTENT_INT_ENV", 10))

@@ -74,7 +74,7 @@ func TestBaselineCalculator_Start_Stop(t *testing.T) {
 
 	// Start without DB - background worker runs but can't update
 	assert.NotPanics(t, func() {
-		calc.Start(context.Background())
+		require.NoError(t, calc.Start(context.Background()))
 	})
 
 	// Short delay
@@ -82,7 +82,7 @@ func TestBaselineCalculator_Start_Stop(t *testing.T) {
 
 	// Stop should work
 	assert.NotPanics(t, func() {
-		calc.Stop()
+		require.NoError(t, calc.Stop())
 	})
 }
 

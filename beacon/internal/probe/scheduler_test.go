@@ -31,7 +31,7 @@ func startTCPServerForScheduler(t *testing.T, addr string) net.Listener {
 			if err != nil {
 				return
 			}
-			conn.Close()
+			_ = conn.Close()
 		}
 	}()
 	return server
@@ -90,7 +90,7 @@ func TestNewProbeScheduler_Empty(t *testing.T) {
 // TestNewProbeScheduler_WithTCPProbe tests creating a scheduler with TCP probe
 func TestNewProbeScheduler_WithTCPProbe(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18770")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	cfg := makeValidTCPProbeConfig("localhost", 18770)
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
@@ -128,7 +128,7 @@ func TestNewProbeScheduler_WithMTRProbe(t *testing.T) {
 // TestNewProbeScheduler_MixedProbes tests creating a scheduler with mixed probe types
 func TestNewProbeScheduler_MixedProbes(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18772")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	probes := []config.ProbeConfig{
 		makeValidTCPProbeConfig("localhost", 18772),
@@ -229,7 +229,7 @@ func TestProbeScheduler_Start_NoProbes(t *testing.T) {
 // TestProbeScheduler_Start_AlreadyRunning tests double-start returns error
 func TestProbeScheduler_Start_AlreadyRunning(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18776")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	cfg := makeValidTCPProbeConfig("localhost", 18776)
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
@@ -283,7 +283,7 @@ func TestProbeScheduler_Stop_NotRunning(t *testing.T) {
 // TestProbeScheduler_GetProbeCount tests GetProbeCount
 func TestProbeScheduler_GetProbeCount(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18777")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	probes := []config.ProbeConfig{
 		makeValidTCPProbeConfig("localhost", 18777),
@@ -301,7 +301,7 @@ func TestProbeScheduler_GetProbeCount(t *testing.T) {
 // TestProbeScheduler_ExecuteProbeNow tests ExecuteProbeNow
 func TestProbeScheduler_ExecuteProbeNow(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18779")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	cfg := makeValidTCPProbeConfig("localhost", 18779)
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
@@ -358,7 +358,7 @@ func TestProbeScheduler_GetLatestResults_Empty(t *testing.T) {
 // TestProbeScheduler_UpdateProbeInterval tests UpdateProbeInterval
 func TestProbeScheduler_UpdateProbeInterval(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18780")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	cfg := makeValidTCPProbeConfig("localhost", 18780)
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
@@ -398,7 +398,7 @@ func TestProbeScheduler_UpdateProbeInterval_InvalidMultiplier(t *testing.T) {
 // TestProbeScheduler_GetInterval tests GetInterval
 func TestProbeScheduler_GetInterval(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18781")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	cfg := makeValidTCPProbeConfig("localhost", 18781)
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
@@ -425,9 +425,9 @@ func TestProbeScheduler_GetInterval(t *testing.T) {
 // TestProbeScheduler_ReloadConfig tests ReloadConfig
 func TestProbeScheduler_ReloadConfig(t *testing.T) {
 	server1 := startTCPServerForScheduler(t, "localhost:18782")
-	defer server1.Close()
+	defer func() { _ = server1.Close() }()
 	server2 := startTCPServerForScheduler(t, "localhost:18783")
-	defer server2.Close()
+	defer func() { _ = server2.Close() }()
 
 	cfg := makeValidTCPProbeConfig("localhost", 18782)
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
@@ -449,7 +449,7 @@ func TestProbeScheduler_ReloadConfig(t *testing.T) {
 // TestProbeScheduler_ReloadConfig_Empty tests ReloadConfig with empty config
 func TestProbeScheduler_ReloadConfig_Empty(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18784")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	cfg := makeValidTCPProbeConfig("localhost", 18784)
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
@@ -567,7 +567,7 @@ func TestProbeScheduler_ReloadConfig_UDPCountTooLow(t *testing.T) {
 // TestProbeScheduler_StartStop_WithProbes tests full start/stop cycle
 func TestProbeScheduler_StartStop_WithProbes(t *testing.T) {
 	server := startTCPServerForScheduler(t, "localhost:18788")
-	defer server.Close()
+	defer func() { _ = server.Close() }()
 
 	cfg := makeValidTCPProbeConfig("localhost", 18788)
 	scheduler, err := NewProbeScheduler([]config.ProbeConfig{cfg})
