@@ -548,3 +548,38 @@ func TestPushService_formatAlertEvent_CustomEventFormat(t *testing.T) {
 	assert.Equal(t, []any{"node:node-1", "metric:packet_loss_rate"}, tags)
 	assert.Equal(t, "{{.Metric}}", eventFormat["details"].(map[string]any)["metric"])
 }
+
+// TestPushService_SetBaseURL verifies the runtime base URL override strips
+// trailing slashes and reflects in rendered payloads. This guards the
+// configuration wiring added for server.base_url (previously hard-coded).
+func TestPushService_SetBaseURL(t *testing.T) {
+	service := &PushService{
+		baseURL: "http://localhost:6532",
+	}
+
+	// Override with a production-style URL, including a trailing slash to prove
+	// it is normalised away.
+	service.SetBaseURL("https://pulse.example.com/")
+
+	assert.Equal(t, "https://pulse.example.com", service.baseURL)
+
+	// Rendered payload must use the overridden base URL.
+	alertEvent := &models.AlertEvent{
+		ID:           "test-alert-1",
+		NodeID:       "node-1",
+		Metric:       "latency",
+		Threshold:    100.0,
+		CurrentValue: 150.0,
+		Level:        "P0",
+		CreatedAt:    time.Date(2024, 1, 15, 10, 30, 0, 0, time.UTC),
+	}
+	webhook := &models.Webhook{ID: "webhook-1", URL: "https://example.com/webhook", Enabled: true}
+
+	formatted, err := service.formatAlertEvent(alertEvent, webhook)
+	require.NoError(t, err)
+
+	links, ok := formatted["links"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "https://pulse.example.com/nodes/node-1", links["alert_details"])
+	assert.Equal(t, "https://pulse.example.com", links["dashboard"])
+}

@@ -60,6 +60,10 @@ type ServerConfig struct {
 	WriteTimeout int    `yaml:"write_timeout"`
 	IdleTimeout  int    `yaml:"idle_timeout"`
 	Mode         string `yaml:"mode"`
+	// BaseURL is the externally reachable URL of this Pulse instance (no trailing
+	// slash), used to render absolute links in webhook payloads and exported data.
+	// Defaults to http://localhost:<port> for local development.
+	BaseURL string `yaml:"base_url"`
 }
 
 // DatabaseConfig holds database configuration
@@ -312,6 +316,7 @@ func defaultConfig() *Config {
 			WriteTimeout: 15,
 			IdleTimeout:  60,
 			Mode:         "debug",
+			BaseURL:      "http://localhost:6532", // overwritten by PULSE_SERVER_BASE_URL in production
 		},
 		DB: DatabaseConfig{
 			MaxConnections:  10,
@@ -393,6 +398,9 @@ func mergeFromEnv(cfg *Config) *Config {
 	}
 	if v := os.Getenv("PULSE_SERVER_MODE"); v != "" {
 		cfg.Server.Mode = v
+	}
+	if v := os.Getenv("PULSE_SERVER_BASE_URL"); v != "" {
+		cfg.Server.BaseURL = strings.TrimRight(v, "/")
 	}
 
 	// Database configuration

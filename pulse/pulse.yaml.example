@@ -26,6 +26,9 @@ server:
   write_timeout: 15         # Write timeout in seconds
   idle_timeout: 60          # Idle timeout in seconds
   mode: "debug"             # Server mode: debug, release, test
+  base_url: "http://localhost:6532"  # Externally reachable URL (no trailing slash);
+                                     # used in webhook payloads and export links.
+                                     # Override with PULSE_SERVER_BASE_URL in production.
 
 # ==================================
 # Database Configuration

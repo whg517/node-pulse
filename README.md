@@ -243,7 +243,7 @@ docker-compose -f e2e/docker-compose.e2e.yml up -d
 | Frontend | React 19, TypeScript 5, Vite 7 |
 | Styling | Tailwind CSS 4 |
 | State | Zustand 5 |
-| Charts | ECharts 6 |
+| Charts | Recharts 3 |
 | i18n | i18next (EN + zh-CN) |
 | Testing | Vitest, Playwright |
 

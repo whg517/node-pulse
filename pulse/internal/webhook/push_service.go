@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -54,6 +55,12 @@ func (s *PushService) WithURLValidator(fn func(string) error) *PushService {
 		s.urlValidator = fn
 	}
 	return s
+}
+
+// SetBaseURL updates the base URL used when rendering absolute links inside
+// webhook payloads. Trailing slashes are stripped to keep rendered URLs clean.
+func (s *PushService) SetBaseURL(baseURL string) {
+	s.baseURL = strings.TrimRight(baseURL, "/")
 }
 
 // SendWebhook sends an alert to a single webhook with retry logic

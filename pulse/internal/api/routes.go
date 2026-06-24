@@ -116,6 +116,11 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		alertEngineConfig := alert.DefaultEngineConfig()
 		alertEngine = alert.NewAlertEngine(pool, alertQuerier, alertEngineConfig)
 		alertEngine.WithRealtimeHub(realtimeHub)
+		// Wire configured server.base_url so webhook payloads carry correct
+		// absolute links instead of the localhost default.
+		if cfg, err := config.Load(); err == nil {
+			alertEngine.WithWebhookBaseURL(cfg.Server.BaseURL)
+		}
 		alertEngine.Start()
 	}
 

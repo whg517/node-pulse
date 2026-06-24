@@ -1,5 +1,5 @@
 .PHONY: test test-unit test-integration test-quick setup-test-db cleanup-test-db help
-.PHONY: build run clean deps swag swag-clean swag-force lint fmt
+.PHONY: build run clean deps swag swag-clean swag-force swag-ensure lint fmt
 
 # Default target
 help: ## Show this help message
@@ -13,16 +13,29 @@ deps: ## Download dependencies
 	go mod tidy
 	@echo "✅ Dependencies ready"
 
-run: ## Run the server (default port 6532)
+# swag-ensure regenerates the Swagger docs only when they are missing, so a
+# fresh checkout still builds. The committed source annotations are the source
+# of truth; run `make swag-force` deliberately to refresh them.
+swag-ensure:
+	@if [ ! -f api/docs/docs.go ]; then \
+		echo "📚 Swagger docs missing, generating..."; \
+		if ! command -v swag > /dev/null 2>&1; then \
+			echo "⚠️  swag not found. Installing..."; \
+			go install github.com/swaggo/swag/cmd/swag@latest; \
+		fi; \
+		swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal -q; \
+	fi
+
+run: swag-ensure ## Run the server (default port 6532)
 	@echo "🚀 Starting server..."
 	@go run cmd/server/main.go
 
-build: ## Build the server binary
+build: swag-ensure ## Build the server binary
 	@echo "🔨 Building server..."
 	@go build -o bin/pulse-api cmd/server/main.go
 	@echo "✅ Binary created: bin/pulse-api"
 
-build-debug: ## Build debug binary with optimizations disabled
+build-debug: swag-ensure ## Build debug binary with optimizations disabled
 	@echo "🔨 Building debug binary..."
 	@go build -gcflags="all=-N -l" -o bin/pulse-api-debug cmd/server/main.go
 	@echo "✅ Debug binary created: bin/pulse-api-debug"
@@ -82,17 +95,17 @@ cleanup-test-db: ## Stop test database container
 	docker compose -f docker-compose.test.yml down
 
 ##@ Testing
-test-unit: ## Run unit tests only (short mode)
+test-unit: swag-ensure ## Run unit tests only (short mode)
 	@echo "🧪 Running unit tests..."
 	go test -short -p 1 ./...
 
-test-integration: ## Run integration tests only
+test-integration: swag-ensure ## Run integration tests only
 	@echo "🧪 Running integration tests..."
 	go test -p 1 ./tests/integration/...
 
 test: setup-test-db test-unit test-integration cleanup-test-db ## Run full test suite (setup + tests + cleanup)
 	@echo "✅ All tests passed"
 
-test-quick: ## Run all tests (assumes DB is running)
+test-quick: swag-ensure ## Run all tests (assumes DB is running)
 	@echo "🧪 Quick test (assumes DB is running)..."
 	go test -p 1 ./...

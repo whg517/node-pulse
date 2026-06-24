@@ -73,6 +73,9 @@ func NewAlertEngine(
 	// Get webhooks querier for webhook push
 	webhookQuerier := db.NewWebhookQuerier(pool)
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
+	// baseURL is the placeholder until the caller overrides it via
+	// WithWebhookBaseURL using the configured server.base_url. The default keeps
+	// webhook payload rendering functional in tests/standalone runs.
 	webhookPushService := webhook.NewPushService(webhookQuerier, webhookLogsQuerier, "http://localhost:6532")
 
 	return &AlertEngine{
@@ -105,6 +108,16 @@ func (e *AlertEngine) WithWebhookURLValidator(fn func(string) error) *AlertEngin
 // WithRealtimeHub enables websocket broadcasts for alert lifecycle events.
 func (e *AlertEngine) WithRealtimeHub(hub *realtime.Hub) *AlertEngine {
 	e.realtimeHub = hub
+	return e
+}
+
+// WithWebhookBaseURL sets the base URL used to render absolute links inside
+// webhook payloads. Should be wired from config.Server.BaseURL so production
+// deployments emit correct links instead of the localhost default.
+func (e *AlertEngine) WithWebhookBaseURL(baseURL string) *AlertEngine {
+	if baseURL != "" {
+		e.webhookPushService.SetBaseURL(baseURL)
+	}
 	return e
 }
 

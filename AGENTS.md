@@ -158,7 +158,7 @@ src/
 │   │              #         ConfirmDialog, LoadingSpinner, ProtectedRoute, etc.
 │   ├── layout/    # AppLayout, Header, Sidebar, Breadcrumb, PageHeader
 │   ├── alerts/    # Alert rules, records components
-│   ├── charts/    # ECharts wrappers
+│   ├── charts/    # Recharts wrappers
 │   ├── dashboard/ # MetricCard, NodeListTable
 │   ├── nodes/     # Node-related components
 │   ├── export/    # Data export components
@@ -179,7 +179,7 @@ src/
 - **React Router v7** for client-side routing
 - **Zustand 5** for state management
 - **i18next** + **react-i18next** for internationalization (EN + zh-CN)
-- **ECharts 6** for charts and data visualization
+- **Recharts 3** for charts and data visualization
 - **Vitest** + **@testing-library/react** for unit/component tests
 
 ### Frontend Routes
@@ -269,19 +269,21 @@ Located in `beacon/internal/*/` and `beacon/tests/`. Run with `make test`.
 Located in `frontend/src/**/*.test.tsx` and `frontend/src/**/__tests__/`. Run with `npm run test` (uses Vitest).
 
 ### E2E Tests (Playwright)
-Located in `e2e/tests/` organized by feature:
-- `tests/auth/` - Login, logout, sessions, token refresh
-- `tests/rbac/` - Role-based access control (admin, operator, viewer)
-- `tests/nodes/` - Node list, detail, CRUD, comparison
-- `tests/alerts/` - Alert rules, history, records
-- `tests/webhooks/` - Webhook configuration
-- `tests/export/` - Data export functionality
-- `tests/dashboard/` - Dashboard metrics
-- `tests/performance/` - Performance metrics
-- `tests/reports/` - Reports
-- `tests/sessions/` - Session management
-- `tests/smoke/` - Smoke tests (quick sanity checks)
-- `tests/visual/` - Visual regression tests
+Located in `e2e/tests/`. Only the `smoke/` suite is currently implemented; the
+feature suites below are the planned roadmap (their npm scripts already exist
+in `e2e/package.json` but point at directories not yet created):
+- `tests/smoke/` - Smoke tests (quick sanity checks) ✅ implemented
+- `tests/auth/` - Login, logout, sessions, token refresh (planned)
+- `tests/rbac/` - Role-based access control (admin, operator, viewer) (planned)
+- `tests/nodes/` - Node list, detail, CRUD, comparison (planned)
+- `tests/alerts/` - Alert rules, history, records (planned)
+- `tests/webhooks/` - Webhook configuration (planned)
+- `tests/export/` - Data export functionality (planned)
+- `tests/dashboard/` - Dashboard metrics (planned)
+- `tests/performance/` - Performance metrics (planned)
+- `tests/reports/` - Reports (planned)
+- `tests/sessions/` - Session management (planned)
+- `tests/visual/` - Visual regression tests (planned)
 
 ```bash
 cd e2e

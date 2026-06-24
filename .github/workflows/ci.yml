@@ -118,6 +118,14 @@ jobs:
         with:
           install-only: true
 
+      - name: Install swag
+        run: go install github.com/swaggo/swag/cmd/swag@latest
+
+      # Generated Swagger docs are git-ignored; regenerate them from source
+      # annotations so the build/tests that compile cmd/server succeed.
+      - name: Generate Swagger docs
+        run: make swag
+
       - name: Lint pulse
         run: make lint
 
