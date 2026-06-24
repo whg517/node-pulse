@@ -10,9 +10,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
-	"beacon/internal/config"
-	"beacon/internal/logger"
-	"beacon/internal/probe"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/probe"
 )
 
 // ModeProvider interface for getting current operating mode

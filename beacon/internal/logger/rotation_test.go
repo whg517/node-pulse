@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 // TestLogRotation_BySize tests log rotation by file size

@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/config"
-	"beacon/internal/logger"
-	"beacon/internal/monitor"
-	"beacon/internal/probe"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/monitor"
+	"github.com/whg517/node-pulse/beacon/internal/probe"
 )
 
 // TestIntegration_ResourceMonitorLifecycle tests resource monitor start/stop lifecycle

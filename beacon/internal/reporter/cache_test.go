@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
 )
 
 // TestMain initializes the logger for all tests

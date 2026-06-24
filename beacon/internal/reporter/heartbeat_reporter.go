@@ -13,8 +13,8 @@ import (
 	"sync"
 	"time"
 
-	"beacon/internal/logger"
-	"beacon/internal/models"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/models"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 

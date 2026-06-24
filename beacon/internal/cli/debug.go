@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"beacon/internal/config"
-	"beacon/internal/diagnostics"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/diagnostics"
 )
 
 var (

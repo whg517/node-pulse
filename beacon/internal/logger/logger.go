@@ -10,7 +10,7 @@ import (
 
 	"gopkg.in/natefinch/lumberjack.v2"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 var (

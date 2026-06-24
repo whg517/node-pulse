@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 // TestNewManager_NilConfig tests creating manager with nil config

@@ -10,8 +10,8 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/config"
-	"beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
 )
 
 // Test constants

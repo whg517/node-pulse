@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
 )
 
 // TestMain initializes the logger for all tests in this package

@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/models"
+	"github.com/whg517/node-pulse/beacon/internal/models"
 )
 
 // TestUDPProbeConfigValidation tests UDP probe configuration validation

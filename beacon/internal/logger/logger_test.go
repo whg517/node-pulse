@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 // TestInitLogger_Success tests successful logger initialization

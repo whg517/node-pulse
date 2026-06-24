@@ -1,5 +1,6 @@
 .PHONY: test test-unit test-integration test-quick setup-test-db cleanup-test-db help
 .PHONY: build run clean deps swag swag-clean swag-force swag-ensure lint fmt
+.PHONY: migrate-up migrate-down migrate-force migrate-version migrate-create
 
 # Default target
 help: ## Show this help message
@@ -93,6 +94,36 @@ setup-test-db: ## Start test database container
 cleanup-test-db: ## Stop test database container
 	@echo "🛑 Stopping test database..."
 	docker compose -f docker-compose.test.yml down
+
+##@ Schema Migrations (golang-migrate)
+# Migrations live under internal/db/migrations/ as versioned .up.sql/.down.sql
+# pairs, embedded into the binary. The server applies them on startup; these
+# targets are for manual operations against a running database.
+MIGRATE_DSN ?= postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable
+MIGRATE_DIR = internal/db/migrations
+
+migrate-up: ## Apply pending migrations to $(MIGRATE_DSN)
+	@echo "⬆️  Applying migrations to $(MIGRATE_DSN)..."
+	@migrate -path $(MIGRATE_DIR) -database "$(MIGRATE_DSN)" up
+
+migrate-down: ## Roll back the last migration on $(MIGRATE_DSN)
+	@echo "⬇️  Rolling back last migration on $(MIGRATE_DSN)..."
+	@migrate -path $(MIGRATE_DIR) -database "$(MIGRATE_DSN)" down 1
+
+migrate-force: ## Force-set migration version (usage: make migrate-force V=N)
+	@if [ -z "$(V)" ]; then echo "Usage: make migrate-force V=<version>"; exit 1; fi
+	@migrate -path $(MIGRATE_DIR) -database "$(MIGRATE_DSN)" force $(V)
+
+migrate-version: ## Show current migration version
+	@migrate -path $(MIGRATE_DIR) -database "$(MIGRATE_DSN)" version
+
+migrate-create: ## Create a new migration pair (usage: make migrate-create NAME=add_foo)
+	@if [ -z "$(NAME)" ]; then echo "Usage: make migrate-create NAME=<name>"; exit 1; fi
+	@next=$$(ls $(MIGRATE_DIR) | grep -oE '^[0-9]+' | sort -n | tail -1); \
+	next=$$((next+1)); \
+	name=$$(printf "%04d_%s" $$next "$(NAME)"); \
+	touch $(MIGRATE_DIR)/$${name}.up.sql $(MIGRATE_DIR)/$${name}.down.sql; \
+	echo "✅ Created $(MIGRATE_DIR)/$${name}.up.sql and .down.sql"
 
 ##@ Testing
 test-unit: swag-ensure ## Run unit tests only (short mode)

@@ -80,6 +80,14 @@ make test-quick        # All tests (assumes DB is already running)
 make setup-test-db     # Start test PostgreSQL container
 make cleanup-test-db   # Stop test PostgreSQL container
 
+# Schema migrations (golang-migrate; versioned SQL under internal/db/migrations/)
+make migrate-create NAME=add_foo  # Create next migration pair (up + down)
+make migrate-up                    # Apply pending migrations (DSN via MIGRATE_DSN)
+make migrate-down                  # Roll back the last migration
+make migrate-version               # Show current schema version
+# Migrations are applied automatically on server startup; these targets are
+# for manual ops. Requires the `migrate` CLI: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
 # Generate Swagger documentation (auto-installs swag if missing)
 make swag
 make swag-clean        # Remove generated docs
@@ -212,7 +220,7 @@ pulse/internal/
 ├── cleanup/       # Scheduled data cleanup (retention)
 ├── config/        # Configuration loading (YAML + env vars)
 ├── csrf/          # CSRF protection middleware
-├── db/            # PostgreSQL connection + migrations
+├── db/            # PostgreSQL connection + versioned migrations (golang-migrate, embedded SQL under db/migrations/)
 ├── diagnostic/    # System health diagnostics
 ├── export/        # Data export functionality
 ├── health/        # Health check endpoints

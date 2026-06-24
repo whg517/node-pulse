@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 // initAdditionalLogger creates a test logger

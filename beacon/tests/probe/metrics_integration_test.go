@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/models"
-	"beacon/internal/probe"
+	"github.com/whg517/node-pulse/beacon/internal/models"
+	"github.com/whg517/node-pulse/beacon/internal/probe"
 )
 
 // TestTCPCoreMetricsIntegration tests TCP probe core metrics collection with real server

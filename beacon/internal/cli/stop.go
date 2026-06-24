@@ -6,8 +6,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"beacon/internal/config"
-	"beacon/internal/process"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/process"
 )
 
 var stopCmd = &cobra.Command{

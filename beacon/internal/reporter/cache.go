@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
 )
 
 // CachePriority represents the priority level of cached data (FR-4.1.7)

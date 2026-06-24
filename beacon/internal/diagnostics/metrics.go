@@ -1,7 +1,7 @@
 package diagnostics
 
 import (
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 // PrometheusMetrics contains Prometheus metrics summary

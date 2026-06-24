@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 // DiagnosticInfo contains all diagnostic information

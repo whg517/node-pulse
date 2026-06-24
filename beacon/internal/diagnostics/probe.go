@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 // ProbeTaskInfo contains information about a single probe task

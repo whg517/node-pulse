@@ -6,7 +6,7 @@ import (
 	"net"
 	"time"
 
-	"beacon/internal/models"
+	"github.com/whg517/node-pulse/beacon/internal/models"
 
 	"golang.org/x/net/icmp"
 	"golang.org/x/net/ipv4"

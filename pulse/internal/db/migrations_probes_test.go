@@ -5,18 +5,14 @@ import (
 	"testing"
 )
 
-// TestCreateProbesTable tests probes table creation
+// TestCreateProbesTable tests the probes table created by the baseline migration.
 func TestCreateProbesTable(t *testing.T) {
 	ctx := context.Background()
 	pool, _ := SetupTestDB(t)
 	defer pool.Close()
 
-	// Run migration
-	if err := createProbesTable(ctx, pool); err != nil {
-		t.Fatalf("Failed to create probes table: %v", err)
-	}
-
-	// Verify table exists
+	// SetupTestDB applies the baseline migration, which creates the probes
+	// table; verify its structure rather than re-running the step.
 	var tableName string
 	err := pool.QueryRow(ctx, `
 		SELECT table_name
@@ -87,22 +83,14 @@ func TestCreateProbesTable(t *testing.T) {
 	}
 }
 
-// TestCreateMetricsTable tests metrics table creation
+// TestCreateMetricsTable tests the metrics table created by the baseline migration.
 func TestCreateMetricsTable(t *testing.T) {
 	ctx := context.Background()
 	pool, _ := SetupTestDB(t)
 	defer pool.Close()
 
-	// Create probes table first (required for foreign key)
-	if err := createProbesTable(ctx, pool); err != nil {
-		t.Fatalf("Failed to create probes table: %v", err)
-	}
-
-	// Run migration
-	if err := createMetricsTable(ctx, pool); err != nil {
-		t.Fatalf("Failed to create metrics table: %v", err)
-	}
-
+	// SetupTestDB applies the baseline migration, which creates the metrics
+	// table (probes is created in the same migration); verify its structure.
 	// Verify table exists
 	var tableName string
 	err := pool.QueryRow(ctx, `

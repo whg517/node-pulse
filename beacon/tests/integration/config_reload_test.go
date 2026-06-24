@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 // TestConfigReload_BeaconStartup verifies Beacon can start with config watcher

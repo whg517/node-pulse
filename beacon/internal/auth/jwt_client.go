@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
 )
 
 // Token configuration constants (matching Pulse server defaults)

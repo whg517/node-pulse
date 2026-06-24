@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"beacon/internal/models"
+	"github.com/whg517/node-pulse/beacon/internal/models"
 )
 
 // UDPProbeConfig represents UDP probe configuration

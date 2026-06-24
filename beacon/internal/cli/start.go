@@ -11,17 +11,17 @@ import (
 
 	"github.com/spf13/cobra"
 
-	pulseapi "beacon/internal/api"
-	"beacon/internal/auth"
-	"beacon/internal/config"
-	"beacon/internal/logger"
-	"beacon/internal/metrics"
-	"beacon/internal/models"
-	"beacon/internal/monitor"
-	"beacon/internal/probe"
-	"beacon/internal/process"
-	"beacon/internal/reporter"
-	"beacon/internal/telemetry"
+	pulseapi "github.com/whg517/node-pulse/beacon/internal/api"
+	"github.com/whg517/node-pulse/beacon/internal/auth"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/metrics"
+	"github.com/whg517/node-pulse/beacon/internal/models"
+	"github.com/whg517/node-pulse/beacon/internal/monitor"
+	"github.com/whg517/node-pulse/beacon/internal/probe"
+	"github.com/whg517/node-pulse/beacon/internal/process"
+	"github.com/whg517/node-pulse/beacon/internal/reporter"
+	"github.com/whg517/node-pulse/beacon/internal/telemetry"
 )
 
 var startCmd = &cobra.Command{

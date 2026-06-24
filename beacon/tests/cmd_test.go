@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/cli"
+	"github.com/whg517/node-pulse/beacon/internal/cli"
 )
 
 // createTestConfig creates a minimal valid test config file

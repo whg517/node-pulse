@@ -6,9 +6,9 @@ import (
 	"sync"
 	"time"
 
-	"beacon/internal/config"
-	"beacon/internal/logger"
-	"beacon/internal/models"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/models"
 )
 
 // ProbeScheduler manages and executes multiple probes

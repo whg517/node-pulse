@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	pulseapi "beacon/internal/api"
-	"beacon/internal/models"
+	pulseapi "github.com/whg517/node-pulse/beacon/internal/api"
+	"github.com/whg517/node-pulse/beacon/internal/models"
 )
 
 // executeWithTimeout executes the command with a timeout context

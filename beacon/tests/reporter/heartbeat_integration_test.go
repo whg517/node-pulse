@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"beacon/internal/config"
-	"beacon/internal/logger"
-	"beacon/internal/models"
-	"beacon/internal/reporter"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/models"
+	"github.com/whg517/node-pulse/beacon/internal/reporter"
 )
 
 // mockJWTClient is a mock implementation of JWT client for testing

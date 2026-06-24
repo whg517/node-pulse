@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/config"
 )
 
 const (

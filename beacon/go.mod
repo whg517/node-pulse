@@ -1,4 +1,4 @@
-module beacon
+module github.com/whg517/node-pulse/beacon
 
 go 1.25.8
 

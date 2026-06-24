@@ -9,7 +9,7 @@ import (
 	"io"
 	"sync"
 
-	"beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
 )
 
 // CompressionStats tracks compression statistics

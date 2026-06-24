@@ -16,16 +16,9 @@ import (
 func setupAlertRecordsTest(t *testing.T) (*pgxpool.Pool, func()) {
 	pool, cleanup := SetupTestDB(t)
 
-	// Create alert records table
-	ctx := context.Background()
-	err := createAlertRecordsTable(ctx, pool)
-	require.NoError(t, err, "Failed to create alert_records table")
-
-	return pool, func() {
-		// Additional cleanup for alert_records
-		_, _ = pool.Exec(ctx, "DROP TABLE IF EXISTS alert_records CASCADE")
-		cleanup()
-	}
+	// SetupTestDB applies the full schema via Migrate(), which includes the
+	// alert_records table; nothing extra to do here.
+	return pool, cleanup
 }
 
 func TestCreateAlertRecord(t *testing.T) {

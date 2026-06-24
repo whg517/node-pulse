@@ -12,10 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"beacon/internal/config"
-	"beacon/internal/logger"
-	"beacon/internal/metrics"
-	"beacon/internal/probe"
+	"github.com/whg517/node-pulse/beacon/internal/config"
+	"github.com/whg517/node-pulse/beacon/internal/logger"
+	"github.com/whg517/node-pulse/beacon/internal/metrics"
+	"github.com/whg517/node-pulse/beacon/internal/probe"
 )
 
 // TestPrometheusScrapingWorkflow simulates Prometheus scraping the /metrics endpoint
