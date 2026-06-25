@@ -14,23 +14,17 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/webhook"
 )
 
-// MetricData represents metric data from beacon heartbeat
-type MetricData struct {
-	NodeID         string
-	LatencyMs      float64
-	PacketLossRate float64
-	JitterMs       float64
-	Timestamp      time.Time
-}
-
-// AlertEngine handles alert evaluation and event creation
+// AlertEngine evaluates beacon metrics against cached alert rules and, when a
+// rule fires, hands the resulting event to a Dispatcher for side-effect
+// orchestration (persistence, suppression, broadcast, webhooks).
+//
+// The engine itself owns only the worker pool, the metric channel and the rule
+// cache; all side-effects live behind the Dispatcher port so they can be
+// unit-tested and swapped independently.
 type AlertEngine struct {
 	pool                     *pgxpool.Pool
-	alertQuerier             db.AlertQuerier
-	alertEventsQuerier       db.AlertEventsQuerier
-	suppressionService       *suppression.Service
-	webhookPushService       *webhook.PushService
-	realtimeHub              *realtime.Hub
+	ruleSource               RuleSource
+	dispatcher               Dispatcher
 	metricChannel            chan *MetricData
 	workerPoolSize           int
 	ctx                      context.Context
@@ -40,25 +34,14 @@ type AlertEngine struct {
 	ruleCacheMutex           sync.RWMutex
 	ruleCacheLastRefresh     time.Time
 	ruleCacheRefreshInterval time.Duration
+
+	// webhookPushService is retained so the With* builder methods can still
+	// configure the webhook adapter created in NewAlertEngine.
+	webhookPushService *webhook.PushService
 }
 
-// EngineConfig defines configuration for AlertEngine
-type EngineConfig struct {
-	WorkerPoolSize           int
-	MetricChannelBufferSize  int
-	RuleCacheRefreshInterval time.Duration
-}
-
-// DefaultEngineConfig returns default engine configuration
-func DefaultEngineConfig() EngineConfig {
-	return EngineConfig{
-		WorkerPoolSize:           10,
-		MetricChannelBufferSize:  1000,
-		RuleCacheRefreshInterval: 60 * time.Second,
-	}
-}
-
-// NewAlertEngine creates a new AlertEngine
+// NewAlertEngine creates a new AlertEngine wired to the database-backed
+// adapters. The public signature is unchanged from the pre-refactor engine.
 func NewAlertEngine(
 	pool *pgxpool.Pool,
 	alertQuerier db.AlertQuerier,
@@ -70,36 +53,35 @@ func NewAlertEngine(
 	suppressionQuerier := db.NewAlertSuppressionsQuerier(pool)
 	suppressionService := suppression.NewService(suppressionQuerier)
 
-	// Get webhooks querier for webhook push
+	// Webhook push service: baseURL placeholder is overridden via
+	// WithWebhookBaseURL from the configured server.base_url.
 	webhookQuerier := db.NewWebhookQuerier(pool)
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
-	// baseURL is the placeholder until the caller overrides it via
-	// WithWebhookBaseURL using the configured server.base_url. The default keeps
-	// webhook payload rendering functional in tests/standalone runs.
 	webhookPushService := webhook.NewPushService(webhookQuerier, webhookLogsQuerier, "http://localhost:6532")
+
+	dispatcher := &CompositeDispatcher{
+		Suppression: NewSuppressionChecker(suppressionService),
+		EventSink:   NewEventSink(alertEventsQuerier, pool),
+		Broadcaster: nil, // set via WithRealtimeHub
+		Webhook:     NewWebhookPusher(webhookPushService),
+	}
 
 	return &AlertEngine{
 		pool:                     pool,
-		alertQuerier:             alertQuerier,
-		alertEventsQuerier:       alertEventsQuerier,
-		suppressionService:       suppressionService,
-		webhookPushService:       webhookPushService,
+		ruleSource:               NewRuleSource(alertQuerier),
+		dispatcher:               dispatcher,
 		metricChannel:            make(chan *MetricData, config.MetricChannelBufferSize),
 		workerPoolSize:           config.WorkerPoolSize,
 		ctx:                      ctx,
 		cancel:                   cancel,
 		ruleCache:                make([]*models.Alert, 0),
 		ruleCacheRefreshInterval: config.RuleCacheRefreshInterval,
+		webhookPushService:       webhookPushService,
 	}
 }
 
-// getPool returns the database pool
-func (e *AlertEngine) getPool() *pgxpool.Pool {
-	return e.pool
-}
-
-// WithWebhookURLValidator overrides the URL validator used by the internal webhook push service.
-// Pass nil to disable URL validation (useful in tests with http:// servers).
+// WithWebhookURLValidator overrides the URL validator used by the internal
+// webhook push service. Pass nil to disable URL validation (useful in tests).
 func (e *AlertEngine) WithWebhookURLValidator(fn func(string) error) *AlertEngine {
 	e.webhookPushService.WithURLValidator(fn)
 	return e
@@ -107,7 +89,9 @@ func (e *AlertEngine) WithWebhookURLValidator(fn func(string) error) *AlertEngin
 
 // WithRealtimeHub enables websocket broadcasts for alert lifecycle events.
 func (e *AlertEngine) WithRealtimeHub(hub *realtime.Hub) *AlertEngine {
-	e.realtimeHub = hub
+	if d, ok := e.dispatcher.(*CompositeDispatcher); ok {
+		d.Broadcaster = NewBroadcaster(hub)
+	}
 	return e
 }
 
@@ -121,7 +105,7 @@ func (e *AlertEngine) WithWebhookBaseURL(baseURL string) *AlertEngine {
 	return e
 }
 
-// Start starts the alert engine workers
+// Start starts the alert engine workers.
 func (e *AlertEngine) Start() {
 	slog.Info("Starting alert engine", "worker_pool_size", e.workerPoolSize)
 
@@ -141,7 +125,7 @@ func (e *AlertEngine) Start() {
 	}
 }
 
-// Stop gracefully stops the alert engine
+// Stop gracefully stops the alert engine.
 func (e *AlertEngine) Stop() {
 	slog.Info("Stopping alert engine")
 	e.cancel()
@@ -150,7 +134,7 @@ func (e *AlertEngine) Stop() {
 	slog.Info("Alert engine stopped")
 }
 
-// EvaluateMetrics queues metric data for evaluation (non-blocking)
+// EvaluateMetrics queues metric data for evaluation (non-blocking).
 func (e *AlertEngine) EvaluateMetrics(data *MetricData) bool {
 	select {
 	case e.metricChannel <- data:
@@ -164,7 +148,7 @@ func (e *AlertEngine) EvaluateMetrics(data *MetricData) bool {
 	}
 }
 
-// worker processes metrics from the channel
+// worker processes metrics from the channel.
 func (e *AlertEngine) worker(id int) {
 	defer e.wg.Done()
 
@@ -185,120 +169,38 @@ func (e *AlertEngine) worker(id int) {
 	}
 }
 
-// evaluateMetric evaluates a single metric against all applicable rules
+// evaluateMetric evaluates a single metric sample against all applicable rules
+// and dispatches any resulting alert events. Side-effects are delegated to the
+// configured Dispatcher.
 func (e *AlertEngine) evaluateMetric(data *MetricData) {
 	startTime := time.Now()
 	alertsCreated := 0
 
-	// Get cached rules
+	// Snapshot the cached rules under the read lock.
 	e.ruleCacheMutex.RLock()
 	rules := make([]*models.Alert, len(e.ruleCache))
 	copy(rules, e.ruleCache)
 	e.ruleCacheMutex.RUnlock()
 
-	// Evaluate each rule
 	for _, rule := range rules {
 		if !rule.Enabled {
 			continue
 		}
-
-		// Check if rule applies to this node
-		if rule.NodeID != nil && *rule.NodeID != data.NodeID {
-			// Node-specific rule for different node
+		// Skip node-specific rules that do not target this node.
+		if !RuleAppliesToNode(rule, data.NodeID) {
 			continue
 		}
 
-		// Evaluate rule
-		if alertEvent := e.evaluateRule(rule, data); alertEvent != nil {
-			// Check suppression before creating alert event
-			ctx, cancel := context.WithTimeout(e.ctx, 5*time.Second)
-			defer cancel()
-
-			suppressed, err := e.suppressionService.ShouldSuppress(ctx, data.NodeID, rule.Metric)
-			if err != nil {
-				slog.Error("Failed to check suppression",
-					"node_id", data.NodeID,
-					"metric", rule.Metric,
-					"error", err)
-				// Continue with alert creation on error (fail open)
-			} else if suppressed {
-				slog.Info("Alert suppressed",
-					"node_id", data.NodeID,
-					"metric", rule.Metric,
-					"level", rule.Level,
-					"threshold", rule.Threshold,
-					"current_value", alertEvent.CurrentValue)
-				continue // Skip creating alert event
-			}
-
-			// Create alert event in database
-			err = e.alertEventsQuerier.CreateAlertEvent(ctx, alertEvent)
-			if err != nil {
-				slog.Error("Failed to create alert event",
-					"node_id", data.NodeID,
-					"metric", rule.Metric,
-					"error", err)
-			} else {
-				alertsCreated++
-				slog.Info("Alert event created",
-					"alert_id", alertEvent.ID,
-					"node_id", alertEvent.NodeID,
-					"metric", alertEvent.Metric,
-					"threshold", alertEvent.Threshold,
-					"current_value", alertEvent.CurrentValue,
-					"level", alertEvent.Level)
-
-				// Create alert record for lifecycle tracking (Story 6.1)
-				alertRecord := &models.AlertRecord{
-					AlertEventID: alertEvent.ID,
-					NodeID:       alertEvent.NodeID,
-					Metric:       alertEvent.Metric,
-					Level:        alertEvent.Level,
-					Status:       "pending", // Initial status
-				}
-				if recordErr := db.CreateAlertRecord(ctx, e.getPool(), alertRecord); recordErr != nil {
-					slog.Error("Failed to create alert record",
-						"alert_event_id", alertEvent.ID,
-						"node_id", data.NodeID,
-						"metric", rule.Metric,
-						"error", recordErr)
-					// Don't fail the alert if record creation fails
-				} else {
-					slog.Debug("Alert record created",
-						"record_id", alertRecord.ID,
-						"alert_event_id", alertEvent.ID)
-					if e.realtimeHub != nil {
-						e.realtimeHub.BroadcastAlertRecord(realtime.EventAlertNew, alertRecord)
-					}
-				}
-
-				// Record suppression for future alerts
-				err = e.suppressionService.RecordDefaultSuppression(ctx, data.NodeID, rule.Metric)
-				if err != nil {
-					slog.Error("Failed to record suppression",
-						"node_id", data.NodeID,
-						"metric", rule.Metric,
-						"error", err)
-					// Don't fail the alert if suppression recording fails
-				}
-
-				// Send webhook notifications asynchronously (non-blocking)
-				go func(event *models.AlertEvent) {
-					webhookCtx, webhookCancel := context.WithTimeout(context.Background(), 30*time.Second)
-					defer webhookCancel()
-
-					if err := e.webhookPushService.SendAlert(webhookCtx, event); err != nil {
-						slog.Error("Webhook push failed",
-							"alert_id", event.ID,
-							"error", err)
-					}
-				}(alertEvent)
-			}
+		event := EvaluateRule(rule, data)
+		if event == nil {
+			continue
 		}
+
+		e.dispatcher.Dispatch(e.ctx, event, rule)
+		alertsCreated++
 	}
 
-	duration := time.Since(startTime)
-	if duration > 100*time.Millisecond {
+	if duration := time.Since(startTime); duration > 100*time.Millisecond {
 		slog.Warn("Slow alert evaluation",
 			"node_id", data.NodeID,
 			"duration_ms", duration.Milliseconds(),
@@ -306,42 +208,7 @@ func (e *AlertEngine) evaluateMetric(data *MetricData) {
 	}
 }
 
-// evaluateRule evaluates a single rule against metric data
-func (e *AlertEngine) evaluateRule(rule *models.Alert, data *MetricData) *models.AlertEvent {
-	var currentValue float64
-	var exceedsThreshold bool
-
-	switch rule.Metric {
-	case "latency":
-		currentValue = data.LatencyMs
-		exceedsThreshold = currentValue > rule.Threshold
-	case "packet_loss_rate":
-		currentValue = data.PacketLossRate
-		exceedsThreshold = currentValue > rule.Threshold
-	case "jitter":
-		currentValue = data.JitterMs
-		exceedsThreshold = currentValue > rule.Threshold
-	default:
-		slog.Warn("Unknown metric type in alert rule", "metric", rule.Metric)
-		return nil
-	}
-
-	if !exceedsThreshold {
-		return nil
-	}
-
-	// Create alert event
-	return &models.AlertEvent{
-		NodeID:       data.NodeID,
-		Metric:       rule.Metric,
-		Threshold:    rule.Threshold,
-		CurrentValue: currentValue,
-		Level:        rule.Level,
-		CreatedAt:    time.Now(),
-	}
-}
-
-// ruleCacheRefreshLoop periodically refreshes the rule cache
+// ruleCacheRefreshLoop periodically refreshes the rule cache.
 func (e *AlertEngine) ruleCacheRefreshLoop() {
 	defer e.wg.Done()
 
@@ -360,9 +227,13 @@ func (e *AlertEngine) ruleCacheRefreshLoop() {
 	}
 }
 
-// refreshRuleCache refreshes the cached alert rules
+// refreshRuleCache refreshes the cached alert rules.
 func (e *AlertEngine) refreshRuleCache(ctx context.Context) error {
-	rules, err := e.alertQuerier.GetAlerts(ctx, nil) // nil = get all rules (no node filter)
+	if e.ruleSource == nil {
+		panic("AlertEngine rule source not configured")
+	}
+
+	rules, err := e.ruleSource.GetAlerts(ctx, nil) // nil = get all rules (no node filter)
 	if err != nil {
 		return err
 	}
@@ -387,7 +258,7 @@ func (e *AlertEngine) refreshRuleCache(ctx context.Context) error {
 	return nil
 }
 
-// GetStats returns alert engine statistics
+// GetStats returns alert engine statistics.
 func (e *AlertEngine) GetStats() map[string]interface{} {
 	e.ruleCacheMutex.RLock()
 	defer e.ruleCacheMutex.RUnlock()

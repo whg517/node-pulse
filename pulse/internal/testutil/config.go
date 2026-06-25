@@ -62,20 +62,12 @@ func TeardownTestConfig() {
 	// Reset global config
 	config.Reset()
 
-	// Clean up test environment variables
-	testEnvVars := []string{
-		"PULSE_SERVER_MODE",
-		"PULSE_DATABASE_URL",
-		"PULSE_ADMIN_USERNAME",
-		"PULSE_ADMIN_PASSWORD",
-		"PULSE_SESSION_SECRET",
-		"PULSE_JWT_SECRET",
-		"TEST_DATABASE_URL",
-	}
-
-	for _, envVar := range testEnvVars {
-		_ = os.Unsetenv(envVar)
-	}
+	// Only unset the variable SetupTestConfig itself set. Other PULSE_*
+	// variables (e.g. PULSE_DATABASE_URL, TEST_DATABASE_URL, admin credentials)
+	// are typically provided by the caller (CI / dev shell) for the whole test
+	// run; unsetting them here caused sibling db tests run in the same process
+	// to fall back to the 5432 default and skip after the first test cleaned up.
+	_ = os.Unsetenv("PULSE_SERVER_MODE")
 }
 
 // MustLoadTestConfig loads configuration for testing or panics

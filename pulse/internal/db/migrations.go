@@ -57,6 +57,49 @@ func runVersionedMigrations(pool *pgxpool.Pool) error {
 		}
 	}()
 
+	// Self-heal: some test helpers drop tables manually without resetting the
+	// schema_migrations version, leaving a stale "version=1" with a partial or
+	// missing schema. ADD CONSTRAINT has no IF NOT EXISTS, so a half-dropped
+	// schema cannot be cleanly re-applied. When the version bookkeeping and the
+	// actual schema disagree, reset the migration version first (while the
+	// schema_migrations table still exists), then drop and recreate the public
+	// schema so Up() rebuilds from a truly clean state. (Production databases
+	// are never in this state; this only affects test cleanup paths.)
+	if stale, _ := isSchemaStale(pool); stale {
+		slog.Info("Schema stale relative to migration version; resetting schema", "component", "migration")
+		if err := m.Force(-1); err != nil {
+			return fmt.Errorf("force reset stale migration: %w", err)
+		}
+		if _, err := pool.Exec(context.Background(), "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public;"); err != nil {
+			return fmt.Errorf("reset stale schema: %w", err)
+		}
+		// schema_migrations was dropped with the schema; migrate will recreate
+		// it during Up(). Close the stale migrate instance and reopen so its
+		// cached version state matches the now-empty database.
+		if _, dbErr := m.Close(); dbErr != nil {
+			slog.Warn("Closing migrate instance after schema reset", "component", "migration", "error", dbErr)
+		}
+		m2, err := migrate.NewWithSourceInstance("iofs", source, dsn)
+		if err != nil {
+			return fmt.Errorf("recreate migrate instance after reset: %w", err)
+		}
+		defer func() {
+			if _, dbErr := m2.Close(); dbErr != nil {
+				slog.Warn("Closing migrate instance", "component", "migration", "error", dbErr)
+			}
+		}()
+		if err := m2.Up(); err != nil && err != migrate.ErrNoChange {
+			return fmt.Errorf("apply migrations after reset: %w", err)
+		}
+		version, dirty, vErr := m2.Version()
+		if vErr != nil && vErr != migrate.ErrNilVersion {
+			slog.Warn("Could not read migration version", "component", "migration", "error", vErr)
+		} else {
+			slog.Info("Migrations applied", "component", "migration", "version", version, "dirty", dirty)
+		}
+		return nil
+	}
+
 	// Up applies all pending migrations; a no-op when already latest.
 	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
 		return fmt.Errorf("apply migrations: %w", err)
@@ -69,6 +112,42 @@ func runVersionedMigrations(pool *pgxpool.Pool) error {
 		slog.Info("Migrations applied", "component", "migration", "version", version, "dirty", dirty)
 	}
 	return nil
+}
+
+// isSchemaStale reports true when the schema_migrations table claims a version
+// >= 1 has been applied but the canonical first table (users) does not exist.
+// This detects a manually-cleared schema left behind by test cleanup that
+// drops tables without touching the migration bookkeeping.
+func isSchemaStale(pool *pgxpool.Pool) (bool, error) {
+	var versionExists bool
+	err := pool.QueryRow(context.Background(), `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.tables
+			WHERE table_schema = 'public' AND table_name = 'schema_migrations'
+		)
+	`).Scan(&versionExists)
+	if err != nil || !versionExists {
+		return false, err // no version table yet → fresh DB, not stale
+	}
+
+	var version int
+	err = pool.QueryRow(context.Background(), `SELECT version FROM schema_migrations`).Scan(&version)
+	if err != nil || version < 1 {
+		return false, err
+	}
+
+	// Version claims >= 1; verify the baseline actually landed.
+	var usersExists bool
+	err = pool.QueryRow(context.Background(), `
+		SELECT EXISTS (
+			SELECT 1 FROM information_schema.tables
+			WHERE table_schema = 'public' AND table_name = 'users'
+		)
+	`).Scan(&usersExists)
+	if err != nil {
+		return false, err
+	}
+	return !usersExists, nil
 }
 
 // Seed performs idempotent data seeding that depends on runtime configuration.
