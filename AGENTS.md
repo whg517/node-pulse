@@ -25,6 +25,23 @@ Follow `docs/development-workflow.md` for all code and documentation changes:
 
 ## Common Commands
 
+### Monorepo-wide (root Makefile)
+
+Run every completion gate locally before opening a PR — mirrors what CI checks:
+
+```bash
+make ci-local      # lint + build + test for all three components
+make lint          # lint pulse + beacon + frontend
+make build         # build all three components
+make tidy          # go mod tidy on both Go modules (regenerates pulse swagger)
+make docker-build  # build all three production Docker images
+make docker-up     # start the production compose stack (needs .env)
+```
+
+Per-component targets (`make lint-pulse`, `make build-beacon`, ...) also exist.
+The component Makefiles (`pulse/`, `beacon/`) and `frontend/package.json`
+remain the source of truth; the root Makefile only orchestrates them.
+
 ### Beacon (Monitoring Agent)
 
 ```bash

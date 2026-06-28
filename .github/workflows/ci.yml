@@ -30,6 +30,7 @@ jobs:
       beacon: ${{ steps.filter.outputs.beacon }}
       pulse: ${{ steps.filter.outputs.pulse }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      docker: ${{ steps.filter.outputs.docker }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -48,6 +49,13 @@ jobs:
             frontend:
               - '.github/workflows/**'
               - 'frontend/**'
+            docker:
+              - '.github/workflows/**'
+              - '**/Dockerfile'
+              - '**/Dockerfile.*'
+              - '**/*.dockerfile'
+              - 'docker-compose*.yml'
+              - 'frontend/nginx.conf'
 
   beacon:
     name: Beacon Build And Test
@@ -165,3 +173,75 @@ jobs:
 
       - name: Run frontend tests
         run: npm run test -- --run
+
+  # ---------------------------------------------------------------------
+  # Guardrails: catch whole-repo drift that the per-component jobs miss.
+  # ---------------------------------------------------------------------
+
+  go-mod-hygiene:
+    name: Go Module Hygiene
+    needs: changes
+    # Run when either Go module or build files change. This catches un-tidy
+    # go.mod/go.sum that would otherwise slip through component jobs.
+    if: needs.changes.outputs.beacon == 'true' || needs.changes.outputs.pulse == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: pulse/go.mod
+          cache-dependency-path: |
+            pulse/go.sum
+            beacon/go.sum
+
+      - name: Install swag
+        run: go install github.com/swaggo/swag/cmd/swag@latest
+
+      - name: Generate Swagger docs (pulse)
+        working-directory: pulse
+        # The generated api/docs package is git-ignored but imported by
+        # cmd/server, so it must exist before `go mod tidy` can resolve imports.
+        run: swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal -q
+
+      - name: Verify pulse go.mod/go.sum are tidy
+        working-directory: pulse
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum || {
+            echo "::error::pulse go.mod/go.sum not tidy. Run 'make tidy' and commit the result."
+            git diff --stat -- go.mod go.sum
+            exit 1
+          }
+
+      - name: Verify beacon go.mod/go.sum are tidy
+        working-directory: beacon
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum || {
+            echo "::error::beacon go.mod/go.sum not tidy. Run 'make tidy' and commit the result."
+            git diff --stat -- go.mod go.sum
+            exit 1
+          }
+
+  docker-build:
+    name: Docker Build Smoke
+    needs: changes
+    # Build all three Dockerfiles so a regression in any production image is
+    # caught at PR time (e.g. a new import the Dockerfile did not account for).
+    if: needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build pulse image
+        run: docker build -t node-pulse-api:test -f pulse/Dockerfile ./pulse
+
+      - name: Build frontend image
+        run: docker build -t node-pulse-ui:test -f frontend/Dockerfile ./frontend
+
+      - name: Build beacon image
+        run: docker build -t node-pulse-beacon:test -f beacon/Dockerfile ./beacon
