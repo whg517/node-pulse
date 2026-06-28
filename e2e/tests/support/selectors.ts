@@ -5,8 +5,16 @@ export function appShell(page: Page) {
   return page.getByText('NodePulse').first()
 }
 
+// gotoRoute navigates without waiting for the full 'load' event. The SPA keeps
+// long-lived API/websocket connections open, so 'load' may never fire and
+// page.goto would hang. 'domcontentloaded' is enough; the caller then waits on
+// a concrete element via expect(...).toBeVisible().
+export async function gotoRoute(page: Page, path: string) {
+  await page.goto(path, { waitUntil: 'domcontentloaded' })
+}
+
 export async function openRoute(page: Page, path: string) {
-  await page.goto(path)
+  await gotoRoute(page, path)
   await appShell(page).waitFor({ state: 'visible' })
 }
 

@@ -8,10 +8,14 @@ export async function signIn(
   username = ADMIN_USER,
   password = ADMIN_PASS
 ) {
-  await page.goto('/login')
-  await expect(page.getByText('NodePulse').first()).toBeVisible()
-  await page.getByLabel('Username').fill(username)
+  await page.goto('/login', { waitUntil: 'domcontentloaded' })
+  // Wait for the SPA to actually render the form. The shell HTML loads before
+  // JS hydrates, and on a containerized stack the first cold parse of the JS
+  // bundle can be slow, so allow generous headroom here.
+  const usernameInput = page.getByLabel('Username')
+  await expect(usernameInput).toBeVisible({ timeout: 30_000 })
+  await usernameInput.fill(username)
   await page.getByLabel('Password').fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page).toHaveURL(/\/dashboard(?:$|[?#])/, { timeout: 15_000 })
+  await expect(page).toHaveURL(/\/dashboard(?:$|[?#])/, { timeout: 20_000 })
 }

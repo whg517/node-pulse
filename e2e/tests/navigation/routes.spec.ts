@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/test'
-import { expectPageTitle } from '../support/selectors'
+import { expectPageTitle, gotoRoute } from '../support/selectors'
 
 const protectedRoutes = [
   { path: '/dashboard', title: 'Dashboard' },
@@ -22,7 +22,7 @@ const protectedRoutes = [
 test.describe('protected route inventory', () => {
   for (const route of protectedRoutes) {
     test(`renders ${route.path}`, async ({ authenticatedPage: page }) => {
-      await page.goto(route.path)
+      await gotoRoute(page, route.path)
 
       await expect(page).toHaveURL(new RegExp(route.path.replace(/\//g, '\\/')))
       await expectPageTitle(page, route.title)
@@ -30,13 +30,13 @@ test.describe('protected route inventory', () => {
   }
 
   test('supports legacy aliases', async ({ authenticatedPage: page }) => {
-    await page.goto('/webhooks')
+    await gotoRoute(page, '/webhooks')
     await expect(page).toHaveURL(/\/integrations\/webhooks/)
 
-    await page.goto('/sessions')
+    await gotoRoute(page, '/sessions')
     await expect(page).toHaveURL(/\/settings\/sessions/)
 
-    await page.goto('/comparison')
+    await gotoRoute(page, '/comparison')
     await expect(page).toHaveURL(/\/nodes\/comparison/)
   })
 })

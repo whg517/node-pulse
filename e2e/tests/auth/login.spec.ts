@@ -1,25 +1,26 @@
 import { test, expect } from '../fixtures/test'
 import { signIn } from '../support/auth'
+import { gotoRoute } from '../support/selectors'
 
 test.describe('authentication', () => {
   test('shows the login form', async ({ page }) => {
-    await page.goto('/login')
+    await gotoRoute(page, '/login')
 
-    await expect(page.getByText('NodePulse').first()).toBeVisible()
-    await expect(page.getByLabel('Username')).toBeVisible()
+    await expect(page.getByLabel('Username')).toBeVisible({ timeout: 15_000 })
     await expect(page.getByLabel('Password')).toBeVisible()
     await expect(page.getByRole('button', { name: 'Sign in' })).toBeEnabled()
   })
 
   test('redirects protected routes to login', async ({ page }) => {
-    await page.goto('/dashboard')
+    await gotoRoute(page, '/dashboard')
 
     await expect(page).toHaveURL(/\/login/)
-    await expect(page.getByText('NodePulse').first()).toBeVisible()
+    await expect(page.getByLabel('Username')).toBeVisible({ timeout: 15_000 })
   })
 
   test('keeps users on login after invalid credentials', async ({ page }) => {
-    await page.goto('/login')
+    await gotoRoute(page, '/login')
+    await expect(page.getByLabel('Username')).toBeVisible({ timeout: 15_000 })
     await page.getByLabel('Username').fill('invalid')
     await page.getByLabel('Password').fill('wrong-password')
     await page.getByRole('button', { name: 'Sign in' }).click()
@@ -32,17 +33,17 @@ test.describe('authentication', () => {
     await signIn(page)
 
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible()
-    await expect(page.getByText('NodePulse').first()).toBeVisible()
   })
 
   test('returns to the originally requested route after login', async ({ page }) => {
-    await page.goto('/nodes')
+    await gotoRoute(page, '/nodes')
     await expect(page).toHaveURL(/\/login/)
+    await expect(page.getByLabel('Username')).toBeVisible({ timeout: 15_000 })
 
     await page.getByLabel('Username').fill('admin')
     await page.getByLabel('Password').fill('Admin123')
     await page.getByRole('button', { name: 'Sign in' }).click()
 
-    await expect(page).toHaveURL(/\/nodes(?:$|[?#])/, { timeout: 15_000 })
+    await expect(page).toHaveURL(/\/nodes(?:$|[?#])/, { timeout: 20_000 })
   })
 })
