@@ -53,7 +53,7 @@ fmt: ## Format Go code
 	@gofmt -w -s .
 	@echo "✅ Code formatted"
 
-lint: ## Run linters (requires golangci-lint)
+lint: swag-ensure web-ensure ## Run linters (requires golangci-lint)
 	@echo "🔍 Running linters..."
 	@if command -v golangci-lint > /dev/null 2>&1; then \
 		golangci-lint run ./...; \
@@ -98,15 +98,15 @@ web-build: ## Build the frontend and copy its dist into the embedded web/dist
 web-clean: ## Restore the embedded dist to the placeholder (drop the built assets)
 	@echo "🧹 Restoring placeholder dist..."
 	@rm -rf $(WEB_DIST_DIR) && mkdir -p $(WEB_DIST_DIR)
-	@printf '%s\n' '<!DOCTYPE html>' '<html><head><meta charset="utf-8"><title>Node-Pulse</title></head>' '<body><p>Frontend not built. Run <code>make web-build</code> in the pulse directory.</p></body></html>' > $(WEB_DIST_DIR)/index.html
-	@echo "✅ Placeholder restored"
+	@touch $(WEB_DIST_DIR)/.gitkeep
+	@echo "✅ Placeholder restored (empty dist/.gitkeep)"
 
-# web-ensure guarantees web/dist exists (the placeholder is committed, so this
-# is a safety net for partial checkouts). It does NOT build the frontend — use
+# web-ensure guarantees web/dist contains the .gitkeep placeholder so the
+# //go:embed directive compiles. It does NOT build the frontend — use
 # `make web-build` for a release with the real SPA.
 web-ensure:
-	@if [ ! -f $(WEB_DIST_DIR)/index.html ]; then \
-		echo "⚠️  $(WEB_DIST_DIR)/index.html missing, restoring placeholder..."; \
+	@if [ ! -f $(WEB_DIST_DIR)/.gitkeep ]; then \
+		echo "⚠️  $(WEB_DIST_DIR)/.gitkeep missing, restoring placeholder..."; \
 		$(MAKE) --no-print-directory web-clean; \
 	fi
 
@@ -156,17 +156,17 @@ migrate-create: ## Create a new migration pair (usage: make migrate-create NAME=
 	echo "✅ Created $(MIGRATE_DIR)/$${name}.up.sql and .down.sql"
 
 ##@ Testing
-test-unit: swag-ensure ## Run unit tests only (short mode)
+test-unit: swag-ensure web-ensure ## Run unit tests only (short mode)
 	@echo "🧪 Running unit tests..."
 	go test -short -p 1 ./...
 
-test-integration: swag-ensure ## Run integration tests only
+test-integration: swag-ensure web-ensure ## Run integration tests only
 	@echo "🧪 Running integration tests..."
 	go test -p 1 ./tests/integration/...
 
 test: setup-test-db test-unit test-integration cleanup-test-db ## Run full test suite (setup + tests + cleanup)
 	@echo "✅ All tests passed"
 
-test-quick: swag-ensure ## Run all tests (assumes DB is running)
+test-quick: swag-ensure web-ensure ## Run all tests (assumes DB is running)
 	@echo "🧪 Quick test (assumes DB is running)..."
 	go test -p 1 ./...

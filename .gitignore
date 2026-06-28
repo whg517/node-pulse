@@ -82,15 +82,16 @@ frontend/build/
 frontend/.next/
 frontend/.nuxt/
 
-# Embedded frontend build output (produced by `make web-build`).
-# Ignore everything under web/dist except the placeholder index.html, which
-# must stay tracked so the package always compiles even without a frontend build.
-# The leading "!pulse/web/dist/" re-includes the directory itself, otherwise
-# the global "dist/" rule above would exclude it and make the file exception
-# impossible (git cannot re-include files under an ignored directory).
+# Embedded frontend build output (produced by `make web-build` / web-ensure).
+# Ignore the built assets, but keep the .gitkeep placeholder tracked so the
+# //go:embed directive compiles on a fresh checkout. The leading
+# "!pulse/web/dist/" re-includes the directory itself, otherwise the global
+# "dist/" rule above would exclude it and make the file exception impossible
+# (git cannot re-include files under an ignored directory). `make build`/`make
+# run` run web-ensure first to recreate .gitkeep if it is missing.
 pulse/web/dist/*
 !pulse/web/dist/
-!pulse/web/dist/index.html
+!pulse/web/dist/.gitkeep
 
 # Cache
 .npm

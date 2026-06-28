@@ -61,13 +61,13 @@ ci-local: lint build test ## Run the full local gate (lint + build + test) mirro
 
 ##@ Dependency hygiene
 
-tidy: ## Run go mod tidy on both Go modules (regenerates pulse swagger first)
-	@cd pulse && ([ -f api/docs/docs.go ] || (command -v swag >/dev/null 2>&1 && swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal -q || true)) && go mod tidy
+tidy: ## Run go mod tidy on both Go modules (regenerates pulse swagger + web placeholder first)
+	@cd pulse && make swag-ensure web-ensure && go mod tidy
 	@cd beacon && go mod tidy
 
 check-mods: ## Fail if go.mod/go.sum are not tidy (run after `make tidy`)
 	@echo "Checking pulse modules..."
-	@cd pulse && ([ -f api/docs/docs.go ] || (command -v swag >/dev/null 2>&1 && swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal -q || true)) && go mod tidy && go mod verify && git diff --exit-code -- go.mod go.sum || (echo "::error::pulse go.mod/go.sum not tidy; run 'make tidy'"; exit 1)
+	@cd pulse && make swag-ensure web-ensure && go mod tidy && go mod verify && git diff --exit-code -- go.mod go.sum || (echo "::error::pulse go.mod/go.sum not tidy; run 'make tidy'"; exit 1)
 	@echo "Checking beacon modules..."
 	@cd beacon && go mod tidy && go mod verify && git diff --exit-code -- go.mod go.sum || (echo "::error::beacon go.mod/go.sum not tidy; run 'make tidy'"; exit 1)
 
