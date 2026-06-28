@@ -1,12 +1,9 @@
 // Package web embeds the compiled frontend (Vite production build) into the
 // Pulse binary so a single binary serves both the API and the SPA.
 //
-// The embedded files live under dist/. A .gitkeep placeholder keeps the
-// directory non-empty so //go:embed compiles even without a frontend build;
-// the real production assets are produced by `make web-build` (which runs
-// `npm run build` in ../frontend and copies the output here) before a
-// release build. In placeholder-only builds the SPA is unavailable and the
-// server logs a warning instead of serving the frontend.
+// The embedded files live under dist/. A committed .gitkeep keeps the
+// directory non-empty so //go:embed always compiles; run `make web-build` to
+// populate dist with the real frontend before a release build.
 package web
 
 import (
@@ -32,8 +29,7 @@ func DistFS() fs.FS {
 
 // IndexHTML returns the SPA entry point HTML (index.html), used as the
 // fallback for client-side routes. It returns an error when the frontend has
-// not been built into dist (placeholder-only build); callers should treat
-// that as "frontend unavailable".
+// not been built into dist; callers should treat that as "frontend unavailable".
 func IndexHTML() ([]byte, error) {
 	return distFS.ReadFile("dist/index.html")
 }

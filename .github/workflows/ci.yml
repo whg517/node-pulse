@@ -206,12 +206,6 @@ jobs:
         # cmd/server, so it must exist before `go mod tidy` can resolve imports.
         run: swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal -q
 
-      - name: Restore embedded frontend placeholder (pulse)
-        working-directory: pulse
-        # web/dist is git-ignored (build output) but //go:embed needs it to
-        # exist at compile time. Restore the placeholder before any go command.
-        run: make web-ensure
-
       - name: Verify pulse go.mod/go.sum are tidy
         working-directory: pulse
         run: |
