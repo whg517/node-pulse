@@ -218,9 +218,10 @@ npm run report       # HTML report
 
 ### Production stack (recommended)
 
-A single `docker-compose.prod.yml` brings up PostgreSQL + Pulse API + frontend
-(nginx) with health checks and correct start ordering. Beacon agents are
-deployed separately on each monitored node (see `beacon/Dockerfile`).
+A single `docker-compose.prod.yml` brings up PostgreSQL + Pulse. The frontend
+is **embedded into the Pulse binary** (`//go:embed`), so one container serves
+both the SPA and the API — there is no separate frontend or nginx container.
+Beacon agents are deployed separately on each monitored node (`beacon/Dockerfile`).
 
 ```bash
 # 1. Configure secrets (copy and edit)
@@ -233,34 +234,29 @@ cp .env.example .env
 # 2. Build and start the whole stack
 docker compose -f docker-compose.prod.yml up -d --build
 
-# Pulse API:  http://localhost:6532   (Swagger at /swagger/index.html in debug)
-# Frontend:   http://localhost         (nginx proxies /api and /ws to pulse)
+# App (SPA + API):  http://localhost:6532   (Swagger at /swagger/index.html in debug)
 ```
 
-The frontend image builds the Vite bundle with same-origin relative API URLs
-and serves it behind an nginx reverse proxy (`frontend/nginx.conf`), so there
-are no CORS or `localhost:6532` hard-codes to fix per environment — just set
-`PULSE_SERVER_BASE_URL` for absolute links in webhook payloads / exports.
+Because the SPA is same-origin with the API, the frontend uses relative API
+URLs — no CORS configuration or `localhost:6532` hard-codes to fix per
+environment.
 
 ### Individual component images
 
 ```bash
-# Pulse API (regenerates Swagger docs from annotations during the build)
-docker build -t node-pulse-api  -f pulse/Dockerfile     ./pulse
-
-# Frontend (nginx-served production build)
-docker build -t node-pulse-ui   -f frontend/Dockerfile   ./frontend
+# Pulse API + embedded frontend (build context is the repo root; regenerates
+# Swagger docs and builds the Vite bundle during the image build)
+docker build -t node-pulse-api    -f pulse/Dockerfile  .
 
 # Beacon agent (static binary, minimal Alpine runtime)
-docker build -t node-pulse-beacon -f beacon/Dockerfile   ./beacon
+docker build -t node-pulse-beacon -f beacon/Dockerfile ./beacon
 ```
 
 ### Full E2E stack
 
 ```bash
 docker-compose -f e2e/docker-compose.e2e.yml up -d
-# Pulse:    http://localhost:6532
-# Frontend: http://localhost:5173
+# App (SPA + API):  http://localhost:6532
 ```
 
 ## Tech Stack

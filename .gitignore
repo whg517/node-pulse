@@ -82,6 +82,16 @@ frontend/build/
 frontend/.next/
 frontend/.nuxt/
 
+# Embedded frontend build output (produced by `make web-build`).
+# Ignore everything under web/dist except the placeholder index.html, which
+# must stay tracked so the package always compiles even without a frontend build.
+# The leading "!pulse/web/dist/" re-includes the directory itself, otherwise
+# the global "dist/" rule above would exclude it and make the file exception
+# impossible (git cannot re-include files under an ignored directory).
+pulse/web/dist/*
+!pulse/web/dist/
+!pulse/web/dist/index.html
+
 # Cache
 .npm
 .eslintcache

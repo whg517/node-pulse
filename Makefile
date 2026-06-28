@@ -73,10 +73,9 @@ check-mods: ## Fail if go.mod/go.sum are not tidy (run after `make tidy`)
 
 ##@ Docker
 
-docker-build: ## Build all three production Docker images
-	docker build -t node-pulse-api     -f pulse/Dockerfile     ./pulse
-	docker build -t node-pulse-ui      -f frontend/Dockerfile  ./frontend
-	docker build -t node-pulse-beacon  -f beacon/Dockerfile    ./beacon
+docker-build: ## Build the production images (pulse embeds the frontend)
+	docker build -t node-pulse-api    -f pulse/Dockerfile  .
+	docker build -t node-pulse-beacon -f beacon/Dockerfile ./beacon
 
 docker-up: ## Start the production stack (requires .env; see .env.example)
 	docker compose -f docker-compose.prod.yml up -d --build

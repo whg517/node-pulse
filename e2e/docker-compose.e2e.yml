@@ -1,14 +1,14 @@
-# E2E test stack for Node-Pulse: PostgreSQL + Pulse API + frontend, wired so
-# Playwright (run from the host) can hit the frontend and API.
+# E2E test stack for Node-Pulse: PostgreSQL + Pulse (which serves the embedded
+# frontend too). Playwright runs on the host and hits Pulse on port 6532.
 #
 # Port choices:
-#   - DB exposed on 5433 to avoid clashing with other Postgres instances on 5432.
-#   - Pulse API on 6532, frontend on 5173 (the URLs the Playwright config expects).
+#   - DB exposed on 5433 to avoid clashing with other Postgres on 5432.
+#   - Pulse on 6532 — the single origin for both the SPA and the API.
 #
 # Usage:
 #   cd e2e
 #   npm run docker:up
-#   npm run test:smoke:fast
+#   E2E_BASE_URL=http://localhost:6532 npm run test:smoke:fast
 #   npm run docker:down
 
 services:
@@ -31,8 +31,9 @@ services:
 
   pulse:
     build:
-      context: ../pulse
-      dockerfile: Dockerfile
+      # Repo root context so the Dockerfile can build + embed the frontend.
+      context: ..
+      dockerfile: pulse/Dockerfile
     container_name: nodepulse-e2e-api
     depends_on:
       postgres:
@@ -45,7 +46,7 @@ services:
       PULSE_ADMIN_PASSWORD: Admin123
       PULSE_SESSION_SECRET: e2e-session-secret-not-for-production-use
       PULSE_JWT_SECRET: e2e-jwt-secret-not-for-production-use
-      PULSE_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      PULSE_CORS_ALLOWED_ORIGINS: http://localhost:6532,http://127.0.0.1:6532
       PULSE_SESSION_COOKIE_SECURE: "false"
     ports:
       - "6532:6532"
@@ -54,17 +55,6 @@ services:
       interval: 10s
       timeout: 5s
       retries: 12
-
-  frontend:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-    container_name: nodepulse-e2e-web
-    depends_on:
-      pulse:
-        condition: service_healthy
-    ports:
-      - "5173:80"
 
 volumes:
   postgres_e2e_data:

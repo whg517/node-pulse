@@ -1,6 +1,7 @@
 .PHONY: test test-unit test-integration test-quick setup-test-db cleanup-test-db help
 .PHONY: build run clean deps swag swag-clean swag-force swag-ensure lint fmt
 .PHONY: migrate-up migrate-down migrate-force migrate-version migrate-create
+.PHONY: web-build web-clean
 
 # Default target
 help: ## Show this help message
@@ -27,16 +28,16 @@ swag-ensure:
 		swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal -q; \
 	fi
 
-run: swag-ensure ## Run the server (default port 6532)
+run: swag-ensure web-ensure ## Run the server (default port 6532)
 	@echo "🚀 Starting server..."
 	@go run cmd/server/main.go
 
-build: swag-ensure ## Build the server binary
+build: swag-ensure web-ensure ## Build the server binary
 	@echo "🔨 Building server..."
 	@go build -o bin/pulse-api cmd/server/main.go
 	@echo "✅ Binary created: bin/pulse-api"
 
-build-debug: swag-ensure ## Build debug binary with optimizations disabled
+build-debug: swag-ensure web-ensure ## Build debug binary with optimizations disabled
 	@echo "🔨 Building debug binary..."
 	@go build -gcflags="all=-N -l" -o bin/pulse-api-debug cmd/server/main.go
 	@echo "✅ Debug binary created: bin/pulse-api-debug"
@@ -79,6 +80,35 @@ swag-clean: ## Clean generated Swagger documentation
 	@echo "✅ Swagger docs cleaned"
 
 swag-force: deps swag-clean swag ## Force rebuild Swagger docs (clean + generate)
+
+##@ Embedded Frontend
+
+# Path to the sibling frontend module and the embedded copy inside this binary.
+FRONTEND_DIR := ../frontend
+WEB_DIST_DIR := web/dist
+
+web-build: ## Build the frontend and copy its dist into the embedded web/dist
+	@echo "🌐 Building frontend..."
+	@cd $(FRONTEND_DIR) && npm ci && VITE_API_BASE_URL= npm run build
+	@echo "📦 Copying dist into $(WEB_DIST_DIR)..."
+	@rm -rf $(WEB_DIST_DIR) && mkdir -p $(WEB_DIST_DIR)
+	@cp -r $(FRONTEND_DIR)/dist/. $(WEB_DIST_DIR)/
+	@echo "✅ Frontend embedded into $(WEB_DIST_DIR)"
+
+web-clean: ## Restore the embedded dist to the placeholder (drop the built assets)
+	@echo "🧹 Restoring placeholder dist..."
+	@rm -rf $(WEB_DIST_DIR) && mkdir -p $(WEB_DIST_DIR)
+	@printf '%s\n' '<!DOCTYPE html>' '<html><head><meta charset="utf-8"><title>Node-Pulse</title></head>' '<body><p>Frontend not built. Run <code>make web-build</code> in the pulse directory.</p></body></html>' > $(WEB_DIST_DIR)/index.html
+	@echo "✅ Placeholder restored"
+
+# web-ensure guarantees web/dist exists (the placeholder is committed, so this
+# is a safety net for partial checkouts). It does NOT build the frontend — use
+# `make web-build` for a release with the real SPA.
+web-ensure:
+	@if [ ! -f $(WEB_DIST_DIR)/index.html ]; then \
+		echo "⚠️  $(WEB_DIST_DIR)/index.html missing, restoring placeholder..."; \
+		$(MAKE) --no-print-directory web-clean; \
+	fi
 
 ##@ Database Management
 setup-test-db: ## Start test database container

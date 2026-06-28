@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = process.env.E2E_BASE_URL || process.env.BASE_URL || 'http://localhost:5173'
-const startFrontend = process.env.E2E_START_FRONTEND === '1'
+// The frontend is embedded in the Pulse binary, so the SPA and the API share
+// one origin (default http://localhost:6532). Override with E2E_BASE_URL if
+// you point tests at a different deployment.
+const baseURL = process.env.E2E_BASE_URL || process.env.BASE_URL || 'http://localhost:6532'
 
 export default defineConfig({
   testDir: './tests',
@@ -29,15 +31,6 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  webServer: startFrontend
-    ? {
-        command: 'npm run dev -- --host 127.0.0.1',
-        cwd: '../frontend',
-        url: baseURL,
-        reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
-      }
-    : undefined,
   projects: [
     {
       name: 'chromium',

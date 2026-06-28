@@ -6,6 +6,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"log/slog"
+	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
@@ -25,6 +27,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/realtime"
 	"github.com/whg517/node-pulse/pulse/pkg/metrics"
 	"github.com/whg517/node-pulse/pulse/pkg/middleware"
+	"github.com/whg517/node-pulse/pulse/web"
 )
 
 // CacheManager holds cache instances that need cleanup on shutdown
@@ -520,8 +523,54 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		}
 	}
 
+	// Serve the embedded frontend (Vite production build). The SPA is served
+	// from the same origin as the API, so the browser uses relative URLs and
+	// no CORS/reverse-proxy is needed.
+	//
+	// Order matters: this is registered AFTER all /api/v1, /swagger, /metrics
+	// and /ws routes, so those take precedence. Static assets under /assets
+	// are served with long cache headers; any other unmatched path falls back
+	// to index.html so BrowserRouter (history mode) deep links resolve.
+	registerFrontend(router)
+
 	// Return cache manager for graceful shutdown
 	return cacheManager
+}
+
+// registerFrontend wires the embedded frontend SPA onto the router.
+func registerFrontend(router *gin.Engine) {
+	dist := web.DistFS()
+	fileServer := http.FileServer(http.FS(dist))
+
+	// Static assets are fingerprinted by Vite, so they can be cached forever.
+	// The embedded FS is rooted at dist/, so asset paths like /assets/app.js
+	// map directly to "assets/app.js" inside the FS (no prefix stripping needed).
+	router.GET("/assets/*filepath", func(c *gin.Context) {
+		c.Header("Cache-Control", "public, max-age=31536000, immutable")
+		fileServer.ServeHTTP(c.Writer, c.Request)
+	})
+
+	// Other root-level static files (e.g. /vite.svg, /favicon.ico).
+	router.StaticFileFS("/vite.svg", "vite.svg", http.FS(dist))
+
+	// SPA fallback: any path not matched by the API or static handlers serves
+	// index.html so client-side routing owns the URL. This must be a NoRoute
+	// handler so it only catches genuinely unmatched paths.
+	indexHTML, err := web.IndexHTML()
+	if err != nil {
+		slog.Error("Failed to load embedded index.html; SPA fallback disabled", "error", err)
+		return
+	}
+	router.NoRoute(func(c *gin.Context) {
+		// Do not hijack API/infra routes that were simply not found — return 404
+		// JSON for those so clients get a clear signal instead of an HTML page.
+		path := c.Request.URL.Path
+		if len(path) >= 4 && path[:4] == "/api" || path == "/metrics" || path == "/swagger" || path == "/ws" {
+			c.JSON(http.StatusNotFound, gin.H{"code": "ERR_NOT_FOUND", "message": "resource not found"})
+			return
+		}
+		c.Data(http.StatusOK, "text/html; charset=utf-8", indexHTML)
+	})
 }
 
 // getEnvOrDefault gets environment variable or returns default value
