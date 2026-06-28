@@ -10,8 +10,16 @@ RUN apk add --no-cache git ca-certificates tzdata
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Install swag to regenerate the Swagger docs from annotations. The generated
+# api/docs/*.go files are git-ignored (they are build artifacts), but
+# cmd/server imports the package, so they must exist before `go build`.
+RUN go install github.com/swaggo/swag/cmd/swag@latest
+
 # Copy source code
 COPY . .
+
+# Regenerate Swagger docs (no-op effect if already present; idempotent).
+RUN swag init -g cmd/server/main.go -o api/docs --parseDependency --parseInternal -q
 
 # Build the binary
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -buildvcs=false -o pulse ./cmd/server

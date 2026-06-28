@@ -216,17 +216,46 @@ npm run report       # HTML report
 
 ## Docker
 
-### Pulse
+### Production stack (recommended)
+
+A single `docker-compose.prod.yml` brings up PostgreSQL + Pulse API + frontend
+(nginx) with health checks and correct start ordering. Beacon agents are
+deployed separately on each monitored node (see `beacon/Dockerfile`).
 
 ```bash
-docker build -t node-pulse-api ./pulse
-docker run -p 6532:6532 \
-  -e PULSE_DATABASE_URL=postgres://user:pass@host:5432/nodepulse \
-  -e PULSE_SERVER_MODE=release \
-  node-pulse-api
+# 1. Configure secrets (copy and edit)
+cp .env.example .env
+#    - set POSTGRES_PASSWORD, PULSE_ADMIN_PASSWORD
+#    - generate strong secrets:  openssl rand -hex 32
+#      for PULSE_SESSION_SECRET and PULSE_JWT_SECRET
+#    - set PULSE_SERVER_BASE_URL to the externally reachable URL
+
+# 2. Build and start the whole stack
+docker compose -f docker-compose.prod.yml up -d --build
+
+# Pulse API:  http://localhost:6532   (Swagger at /swagger/index.html in debug)
+# Frontend:   http://localhost         (nginx proxies /api and /ws to pulse)
 ```
 
-### Full E2E Stack
+The frontend image builds the Vite bundle with same-origin relative API URLs
+and serves it behind an nginx reverse proxy (`frontend/nginx.conf`), so there
+are no CORS or `localhost:6532` hard-codes to fix per environment — just set
+`PULSE_SERVER_BASE_URL` for absolute links in webhook payloads / exports.
+
+### Individual component images
+
+```bash
+# Pulse API (regenerates Swagger docs from annotations during the build)
+docker build -t node-pulse-api  -f pulse/Dockerfile     ./pulse
+
+# Frontend (nginx-served production build)
+docker build -t node-pulse-ui   -f frontend/Dockerfile   ./frontend
+
+# Beacon agent (static binary, minimal Alpine runtime)
+docker build -t node-pulse-beacon -f beacon/Dockerfile   ./beacon
+```
+
+### Full E2E stack
 
 ```bash
 docker-compose -f e2e/docker-compose.e2e.yml up -d
