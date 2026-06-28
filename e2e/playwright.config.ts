@@ -1,26 +1,43 @@
 import { defineConfig, devices } from '@playwright/test'
 
-/**
- * Playwright configuration for Node-Pulse E2E tests.
- *
- * Default target: http://localhost:5173 (frontend dev server)
- * Backend API:    http://localhost:6532
- *
- * For Docker-based E2E: run `npm run docker:up` first, then `npm test`.
- */
+const baseURL = process.env.E2E_BASE_URL || process.env.BASE_URL || 'http://localhost:5173'
+const startFrontend = process.env.E2E_START_FRONTEND === '1'
+
 export default defineConfig({
   testDir: './tests',
+  outputDir: './test-results',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  // CI uses 2 workers for throughput. Locally default to 1: the bundled
+  // docker-compose stack runs pulse+postgres+frontend in containers with
+  // limited resources, and serial execution avoids flaky timeouts from
+  // concurrent page loads overwhelming the local stack.
+  workers: process.env.CI ? 2 : 1,
+  timeout: 30_000,
+  expect: {
+    timeout: 10_000,
+  },
+  reporter: process.env.CI
+    ? [['list'], ['html', { open: 'never' }], ['json', { outputFile: 'test-results/results.json' }]]
+    : [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: process.env.BASE_URL || 'http://localhost:5173',
+    baseURL,
+    actionTimeout: 10_000,
+    navigationTimeout: 15_000,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
   },
-
+  webServer: startFrontend
+    ? {
+        command: 'npm run dev -- --host 127.0.0.1',
+        cwd: '../frontend',
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 120_000,
+      }
+    : undefined,
   projects: [
     {
       name: 'chromium',
@@ -33,6 +50,11 @@ export default defineConfig({
     {
       name: 'webkit',
       use: { ...devices['Desktop Safari'] },
+    },
+    {
+      name: 'mobile-chromium',
+      testMatch: /.*smoke.*\.spec\.ts/,
+      use: { ...devices['Pixel 7'] },
     },
   ],
 })

@@ -1,27 +1,37 @@
 {
   "name": "node-pulse-e2e",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "description": "Playwright end-to-end tests for Node-Pulse (real stack only)",
   "scripts": {
     "test": "playwright test",
     "test:smoke": "playwright test tests/smoke/",
     "test:smoke:fast": "playwright test tests/smoke/ --project=chromium --workers=4",
     "test:auth": "playwright test tests/auth/",
+    "test:navigation": "playwright test tests/navigation/",
     "test:nodes": "playwright test tests/nodes/",
     "test:alerts": "playwright test tests/alerts/",
-    "test:webhooks": "playwright test tests/webhooks/",
-    "test:export": "playwright test tests/export/",
-    "test:rbac": "playwright test tests/rbac/",
+    "test:integrations": "playwright test tests/integrations/",
+    "test:webhooks": "playwright test tests/integrations/",
+    "test:reports": "playwright test tests/reports/",
+    "test:export": "playwright test tests/reports/",
+    "test:settings": "playwright test tests/settings/",
+    "test:rbac": "playwright test tests/settings/",
     "test:ui": "playwright test --ui",
     "test:debug": "playwright test --debug",
     "test:headed": "playwright test --headed",
+    "typecheck": "tsc --noEmit",
+    "list": "playwright test --list",
     "report": "playwright show-report",
+    "install:browsers": "playwright install",
     "docker:up": "docker compose -f docker-compose.e2e.yml up -d",
     "docker:down": "docker compose -f docker-compose.e2e.yml down",
     "docker:logs": "docker compose -f docker-compose.e2e.yml logs -f",
     "docker:reset": "docker compose -f docker-compose.e2e.yml down -v && docker compose -f docker-compose.e2e.yml up -d"
   },
   "devDependencies": {
-    "@playwright/test": "^1.49.0"
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
   }
 }
