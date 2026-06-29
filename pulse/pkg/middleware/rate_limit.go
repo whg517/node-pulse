@@ -149,37 +149,44 @@ func RateLimitMiddleware() gin.HandlerFunc {
 			limit = unauthLimit
 		}
 
-		rateLimiter.mu.Lock()
-		defer rateLimiter.mu.Unlock()
+		// Count the request under the lock, then release BEFORE calling c.Next().
+		// The previous code held mu for the whole handler via `defer Unlock()`;
+		// for long-lived handlers (e.g. the /ws websocket, whose ServeWS blocks
+		// forever in readPump) c.Next() never returns, so the defer never ran,
+		// the mutex was held permanently, and every subsequent request deadlocked
+		// on mu.Lock() — the whole server froze while a websocket was open.
+		result := func() struct{ allowed bool; count int } {
+			rateLimiter.mu.Lock()
+			defer rateLimiter.mu.Unlock()
 
-		v, exists := rateLimiter.visitors[key]
-		if !exists {
-			v = &visitor{
-				requests: 1,
-				timer:    time.Now(),
+			v, exists := rateLimiter.visitors[key]
+			if !exists {
+				rateLimiter.visitors[key] = &visitor{requests: 1, timer: time.Now()}
+				return struct{ allowed bool; count int }{true, 1}
 			}
-			rateLimiter.visitors[key] = v
-		} else {
+
 			if time.Since(v.timer) > rateLimiter.window {
 				v.requests = 1
 				v.timer = time.Now()
-			} else {
-				v.requests++
+				return struct{ allowed bool; count int }{true, 1}
 			}
 
-			if v.requests > limit {
-				c.JSON(http.StatusTooManyRequests, gin.H{
-					"code":    "ERR_RATE_LIMIT_EXCEEDED",
-					"message": "请求过于频繁，请稍后再试",
-					"details": map[string]interface{}{
-						"limit":    limit,
-						"window":   rateLimiter.window.String(),
-						"requests": v.requests,
-					},
-				})
-				c.Abort()
-				return
-			}
+			v.requests++
+			return struct{ allowed bool; count int }{v.requests <= limit, v.requests}
+		}()
+
+		if !result.allowed {
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"code":    "ERR_RATE_LIMIT_EXCEEDED",
+				"message": "请求过于频繁，请稍后再试",
+				"details": map[string]interface{}{
+					"limit":    limit,
+					"window":   rateLimiter.window.String(),
+					"requests": result.count,
+				},
+			})
+			c.Abort()
+			return
 		}
 
 		c.Next()
