@@ -4,13 +4,16 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/whg517/node-pulse/pulse/internal/cache"
 	"github.com/whg517/node-pulse/pulse/internal/db"
@@ -291,30 +294,67 @@ func (h *DataHandler) GetHistoryHandler(c *gin.Context) {
 		aggregation = *req.Aggregation
 	}
 
-	// Query historical data
-	ctx := context.Background()
-	seriesList := make([]HistorySeries, 0)
+	// Query historical data with a bounded timeout and run the per-(node,metric)
+	// queries concurrently. The previous code issued N×M queries serially with
+	// context.Background(), which both blocked the request for the sum of all
+	// round trips and held pool connections with no cancellation. Under modest
+	// concurrency this starved the pool and returned 500.
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
+
+	type result struct {
+		nodeID  string
+		metric  string
+		series  *HistorySeries
+	}
+	results := make([]result, 0, len(req.NodeIDs)*len(req.Metrics))
+	var mu sync.Mutex
+	g, gctx := errgroup.WithContext(ctx)
+	// Cap concurrency so a request with many nodes/metrics doesn't open more
+	// in-flight queries than the pool can serve.
+	g.SetLimit(10)
 
 	for _, nodeID := range req.NodeIDs {
 		for _, metric := range req.Metrics {
-			series, err := h.queryMetricHistory(ctx, nodeID, metric, startTime, endTime, aggregation)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{
-					"error":   "Failed to query historical data",
-					"details": err.Error(),
-				})
-				return
-			}
-
-			// Calculate baseline for 7d and 30d ranges
-			duration := endTime.Sub(startTime)
-			if duration >= 7*24*time.Hour {
-				baseline := h.calculateBaseline(series.DataPoints)
-				series.Baseline = &baseline
-			}
-
-			seriesList = append(seriesList, *series)
+			nodeID, metric := nodeID, metric // capture
+			g.Go(func() error {
+				series, err := h.queryMetricHistory(gctx, nodeID, metric, startTime, endTime, aggregation)
+				if err != nil {
+					return fmt.Errorf("node %s metric %s: %w", nodeID, metric, err)
+				}
+				mu.Lock()
+				results = append(results, result{nodeID: nodeID, metric: metric, series: series})
+				mu.Unlock()
+				return nil
+			})
 		}
+	}
+
+	if err := g.Wait(); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to query historical data",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	// Preserve the original (node, metric) ordering for stable output.
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].nodeID != results[j].nodeID {
+			return results[i].nodeID < results[j].nodeID
+		}
+		return results[i].metric < results[j].metric
+	})
+
+	seriesList := make([]HistorySeries, 0, len(results))
+	duration := endTime.Sub(startTime)
+	for _, r := range results {
+		s := *r.series
+		if duration >= 7*24*time.Hour {
+			baseline := h.calculateBaseline(s.DataPoints)
+			s.Baseline = &baseline
+		}
+		seriesList = append(seriesList, s)
 	}
 
 	// Return response
@@ -359,9 +399,11 @@ func (h *DataHandler) queryMetricHistory(
 		truncateFormat = "minute"
 	}
 
-	// Query with aggregation
-	// Use date_trunc for compatibility with standard PostgreSQL
-	// For 5-minute buckets, we need to round to nearest 5 minutes
+	// Query with aggregation. Both branches bind parameters starting at $1 so
+	// the same argument list (nodeID, startTime, endTime) applies to either —
+	// the previous 5m branch used $2/$3/$4 (skipping $1) while Query still
+	// passed truncateFormat first, which left $1 unbound and raised
+	// "could not determine data type of parameter $1".
 	var query string
 	if aggregation == "5m" {
 		query = `
@@ -371,9 +413,9 @@ func (h *DataHandler) queryMetricHistory(
 					floor(extract(minute from timestamp) / 5) * interval '5 minutes' AS bucket,
 				AVG(` + column + `) AS value
 			FROM metrics
-			WHERE node_id = $2
-				AND timestamp >= $3
-				AND timestamp <= $4
+			WHERE node_id = $1
+				AND timestamp >= $2
+				AND timestamp <= $3
 				AND ` + column + ` IS NOT NULL
 			GROUP BY bucket
 			ORDER BY bucket ASC;
@@ -381,7 +423,7 @@ func (h *DataHandler) queryMetricHistory(
 	} else {
 		query = `
 			SELECT
-				date_trunc($1::text, timestamp) AS bucket,
+				date_trunc($1, timestamp) AS bucket,
 				AVG(` + column + `) AS value
 			FROM metrics
 			WHERE node_id = $2
@@ -393,7 +435,13 @@ func (h *DataHandler) queryMetricHistory(
 		`
 	}
 
-	rows, err := h.pool.Query(ctx, query, truncateFormat, nodeID, startTime, endTime)
+	var rows pgx.Rows
+	var err error
+	if aggregation == "5m" {
+		rows, err = h.pool.Query(ctx, query, nodeID, startTime, endTime)
+	} else {
+		rows, err = h.pool.Query(ctx, query, truncateFormat, nodeID, startTime, endTime)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("failed to query metrics: %w", err)
 	}
@@ -465,7 +513,8 @@ func (h *DataHandler) GetMetricsHandler(c *gin.Context) {
 	nodeIDs := c.QueryArray("node_id")
 
 	// Query real-time metrics from database
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
 	metricsList := make([]map[string]interface{}, 0)
 
 	// Build query for latest metrics per node
@@ -685,7 +734,8 @@ func (h *DataHandler) GetComparisonHandler(c *gin.Context) {
 	}
 
 	// Query comparison data
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
+	defer cancel()
 	comparisonData, err := h.queryComparisonData(ctx, req.NodeIDs, req.Metrics, startTime, endTime)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -746,7 +796,7 @@ func (h *DataHandler) queryComparisonData(
 			if useRealtimeData && startTime.After(oneHourAgo) {
 				// All data is in real-time range (< 1 hour)
 				// Query from memory cache
-				dataPoints = h.queryRealtimeData(nodeID, metric, startTime, endTime)
+				dataPoints = h.queryRealtimeData(ctx, nodeID, metric, startTime, endTime)
 			} else if !useRealtimeData {
 				// All data is historical (> 1 hour)
 				// Query from PostgreSQL
@@ -764,7 +814,7 @@ func (h *DataHandler) queryComparisonData(
 				historicalPoints, _ := h.queryHistoricalData(ctx, nodeID, metric, startTime, historicalEnd)
 
 				// Query real-time data from 1 hour ago to now
-				realtimePoints := h.queryRealtimeData(nodeID, metric, oneHourAgo, endTime)
+				realtimePoints := h.queryRealtimeData(ctx, nodeID, metric, oneHourAgo, endTime)
 
 				// Merge both datasets
 				dataPoints = append(historicalPoints, realtimePoints...)
@@ -856,9 +906,9 @@ func (h *DataHandler) getNodeName(ctx context.Context, nodeID string) (string, e
 // Note: In the current implementation, memory cache is not directly accessible from DataHandler
 // This is a placeholder that queries from PostgreSQL for < 1 hour data
 // TODO: Integrate with memory cache in future iterations
-func (h *DataHandler) queryRealtimeData(nodeID string, metric string, startTime, endTime time.Time) []DataPoint {
+func (h *DataHandler) queryRealtimeData(ctx context.Context, nodeID string, metric string, startTime, endTime time.Time) []DataPoint {
 	// For now, query from PostgreSQL with < 1 hour filter
-	ctx := context.Background()
+	// ctx (a request-scoped, timeout-bounded context) is passed in by callers.
 	dataPoints, err := h.queryHistoricalData(ctx, nodeID, metric, startTime, endTime)
 	if err != nil {
 		return []DataPoint{}

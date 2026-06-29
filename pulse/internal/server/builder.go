@@ -114,7 +114,12 @@ func (s *Server) initTelemetry() error {
 
 // initDatabase initializes the database connection
 func (s *Server) initDatabase() error {
-	database, err := db.New(s.config.DB.URL)
+	database, err := db.New(s.config.DB.URL, db.PoolOptions{
+		MaxConnections:         s.config.DB.MaxConnections,
+		MinConnections:         s.config.DB.MinConnections,
+		MaxConnLifetimeSeconds: s.config.DB.ConnMaxLifetime,
+		MaxConnIdleSeconds:     s.config.DB.ConnMaxIdleTime,
+	})
 	if err != nil {
 		return err
 	}

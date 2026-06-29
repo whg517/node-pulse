@@ -319,8 +319,8 @@ func defaultConfig() *Config {
 			BaseURL:      "http://localhost:6532", // overwritten by PULSE_SERVER_BASE_URL in production
 		},
 		DB: DatabaseConfig{
-			MaxConnections:  10,
-			MinConnections:  1,
+			MaxConnections:  25,
+			MinConnections:  2,
 			ConnMaxLifetime: 3600, // 1 hour
 			ConnMaxIdleTime: 300,  // 5 minutes
 		},
