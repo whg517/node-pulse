@@ -119,3 +119,54 @@ test.describe('nodes CRUD', () => {
     await expect(page.getByText(name)).toHaveCount(0, { timeout: 10_000 })
   })
 })
+
+test.describe('node detail', () => {
+  // createNode is a small helper that creates a throwaway node and returns its
+  // name so the detail-navigation tests have something to click into.
+  async function createNode(page: import('@playwright/test').Page): Promise<string> {
+    const name = `e2e-detail-${stamp()}`
+    await page.getByRole('button', { name: 'Add New Node' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.locator('#name').fill(name)
+    await dialog.locator('#ip').fill('10.20.0.1')
+    await dialog.locator('#region').fill('e2e-test')
+    await dialog.getByRole('button', { name: 'Create Node' }).click()
+    await expect(dialog).toBeHidden()
+    return name
+  }
+
+  test('navigates into a node detail page', async ({ authenticatedPage: page }) => {
+    await gotoRoute(page, '/nodes')
+    const name = await createNode(page)
+
+    // The node name is a link into /nodes/{id}.
+    await page.getByRole('link', { name }).first().click()
+    await expect(page).toHaveURL(/\/nodes\/[0-9a-f-]{36}/, { timeout: 10_000 })
+
+    // The detail shell renders the node name and the metric/diagnosis sections.
+    await expect(page.getByRole('heading', { name }).first()).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Problem Diagnosis')).toBeVisible()
+  })
+
+  test('switches the metric time range', async ({ authenticatedPage: page }) => {
+    await gotoRoute(page, '/nodes')
+    const name = await createNode(page)
+    await page.getByRole('link', { name }).first().click()
+    await expect(page).toHaveURL(/\/nodes\/[0-9a-f-]{36}/, { timeout: 10_000 })
+
+    // Each TrendChart has its own time-range group. Target the first one.
+    const group = page.getByRole('group', { name: 'Time range selector' }).first()
+    const sevenDays = group.getByRole('button', { name: '7 Days' })
+
+    // 24h is the default (pressed); switch to 7 days.
+    await expect(sevenDays).toHaveAttribute('aria-pressed', 'false')
+    await sevenDays.click()
+    await expect(sevenDays).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 })
+  })
+
+  test('shows a not-found state for an unknown node id', async ({ authenticatedPage: page }) => {
+    await gotoRoute(page, '/nodes/00000000-0000-0000-0000-000000000000')
+    // The detail page renders a "not found" card rather than crashing.
+    await expect(page.getByText(/does not exist|not found/i)).toBeVisible({ timeout: 10_000 })
+  })
+})

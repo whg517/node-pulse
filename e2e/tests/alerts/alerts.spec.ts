@@ -96,3 +96,33 @@ test.describe('alert rules CRUD', () => {
     await expect(page.getByText(threshold)).toHaveCount(0, { timeout: 10_000 })
   })
 })
+
+test.describe('alert records page', () => {
+  test('shows the filter controls and columns', async ({ authenticatedPage: page }) => {
+    await gotoRoute(page, '/alerts/records')
+    await expectPageTitle(page, 'Alert History')
+
+    // Filter controls present.
+    await expect(page.getByPlaceholder(/node name or metric/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Apply' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Reset' })).toBeVisible()
+  })
+
+  test('renders the records area without crashing on an empty stack', async ({ authenticatedPage: page }) => {
+    await gotoRoute(page, '/alerts/records')
+    // On a clean stack with no triggered alerts the page should still render
+    // its shell (title + filter bar); whether it shows an empty-state hint or
+    // an empty table depends on i18n/page variant, so assert the stable shell.
+    await expectPageTitle(page, 'Alert History')
+    await expect(page.getByPlaceholder(/node name or metric/i)).toBeVisible()
+  })
+
+  test('reset filter clears the search input', async ({ authenticatedPage: page }) => {
+    await gotoRoute(page, '/alerts/records')
+    const search = page.getByPlaceholder(/node name or metric/i)
+    await search.fill('zzz-no-match')
+    await page.getByRole('button', { name: 'Apply' }).click()
+    await page.getByRole('button', { name: 'Reset' }).click()
+    await expect(search).toHaveValue('')
+  })
+})

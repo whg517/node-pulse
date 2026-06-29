@@ -1,5 +1,5 @@
 import { test, expect } from '../fixtures/test'
-import { signIn } from '../support/auth'
+import { signIn, signOut } from '../support/auth'
 import { gotoRoute } from '../support/selectors'
 
 test.describe('authentication', () => {
@@ -45,5 +45,24 @@ test.describe('authentication', () => {
     await page.getByRole('button', { name: 'Sign in' }).click()
 
     await expect(page).toHaveURL(/\/nodes(?:$|[?#])/, { timeout: 20_000 })
+  })
+
+  test('opens the user menu and shows the logout action', async ({ authenticatedPage: page }) => {
+    await page.getByTestId('user-menu-button').click()
+    await expect(page.getByRole('menuitem', { name: 'Logout' })).toBeVisible()
+  })
+
+  test('logs out and returns to the login page', async ({ authenticatedPage: page }) => {
+    await signOut(page)
+    await expect(page.getByLabel('Username')).toBeVisible({ timeout: 15_000 })
+  })
+
+  test('protects routes again after logout', async ({ authenticatedPage: page }) => {
+    await signOut(page)
+    // After logout, visiting a protected route must redirect back to login.
+    // A full reload forces the SPA to re-run its auth guard from a clean state.
+    await gotoRoute(page, '/dashboard')
+    await page.reload({ waitUntil: 'domcontentloaded' })
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 })
   })
 })

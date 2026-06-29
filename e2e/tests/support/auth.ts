@@ -19,3 +19,11 @@ export async function signIn(
   await page.getByRole('button', { name: 'Sign in' }).click()
   await expect(page).toHaveURL(/\/dashboard(?:$|[?#])/, { timeout: 20_000 })
 }
+
+// signOut triggers the logout flow via the Header user-menu dropdown and
+// waits until the SPA returns to /login.
+export async function signOut(page: Page) {
+  await page.getByTestId('user-menu-button').click()
+  await page.getByRole('menuitem', { name: 'Logout' }).click()
+  await expect(page).toHaveURL(/\/login/, { timeout: 15_000 })
+}

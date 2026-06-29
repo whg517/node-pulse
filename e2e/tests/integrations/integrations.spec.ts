@@ -80,4 +80,24 @@ test.describe('webhooks CRUD', () => {
     await expect(confirm).toBeHidden()
     await expect(page.getByText(url)).toHaveCount(0, { timeout: 10_000 })
   })
+
+  test('shows feedback when testing a webhook against an unreachable endpoint', async ({ authenticatedPage: page }) => {
+    await gotoRoute(page, '/integrations/webhooks')
+
+    // Create a webhook pointing at a host that will not accept the delivery.
+    const url = `https://10.255.255.1/hook-${stamp()}`
+    await page.getByRole('button', { name: 'Add Webhook' }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.locator('#webhook-url').fill(url)
+    await dialog.getByRole('button', { name: 'Add Webhook' }).click()
+    await expect(dialog).toBeHidden()
+    await expect(page.getByText(url).first()).toBeVisible({ timeout: 10_000 })
+
+    // Trigger a test delivery.
+    const row = page.getByRole('row').filter({ hasText: url }).first()
+    await row.getByRole('button', { name: /test webhook/i }).click()
+
+    // The page shows a feedback notice (success or failure text appears).
+    await expect(page.getByText(/delivered successfully|delivery failed|test failed/i)).toBeVisible({ timeout: 30_000 })
+  })
 })
