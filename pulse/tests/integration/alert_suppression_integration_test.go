@@ -29,11 +29,8 @@ func setupSuppressionTestDB(t *testing.T) (*pgxpool.Pool, func()) {
 
 	ctx := context.Background()
 
-	// Connect to test database
-	testDBURL := testutil.GetTestDBURL()
-
-	pool, err := pgxpool.New(ctx, testDBURL)
-	require.NoError(t, err, "Failed to connect to test database")
+	// Connect to test database (skips cleanly when DB is unreachable or -short)
+	pool := testutil.RequireDB(t)
 
 	// Run migrations
 	err = db.Migrate(ctx, pool)

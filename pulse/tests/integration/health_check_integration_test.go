@@ -39,11 +39,8 @@ func (suite *HealthCheckIntegrationTestSuite) SetupSuite() {
 
 	suite.ctx = context.Background()
 
-	// Connect to test database
-	testDBURL := testutil.GetTestDBURL()
-
-	pool, err := pgxpool.New(suite.ctx, testDBURL)
-	require.NoError(suite.T(), err, "Failed to connect to test database")
+	// Connect to test database (skips cleanly when DB is unreachable or -short)
+	pool := testutil.RequireDB(suite.T())
 	suite.pool = pool
 
 	// Run migrations

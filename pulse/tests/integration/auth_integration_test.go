@@ -35,11 +35,8 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool, *api.CacheManage
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	pool, err := pgxpool.New(context.Background(), testutil.GetTestDBURL())
-	if err != nil {
-		t.Skip("No database connection")
-		return nil, nil, nil
-	}
+	// Connect to test database (skips cleanly when DB is unreachable or -short)
+	pool := testutil.RequireDB(t)
 
 	// Run database migrations
 	if err := db.Migrate(context.Background(), pool); err != nil {

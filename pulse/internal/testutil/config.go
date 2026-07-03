@@ -1,8 +1,12 @@
 package testutil
 
 import (
+	"context"
 	"os"
+	"testing"
+	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/whg517/node-pulse/pulse/internal/config"
 )
 
@@ -11,6 +15,41 @@ const (
 	// This matches the configuration in docker-compose.test.yml
 	defaultTestDBURL = "postgres://testuser:testpass123@localhost:5432/nodepulse_test?sslmode=disable"
 )
+
+// RequireDB skips the calling test unless a live test database is reachable.
+// It is the single entry point integration setup helpers should call first so
+// that `go test -short` (and CI unit-test runs without a Postgres service) do
+// not FAIL on connection-refused errors but SKIP cleanly instead.
+//
+// The skip triggers when:
+//   - testing.Short() is true (unit/short runs), or
+//   - the test database is not reachable within a short probe window.
+func RequireDB(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode (requires database)")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, GetTestDBURL())
+	if err != nil {
+		t.Skipf("Skipping integration test: cannot create pool: %v", err)
+		return nil
+	}
+
+	// pgxpool is lazy: force a real round-trip so an unreachable DB is detected
+	// now rather than failing later as a hard error.
+	if err := pool.Ping(ctx); err != nil {
+		pool.Close()
+		t.Skipf("Skipping integration test: database not reachable: %v", err)
+		return nil
+	}
+
+	return pool
+}
 
 // GetTestDBURL returns the test database URL.
 // Priority:

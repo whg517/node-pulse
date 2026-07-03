@@ -27,22 +27,14 @@ func TestCleanupTask_Integration(t *testing.T) {
 		t.Fatalf("Failed to load config: %v", err)
 	}
 
-	pool, err := pgxpool.New(context.Background(), testutil.GetTestDBURL())
-	if err != nil {
-		t.Skip("No database connection")
-		return
-	}
+	// Connect to test database (skips cleanly when DB is unreachable or -short)
+	pool := testutil.RequireDB(t)
 	defer pool.Close()
 
 	// Run migrations
 	ctx := context.Background()
 	if err := db.Migrate(ctx, pool); err != nil {
 		t.Fatalf("Failed to migrate test database: %v", err)
-	}
-
-	if err := pool.Ping(ctx); err != nil {
-		t.Skipf("Database not ready: %v", err)
-		return
 	}
 
 	// Create test node and probe

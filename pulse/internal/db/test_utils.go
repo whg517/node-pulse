@@ -17,6 +17,13 @@ import (
 // SetupTestDB creates a test database connection pool
 // This function is exported for use in other test packages
 func SetupTestDB(t *testing.T) (*pgxpool.Pool, func()) {
+	// Skip in short/unit-test runs so `go test -short ./...` stays green without
+	// a live Postgres. The per-call Ping below also skips when the DB exists but
+	// is unreachable.
+	if testing.Short() {
+		t.Skip("Skipping integration test in short mode (requires database)")
+	}
+
 	// Setup test config
 	testutil.SetupTestConfig()
 
