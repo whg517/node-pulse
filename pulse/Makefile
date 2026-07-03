@@ -155,3 +155,28 @@ test: setup-test-db test-unit test-integration cleanup-test-db ## Run full test 
 test-quick: swag-ensure ## Run all tests (assumes DB is running)
 	@echo "🧪 Quick test (assumes DB is running)..."
 	go test -p 1 ./...
+
+test-coverage: swag-ensure ## Run unit tests with coverage (report-only, no threshold)
+	@echo "🧪 Running unit tests with coverage (report-only)..."
+	@# Scope to internal/ + cmd/ so this runs without a test database. The
+	@# integration suite (tests/integration) needs a live Postgres and is
+	@# excluded from this report-only target.
+	go test -short -p 1 -coverprofile=coverage.out ./internal/... ./cmd/...
+	@go tool cover -func=coverage.out | tail -1
+	@echo "📊 Full report: go tool cover -html=coverage.out (artifacts: coverage.out, git-ignored)"
+
+# COVERAGE_BASELINE is the ratchet floor for the internal/ unit-test coverage
+# total (statements). Run `make test-coverage-check` locally before raising the
+# floor; bump this number only after improving coverage, never lower it.
+COVERAGE_BASELINE := 31.0
+
+test-coverage-check: swag-ensure ## Run coverage and fail if it dropped below the baseline floor
+	@echo "🧪 Checking coverage against baseline ($(COVERAGE_BASELINE)%)..."
+	@go test -short -p 1 -coverprofile=coverage.out ./internal/... ./cmd/... >/dev/null
+	@total=$$(go tool cover -func=coverage.out | tail -1 | grep -oE '[0-9]+\.[0-9]+' | tail -1); \
+	echo "   current: $${total}%   baseline: $(COVERAGE_BASELINE)%"; \
+	awk -v cur="$$total" -v base="$(COVERAGE_BASELINE)" 'BEGIN { exit !(cur >= base) }' || { \
+		echo "::error::Coverage regression: $${total}% < baseline $(COVERAGE_BASELINE)%. Improve coverage or lower the floor deliberately."; \
+		exit 1; \
+	}; \
+	echo "✅ Coverage $${total}% meets the $(COVERAGE_BASELINE)% baseline."

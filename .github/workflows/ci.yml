@@ -143,6 +143,21 @@ jobs:
       - name: Build pulse API
         run: make build
 
+      # Coverage is report-only: collected and uploaded as an artifact so it
+      # can be inspected, but it does NOT gate the build (no threshold enforced).
+      - name: Collect pulse coverage (report-only)
+        run: make test-coverage
+        continue-on-error: true
+
+      - name: Upload pulse coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pulse-coverage
+          path: pulse/coverage.out
+          if-no-files-found: ignore
+          retention-days: 14
+
   frontend:
     name: Frontend Lint Build And Test
     needs: changes
@@ -173,6 +188,83 @@ jobs:
 
       - name: Run frontend tests
         run: npm run test -- --run
+
+      # Coverage is report-only: collected and uploaded as an artifact so it
+      # can be inspected, but it does NOT gate the build (no threshold enforced).
+      - name: Collect frontend coverage (report-only)
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: Upload frontend coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  # ---------------------------------------------------------------------
+  # E2E: spin up the full stack (Postgres + Pulse with embedded frontend) and
+  # run the Playwright smoke suite against it. Heavy (builds the pulse image),
+  # so it is gated behind a dedicated path filter and only runs the fast
+  # Chromium smoke suite in CI.
+  # ---------------------------------------------------------------------
+
+  e2e:
+    name: E2E (Playwright Smoke)
+    needs: changes
+    if: needs.changes.outputs.pulse == 'true' || needs.changes.outputs.frontend == 'true' || needs.changes.outputs.docker == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: e2e
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build and start the E2E stack
+        run: |
+          docker compose -f docker-compose.e2e.yml up -d --build --wait
+          echo "E2E_BASE_URL=http://localhost:6532" >> "$GITHUB_ENV"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 25
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+
+      - name: Install E2E dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright smoke suite (Chromium)
+        run: npm run test:smoke:fast
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload Playwright traces (failures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-test-results
+          path: e2e/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Tear down the E2E stack
+        if: always()
+        run: docker compose -f docker-compose.e2e.yml down -v
 
   # ---------------------------------------------------------------------
   # Guardrails: catch whole-repo drift that the per-component jobs miss.

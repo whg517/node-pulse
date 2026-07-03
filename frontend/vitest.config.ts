@@ -23,7 +23,18 @@ export default defineConfig({
         'src/**/index.ts',
         'src/main.tsx',
         'src/vite-env.d.ts',
+        'src/test/**',
       ],
+      // Ratchet floors: these are intentionally set a few points below the
+      // current baseline so normal fluctuations pass, but a real regression is
+      // caught. Bump these (never lower) as coverage improves.
+      // Column order is lines | branches | functions | statements.
+      thresholds: {
+        lines: 68,
+        branches: 62,
+        functions: 56,
+        statements: 68,
+      },
     },
   },
   resolve: {
