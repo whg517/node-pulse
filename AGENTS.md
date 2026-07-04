@@ -2,6 +2,16 @@
 
 Guidance for AI agents and contributors working in this repository.
 
+## ⛔ Hard Rules (read before any edit)
+
+1. **Never edit on `main`.** Create a worktree first: `git worktree add -b <type>-<name> .worktree/<type>-<name> main`. All work — including docs-only changes — happens in `.worktree/<type>-<name>/`.
+2. **No `chore` type** for branches or commits. Use `feat | fix | docs | refactor | test | perf | build | ci | revert`.
+3. **Completion gates are mandatory**, including for docs changes: `golangci-lint` (pulse + beacon), Go build (pulse + beacon), frontend lint, frontend build.
+4. **Squash-merge back to `main`**, then remove the worktree.
+5. Full procedure: `docs/development-workflow.md` (7 steps). When in doubt, that file wins over this summary.
+
+> **AI agents:** before any edit, read `docs/development-workflow.md` and lay out its 7 steps as a todo list. "User said to commit" means "run the full workflow through squash-merge", not a single `git commit`. Report gate results faithfully — do not claim a failed gate passed.
+
 ## Repository Structure
 
 Monorepo for **Node-Pulse**, a distributed network monitoring system:
@@ -14,12 +24,24 @@ Monorepo for **Node-Pulse**, a distributed network monitoring system:
 
 ## Development Workflow
 
-See `docs/development-workflow.md` for full details. Key rules:
+Authoritative source: `docs/development-workflow.md`. Checklist form (copy into your todo list):
 
-- Develop in Git worktrees under `.worktree/`, branching from `main` as `<type>-<name>`.
-- Squash-merge completed work back to `main`.
-- Conventional Commit messages (allowed types in the workflow doc); **never use `chore`**.
-- Completion gates before PR: `golangci-lint`, Go build, frontend lint, frontend build.
+1. **Worktree** — `git worktree add -b <type>-<name> .worktree/<type>-<name> main` (branch from `main`).
+2. **Type** — one of `feat | fix | docs | refactor | test | perf | build | ci | revert` (never `chore`).
+3. **Commit** — Conventional Commit style, imperative summary, e.g. `docs: simplify AGENTS.md`.
+4. **Gates** — run all four before merging (see "Completion Gates" below).
+5. **Merge** — `git switch main && git merge --squash <type>-<name> && git commit`.
+6. **Cleanup** — `git worktree remove .worktree/<type>-<name> && git branch -D <type>-<name>`.
+
+### Completion Gates
+
+```bash
+(cd pulse   && make lint && make build)        # Go lint + build
+(cd beacon  && make lint && make build-local)  # Go lint + build
+(cd frontend && npm run lint && npm run build) # frontend lint + build
+```
+
+If a gate fails on `main` for reasons unrelated to your change, report it honestly and fix it in a separate branch — don't claim it passed.
 
 ## Common Commands
 
