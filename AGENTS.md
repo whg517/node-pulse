@@ -1,391 +1,96 @@
 # AGENTS.md
 
-This file provides guidance to AI agents and contributors when working with code in this repository.
+Guidance for AI agents and contributors working in this repository.
 
 ## Repository Structure
 
-This is a monorepo for **Node-Pulse**, a distributed network monitoring system with three main components:
+Monorepo for **Node-Pulse**, a distributed network monitoring system:
 
-- **`beacon/`** - Go-based monitoring agent that runs on nodes, performs TCP/UDP probes, and reports metrics
-- **`pulse/`** - Go-based backend API server that receives metrics, manages nodes, and serves the frontend
-- **`frontend/`** - React + TypeScript web UI for visualization and management
-- **`e2e/`** - Playwright end-to-end test suite
-- **`docs/`** - Project documentation (PRD, auth design, UI design)
+- **`beacon/`** — Go monitoring agent (TCP/UDP probes, reports metrics)
+- **`pulse/`** — Go backend API server (receives metrics, serves frontend)
+- **`frontend/`** — React + TypeScript web UI
+- **`e2e/`** — Playwright end-to-end tests
+- **`docs/`** — Project documentation (PRD, auth/UI design, dev workflow)
 
 ## Development Workflow
 
-Follow `docs/development-workflow.md` for all code and documentation changes:
+See `docs/development-workflow.md` for full details. Key rules:
 
-- Develop in Git worktrees under `.worktree/`.
-- Start from `main`, then create a branch named `<type>-<name>`.
+- Develop in Git worktrees under `.worktree/`, branching from `main` as `<type>-<name>`.
 - Squash-merge completed work back to `main`.
-- Required completion gates: `golangci-lint`, Go build, frontend lint, and frontend build.
-- Use standardized Conventional Commit messages with the allowed types in the workflow document.
-- Do not use the `chore` type for branches or commits.
+- Conventional Commit messages (allowed types in the workflow doc); **never use `chore`**.
+- Completion gates before PR: `golangci-lint`, Go build, frontend lint, frontend build.
 
 ## Common Commands
 
-### Monorepo-wide (root Makefile)
+The component Makefiles (`pulse/`, `beacon/`) and `frontend/package.json` are the source of truth; the root Makefile only orchestrates them. Per-component targets like `make lint-pulse`, `make build-beacon` also exist.
 
-Run every completion gate locally before opening a PR — mirrors what CI checks:
+### Root (mirrors CI)
 
 ```bash
-make ci-local      # lint + build + test for all three components
+make ci-local      # lint + build + test for all components
 make lint          # lint pulse + beacon + frontend
-make build         # build all three components
+make build         # build all components
 make tidy          # go mod tidy on both Go modules (regenerates pulse swagger)
-make docker-build  # build all three production Docker images
-make docker-up     # start the production compose stack (needs .env)
+make docker-build  # build all production Docker images
+make docker-up     # start production compose stack (needs .env)
 ```
 
-Per-component targets (`make lint-pulse`, `make build-beacon`, ...) also exist.
-The component Makefiles (`pulse/`, `beacon/`) and `frontend/package.json`
-remain the source of truth; the root Makefile only orchestrates them.
+### Beacon (`cd beacon`)
 
-### Beacon (Monitoring Agent)
+`make build` (Linux AMD64 static) · `make build-local` · `make run` (needs `beacon.yaml`) · `make test` · `make test-coverage` · `make lint` · `make lint-fix` · `make clean`
 
-```bash
-cd beacon
+### Pulse (`cd pulse`)
 
-# Build for Linux AMD64 (static binary)
-make build
+`make run` (port 6532) · `make build` / `build-debug` · `make test` (full, needs Docker) · `make test-unit` / `test-integration` / `test-quick` · `make setup-test-db` / `cleanup-test-db` · `make migrate-up` / `migrate-down` / `migrate-version` / `migrate-create NAME=` · `make swag` / `swag-force` · `make lint` · `make fmt` · `make help`
 
-# Build for current platform
-make build-local
+Migrations auto-apply on startup; manual targets need the `migrate` CLI (`go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest`). Config via `pulse.yaml` (see `pulse.yaml.example`); `PULSE_`-prefixed env vars override.
 
-# Run the beacon (requires beacon.yaml)
-make run
+### Frontend (`cd frontend`)
 
-# Run tests
-make test
-make test-coverage
+`npm install` · `npm run dev` (port 5173) · `npm run build` · `npm run preview` · `npm run test` (Vitest) · `npm run lint`
 
-# Run linter
-make lint
-make lint-fix
+### E2E (`cd e2e`)
 
-# Clean build artifacts
-make clean
-```
-
-Beacon requires a `beacon.yaml` configuration file. See `beacon.yaml.example` for reference.
-
-### Pulse (Backend API Server)
-
-```bash
-cd pulse
-
-# Download dependencies
-make deps
-
-# Run the server (default port 6532)
-make run
-
-# Build binary → bin/pulse-api
-make build
-
-# Build debug binary (optimizations disabled) → bin/pulse-api-debug
-make build-debug
-
-# Run tests (requires Docker for test database)
-make test              # Full test suite: setup DB + run tests + cleanup DB
-make test-unit         # Unit tests only (short mode)
-make test-integration  # Integration tests only
-make test-quick        # All tests (assumes DB is already running)
-
-# Database management
-make setup-test-db     # Start test PostgreSQL container
-make cleanup-test-db   # Stop test PostgreSQL container
-
-# Schema migrations (golang-migrate; versioned SQL under internal/db/migrations/)
-make migrate-create NAME=add_foo  # Create next migration pair (up + down)
-make migrate-up                    # Apply pending migrations (DSN via MIGRATE_DSN)
-make migrate-down                  # Roll back the last migration
-make migrate-version               # Show current schema version
-# Migrations are applied automatically on server startup; these targets are
-# for manual ops. Requires the `migrate` CLI: go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-
-# Generate Swagger documentation (auto-installs swag if missing)
-make swag
-make swag-clean        # Remove generated docs
-make swag-force        # Clean + regenerate
-
-# Run linter (requires golangci-lint)
-make lint
-
-# Format Go code
-make fmt
-
-# Show all available targets
-make help
-```
-
-Configuration is via `pulse.yaml`. Copy `pulse.yaml.example` and update values.
-Environment variables with `PULSE_` prefix override config file settings.
-
-### Frontend (React)
-
-```bash
-cd frontend
-
-# Install dependencies
-npm install
-
-# Run dev server (default port 5173)
-npm run dev
-
-# Build for production
-npm run build
-
-# Preview production build
-npm run preview
-
-# Run unit/component tests (Vitest)
-npm run test
-
-# Lint
-npm run lint
-```
+`npm test` (needs Pulse + Frontend + DB) · `npm run test:smoke` / `test:smoke:fast` (only `smoke/` is implemented; auth, rbac, nodes, alerts, webhooks, export, dashboard, performance, reports, sessions, visual suites are planned) · `npm run docker:up` / `docker:down` / `docker:logs` / `docker:reset` (recommended env via `docker-compose.e2e.yml`) · `npm run test:ui` / `test:debug` / `test:headed` / `report`
 
 ## Architecture Overview
 
-### System Flow
-
 ```
-Beacon (per node)          Pulse Server              PostgreSQL
-     │                         │                          │
-     │ POST /heartbeat         │                          │
-     ├────────────────────────►│                          │
-     │  (JWT auth)             │                          │
-     │                         │                          │
-     │                         ├──► Memory Cache          │
-     │                         │   (ring buffer)          │
-     │                         │                          │
-     │                         ├──► Batch Writer ────────►│
-     │                         │   (async)                │
-     │                         │                          │
-     │                         ├──► Alert Engine          │
-     │                         │   (worker pool)          │
-     │                         │                          │
-     │                         ├──► Webhook Dispatcher    │
-     │                         │                          │
-     │                         └──► Scheduler             │
-     │                             (cleanup, suppression) │
+Beacon (per node) ──POST /heartbeat (JWT)──► Pulse Server ──► PostgreSQL
+                                               ├── Memory Cache (ring buffer)
+                                               ├── Batch Writer (async) ──► DB
+                                               ├── Alert Engine (worker pool)
+                                               ├── Webhook Dispatcher
+                                               └── Scheduler (cleanup, suppression)
 ```
 
-### Frontend Architecture
+**Pulse internal packages** (`pulse/internal/`): `alert`, `auth`, `cache`, `cleanup`, `config`, `csrf`, `db` (PostgreSQL + golang-migrate), `diagnostic`, `export`, `health`, `models`, `scheduler`, `security`, `server`, `suppression`, `webhook`.
 
-```
-src/
-├── api/           # API client functions (per domain: auth, nodes, alerts, etc.)
-├── components/    # Reusable UI components
-│   ├── common/    # Shared: PageContainer, PageHeader, ErrorBanner, ActionButton,
-│   │              #         ConfirmDialog, LoadingSpinner, ProtectedRoute, etc.
-│   ├── layout/    # AppLayout, Header, Sidebar, Breadcrumb, PageHeader
-│   ├── alerts/    # Alert rules, records components
-│   ├── charts/    # Recharts wrappers
-│   ├── dashboard/ # MetricCard, NodeListTable
-│   ├── nodes/     # Node-related components
-│   ├── export/    # Data export components
-│   ├── sessions/  # Session management components
-│   └── webhooks/  # Webhook components
-├── config/        # designTokens.ts, constants.ts
-├── hooks/         # Custom hooks: useAuth, useDashboard, useNodeDetail, useTheme, etc.
-├── locales/       # i18n: en.json, zh-CN.json
-├── pages/         # Route-level page components
-├── stores/        # Zustand state stores (authStore, nodesStore, alertsStore, etc.)
-└── types/         # Shared TypeScript types
-```
-
-### Frontend Tech Stack
-
-- **React 19** + **TypeScript 5** + **Vite 7**
-- **Tailwind CSS 4** for styling (dark mode via `dark:` classes)
-- **React Router v7** for client-side routing
-- **Zustand 5** for state management
-- **i18next** + **react-i18next** for internationalization (EN + zh-CN)
-- **Recharts 3** for charts and data visualization
-- **Vitest** + **@testing-library/react** for unit/component tests
-
-### Frontend Routes
-
-| Path | Component | Notes |
-|------|-----------|-------|
-| `/login` | LoginPage | Public |
-| `/dashboard` | DashboardPage | |
-| `/nodes` | NodeManagementPage | |
-| `/nodes/:id` | NodeDetailPage | |
-| `/nodes/comparison` | NodeComparisonPage | |
-| `/alerts/rules` | AlertRulesPage | |
-| `/alerts/records` | AlertRecordsPage | |
-| `/alerts/history` | AlertHistoryPage | |
-| `/reports` | ReportsPage | |
-| `/reports/history` | DataExportPage | |
-| `/integrations/webhooks` | WebhooksPage | |
-| `/integrations/health` | SystemHealthPage | |
-| `/settings/preferences` | PreferencesPage | |
-| `/settings/sessions` | SessionsPage | |
-| `/settings/users` | UsersPage | admin only |
-
-### Pulse Internal Packages
-
-```
-pulse/internal/
-├── alert/         # Alert rule evaluation engine
-├── auth/          # JWT, session, API key management
-├── cache/         # In-memory ring buffer cache
-├── cleanup/       # Scheduled data cleanup (retention)
-├── config/        # Configuration loading (YAML + env vars)
-├── csrf/          # CSRF protection middleware
-├── db/            # PostgreSQL connection + versioned migrations (golang-migrate, embedded SQL under db/migrations/)
-├── diagnostic/    # System health diagnostics
-├── export/        # Data export functionality
-├── health/        # Health check endpoints
-├── models/        # Shared domain models
-├── scheduler/     # Background job scheduler
-├── security/      # Input validation, rate limiting
-├── server/        # HTTP server setup, router, middleware
-├── suppression/   # Alert suppression logic
-└── webhook/       # Webhook delivery
-```
+**Frontend stack**: React 19 + TypeScript 5 + Vite 7, Tailwind CSS 4 (dark mode via `dark:`), React Router v7, Zustand 5, i18next (EN + zh-CN), Recharts 3, Vitest + Testing Library. Source under `frontend/src/`: `api/`, `components/` (`common/`, `layout/`, domain folders), `config/`, `hooks/`, `locales/`, `pages/`, `stores/`, `types/`.
 
 ## Important Patterns
 
-### Error Handling
-- Beacon: Exponential backoff retry (1s, 2s, 4s) for 5xx and network errors
-- Pulse: Distinguishes retryable (5xx, network) vs non-retryable (4xx) errors
-- Frontend: Axios interceptor auto-refreshes JWT on 401; `ErrorBanner` component for error display
-
-### Frontend Design System
-- Use `PageContainer` + `PageHeader` for all page layouts (replaces custom nav/header)
-- Use `ErrorBanner` for error states, `ActionButton` for primary actions, `ConfirmDialog` for confirmations
-- Use `statusColors`, `statusClasses` from `src/config/designTokens.ts` for status indicators
-- Always add `dark:` class variants for dark mode support
-- Use `t()` from `useTranslation()` for all user-visible strings; add keys to both `en.json` and `zh-CN.json`
-
-### Security
-- JWT secrets auto-generated (512-bit) if not provided in config
-- TLS 1.2+ enforcement for Beacon→Pulse communication
-- SHA-256 hashing for API keys and refresh tokens
-- Rate limiting: 5 login attempts per IP per minute
-- Account lockout: 5 failed attempts = 10 minute lockout
-- Role-based access control (admin, operator, viewer, beacon)
-- CSRF protection on mutation endpoints
-- Access tokens stored in memory only (not localStorage)
-
-### Performance
-- Async batch writes to DB (non-blocking for heartbeat endpoint)
-- Memory cache for real-time queries (ring buffer, 60 points per node)
-- Worker pools for alert evaluation (10 workers)
-- JWT: access token 15 min expiry; refresh via 401 interceptor (no timer)
-- Non-blocking metric writes (drop on overflow)
+- **Error handling**: Beacon retries 5xx/network with exponential backoff (1s, 2s, 4s). Pulse distinguishes retryable (5xx, network) vs non-retryable (4xx). Frontend auto-refreshes JWT on 401 via Axios interceptor; surface errors with `ErrorBanner`.
+- **Frontend design system**: Use `PageContainer` + `PageHeader` for layouts; `ErrorBanner` / `ActionButton` / `ConfirmDialog` for standard interactions; `statusColors` / `statusClasses` from `src/config/designTokens.ts`. Always add `dark:` variants. All user-visible strings via `t()` from `useTranslation()`, with keys added to both `en.json` and `zh-CN.json`.
+- **Security**: JWT secrets auto-generated (512-bit) if unset; TLS 1.2+ for Beacon→Pulse; SHA-256 hashing for API keys/refresh tokens; rate limiting (5 logins/IP/min); account lockout (5 fails = 10 min); RBAC (admin, operator, viewer, beacon); CSRF on mutations; access tokens in memory only.
+- **Performance**: Async batch DB writes (non-blocking heartbeat); ring-buffer cache (60 points/node); 10-worker alert pool; access token 15 min expiry with refresh-on-401; drop-on-overflow metric writes.
 
 ## Testing
 
-### Beacon Tests
-Located in `beacon/internal/*/` and `beacon/tests/`. Run with `make test`.
-
-### Pulse Tests
-- Unit tests: `pulse/internal/**/*_test.go` and `pulse/tests/api/`, `pulse/tests/cache/`
-- Integration tests: `pulse/tests/integration/`
-- Requires Docker test database: `make setup-test-db`
-
-### Frontend Tests
-Located in `frontend/src/**/*.test.tsx` and `frontend/src/**/__tests__/`. Run with `npm run test` (uses Vitest).
-
-### E2E Tests (Playwright)
-Located in `e2e/tests/`. Only the `smoke/` suite is currently implemented; the
-feature suites below are the planned roadmap (their npm scripts already exist
-in `e2e/package.json` but point at directories not yet created):
-- `tests/smoke/` - Smoke tests (quick sanity checks) ✅ implemented
-- `tests/auth/` - Login, logout, sessions, token refresh (planned)
-- `tests/rbac/` - Role-based access control (admin, operator, viewer) (planned)
-- `tests/nodes/` - Node list, detail, CRUD, comparison (planned)
-- `tests/alerts/` - Alert rules, history, records (planned)
-- `tests/webhooks/` - Webhook configuration (planned)
-- `tests/export/` - Data export functionality (planned)
-- `tests/dashboard/` - Dashboard metrics (planned)
-- `tests/performance/` - Performance metrics (planned)
-- `tests/reports/` - Reports (planned)
-- `tests/sessions/` - Session management (planned)
-- `tests/visual/` - Visual regression tests (planned)
-
-```bash
-cd e2e
-
-# Install dependencies
-npm install
-
-# Run all tests (requires running Pulse + Frontend + DB)
-npm test
-
-# Run specific test suites
-npm run test:auth
-npm run test:rbac
-npm run test:nodes
-npm run test:alerts
-npm run test:webhooks
-npm run test:export
-npm run test:smoke        # Quick smoke tests
-npm run test:smoke:fast   # Smoke tests (Chromium only, 4 workers)
-
-# Docker-based E2E environment (recommended)
-npm run docker:up      # Start Pulse, Frontend, PostgreSQL in Docker
-npm run docker:down    # Stop containers
-npm run docker:logs    # View logs
-npm run docker:reset   # Reset volumes and restart
-
-# Debugging
-npm run test:ui        # Playwright UI mode
-npm run test:debug     # Debug mode
-npm run test:headed    # Run with browser visible
-npm run report         # Show test report
-```
-
-The E2E environment uses `docker-compose.e2e.yml` which sets up:
-- PostgreSQL test database (port 5432)
-- Pulse backend API (port 6532)
-- Frontend dev server (port 5173)
+- **Beacon**: `beacon/internal/*/` and `beacon/tests/` — `make test`.
+- **Pulse unit**: `pulse/internal/**/*_test.go`, `pulse/tests/api/`, `pulse/tests/cache/`. **Integration**: `pulse/tests/integration/` (needs Docker DB via `make setup-test-db`).
+- **Frontend**: `frontend/src/**/*.test.tsx` and `__tests__/` — `npm run test`.
+- **E2E**: `e2e/tests/` — only `smoke/` implemented; see commands above.
 
 ## Configuration
 
-### Beacon Configuration (`beacon.yaml`)
-Required:
-- `pulse_server` - Pulse server URL
-- `node_id` - Unique node identifier (alphanumeric, hyphens, underscores)
-- `node_name` - Human-readable name
-- `api_key` - API key for JWT authentication
+- **Beacon** (`beacon.yaml`, see `beacon.yaml.example`): required `pulse_server`, `node_id`, `node_name`, `api_key`; optional `region`, `tags`, `probes`, `reconnect`, `metrics_*` (Prometheus `/metrics` on port 2112 by default). Supports hot-reload.
+- **Pulse** (`pulse.yaml`, see `pulse.yaml.example`): `server.port` (6532), `server.mode`, `database.url` (**required**), `log.*`, `cors.allowed_origins`, `admin.*` (default `admin`/`Admin123`), `jwt.*`, `session.*`, `cleanup.*` (retention 7 days). Priority: **env vars (`PULSE_` prefix) > pulse.yaml > defaults**.
 
-Optional:
-- `region` - Region label
-- `tags` - Custom string tags
-- `probes` - TCP/UDP probe targets (type, target, port, interval, count, timeout)
-- `reconnect` - Retry config (max_retries, retry_interval, backoff strategy)
-- `metrics_enabled` - Enable Prometheus `/metrics` endpoint (default: true)
-- `metrics_port` - Prometheus metrics port (default: 2112)
-- `metrics_update_seconds` - Metrics update interval (default: 10)
+## Operational Notes
 
-### Pulse Configuration (`pulse.yaml`)
-Copy `pulse.yaml.example` to `pulse.yaml`. All fields can also be set via environment variables with `PULSE_` prefix (e.g. `PULSE_DATABASE_URL`).
-
-Key sections:
-- `server.port` (default: `6532`), `server.mode` (`debug`/`release`)
-- `database.url` - PostgreSQL connection string (**required**)
-- `log.level` (`debug`/`info`/`warn`/`error`), `log.format` (`text`/`json`)
-- `cors.allowed_origins` (default: `http://localhost:4173,http://localhost:5173`)
-- `admin.username` / `admin.password` (default: `admin` / `Admin123`)
-- `jwt.secret` (auto-generated if empty), `jwt.expiration_hours` (default: 24)
-- `session.secret` (auto-generated if empty), `session.expiration_hours` (default: 24)
-- `cleanup.enabled`, `cleanup.retention_days` (default: 7)
-
-Configuration priority: **Environment variables > pulse.yaml > defaults**
-
-## Development Notes
-
-1. Configuration priority: Environment variables > pulse.yaml > built-in defaults
-2. Beacon supports config hot-reload (no restart required)
-3. Graceful shutdown: All components handle SIGTERM/SIGINT
-4. Token rotation: Refresh tokens are one-time use; access tokens live in memory only
-5. Concurrent safety: All shared state protected by mutexes
-6. Prometheus metrics: Beacon exposes `/metrics` on port 2112 (configurable)
-7. Swagger UI available at `http://localhost:6532/swagger/index.html` when running in debug mode
+- All components handle SIGTERM/SIGINT for graceful shutdown.
+- Refresh tokens are one-time use; access tokens live in memory only.
+- All shared state is mutex-protected.
+- Swagger UI at `http://localhost:6532/swagger/index.html` in debug mode.
