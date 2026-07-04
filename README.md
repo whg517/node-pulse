@@ -256,7 +256,7 @@ docker build -t node-pulse-beacon -f beacon/Dockerfile ./beacon
 ### Full E2E stack
 
 ```bash
-docker-compose -f e2e/docker-compose.e2e.yml up -d
+docker compose -f deploy/docker/docker-compose.e2e.yml up -d
 # App (SPA + API):  http://localhost:6532
 ```
 

@@ -24,10 +24,10 @@
     "list": "playwright test --list",
     "report": "playwright show-report",
     "install:browsers": "playwright install",
-    "docker:up": "docker compose -f docker-compose.e2e.yml up -d",
-    "docker:down": "docker compose -f docker-compose.e2e.yml down",
-    "docker:logs": "docker compose -f docker-compose.e2e.yml logs -f",
-    "docker:reset": "docker compose -f docker-compose.e2e.yml down -v && docker compose -f docker-compose.e2e.yml up -d"
+    "docker:up": "docker compose -f ../deploy/docker/docker-compose.e2e.yml up -d",
+    "docker:down": "docker compose -f ../deploy/docker/docker-compose.e2e.yml down",
+    "docker:logs": "docker compose -f ../deploy/docker/docker-compose.e2e.yml logs -f",
+    "docker:reset": "docker compose -f ../deploy/docker/docker-compose.e2e.yml down -v && docker compose -f ../deploy/docker/docker-compose.e2e.yml up -d"
   },
   "devDependencies": {
     "@playwright/test": "^1.49.0",

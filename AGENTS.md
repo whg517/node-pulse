@@ -74,7 +74,7 @@ Migrations auto-apply on startup; manual targets need the `migrate` CLI (`go ins
 
 ### E2E (`cd e2e`)
 
-`npm test` (needs Pulse + Frontend + DB) · `npm run test:smoke` / `test:smoke:fast` (only `smoke/` is implemented; auth, rbac, nodes, alerts, webhooks, export, dashboard, performance, reports, sessions, visual suites are planned) · `npm run docker:up` / `docker:down` / `docker:logs` / `docker:reset` (recommended env via `docker-compose.e2e.yml`) · `npm run test:ui` / `test:debug` / `test:headed` / `report`
+`npm test` (needs Pulse + Frontend + DB) · `npm run test:smoke` / `test:smoke:fast` (only `smoke/` is implemented; auth, rbac, nodes, alerts, webhooks, export, dashboard, performance, reports, sessions, visual suites are planned) · `npm run docker:up` / `docker:down` / `docker:logs` / `docker:reset` (recommended env via `deploy/docker/docker-compose.e2e.yml`) · `npm run test:ui` / `test:debug` / `test:headed` / `report`
 
 ## Architecture Overview
 

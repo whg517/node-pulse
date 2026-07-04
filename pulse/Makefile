@@ -98,9 +98,9 @@ web-build: ## Build the frontend and copy its dist into the embedded web/dist
 ##@ Database Management
 setup-test-db: ## Start test database container
 	@echo "🐳 Starting test database..."
-	docker compose -f docker-compose.test.yml up -d postgres-test
+	docker compose -f ../deploy/docker/docker-compose.test.yml up -d postgres-test
 	@echo "⏳ Waiting for database to be ready..."
-	@until docker compose -f docker-compose.test.yml exec postgres-test pg_isready -U testuser > /dev/null 2>&1; do \
+	@until docker compose -f ../deploy/docker/docker-compose.test.yml exec postgres-test pg_isready -U testuser > /dev/null 2>&1; do \
 		echo "Waiting for database..."; \
 		sleep 2; \
 	done
@@ -108,7 +108,7 @@ setup-test-db: ## Start test database container
 
 cleanup-test-db: ## Stop test database container
 	@echo "🛑 Stopping test database..."
-	docker compose -f docker-compose.test.yml down
+	docker compose -f ../deploy/docker/docker-compose.test.yml down
 
 ##@ Schema Migrations (golang-migrate)
 # Migrations live under internal/db/migrations/ as versioned .up.sql/.down.sql

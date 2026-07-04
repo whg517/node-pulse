@@ -5,11 +5,10 @@
 #   - DB exposed on 5433 to avoid clashing with other Postgres on 5432.
 #   - Pulse on 6532 — the single origin for both the SPA and the API.
 #
-# Usage:
-#   cd e2e
-#   npm run docker:up
-#   E2E_BASE_URL=http://localhost:6532 npm run test:smoke:fast
-#   npm run docker:down
+# Usage (from the repository root):
+#   npm --prefix e2e run docker:up
+#   E2E_BASE_URL=http://localhost:6532 npm --prefix e2e run test:smoke:fast
+#   npm --prefix e2e run docker:down
 
 services:
   postgres:
@@ -31,8 +30,10 @@ services:
 
   pulse:
     build:
-      # Repo root context so the Dockerfile can build + embed the frontend.
-      context: ..
+      # Context is the repo root (two levels up from deploy/docker/) so the
+      # Dockerfile can build + embed the frontend. dockerfile is resolved
+      # relative to that context.
+      context: ../..
       dockerfile: pulse/Dockerfile
     container_name: nodepulse-e2e-api
     depends_on:
