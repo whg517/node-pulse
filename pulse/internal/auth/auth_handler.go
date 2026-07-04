@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -27,6 +28,24 @@ const (
 	ConstantAuthDelay           = 150 * time.Millisecond
 )
 
+// Mailer is the minimal email-sending capability AuthHandler needs (for password
+// reset links). The notify.Sender satisfies this; a nil-safe default logs only.
+type Mailer interface {
+	Send(ctx context.Context, to, subject, body string, attachments ...MailerAttachment) error
+}
+
+// MailerAttachment is the minimal attachment shape AuthHandler references.
+type MailerAttachment struct {
+	Filename    string
+	Content     []byte
+	ContentType string
+}
+
+// noopMailer logs instead of sending; used when no Mailer is configured.
+type noopMailer struct{}
+
+func (noopMailer) Send(_ context.Context, _, _, _ string, _ ...MailerAttachment) error { return nil }
+
 // AuthHandler handles authentication endpoints
 // AuthHandler handles authentication endpoints
 type AuthHandler struct {
@@ -46,6 +65,23 @@ type AuthHandler struct {
 	refreshLimitPerMinute int
 	logoutLimitPerMinute  int
 	apikeyLimitPerMinute  int
+	// Outbound email + the public frontend URL for embedded reset links.
+	mailer   Mailer
+	resetURL string
+}
+
+// Option configures an AuthHandler after construction.
+type Option func(*AuthHandler)
+
+// WithPasswordResetMailer wires the email sender and the public frontend URL
+// used to build password-reset links (e.g. https://app/reset-password).
+func WithPasswordResetMailer(mailer Mailer, resetURL string) Option {
+	return func(h *AuthHandler) {
+		if mailer != nil {
+			h.mailer = mailer
+		}
+		h.resetURL = resetURL
+	}
 }
 
 // RateLimitOptions holds per-minute limits for auth endpoints.
@@ -68,6 +104,7 @@ func NewAuthHandler(
 	maxValidityDays int,
 	cookieSecure bool,
 	rateLimitOpts RateLimitOptions,
+	opts ...Option,
 ) *AuthHandler {
 	jwtService := NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, accessExpirationMinutes, pool)
 	refreshTokenService := NewRefreshTokenService(pool)
@@ -90,7 +127,7 @@ func NewAuthHandler(
 		rateLimitOpts.APIKeyPerMinute = MaxAPIKeyAttemptsPerMinute
 	}
 
-	return &AuthHandler{
+	h := &AuthHandler{
 		pool:                    pool,
 		jwtService:              jwtService,
 		refreshTokenService:     refreshTokenService,
@@ -106,7 +143,12 @@ func NewAuthHandler(
 		refreshLimitPerMinute:   rateLimitOpts.RefreshPerMinute,
 		logoutLimitPerMinute:    rateLimitOpts.LogoutPerMinute,
 		apikeyLimitPerMinute:    rateLimitOpts.APIKeyPerMinute,
+		mailer:                  noopMailer{},
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // Login handles user authentication
@@ -1059,7 +1101,7 @@ func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 
 	// Generate reset token
 	userAgent := c.GetHeader("User-Agent")
-	_, err = h.passwordResetService.GenerateResetToken(ctx, userID, ipAddress, userAgent)
+	token, err := h.passwordResetService.GenerateResetToken(ctx, userID, ipAddress, userAgent)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
 			Code:    "TOKEN_GENERATION_FAILED",
@@ -1074,14 +1116,36 @@ func (h *AuthHandler) RequestPasswordReset(c *gin.Context) {
 		"email":    req.Email,
 	})
 
-	// In production, send email with reset link
-	// For now, return token (development only - remove in production)
-	// TODO: Implement email sending
+	// Send the reset link by email. Best-effort: failures are logged but do not
+	// change the anti-enumeration response (the user must not learn whether the
+	// email exists). The mailer may be a NoopSender when SMTP is unconfigured.
+	resetLink := h.buildResetLink(token)
+	subject := "NodePulse — password reset"
+	body := fmt.Sprintf(
+		"Hello %s,\n\nYou requested a password reset. Use the link below to choose a new password. The link is single-use and expires shortly.\n\n%s\n\nIf you did not request this, you can safely ignore this email.\n",
+		username, resetLink,
+	)
+	if err := h.mailer.Send(ctx, req.Email, subject, body); err != nil {
+		// Logged but not surfaced — see comment above.
+		slog.Warn("Failed to send password-reset email",
+			"component", "auth", "user_id", userID, "error", err)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "If the email exists, a password reset link has been sent",
 		// Uncomment for development testing:
 		// "token": token,
 	})
+}
+
+// buildResetLink assembles the public frontend URL the user clicks in the email.
+// When resetURL is unset it falls back to a dev-friendly relative link.
+func (h *AuthHandler) buildResetLink(token string) string {
+	base := strings.TrimRight(h.resetURL, "/")
+	if base == "" {
+		base = "/reset-password"
+	}
+	return base + "?token=" + token
 }
 
 // ConfirmPasswordReset completes password reset flow

@@ -137,3 +137,45 @@ export async function testWebhook(id: string): Promise<TestWebhookResponse> {
     method: 'POST',
   })
 }
+
+/** A single webhook delivery attempt record. */
+export interface WebhookDeliveryLogDTO {
+  id: string
+  webhook_id: string
+  alert_event_id: string
+  /** success | failure | retrying */
+  status: string
+  retry_count: number
+  error_message: string
+  sent_at: string
+  created_at: string
+}
+
+export interface WebhookLogsResponse {
+  data: {
+    logs: WebhookDeliveryLogDTO[]
+    total: number
+  }
+  limit: number
+  offset: number
+  message: string
+  timestamp: string
+}
+
+/**
+ * List delivery logs for a webhook, newest first.
+ *
+ * @param id - Webhook ID
+ * @param params - Pagination params (limit default 50, max 200)
+ * @returns Paginated delivery logs
+ */
+export async function getWebhookLogs(
+  id: string,
+  params?: { limit?: number; offset?: number }
+): Promise<WebhookLogsResponse> {
+  const search = new URLSearchParams()
+  if (params?.limit !== undefined) search.set('limit', String(params.limit))
+  if (params?.offset !== undefined) search.set('offset', String(params.offset))
+  const qs = search.toString() ? `?${search.toString()}` : ''
+  return apiClient<WebhookLogsResponse>(`/api/v1/webhooks/${id}/logs${qs}`)
+}

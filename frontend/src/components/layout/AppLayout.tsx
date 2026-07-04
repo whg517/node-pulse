@@ -6,6 +6,7 @@ import { AppSidebar } from './Sidebar'
 import { Header } from './Header'
 import { BreadcrumbProvider } from './BreadcrumbContext'
 import { Breadcrumb } from './Breadcrumb'
+import { useGlobalRealtime } from '@/hooks/useGlobalRealtime'
 
 export interface AppLayoutProps {
   children: ReactNode
@@ -14,6 +15,9 @@ export interface AppLayoutProps {
 
 export function AppLayout({ children, alertCount = 0 }: AppLayoutProps) {
   const { t } = useTranslation()
+  // G7: keep the WS + browser-notification connection alive app-wide (one
+  // persistent session connection), instead of only on the Dashboard.
+  useGlobalRealtime()
 
   return (
     <SidebarProvider>

@@ -157,3 +157,54 @@ export async function getMe(): Promise<GetMeResponse> {
     )
   }
 }
+
+/** Response shape for the change-password endpoint. */
+export interface ChangePasswordResponse {
+  message: string
+  // The backend revokes all other sessions after a successful password change;
+  // the current session is kept (best-effort within the last minute).
+  sessions_revoked: boolean
+  timestamp?: string
+}
+
+/**
+ * Change the current user's password
+ *
+ * Requires the current password for verification. On success the backend
+ * revokes all other sessions; the current session is kept (best-effort).
+ * Backend endpoint: POST /auth/password/change (CSRF-protected).
+ *
+ * @param currentPassword - Current password for verification
+ * @param newPassword - New password (must pass backend strength validation)
+ * @returns Change-password response with sessions_revoked flag
+ * @throws AuthenticationError if current password is wrong or not authenticated
+ * @throws ValidationError if the new password is weak or identical to the current
+ */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string
+): Promise<ChangePasswordResponse> {
+  return apiClient<ChangePasswordResponse>('/api/v1/auth/password/change', {
+    method: 'POST',
+    body: JSON.stringify({
+      current_password: currentPassword,
+      new_password: newPassword,
+    }),
+  })
+}
+
+/** Request a password-reset link. Anti-enumeration: response is identical whether the email exists. */
+export async function requestPasswordReset(email: string): Promise<{ message: string }> {
+  return apiClient<{ message: string }>('/api/v1/auth/password/reset/request', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  })
+}
+
+/** Confirm a password reset using the token from the email link. */
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<{ message: string }> {
+  return apiClient<{ message: string }>('/api/v1/auth/password/reset/confirm', {
+    method: 'POST',
+    body: JSON.stringify({ token, new_password: newPassword }),
+  })
+}

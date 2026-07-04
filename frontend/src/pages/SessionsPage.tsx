@@ -4,8 +4,19 @@ import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { getSessions, deleteSession, getSessionInfo } from '@/api/sessions'
+import { getSessions, deleteSession, getSessionInfo, revokeAllSessions } from '@/api/sessions'
 import type { Session } from '@/types/auth'
 
 export default function SessionsPage() {
@@ -15,6 +26,7 @@ export default function SessionsPage() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isRevokingAll, setIsRevokingAll] = useState(false)
 
   const loadSessions = useCallback(async () => {
     setIsLoading(true)
@@ -48,9 +60,50 @@ export default function SessionsPage() {
     }
   }
 
+  const handleRevokeAll = async () => {
+    setIsRevokingAll(true)
+    setError(null)
+    try {
+      await revokeAllSessions()
+      // Revoking all sessions includes the current one; sign the user out.
+      setTimeout(() => navigate('/login', { replace: true }), 1500)
+    } catch (err) {
+      setError((err as { message?: string }).message || t('errors.failedToLoad'))
+      setIsRevokingAll(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
-      <PageHeader title={t('sessions.title')} subtitle={t('sessions.description')} />
+      <PageHeader
+        title={t('sessions.title')}
+        subtitle={t('sessions.description')}
+        actions={
+          sessions.length > 0 ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="sm" disabled={isRevokingAll}>
+                  {isRevokingAll ? t('sessions.revokingAll', 'Signing out...') : t('sessions.revokeAll', 'Sign out all sessions')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('sessions.confirmRevokeAllTitle', 'Sign out all sessions?')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('sessions.confirmRevokeAllDesc', 'This will sign out every device including this one. You will need to log in again.')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction variant="destructive" onClick={() => void handleRevokeAll()}>
+                    {t('sessions.revokeAll', 'Sign out all')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : undefined
+        }
+      />
 
       {error && (
         <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">

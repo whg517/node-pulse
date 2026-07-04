@@ -28,7 +28,10 @@
     "webhooks": "Webhooks",
     "performance": "Performance",
     "users": "Users",
-    "exportHistory": "Export History"
+    "exportHistory": "Export History",
+    "apiKeys": "API Keys",
+    "auditLogs": "Audit Logs",
+    "systemConfig": "System Config"
   },
   "common": {
     "loading": "Loading...",
@@ -80,7 +83,14 @@
     "retry": "Retry",
     "expand": "Expand",
     "collapse": "Collapse",
-    "welcome": "Welcome"
+    "welcome": "Welcome",
+    "copy": "Copy",
+    "copied": "Copied",
+    "done": "Done",
+    "apply": "Apply",
+    "clear": "Clear",
+    "showing": "Showing",
+    "of": "of"
   },
   "navigation": {
     "dashboard": "Dashboard",
@@ -324,7 +334,14 @@
     "routeTo": "Route to",
     "notifyVia": "Notify via",
     "webhook": "Webhook",
-    "ruleEmail": "Email"
+    "ruleEmail": "Email",
+    "addNote": "Add Note",
+    "addNotePlaceholder": "Add investigation details (Ctrl/Cmd+Enter to submit)",
+    "addNoteHint": "Press Ctrl/Cmd+Enter to submit",
+    "submitNote": "Submit Note",
+    "addNoteFailed": "Failed to add note",
+    "localOnlyTitle": "Local-only",
+    "localOnlyRouting": "Routing rules are saved only in this browser and are not enforced by the server. Today every enabled webhook receives every alert. See docs/adr/ADR-002-alert-routing.md."
   },
   "reports": {
     "title": "Reports",
@@ -426,7 +443,9 @@
     "noSchedules": "No scheduled reports configured.",
     "noSchedulesHint": "Create a schedule to automatically generate reports.",
     "lastRun": "Last Run",
-    "never": "Never"
+    "never": "Never",
+    "localOnlyTitle": "Local-only",
+    "localOnlySchedule": "Scheduled reports are saved only in this browser and are not executed by the server. Switching devices or clearing browser data will lose them. See docs/adr/ADR-001-report-scheduling.md."
   },
   "webhooks": {
     "title": "Webhooks",
@@ -532,7 +551,54 @@
     "disable": "Disable",
     "delete": "Delete",
     "savePreferences": "Save Preferences",
-    "saved": "Settings saved successfully"
+    "saved": "Settings saved successfully",
+    "securityDescription": "Change your account password. Other sessions will be signed out.",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "confirmPassword": "Confirm new password",
+    "changePassword": "Change Password",
+    "passwordMismatch": "New passwords do not match",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "passwordChanged": "Password changed successfully",
+    "passwordChangedSessionsRevoked": "Password changed. Other sessions were signed out.",
+    "passwordChangeFailed": "Failed to change password",
+    "forceLogout": "Force logout",
+    "confirmForceLogoutTitle": "Force sign out?",
+    "confirmForceLogoutMessage": "This will immediately end all sessions for {name}. They will need to sign in again.",
+    "apiKeys": "API Keys",
+    "apiKeysDescription": "Manage API keys for Beacon authentication.",
+    "createApiKey": "Create API Key",
+    "keyName": "Name",
+    "keyNamePlaceholder": "e.g. beacon-prod-01",
+    "keyPrefix": "Prefix",
+    "lastUsed": "Last used",
+    "created": "Created",
+    "noApiKeys": "No API keys yet. Create one to authenticate a Beacon.",
+    "create": "Create",
+    "rotate": "Rotate",
+    "revoke": "Revoke",
+    "revoked": "Revoked",
+    "apiKeyHelp": "The full key is shown only once after creation. Store it securely.",
+    "createdKeyTitle": "API key created",
+    "rotatedKeyTitle": "API key rotated",
+    "apiKeyOnceWarning": "Copy this key now. For security, it will not be shown again.",
+    "confirmRevokeKeyTitle": "Revoke API key?",
+    "confirmRevokeKeyMessage": "Revoke \"{name}\"? Beacons using this key will immediately fail to authenticate.",
+    "adminOnly": "Access denied — administrator role required.",
+    "auditLogs": "Audit Logs",
+    "auditLogsDescription": "Security event audit trail.",
+    "eventType": "Event type",
+    "allEvents": "All events",
+    "startTime": "Start time",
+    "endTime": "End time",
+    "event": "Event",
+    "details": "Details",
+    "timestamp": "Timestamp",
+    "noAuditLogs": "No audit log entries match the filters.",
+    "systemConfig": "System Config",
+    "systemConfigDescription": "View the effective server configuration and re-validate it.",
+    "revalidate": "Re-validate",
+    "configValid": "Configuration is valid"
   },
   "auth": {
     "loginTitle": "Sign In",
@@ -588,7 +654,7 @@
   },
   "mtr": {
     "title": "MTR Traceroute",
-    "pathVisualization": "MTR Path Visualization",
+    "pathVisualization": "Path visualization & risk conditions",
     "networkPath": "Network Path",
     "pathTo": "Path to",
     "target": "Target",
@@ -674,7 +740,11 @@
     "yesRevoke": "Yes, Revoke",
     "confirmRevoke": "Confirm?",
     "logoutWarning": "This will log you out.",
-    "cancelRevoke": "Cancel"
+    "cancelRevoke": "Cancel",
+    "revokeAll": "Sign out all sessions",
+    "revokingAll": "Signing out...",
+    "confirmRevokeAllTitle": "Sign out all sessions?",
+    "confirmRevokeAllDesc": "This will sign out every device including this one. You will need to log in again."
   },
   "alertHistory": {
     "title": "Alert History",
@@ -815,7 +885,17 @@
     "templateDescription": "Description (optional)",
     "noTemplates": "No templates saved.",
     "confirmApply": "Apply this template? Current config will be replaced.",
-    "deleteTemplate": "Delete Template"
+    "deleteTemplate": "Delete Template",
+    "localOnlyTemplates": "Templates are saved only in this browser. Switching devices or clearing browser data will lose them. See docs/adr/ADR-003-beacon-config-templates.md.",
+    "preview": "Preview",
+    "previewValid": "Configuration is valid",
+    "previewInvalid": "Configuration has problems",
+    "batchDeploy": "Batch deploy to many",
+    "exitBatch": "Exit batch mode",
+    "batchHint": "Select target beacons to deploy the current configuration to.",
+    "deployToN": "Deploy to {n} beacon(s)",
+    "batchResult": "Batch deploy: {success} succeeded, {failed} failed.",
+    "batchFailedIds": "Failed: {ids}"
   },
   "probes": {
     "title": "Probe Management",

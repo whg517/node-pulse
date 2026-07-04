@@ -120,7 +120,7 @@ func TestCreateExportRequest_Validate_AllValidMetrics(t *testing.T) {
 }
 
 func TestNewExportService(t *testing.T) {
-	svc := NewExportService(nil)
+	svc := NewExportService(nil, nil)
 	assert.NotNil(t, svc)
 
 	// Cleanup
@@ -128,7 +128,7 @@ func TestNewExportService(t *testing.T) {
 }
 
 func TestExportService_CreateExport_ValidationError(t *testing.T) {
-	svc := NewExportService(nil)
+	svc := NewExportService(nil, nil)
 	defer svc.Shutdown()
 
 	req := validRequest()
@@ -140,7 +140,7 @@ func TestExportService_CreateExport_ValidationError(t *testing.T) {
 }
 
 func TestExportService_UpdateTaskStatus(t *testing.T) {
-	svc := NewExportService(nil)
+	svc := NewExportService(nil, nil)
 	defer svc.Shutdown()
 
 	// Add a task directly without calling CreateExport (to avoid nil pool panic)
@@ -161,7 +161,7 @@ func TestExportService_UpdateTaskStatus(t *testing.T) {
 }
 
 func TestExportService_ListExports(t *testing.T) {
-	svc := NewExportService(nil)
+	svc := NewExportService(nil, nil)
 	defer svc.Shutdown()
 
 	now := time.Now()
@@ -197,7 +197,7 @@ func TestExportService_ListExports(t *testing.T) {
 }
 
 func TestExportService_UpdateTaskStatus_Completed(t *testing.T) {
-	svc := NewExportService(nil)
+	svc := NewExportService(nil, nil)
 	defer svc.Shutdown()
 
 	taskID := "test-task-2"
@@ -220,7 +220,7 @@ func TestExportService_UpdateTaskStatus_Completed(t *testing.T) {
 }
 
 func TestExportService_GetTask_NonExistent(t *testing.T) {
-	svc := NewExportService(nil)
+	svc := NewExportService(nil, nil)
 	defer svc.Shutdown()
 
 	task := svc.getTask("nonexistent")

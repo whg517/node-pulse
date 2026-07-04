@@ -9,6 +9,7 @@ import (
 	"hash/crc32"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -627,6 +628,11 @@ type BeaconConfigResponse struct {
 	Timestamp string       `json:"timestamp"`
 }
 
+// RollbackBeaconConfigRequest targets a prior history version to restore.
+type RollbackBeaconConfigRequest struct {
+	Version int `json:"version" binding:"required"`
+}
+
 // ConfigHistoryEntry represents a config history entry
 type ConfigHistoryEntry struct {
 	Version   int          `json:"version"`
@@ -897,6 +903,97 @@ func (h *BeaconHandler) GetBeaconConfigHistory(c *gin.Context) {
 	c.JSON(http.StatusOK, ConfigHistoryResponse{
 		Data:      history,
 		Message:   "Config history retrieved successfully",
+		Timestamp: time.Now().Format(time.RFC3339),
+	})
+}
+
+// RollbackBeaconConfigHandler handles POST /api/v1/beacons/:id/config/rollback
+// @Summary		Roll back beacon configuration
+// @Description	Restores a beacon's config to a prior history version by re-applying it as a new version. Requires admin or operator role.
+// @Tags			Beacon
+// @Accept			json
+// @Produce		json
+// @Param			id		path		string							true	"Beacon ID"
+// @Param			request	body		RollbackBeaconConfigRequest		true	"Target version to restore"
+// @Success		200		{object}	BeaconConfigResponse			"Beacon config rolled back successfully"
+// @Failure		400		{object}	models.ErrorResponse			"Invalid request or version"
+// @Failure		401		{object}	models.ErrorResponse			"Unauthorized"
+// @Failure		403		{object}	models.ErrorResponse			"Forbidden (requires admin or operator role)"
+// @Failure		404		{object}	models.ErrorResponse			"History version not found"
+// @Failure		500		{object}	models.ErrorResponse			"Internal server error"
+// @Security		BearerAuth
+// @Router			/beacons/{id}/config/rollback [post]
+func (h *BeaconHandler) RollbackBeaconConfigHandler(c *gin.Context) {
+	beaconID := c.Param("id")
+	parsedBeaconID, err := uuid.Parse(beaconID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_INVALID_BEACON_ID",
+			Message: "Invalid beacon ID format",
+		})
+		return
+	}
+
+	var req RollbackBeaconConfigRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_INVALID_REQUEST",
+			Message: "Invalid request parameters",
+			Details: err.Error(),
+		})
+		return
+	}
+	if req.Version < 1 {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    "ERR_INVALID_VERSION",
+			Message: "version must be >= 1",
+		})
+		return
+	}
+
+	// Determine the actor for the audit trail.
+	changedBy := "system"
+	if username, exists := c.Get("username"); exists {
+		if u, ok := username.(string); ok && u != "" {
+			changedBy = u
+		}
+	} else if userID, exists := c.Get("user_id"); exists {
+		if u, ok := userID.(string); ok && u != "" {
+			changedBy = u
+		}
+	}
+
+	querier := h.beaconConfigQuerier()
+	if querier == nil {
+		c.JSON(http.StatusServiceUnavailable, models.ErrorResponse{
+			Code:    "ERR_CONFIG_STORE_UNAVAILABLE",
+			Message: "Beacon config store is not available",
+		})
+		return
+	}
+
+	config, err := querier.RollbackBeaconConfig(c.Request.Context(), parsedBeaconID, req.Version, "rollback:"+changedBy)
+	if err != nil {
+		// History-not-found vs other errors: the repo wraps not-found with a message.
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Code:    "ERR_NOT_FOUND",
+				Message: "History version not found",
+				Details: err.Error(),
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_INTERNAL_SERVER",
+			Message: "Failed to roll back beacon config",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, BeaconConfigResponse{
+		Data:      fromDBBeaconConfig(config),
+		Message:   "Beacon config rolled back successfully",
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }

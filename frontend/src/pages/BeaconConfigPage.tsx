@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { fetchNodes } from '@/api/nodes'
-import { fetchBeaconConfig, updateBeaconConfig, fetchConfigHistory } from '@/api/beaconConfig'
-import type { BeaconConfigDTO, ProbeConfigDTO, ConfigHistoryEntry } from '@/api/beaconConfig'
+import { fetchBeaconConfig, updateBeaconConfig, fetchConfigHistory, previewConfig, batchUpdateConfig, rollbackBeaconConfig } from '@/api/beaconConfig'
+import type { BeaconConfigDTO, ProbeConfigDTO, ConfigHistoryEntry, ConfigPreviewResult } from '@/api/beaconConfig'
+import { listBeaconConfigTemplates, createBeaconConfigTemplate, deleteBeaconConfigTemplate, type BeaconConfigTemplateDTO } from '@/api/beaconConfigTemplates'
 import type { NodeDTO } from '@/api/types'
-import { useSettingsStore, type ConfigTemplate } from '@/stores/settingsStore'
 
 function emptyProbe(): ProbeConfigDTO {
   return {
@@ -67,10 +67,32 @@ export default function BeaconConfigPage() {
   const [validationErrors, setValidationErrors] = useState<BeaconConfigValidationErrors>(emptyValidationErrors)
   const [showHistory, setShowHistory] = useState(false)
 
+  // G8 config preview state
+  const [preview, setPreview] = useState<ConfigPreviewResult | null>(null)
+  const [isPreviewing, setIsPreviewing] = useState(false)
+
+  // G9 batch deploy state (multi-select across all nodes)
+  const [batchMode, setBatchMode] = useState(false)
+  const [batchSelectedIds, setBatchSelectedIds] = useState<string[]>([])
+  const [batchResult, setBatchResult] = useState<{ success_count: number; failed_count: number; failed_ids?: string[]; errors?: string[] } | null>(null)
+  const [isBatchDeploying, setIsBatchDeploying] = useState(false)
+
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
   const [templateName, setTemplateName] = useState('')
   const [templateDesc, setTemplateDesc] = useState('')
-  const { configTemplates, addConfigTemplate, deleteConfigTemplate } = useSettingsStore()
+  // Templates now come from the server (ADR-003) instead of localStorage.
+  const [templates, setTemplates] = useState<BeaconConfigTemplateDTO[]>([])
+
+  const loadTemplates = useCallback(async () => {
+    try {
+      const res = await listBeaconConfigTemplates()
+      setTemplates(res.data?.templates || [])
+    } catch {
+      // Best-effort; templates are non-critical.
+    }
+  }, [])
+
+  useEffect(() => { void loadTemplates() }, [loadTemplates])
 
   useEffect(() => {
     fetchNodes()
@@ -203,36 +225,108 @@ export default function BeaconConfigPage() {
     }
   }
 
-  const handleSaveTemplate = () => {
-    if (!config || !templateName.trim()) return
-    const template: ConfigTemplate = {
-      id: crypto.randomUUID(),
-      name: templateName.trim(),
-      description: templateDesc.trim() || undefined,
-      probes: config.probes.map((p) => ({
-        type: p.type as 'TCP' | 'UDP',
-        target: p.target,
-        port: p.port,
-        interval_seconds: p.interval_seconds,
-        timeout_seconds: p.timeout_seconds,
-        count: p.count,
-      })),
-      interval_seconds: config.interval_seconds,
-      timeout_seconds: config.timeout_seconds,
+  const handlePreview = async () => {
+    if (!config || !selectedNodeId) return
+    setIsPreviewing(true)
+    setError(null)
+    setPreview(null)
+    try {
+      const res = await previewConfig(selectedNodeId, {
+        probes: config.probes,
+        interval_seconds: config.interval_seconds,
+        timeout_seconds: config.timeout_seconds,
+      })
+      setPreview(res.data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setIsPreviewing(false)
     }
-    addConfigTemplate(template)
-    setTemplateName('')
-    setTemplateDesc('')
-    setShowSaveTemplate(false)
   }
 
-  const handleApplyTemplate = (template: ConfigTemplate) => {
+  const handleBatchDeploy = async () => {
+    if (!config || batchSelectedIds.length === 0) return
+    setIsBatchDeploying(true)
+    setError(null)
+    setBatchResult(null)
+    try {
+      const res = await batchUpdateConfig('manual', {
+        beacon_ids: batchSelectedIds,
+        config: {
+          probes: config.probes,
+          interval_seconds: config.interval_seconds,
+          timeout_seconds: config.timeout_seconds,
+        },
+      })
+      setBatchResult(res.data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setIsBatchDeploying(false)
+    }
+  }
+
+  const toggleBatchId = (id: string) => {
+    setBatchSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    )
+  }
+
+  const handleRollback = async (version: number) => {
+    if (!selectedNodeId) return
+    setIsSaving(true)
+    setError(null)
+    setSaveMessage(null)
+    try {
+      const res = await rollbackBeaconConfig(selectedNodeId, version)
+      setConfig(res.data)
+      setSaveMessage(t('beaconConfig.rollbackSuccess', 'Rolled back to version {v}', { v: version }))
+      void loadConfig()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleSaveTemplate = async () => {
+    if (!config || !templateName.trim()) return
+    try {
+      await createBeaconConfigTemplate({
+        name: templateName.trim(),
+        description: templateDesc.trim() || undefined,
+        probes: config.probes.map((p) => ({
+          type: p.type,
+          target: p.target,
+          port: p.port,
+          interval_seconds: p.interval_seconds,
+          timeout_seconds: p.timeout_seconds,
+          count: p.count,
+        })),
+        interval_seconds: config.interval_seconds,
+        timeout_seconds: config.timeout_seconds,
+      })
+      setTemplateName('')
+      setTemplateDesc('')
+      setShowSaveTemplate(false)
+      await loadTemplates()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
+  const handleApplyTemplate = (template: BeaconConfigTemplateDTO) => {
     if (!config) return
     setConfig({
       ...config,
-      probes: template.probes.map((p) => ({
-        ...p,
+      probes: (template.probes || []).map((p) => ({
         id: crypto.randomUUID(),
+        type: (p.type as 'TCP' | 'UDP') || 'TCP',
+        target: p.target || '',
+        port: p.port ?? 443,
+        interval_seconds: p.interval_seconds ?? 60,
+        timeout_seconds: p.timeout_seconds ?? 5,
+        count: p.count ?? 10,
       })),
       interval_seconds: template.interval_seconds,
       timeout_seconds: template.timeout_seconds,
@@ -256,6 +350,14 @@ export default function BeaconConfigPage() {
             </button>
             <button
               type="button"
+              onClick={() => void handlePreview()}
+              disabled={isPreviewing || !config || !selectedNodeId}
+              className="px-4 py-2 text-sm font-medium rounded-lg border border-border text-foreground hover:bg-accent/10 disabled:opacity-50"
+            >
+              {isPreviewing ? t('common.saving') : t('beaconConfig.preview', 'Preview')}
+            </button>
+            <button
+              type="button"
               onClick={() => void handleSave()}
               disabled={isSaving || !config}
               className="px-4 py-2 bg-primary hover:bg-primary/85 text-white text-sm font-medium rounded-lg disabled:opacity-50"
@@ -272,23 +374,89 @@ export default function BeaconConfigPage() {
           {saveMessage}
         </div>
       )}
+      {preview && (
+        <div className={`mb-4 rounded-md px-4 py-3 text-sm ${preview.valid ? 'bg-healthy-bg text-healthy-text' : 'bg-destructive/10 text-destructive'}`}>
+          <p className="font-medium">
+            {preview.valid ? t('beaconConfig.previewValid', 'Configuration is valid') : t('beaconConfig.previewInvalid', 'Configuration has problems')}
+          </p>
+          {preview.conflicts.length > 0 && (
+            <ul className="mt-1 list-disc pl-5 text-destructive">
+              {preview.conflicts.map((c, i) => <li key={i}>{c}</li>)}
+            </ul>
+          )}
+          {preview.warnings.length > 0 && (
+            <ul className="mt-1 list-disc pl-5">
+              {preview.warnings.map((w, i) => <li key={i}>{w}</li>)}
+            </ul>
+          )}
+        </div>
+      )}
+      {batchResult && (
+        <div className="mb-4 rounded-md border-l-4 border-primary bg-primary/5 px-4 py-3 text-sm">
+          <p className="font-medium">
+            {t('beaconConfig.batchResult', 'Batch deploy: {success} succeeded, {failed} failed.', { success: batchResult.success_count, failed: batchResult.failed_count })}
+          </p>
+          {batchResult.failed_ids && batchResult.failed_ids.length > 0 && (
+            <p className="mt-1 text-muted-foreground">{t('beaconConfig.batchFailedIds', 'Failed: {ids}', { ids: batchResult.failed_ids.join(', ') })}</p>
+          )}
+        </div>
+      )}
 
-      {/* Node Selector */}
-      <div className="mb-6">
-        <label className="block text-sm font-medium text-muted-foreground mb-2">
-          {t('beaconConfig.selectNode')}
-        </label>
-        <select
-          value={selectedNodeId}
-          onChange={(e) => setSelectedNodeId(e.target.value)}
-          className="w-full max-w-md rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
-        >
-          {nodes.map((n) => (
-            <option key={n.id} value={n.id}>
-              {n.name} ({n.region})
-            </option>
-          ))}
-        </select>
+      {/* Node Selector + Batch deploy (G9) */}
+      <div className="mb-6 space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="block text-sm font-medium text-muted-foreground">
+            {t('beaconConfig.selectNode')}
+          </label>
+          <button
+            type="button"
+            onClick={() => { setBatchMode(!batchMode); setBatchSelectedIds([]); setBatchResult(null) }}
+            className="text-sm text-primary hover:text-primary"
+          >
+            {batchMode ? t('beaconConfig.exitBatch', 'Exit batch mode') : t('beaconConfig.batchDeploy', 'Batch deploy to many')}
+          </button>
+        </div>
+        {!batchMode ? (
+          <select
+            value={selectedNodeId}
+            onChange={(e) => setSelectedNodeId(e.target.value)}
+            className="w-full max-w-md rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground"
+          >
+            {nodes.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.name} ({n.region})
+              </option>
+            ))}
+          </select>
+        ) : (
+          <div className="rounded-lg border border-border p-3">
+            <p className="mb-2 text-xs text-muted-foreground">
+              {t('beaconConfig.batchHint', 'Select target beacons to deploy the current configuration to.')}
+            </p>
+            <div className="grid max-h-48 grid-cols-1 gap-1 overflow-y-auto sm:grid-cols-2">
+              {nodes.map((n) => (
+                <label key={n.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-accent/10">
+                  <input
+                    type="checkbox"
+                    checked={batchSelectedIds.includes(n.id)}
+                    onChange={() => toggleBatchId(n.id)}
+                  />
+                  <span>{n.name} <span className="text-muted-foreground">({n.region})</span></span>
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => void handleBatchDeploy()}
+              disabled={isBatchDeploying || batchSelectedIds.length === 0 || !config}
+              className="mt-3 px-4 py-2 bg-primary hover:bg-primary/85 text-white text-sm font-medium rounded-lg disabled:opacity-50"
+            >
+              {isBatchDeploying
+                ? t('common.saving')
+                : t('beaconConfig.deployToN', 'Deploy to {n} beacon(s)', { n: batchSelectedIds.length })}
+            </button>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -519,8 +687,18 @@ export default function BeaconConfigPage() {
                         <p className="mt-1 text-xs text-destructive">{entry.config.last_ack_error}</p>
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      {entry.changed_by} · {new Date(entry.changed_at).toLocaleString()}
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <span>{entry.changed_by} · {new Date(entry.changed_at).toLocaleString()}</span>
+                      {config && entry.version !== config.version && (
+                        <button
+                          type="button"
+                          onClick={() => void handleRollback(entry.version)}
+                          disabled={isSaving}
+                          className="text-primary hover:text-primary disabled:opacity-50"
+                        >
+                          {t('beaconConfig.rollback', 'Roll back')}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -579,13 +757,13 @@ export default function BeaconConfigPage() {
                 </div>
               </div>
             )}
-            {configTemplates.length === 0 ? (
+            {templates.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">
                 {t('beaconConfig.noTemplates')}
               </div>
             ) : (
               <div className="divide-y divide-border">
-                {configTemplates.map((tmpl) => (
+                {templates.map((tmpl) => (
                   <div key={tmpl.id} className="px-4 py-3 flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-foreground">{tmpl.name}</p>
@@ -593,7 +771,7 @@ export default function BeaconConfigPage() {
                         <p className="text-xs text-muted-foreground">{tmpl.description}</p>
                       )}
                       <p className="text-xs text-muted-foreground">
-                        {tmpl.probes.length} {t('beaconConfig.probes')}
+                        {(tmpl.probes?.length ?? 0)} {t('beaconConfig.probes')}
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -606,7 +784,7 @@ export default function BeaconConfigPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteConfigTemplate(tmpl.id)}
+                        onClick={() => { void deleteBeaconConfigTemplate(tmpl.id).then(() => loadTemplates()) }}
                         className="text-xs text-destructive hover:opacity-80"
                       >
                         {t('common.delete')}

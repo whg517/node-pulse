@@ -70,3 +70,19 @@ export async function getSessionInfo(): Promise<SessionInfoResponse> {
     method: 'GET',
   })
 }
+
+/**
+ * Revoke all sessions for the current user
+ *
+ * Revokes every active session including the current one. After calling this,
+ * the user must log in again. Backend endpoint: POST /auth/sessions/revoke-all.
+ *
+ * @returns void on success
+ * @throws AuthenticationError if not authenticated
+ * @throws ApiError if request fails
+ */
+export async function revokeAllSessions(): Promise<void> {
+  await apiClient<void>('/api/v1/auth/sessions/revoke-all', {
+    method: 'POST',
+  })
+}

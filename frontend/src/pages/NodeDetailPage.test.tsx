@@ -492,10 +492,12 @@ describe('NodeDetailPage', () => {
 
     await renderNodeDetailPage()
 
-    expect(screen.getByText('example.com')).toBeInTheDocument()
-    expect(screen.getByText('192.0.2.1')).toBeInTheDocument()
-    expect(screen.getByText('198.51.100.1')).toBeInTheDocument()
-    expect(screen.getByText('10.0%')).toBeInTheDocument()
+    // MTR data is now rendered by both the summary table (MTRVisualization)
+    // and the path visualization (MTRPathVisualization), so use getAllByText.
+    expect(screen.getAllByText('example.com').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('192.0.2.1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('198.51.100.1').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('10.0%').length).toBeGreaterThan(0)
   })
 
   it('switches between MTR history snapshots', async () => {
@@ -577,13 +579,14 @@ describe('NodeDetailPage', () => {
     await renderNodeDetailPage()
 
     expect(screen.getByText('MTR History')).toBeInTheDocument()
-    expect(screen.getByText('203.0.113.10')).toBeInTheDocument()
+    // MTR data renders in both the summary table and the path visualization.
+    expect(screen.getAllByText('203.0.113.10').length).toBeGreaterThan(0)
 
     fireEvent.change(screen.getByLabelText('Select MTR snapshot'), {
       target: { value: 'mtr-previous' },
     })
 
-    expect(screen.getByText('198.51.100.20')).toBeInTheDocument()
+    expect(screen.getAllByText('198.51.100.20').length).toBeGreaterThan(0)
   })
 
   it('formats last heartbeat timestamp correctly', async () => {

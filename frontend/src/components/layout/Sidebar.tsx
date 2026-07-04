@@ -22,13 +22,25 @@ import {
   GearSix,
   Lightning,
   GlobeSimple,
+  Key,
+  ClipboardText,
+  Wrench,
+  type Icon,
 } from '@phosphor-icons/react'
+import { useAuthStore } from '@/stores/authStore'
 
 export interface SidebarProps {
   alertCount?: number
 }
 
-const navItems = [
+interface NavItem {
+  icon: Icon
+  labelKey: string
+  path: string
+  adminOnly?: boolean
+}
+
+const navItems: NavItem[] = [
   { icon: SquaresFour, labelKey: 'nav.dashboard', path: '/dashboard' },
   { icon: Desktop, labelKey: 'nav.nodes', path: '/nodes' },
   { icon: Lightning, labelKey: 'nav.probes', path: '/nodes/probes' },
@@ -37,10 +49,17 @@ const navItems = [
   { icon: ChartBar, labelKey: 'nav.reports', path: '/reports' },
   { icon: Link, labelKey: 'nav.integrations', path: '/integrations/webhooks' },
   { icon: GearSix, labelKey: 'nav.settings', path: '/settings/preferences' },
+  { icon: Key, labelKey: 'nav.apiKeys', path: '/settings/api-keys', adminOnly: true },
+  { icon: ClipboardText, labelKey: 'nav.auditLogs', path: '/settings/audit-logs', adminOnly: true },
+  { icon: Wrench, labelKey: 'nav.systemConfig', path: '/settings/system-config', adminOnly: true },
 ]
 
 export function AppSidebar({ alertCount = 0 }: SidebarProps) {
   const { t } = useTranslation()
+  const user = useAuthStore((state) => state.user)
+  const isAdmin = user?.role === 'admin'
+
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || isAdmin)
 
   return (
     <Sidebar>
@@ -66,7 +85,7 @@ export function AppSidebar({ alertCount = 0 }: SidebarProps) {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {navItems.map((item) => (
+              {visibleNavItems.map((item) => (
                 <SidebarMenuItem key={item.path}>
                   <SidebarMenuButton asChild>
                     <NavLink to={item.path}>

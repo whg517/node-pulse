@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAlertsStore } from '@/stores/alertsStore'
 import { useAuthStore } from '@/stores/authStore'
-import { useSettingsStore, type AlertRoutingRule } from '@/stores/settingsStore'
+import { listRoutingRules, createRoutingRule, updateRoutingRule, deleteRoutingRule, type AlertRoutingRuleDTO } from '@/api/alertRouting'
 import { fetchNodes } from '@/api/nodes'
 import type { AlertRule } from '@/stores/types'
 import type { NodeDTO, CreateAlertRuleRequest } from '@/api/types'
@@ -38,7 +38,19 @@ export default function AlertRulesPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
   const { alertRules, fetchAlertRules, addAlertRule, updateAlertRule, removeAlertRule } = useAlertsStore()
-  const { routingRules, addRoutingRule, updateRoutingRule, deleteRoutingRule } = useSettingsStore()
+  // Routing rules now come from the server (ADR-002), enforced at dispatch time.
+  const [serverRules, setServerRules] = useState<AlertRoutingRuleDTO[]>([])
+
+  const loadRoutingRules = useCallback(async () => {
+    try {
+      const res = await listRoutingRules()
+      setServerRules(res.data?.rules || [])
+    } catch {
+      // best-effort
+    }
+  }, [])
+
+  useEffect(() => { void loadRoutingRules() }, [loadRoutingRules])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [nodes, setNodes] = useState<NodeDTO[]>([])
@@ -134,21 +146,17 @@ export default function AlertRulesPage() {
     }
   }
 
-  const handleCreateRoutingRule = () => {
-    const rule: AlertRoutingRule = {
-      id: crypto.randomUUID(),
+  const handleCreateRoutingRule = async () => {
+    // The legacy local form used an action.target for the webhook id; the server
+    // API uses a flat webhook_id. Persist via the server (ADR-002).
+    await createRoutingRule({
       name: routingForm.name,
-      conditions: {
-        metric: routingForm.metric || undefined,
-        severity: routingForm.severity || undefined,
-      },
-      action: {
-        type: routingForm.actionType,
-        target: routingForm.actionTarget,
-      },
       enabled: routingForm.enabled,
-    }
-    addRoutingRule(rule)
+      metric: routingForm.metric || undefined,
+      severities: routingForm.severity ? [routingForm.severity] : undefined,
+      webhook_id: routingForm.actionTarget,
+    }).catch(() => { /* best-effort */ })
+    await loadRoutingRules()
     setShowRoutingDialog(false)
     setRoutingForm({
       name: '',
@@ -227,7 +235,7 @@ export default function AlertRulesPage() {
 
       {!isLoading && !error && activeTab === 'routing' && (
         <div>
-          {routingRules.length === 0 ? (
+          {serverRules.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <p className="text-sm text-muted-foreground">{t('alerts.noRoutingRules')}</p>
@@ -237,24 +245,29 @@ export default function AlertRulesPage() {
           ) : (
             <Card>
               <CardContent className="p-0 divide-y">
-                {routingRules.map((rule) => (
+                {serverRules.map((rule) => (
                   <div key={rule.id} className="px-4 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <Switch
                         checked={rule.enabled}
-                        onCheckedChange={(checked) => updateRoutingRule(rule.id, { enabled: checked })}
+                        onCheckedChange={async (checked) => {
+                          await updateRoutingRule(rule.id, {
+                            name: rule.name, enabled: checked, metric: rule.metric,
+                            severities: rule.severities, node_id: rule.node_id, webhook_id: rule.webhook_id,
+                          }).catch(() => {})
+                          await loadRoutingRules()
+                        }}
                       />
                       <div>
                         <p className="text-sm font-medium">{rule.name}</p>
                         <p className="text-xs text-muted-foreground">
-                          {rule.conditions.metric && `${t('alerts.whenMetric')}: ${rule.conditions.metric}`}
-                          {rule.conditions.severity && ` · ${t('alerts.whenSeverity')}: ${rule.conditions.severity}`}
-                          {' · '}{t('alerts.notifyVia')}: {rule.action.type}
-                          {rule.action.target && ` → ${rule.action.target}`}
+                          {rule.metric && `${t('alerts.whenMetric')}: ${rule.metric}`}
+                          {rule.severities && rule.severities.length > 0 && ` · ${t('alerts.whenSeverity')}: ${rule.severities.join('/')}`}
+                          {' · webhook → '}{rule.webhook_id}
                         </p>
                       </div>
                     </div>
-                    <Button variant="link" size="sm" className="text-destructive" onClick={() => deleteRoutingRule(rule.id)}>
+                    <Button variant="link" size="sm" className="text-destructive" onClick={async () => { await deleteRoutingRule(rule.id).catch(() => {}); await loadRoutingRules() }}>
                       {t('common.delete')}
                     </Button>
                   </div>

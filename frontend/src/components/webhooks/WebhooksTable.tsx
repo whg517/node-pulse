@@ -6,6 +6,7 @@ interface WebhooksTableProps {
   onEdit: (id: string) => void
   onDelete: (id: string) => void
   onTest?: (id: string) => void
+  onViewLogs?: (id: string) => void
   onToggleEnabled: (id: string, enabled: boolean) => void
   testingWebhookId?: string | null
   canEdit: boolean
@@ -16,6 +17,7 @@ export function WebhooksTable({
   onEdit,
   onDelete,
   onTest,
+  onViewLogs,
   onToggleEnabled,
   testingWebhookId,
   canEdit,
@@ -140,6 +142,15 @@ export function WebhooksTable({
                         className="text-primary hover:text-primary disabled:cursor-wait disabled:opacity-60 mr-4"
                       >
                         {testingWebhookId === webhook.id ? t('webhooks.testing') : t('webhooks.testWebhook')}
+                      </button>
+                    )}
+                    {onViewLogs && (
+                      <button
+                        type="button"
+                        onClick={() => onViewLogs(webhook.id)}
+                        className="text-primary hover:text-primary mr-4"
+                      >
+                        {t('webhooks.viewLogs', 'Delivery logs')}
                       </button>
                     )}
                     <button

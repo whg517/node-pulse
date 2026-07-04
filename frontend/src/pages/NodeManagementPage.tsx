@@ -31,7 +31,9 @@ export default function NodeManagementPage() {
   const [nodeToDelete, setNodeToDelete] = useState<string>()
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const canEdit = user?.role === 'admin'
+  // Backend RBAC (routes.go) allows admin AND operator to manage nodes; the UI
+  // previously hid create/edit/delete from operators, which was inconsistent.
+  const canEdit = user?.role === 'admin' || user?.role === 'operator'
 
   useEffect(() => { loadNodes() }, [])
 

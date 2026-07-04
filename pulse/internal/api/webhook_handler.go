@@ -305,6 +305,58 @@ func (h *WebhookHandler) GetWebhookByIDHandler(c *gin.Context) {
 	})
 }
 
+// GetWebhookLogsHandler handles GET /api/v1/webhooks/:id/logs
+// @Summary		List webhook delivery logs
+// @Description	Returns recent delivery logs for a webhook, newest first. Admin role required.
+// @Tags			Webhooks
+// @Produce		json
+// @Param			id		path		string	true	"Webhook ID"
+// @Param			limit	query		int		false	"Max logs to return (default 50, max 200)"	default(50)
+// @Param			offset	query		int		false	"Number of logs to skip"						default(0)
+// @Success		200		{object}	map[string]interface{}						"Delivery logs"
+// @Failure		401		{object}	map[string]interface{}						"Unauthorized"
+// @Failure		403		{object}	map[string]interface{}						"Forbidden (requires admin role)"
+// @Failure		500		{object}	map[string]interface{}						"Internal server error"
+// @Security		BearerAuth
+// @Router			/webhooks/{id}/logs [get]
+func (h *WebhookHandler) GetWebhookLogsHandler(c *gin.Context) {
+	id := c.Param("id")
+
+	limit := 50
+	offset := 0
+	if v := c.Query("limit"); v != "" {
+		if _, err := fmt.Sscanf(v, "%d", &limit); err != nil || limit <= 0 {
+			limit = 50
+		}
+	}
+	if v := c.Query("offset"); v != "" {
+		if _, err := fmt.Sscanf(v, "%d", &offset); err != nil || offset < 0 {
+			offset = 0
+		}
+	}
+
+	logs, total, err := h.logsQuerier.GetWebhookLogs(c.Request.Context(), id, limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    "ERR_INTERNAL",
+			"message": "Failed to retrieve webhook delivery logs",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": gin.H{
+			"logs":  logs,
+			"total": total,
+		},
+		"limit":     limit,
+		"offset":    offset,
+		"message":   "Webhook delivery logs retrieved successfully",
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}
+
 // UpdateWebhookHandler handles PUT /api/v1/webhooks/:id
 // @Summary		Update a webhook
 // @Description	Updates an existing webhook configuration. URL must use HTTPS if provided. Admin role required.
@@ -430,6 +482,10 @@ func (noopWebhookLogsQuerier) CreateWebhookLog(context.Context, *models.WebhookL
 
 func (noopWebhookLogsQuerier) CountRecentWebhookLogs(context.Context, *int64, *int64, int) error {
 	return nil
+}
+
+func (noopWebhookLogsQuerier) GetWebhookLogs(context.Context, string, int, int) ([]*models.WebhookLog, int, error) {
+	return []*models.WebhookLog{}, 0, nil
 }
 
 func sampleWebhookAlertEvent() *models.AlertEvent {

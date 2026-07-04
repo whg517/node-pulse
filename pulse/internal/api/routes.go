@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -24,6 +25,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/export"
 	"github.com/whg517/node-pulse/pulse/internal/health"
+	"github.com/whg517/node-pulse/pulse/internal/notify"
 	"github.com/whg517/node-pulse/pulse/internal/realtime"
 	"github.com/whg517/node-pulse/pulse/pkg/metrics"
 	"github.com/whg517/node-pulse/pulse/pkg/middleware"
@@ -39,8 +41,24 @@ type CacheManager struct {
 	MetricsCollector *metrics.Collector
 }
 
-// SetupRoutes configures all API routes and returns cache manager for shutdown
-func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *pgxpool.Pool) *CacheManager {
+// mailAdapter bridges notify.Sender (notify.Attachment) to auth.Mailer
+// (auth.MailerAttachment) so the auth package stays free of a notify import.
+type mailAdapter struct {
+	sender notify.Sender
+}
+
+func (m mailAdapter) Send(ctx context.Context, to, subject, body string, attachments ...auth.MailerAttachment) error {
+	conv := make([]notify.Attachment, 0, len(attachments))
+	for _, a := range attachments {
+		conv = append(conv, notify.Attachment{Filename: a.Filename, Content: a.Content, ContentType: a.ContentType})
+	}
+	return m.sender.Send(ctx, to, subject, body, conv...)
+}
+
+// SetupRoutes configures all API routes and returns cache manager for shutdown.
+// cfg provides app config (notify/reset URL); mailer sends outbound email and
+// may be a NoopSender when SMTP is unconfigured.
+func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *pgxpool.Pool, cfg *config.Config, mailer notify.Sender) *CacheManager {
 	// Apply CORS middleware (must be first)
 	router.Use(middleware.CORSMiddleware())
 
@@ -103,6 +121,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		30, // 30 days max validity
 		cookieSecure,
 		rateLimitOpts,
+		auth.WithPasswordResetMailer(mailAdapter{sender: mailer}, cfg.Notify.PasswordResetURL),
 	)
 
 	// Initialize memory cache and batch writer (Story 3.2)
@@ -127,8 +146,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		alertEngine.Start()
 	}
 
-	// Initialize export service (Story 8.1)
-	exportService := export.NewExportService(pool)
+	// Initialize export service (Story 8.1). Pass a durable task store so export
+	// tasks survive server restarts (see docs/user-journey.md §17 G3).
+	exportService := export.NewExportService(pool, db.NewExportTaskRepository(pool))
 
 	// Initialize metrics collector (Story 8.3)
 	metricsCollector := metrics.NewCollector()
@@ -199,6 +219,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			beacons.GET("/:id/config/history", beaconHandler.GetBeaconConfigHistory)
 			// POST /api/v1/beacons/:id/config/preview - Preview config changes
 			beacons.POST("/:id/config/preview", beaconHandler.GetConfigPreview)
+			// POST /api/v1/beacons/:id/config/rollback - Roll back config to a prior version (admin/operator)
+			beacons.POST("/:id/config/rollback", middleware.RBACMiddleware([]string{"admin", "operator"}), beaconHandler.RollbackBeaconConfigHandler)
 		}
 
 		// Beacon group config management routes (admin/operator only)
@@ -208,6 +230,17 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		{
 			// POST /api/v1/beacon-groups/:gid/config - Batch update beacon configs
 			beaconGroups.POST("/:gid/config", beaconHandler.BatchUpdateBeaconGroupConfig)
+		}
+
+		// Beacon config templates (ADR-003). Owned by user; admin/operator write.
+		beaconConfigTemplateHandler := NewBeaconConfigTemplateHandler(db.NewBeaconConfigTemplatesRepository(pool))
+		templates := v1.Group("/beacon-config-templates")
+		templates.Use(middleware.JWTAuthMiddleware(jwtService))
+		{
+			templates.GET("", beaconConfigTemplateHandler.ListBeaconConfigTemplatesHandler)
+			templates.POST("", middleware.RBACMiddleware([]string{"admin", "operator"}), beaconConfigTemplateHandler.CreateBeaconConfigTemplateHandler)
+			templates.PUT("/:id", middleware.RBACMiddleware([]string{"admin", "operator"}), beaconConfigTemplateHandler.UpdateBeaconConfigTemplateHandler)
+			templates.DELETE("/:id", middleware.RBACMiddleware([]string{"admin", "operator"}), beaconConfigTemplateHandler.DeleteBeaconConfigTemplateHandler)
 		}
 
 		// Auth endpoints (public)
@@ -427,12 +460,30 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			exports.GET("/:id/download", exportHandler.DownloadExportHandler)
 		}
 
+		// Report schedules (ADR-001). Admin-managed recurring reports.
+		reportScheduleHandler := NewReportScheduleHandler(db.NewReportScheduleRepository(pool))
+		reportsSched := v1.Group("/reports/schedules")
+		reportsSched.Use(middleware.JWTAuthMiddleware(jwtService))
+		{
+			reportsSched.GET("", reportScheduleHandler.ListReportSchedulesHandler)
+			reportsSched.POST("", middleware.RBACMiddleware([]string{"admin"}), reportScheduleHandler.CreateReportScheduleHandler)
+			reportsSched.PUT("/:id", middleware.RBACMiddleware([]string{"admin"}), reportScheduleHandler.UpdateReportScheduleHandler)
+			reportsSched.DELETE("/:id", middleware.RBACMiddleware([]string{"admin"}), reportScheduleHandler.DeleteReportScheduleHandler)
+		}
+
 		// Alert management routes (require auth) (Story 5.1)
 		alertHandler := NewAlertHandler(alertQuerier)
 
 		// Alerts group with auth middleware
 		alerts := v1.Group("/alerts")
 		alerts.Use(middleware.JWTAuthMiddleware(jwtService))
+
+		// Alert routing rules (ADR-002). CRUD for per-webhook routing.
+		alertRoutingHandler := NewAlertRoutingHandler(db.NewAlertRoutingRulesRepository(pool))
+		alerts.GET("/routing-rules", alertRoutingHandler.ListRoutingRulesHandler)
+		alerts.POST("/routing-rules", middleware.RBACMiddleware([]string{"admin", "operator"}), alertRoutingHandler.CreateRoutingRuleHandler)
+		alerts.PUT("/routing-rules/:id", middleware.RBACMiddleware([]string{"admin", "operator"}), alertRoutingHandler.UpdateRoutingRuleHandler)
+		alerts.DELETE("/routing-rules/:id", middleware.RBACMiddleware([]string{"admin", "operator"}), alertRoutingHandler.DeleteRoutingRuleHandler)
 
 		// GET /api/v1/alerts/rules - Get all alert rules (all roles)
 		alerts.GET("/rules", alertHandler.GetAlertRulesHandler)
@@ -494,6 +545,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		// GET /api/v1/webhooks/:id - Get webhook configuration by ID (admin only)
 		webhooks.GET("/:id", webhookHandler.GetWebhookByIDHandler)
+
+		// GET /api/v1/webhooks/:id/logs - List delivery logs for a webhook (admin only)
+		webhooks.GET("/:id/logs", webhookHandler.GetWebhookLogsHandler)
 
 		// POST /api/v1/webhooks - Create webhook configuration (admin only)
 		webhooks.POST("", webhookHandler.CreateWebhookHandler)

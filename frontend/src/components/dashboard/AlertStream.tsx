@@ -1,24 +1,11 @@
 import { useNavigate } from 'react-router-dom'
-import { memo, useMemo, useEffect } from 'react'
+import { memo, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAlertsStore } from '../../stores/alertsStore'
-import type { AlertRecord } from '../../stores/types'
 import { memoCompare } from '../../utils/deepEqual'
-import * as NotificationService from '../../services/NotificationService'
-import * as WebSocketService from '../../services/WebSocketService'
 
 interface AlertStreamProps { maxItems?: number; className?: string; isLoading?: boolean }
 type AlertLevel = 'P0' | 'P1' | 'P2'
-type AlertEventPayload = {
-  id: string
-  node_id: string
-  metric: string
-  level: string
-  status?: AlertRecord['status']
-  created_at?: string
-  updated_at?: string
-  threshold?: string | number
-}
 
 function getSeverityStyles(level: AlertLevel): string {
   const styles: Record<AlertLevel, string> = {
@@ -62,38 +49,10 @@ export const AlertStream = memo(function AlertStream({ maxItems = 10, className 
   const navigate = useNavigate()
   const { t } = useTranslation()
   const alertRecords = useAlertsStore((state) => state.alertRecords)
-  const upsertAlertRecord = useAlertsStore((state) => state.upsertAlertRecord)
 
-  useEffect(() => {
-    const handleNotificationClick = (alertId: string) => navigate(`/alerts/records?highlight=${alertId}`)
-    NotificationService.initialize(handleNotificationClick)
-    return () => NotificationService.destroy()
-  }, [navigate])
-
-  useEffect(() => {
-    const handleMessage = (message: WebSocketService.WebSocketMessage<unknown>) => {
-      if (message.type === 'alert:new' || message.type === 'alert:updated' || message.type === 'alert:resolved') {
-        const payload = message.payload as AlertEventPayload
-        upsertAlertRecord({
-          id: payload.id,
-          nodeId: payload.node_id,
-          metric: payload.metric,
-          level: payload.level,
-          status: payload.status ?? 'pending',
-          timestamp: payload.created_at ?? payload.updated_at ?? message.timestamp,
-        })
-      }
-
-      if (message.type === 'alert:new') {
-        const payload = message.payload as AlertEventPayload
-        const nodeName = `Node ${payload.node_id.slice(0, 8)}`
-        NotificationService.showAlertNotification(payload.id, payload.level, nodeName, payload.metric, String(payload.threshold))
-      }
-    }
-    WebSocketService.initialize(handleMessage)
-    WebSocketService.connect()
-    return () => WebSocketService.disconnect()
-  }, [upsertAlertRecord])
+  // Realtime WS + browser-notification connection is now owned by AppLayout
+  // (useGlobalRealtime) so it stays alive app-wide. This component only renders
+  // the alert stream list; no connect/disconnect effects here.
 
   const activeAlerts = useMemo(() => {
     const safeRecords = Array.isArray(alertRecords) ? alertRecords : []

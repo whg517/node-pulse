@@ -2,12 +2,14 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { useSettingsStore, COMMON_TIMEZONES } from '@/stores/settingsStore'
 import { useTheme } from '@/hooks/useTheme'
 import { supportedLanguages, type LanguageCode } from '@/i18n-config'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { changePassword } from '@/api/auth'
 
 export default function PreferencesPage() {
   const { t, i18n } = useTranslation()
@@ -18,6 +20,13 @@ export default function PreferencesPage() {
   const setTimezone = useSettingsStore((s) => s.setTimezone)
   const { setTheme, isDark } = useTheme()
 
+  // Change-password form state
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [passwordMessage, setPasswordMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
   const handleLanguageChange = (code: LanguageCode) => {
     setLanguage(code)
     i18n.changeLanguage(code)
@@ -26,6 +35,38 @@ export default function PreferencesPage() {
   const handleSave = () => {
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleChangePassword = async () => {
+    setPasswordMessage(null)
+    if (newPassword !== confirmPassword) {
+      setPasswordMessage({ type: 'error', text: t('settings.passwordMismatch', 'New passwords do not match') })
+      return
+    }
+    if (newPassword.length < 8) {
+      setPasswordMessage({ type: 'error', text: t('settings.passwordTooShort', 'Password must be at least 8 characters') })
+      return
+    }
+    setIsChangingPassword(true)
+    try {
+      const res = await changePassword(currentPassword, newPassword)
+      setPasswordMessage({
+        type: 'success',
+        text: res.sessions_revoked
+          ? t('settings.passwordChangedSessionsRevoked', 'Password changed. Other sessions were signed out.')
+          : t('settings.passwordChanged', 'Password changed successfully'),
+      })
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err) {
+      setPasswordMessage({
+        type: 'error',
+        text: err instanceof Error ? err.message : t('settings.passwordChangeFailed', 'Failed to change password'),
+      })
+    } finally {
+      setIsChangingPassword(false)
+    }
   }
 
   return (
@@ -94,6 +135,58 @@ export default function PreferencesPage() {
             />
             <Label htmlFor="dark-mode">{isDark ? t('settings.darkMode') : t('settings.lightMode')}</Label>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">{t('settings.security', 'Security')}</CardTitle>
+          <p className="text-xs text-muted-foreground">{t('settings.securityDescription', 'Change your account password. Other sessions will be signed out.')}</p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {passwordMessage && (
+            <div className={`rounded-md px-3 py-2 text-sm ${passwordMessage.type === 'error' ? 'bg-destructive/10 text-destructive' : 'bg-healthy-bg text-healthy-text'}`}>
+              {passwordMessage.text}
+            </div>
+          )}
+          <div className="space-y-1.5">
+            <Label htmlFor="current-password">{t('settings.currentPassword', 'Current password')}</Label>
+            <Input
+              id="current-password"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="new-password">{t('settings.newPassword', 'New password')}</Label>
+            <Input
+              id="new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="confirm-password">{t('settings.confirmPassword', 'Confirm new password')}</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void handleChangePassword()}
+            disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+          >
+            {isChangingPassword ? t('common.saving', 'Saving...') : t('settings.changePassword', 'Change Password')}
+          </Button>
         </CardContent>
       </Card>
 

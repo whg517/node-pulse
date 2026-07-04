@@ -36,6 +36,10 @@ func (m *mockWebhookLogsQuerier) CountRecentWebhookLogs(ctx context.Context, tot
 	return nil
 }
 
+func (m *mockWebhookLogsQuerier) GetWebhookLogs(context.Context, string, int, int) ([]*models.WebhookLog, int, error) {
+	return []*models.WebhookLog{}, 0, nil
+}
+
 // Mock WebhookQuerier for testing
 type mockWebhookQuerier struct {
 	webhooks []*models.Webhook

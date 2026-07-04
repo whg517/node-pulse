@@ -38,30 +38,79 @@ const (
 	ExportDir = "/tmp/exports"
 )
 
+// TaskStore mirrors export task state to durable storage so tasks survive restarts.
+// It is optional: when nil the service behaves exactly as before (in-memory only).
+type TaskStore interface {
+	Create(ctx context.Context, task *models.ExportTask) error
+	GetByID(ctx context.Context, id string) (*models.ExportTask, error)
+	ListByUser(ctx context.Context, userID string, limit int) ([]*models.ExportTask, error)
+	Update(ctx context.Context, task *models.ExportTask) error
+	ListByStatuses(ctx context.Context, statuses []string) ([]*models.ExportTask, error)
+}
+
 // ExportService handles data export operations
 type ExportService struct {
 	pool   *pgxpool.Pool
+	store  TaskStore
 	tasks  map[string]*models.ExportTask
 	mu     sync.RWMutex
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-// NewExportService creates a new export service
-func NewExportService(pool *pgxpool.Pool) *ExportService {
+// NewExportService creates a new export service. A nil store keeps the legacy
+// in-memory-only behavior; passing a store additionally persists every task and
+// recovers pending/processing tasks on startup.
+func NewExportService(pool *pgxpool.Pool, store TaskStore) *ExportService {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	service := &ExportService{
 		pool:   pool,
+		store:  store,
 		tasks:  make(map[string]*models.ExportTask),
 		ctx:    ctx,
 		cancel: cancel,
+	}
+
+	// Recover unfinished tasks from durable storage before accepting new work.
+	if store != nil {
+		service.recoverPendingTasks()
 	}
 
 	// Start background cleanup goroutine
 	go service.cleanupOldExports()
 
 	return service
+}
+
+// recoverPendingTasks reloads pending/processing tasks from durable storage.
+// Tasks still marked processing after a crash are retried once; tasks left
+// pending are also retried. Completed/failed tasks are loaded for history queries.
+func (s *ExportService) recoverPendingTasks() {
+	if s.store == nil {
+		return
+	}
+	active, err := s.store.ListByStatuses(s.ctx, []string{"pending", "processing"})
+	if err != nil {
+		slog.Error("Failed to load active export tasks from storage; continuing in-memory only",
+			"component", "export", "error", err)
+		return
+	}
+	s.mu.Lock()
+	for _, task := range active {
+		taskCopy := *task
+		s.tasks[task.ID] = &taskCopy
+	}
+	s.mu.Unlock()
+
+	slog.Info("Recovered export tasks from storage", "component", "export", "count", len(active))
+
+	// Retry tasks that were interrupted mid-flight. They are reset to pending so
+	// processExport can drive them through processing -> completed/failed again.
+	for _, task := range active {
+		t := *task
+		go s.processExport(&t)
+	}
 }
 
 // CreateExportRequest represents a request to create an export
@@ -148,6 +197,14 @@ func (s *ExportService) CreateExport(ctx context.Context, req *CreateExportReque
 	s.mu.Lock()
 	s.tasks[task.ID] = task
 	s.mu.Unlock()
+
+	// Persist to durable storage (best-effort; in-memory remains source of truth)
+	if s.store != nil {
+		if err := s.store.Create(context.Background(), task); err != nil {
+			slog.Error("Failed to persist export task; continuing in-memory",
+				"component", "export", "task_id", task.ID, "error", err)
+		}
+	}
 
 	// Start async processing
 	go s.processExport(task)
@@ -236,6 +293,13 @@ func (s *ExportService) processExport(task *models.ExportTask) {
 	task = s.getTask(task.ID)
 	if task != nil {
 		task.CompletedAt = &now
+		// Mirror the completion timestamp to durable storage.
+		if s.store != nil {
+			if err := s.store.Update(context.Background(), task); err != nil {
+				slog.Error("Failed to mirror export task completion",
+					"component", "export", "task_id", task.ID, "error", err)
+			}
+		}
 	}
 
 	slog.Info("Export completed",
@@ -396,10 +460,9 @@ func (s *ExportService) queryMetrics(
 // updateTaskStatus updates the status of an export task
 func (s *ExportService) updateTaskStatus(exportID, status, filePath string, fileSize int64, recordCount int, errorMsg string) {
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	task, ok := s.tasks[exportID]
 	if !ok {
+		s.mu.Unlock()
 		return
 	}
 
@@ -408,6 +471,15 @@ func (s *ExportService) updateTaskStatus(exportID, status, filePath string, file
 	task.FileSize = fileSize
 	task.RecordCount = recordCount
 	task.Error = errorMsg
+	s.mu.Unlock()
+
+	// Mirror to durable storage (best-effort; released lock to avoid blocking hot path)
+	if s.store != nil && task != nil {
+		if err := s.store.Update(context.Background(), task); err != nil {
+			slog.Error("Failed to mirror export task update",
+				"component", "export", "task_id", exportID, "error", err)
+		}
+	}
 }
 
 // getTask retrieves a task without locking (internal use)

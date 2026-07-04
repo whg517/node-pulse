@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { fetchProbes, createProbe, updateProbe, deleteProbe } from '@/api/probes'
 import { fetchNodes } from '@/api/nodes'
+import { useAuthStore } from '@/stores/authStore'
 import type { ProbeDTO, CreateProbeRequest, UpdateProbeRequest } from '@/api/probes'
 import type { NodeDTO } from '@/api/types'
 
@@ -43,6 +44,10 @@ const emptyForm: CreateProbeRequest = {
 
 export default function ProbeManagementPage() {
   const { t } = useTranslation()
+  const user = useAuthStore((state) => state.user)
+  // Backend RBAC (routes.go) requires admin/operator for probe mutations; gate
+  // the UI so viewers don't trigger 403s on click.
+  const canEdit = user?.role === 'admin' || user?.role === 'operator'
   const [probes, setProbes] = useState<ProbeDTO[]>([])
   const [nodes, setNodes] = useState<NodeDTO[]>([])
   const [nodeFilter, setNodeFilter] = useState<string>('')
@@ -151,13 +156,15 @@ export default function ProbeManagementPage() {
         title={t('probes.title')}
         subtitle={t('probes.subtitle')}
         actions={
-          <button
-            type="button"
-            onClick={openCreate}
-            className="px-4 py-2 bg-primary hover:bg-primary/85 text-white text-sm font-medium rounded-lg"
-          >
-            {t('probes.addProbe')}
-          </button>
+          canEdit ? (
+            <button
+              type="button"
+              onClick={openCreate}
+              className="px-4 py-2 bg-primary hover:bg-primary/85 text-white text-sm font-medium rounded-lg"
+            >
+              {t('probes.addProbe')}
+            </button>
+          ) : undefined
         }
       />
 
@@ -206,8 +213,14 @@ export default function ProbeManagementPage() {
                     <td className="px-4 py-3 text-sm text-muted-foreground">{p.port}</td>
                     <td className="px-4 py-3 text-sm text-muted-foreground">{p.interval_seconds}s</td>
                     <td className="px-4 py-3 text-right text-sm space-x-2">
-                      <button type="button" onClick={() => openEdit(p)} className="text-primary hover:opacity-80">{t('settings.edit')}</button>
-                      <button type="button" onClick={() => setDeleteConfirm({ open: true, id: p.id })} className="text-destructive hover:opacity-80">{t('common.delete')}</button>
+                      {canEdit ? (
+                        <>
+                          <button type="button" onClick={() => openEdit(p)} className="text-primary hover:opacity-80">{t('settings.edit')}</button>
+                          <button type="button" onClick={() => setDeleteConfirm({ open: true, id: p.id })} className="text-destructive hover:opacity-80">{t('common.delete')}</button>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                   </tr>
                 ))}

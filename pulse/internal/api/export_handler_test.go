@@ -34,7 +34,7 @@ func TestExportHandler_CreateExportHandler_Success(t *testing.T) {
 
 	pool := setupTestDB(t)
 
-	exportService := export.NewExportService(pool)
+	exportService := export.NewExportService(pool, nil)
 	handler := NewExportHandler(exportService)
 
 	router := gin.New()
@@ -149,7 +149,7 @@ func TestExportHandler_CreateExportHandler_ValidationErrors(t *testing.T) {
 
 			pool := setupTestDB(t)
 
-			exportService := export.NewExportService(pool)
+			exportService := export.NewExportService(pool, nil)
 			handler := NewExportHandler(exportService)
 
 			router := gin.New()
@@ -187,7 +187,7 @@ func TestExportHandler_CreateExportHandler_MaxNodesExceeded(t *testing.T) {
 
 	pool := setupTestDB(t)
 
-	exportService := export.NewExportService(pool)
+	exportService := export.NewExportService(pool, nil)
 	handler := NewExportHandler(exportService)
 
 	router := gin.New()
@@ -241,7 +241,7 @@ func TestExportHandler_GetExportStatusHandler_Success(t *testing.T) {
 
 	pool := setupTestDB(t)
 
-	exportService := export.NewExportService(pool)
+	exportService := export.NewExportService(pool, nil)
 	handler := NewExportHandler(exportService)
 
 	router := gin.New()
@@ -298,7 +298,7 @@ func TestExportHandler_GetExportStatusHandler_NotFound(t *testing.T) {
 
 	pool := setupTestDB(t)
 
-	exportService := export.NewExportService(pool)
+	exportService := export.NewExportService(pool, nil)
 	handler := NewExportHandler(exportService)
 
 	router := gin.New()
@@ -331,7 +331,7 @@ func TestExportHandler_DownloadExportHandler_Success(t *testing.T) {
 
 	pool := setupTestDB(t)
 
-	exportService := export.NewExportService(pool)
+	exportService := export.NewExportService(pool, nil)
 	handler := NewExportHandler(exportService)
 
 	router := gin.New()
@@ -404,7 +404,7 @@ func TestExportHandler_DownloadExportHandler_NotReady(t *testing.T) {
 
 	pool := setupTestDB(t)
 
-	exportService := export.NewExportService(pool)
+	exportService := export.NewExportService(pool, nil)
 	handler := NewExportHandler(exportService)
 
 	router := gin.New()
@@ -457,7 +457,7 @@ func TestExportHandler_Unauthorized(t *testing.T) {
 
 	pool := setupTestDB(t)
 
-	exportService := export.NewExportService(pool)
+	exportService := export.NewExportService(pool, nil)
 	handler := NewExportHandler(exportService)
 
 	router := gin.New()

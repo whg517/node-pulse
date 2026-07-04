@@ -19,16 +19,17 @@ import (
 
 // Config holds all application configuration
 type Config struct {
-	Server     ServerConfig     `yaml:"server"`
-	DB         DatabaseConfig   `yaml:"database"`
-	Cleanup    CleanupConfig    `yaml:"cleanup"`
-	Log        LogConfig        `yaml:"log"`
-	CORS       CORSConfig       `yaml:"cors"`
-	Admin      AdminConfig      `yaml:"admin"`
-	Session    SessionConfig    `yaml:"session"`
-	JWT        JWTConfig        `yaml:"jwt"`
-	RateLimit  RateLimitConfig  `yaml:"rate_limit"`
-	Telemetry  TelemetryConfig  `yaml:"telemetry"`
+	Server    ServerConfig    `yaml:"server"`
+	DB        DatabaseConfig  `yaml:"database"`
+	Cleanup   CleanupConfig   `yaml:"cleanup"`
+	Log       LogConfig       `yaml:"log"`
+	CORS      CORSConfig      `yaml:"cors"`
+	Admin     AdminConfig     `yaml:"admin"`
+	Session   SessionConfig   `yaml:"session"`
+	JWT       JWTConfig       `yaml:"jwt"`
+	RateLimit RateLimitConfig `yaml:"rate_limit"`
+	Telemetry TelemetryConfig `yaml:"telemetry"`
+	Notify    NotifyConfig    `yaml:"notify"`
 }
 
 // TelemetryConfig holds OpenTelemetry / distributed-tracing configuration.
@@ -130,6 +131,24 @@ type RateLimitConfig struct {
 	RefreshMaxPerMinute int `yaml:"refresh_max_per_minute"`
 	RefreshMaxPerDay    int `yaml:"refresh_max_per_day"`
 	APIKeyMaxPerMinute  int `yaml:"apikey_max_per_minute"`
+}
+
+// NotifyConfig holds outbound-email (SMTP) configuration plus the public
+// frontend URL used to build links embedded in emails (password reset, etc.).
+// When SMTP.Host is empty the system uses a log-only NoopSender.
+type NotifyConfig struct {
+	SMTP             SMTPConfig `yaml:"smtp"`
+	PasswordResetURL string     `yaml:"password_reset_url"` // e.g. https://app.example.com/reset-password
+}
+
+// SMTPConfig holds SMTP transport settings. Mirrors notify.SMTPConfig but kept
+// here so the config layer has no dependency on the notify package.
+type SMTPConfig struct {
+	Host     string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+	From     string `yaml:"from"`
 }
 
 var (
@@ -365,12 +384,12 @@ func defaultConfig() *Config {
 			APIKeyMaxPerMinute:  11,  // 11 API key exchanges per minute per key
 		},
 		Telemetry: TelemetryConfig{
-			Enabled:        false,         // opt-in; set PULSE_TELEMETRY_ENABLED=true to activate
+			Enabled:        false, // opt-in; set PULSE_TELEMETRY_ENABLED=true to activate
 			ServiceName:    "pulse",
 			ServiceVersion: "unknown",
 			Environment:    "development",
-			OTLPEndpoint:   "",            // empty → stdout exporter (dev/debug)
-			SamplingRate:   1.0,           // trace every request by default
+			OTLPEndpoint:   "",  // empty → stdout exporter (dev/debug)
+			SamplingRate:   1.0, // trace every request by default
 		},
 	}
 }

@@ -10,7 +10,8 @@ import {
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { getAlertTimeline } from '@/api/alertRecords'
+import { Textarea } from '@/components/ui/textarea'
+import { addAlertNote, getAlertTimeline } from '@/api/alertRecords'
 import type { AlertRecordDTO, AlertRecordStatus, AlertTimelineItemDTO } from '@/api/alertRecords'
 import type { NodeDTO } from '@/api/types'
 
@@ -30,6 +31,8 @@ export function AlertRecordDetailModal({ record, nodes, canEdit, open, onClose, 
   const [isTimelineLoading, setIsTimelineLoading] = useState(false)
   const [timeline, setTimeline] = useState<AlertTimelineItemDTO[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [note, setNote] = useState('')
+  const [isAddingNote, setIsAddingNote] = useState(false)
 
   const node = nodes.find((n) => n.id === record.node_id)
 
@@ -112,6 +115,37 @@ export function AlertRecordDetailModal({ record, nodes, canEdit, open, onClose, 
       setError(err instanceof Error ? err.message : t('alerts.updateFailed', 'Failed to update status'))
     } finally {
       setIsUpdating(false)
+    }
+  }
+
+  const refreshTimeline = (id: string) => {
+    setIsTimelineLoading(true)
+    void getAlertTimeline(id)
+      .then((response) => setTimeline(response.data || []))
+      .catch((err) => setError(err instanceof Error ? err.message : t('alerts.timelineLoadFailed', 'Failed to load alert timeline')))
+      .finally(() => setIsTimelineLoading(false))
+  }
+
+  const handleAddNote = async () => {
+    const trimmed = note.trim()
+    if (!trimmed) return
+    setIsAddingNote(true)
+    setError(null)
+    try {
+      await addAlertNote(record.id, trimmed)
+      setNote('')
+      refreshTimeline(record.id)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t('alerts.addNoteFailed', 'Failed to add note'))
+    } finally {
+      setIsAddingNote(false)
+    }
+  }
+
+  const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault()
+      void handleAddNote()
     }
   }
 
@@ -219,6 +253,30 @@ export function AlertRecordDetailModal({ record, nodes, canEdit, open, onClose, 
               </div>
             )}
           </div>
+
+          {canEdit && (
+            <div className="pt-4 border-t">
+              <label htmlFor="alert-note-input" className="block text-sm font-medium text-muted-foreground mb-2">
+                {t('alerts.addNote', 'Add Note')}
+              </label>
+              <Textarea
+                id="alert-note-input"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                onKeyDown={handleNoteKeyDown}
+                placeholder={t('alerts.addNotePlaceholder', 'Add investigation details (Ctrl/Cmd+Enter to submit)')}
+                rows={3}
+                className="resize-none"
+                disabled={isAddingNote}
+              />
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">{t('alerts.addNoteHint', 'Press Ctrl/Cmd+Enter to submit')}</p>
+                <Button size="sm" onClick={() => void handleAddNote()} disabled={!note.trim() || isAddingNote}>
+                  {isAddingNote ? t('common.saving', 'Saving...') : t('alerts.submitNote', 'Submit Note')}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {canEdit && record.status !== 'resolved' && (
             <div className="pt-4 border-t">

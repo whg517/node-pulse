@@ -17,6 +17,15 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/security"
 )
 
+// RouteMatcher filters the list of enabled webhook candidates for a given alert
+// event based on per-webhook routing rules (ADR-002). A nil router means "no
+// routing rules; every enabled webhook receives every alert" (legacy behavior).
+type RouteMatcher interface {
+	// Filter returns the subset of webhooks that should receive the event.
+	// Webhooks with NO routing rules are always kept (receive everything).
+	Filter(ctx context.Context, event *models.AlertEvent, candidates []*models.Webhook) []*models.Webhook
+}
+
 // PushService handles webhook push operations
 type PushService struct {
 	webhookQuerier     db.WebhookQuerier
@@ -24,6 +33,7 @@ type PushService struct {
 	httpClient         *http.Client
 	baseURL            string
 	urlValidator       func(string) error
+	router             RouteMatcher
 }
 
 // NewPushService creates a new PushService
@@ -54,6 +64,14 @@ func (s *PushService) WithURLValidator(fn func(string) error) *PushService {
 	} else {
 		s.urlValidator = fn
 	}
+	return s
+}
+
+// WithRouter returns the receiver with a RouteMatcher attached (ADR-002). When
+// set, SendAlert consults the router to drop webhooks whose rules don't match
+// the event. Webhooks with no rules are always kept.
+func (s *PushService) WithRouter(router RouteMatcher) *PushService {
+	s.router = router
 	return s
 }
 
@@ -117,6 +135,13 @@ func (s *PushService) SendAlert(ctx context.Context, alertEvent *models.AlertEve
 		if webhook.Enabled {
 			enabledWebhooks = append(enabledWebhooks, webhook)
 		}
+	}
+
+	// Apply per-webhook routing rules (ADR-002). When a router is configured it
+	// drops webhooks whose rules don't match the event; webhooks with no rules
+	// are always kept. No router => legacy "every enabled webhook receives all".
+	if s.router != nil {
+		enabledWebhooks = s.router.Filter(ctx, alertEvent, enabledWebhooks)
 	}
 
 	if len(enabledWebhooks) == 0 {

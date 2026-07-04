@@ -6,15 +6,19 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/cleanup"
 	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/db"
+	"github.com/whg517/node-pulse/pulse/internal/export"
+	"github.com/whg517/node-pulse/pulse/internal/notify"
 	"github.com/whg517/node-pulse/pulse/internal/scheduler"
 	"github.com/whg517/node-pulse/pulse/internal/suppression"
 )
 
 // TaskRegistry manages scheduled task registration
 type TaskRegistry struct {
-	scheduler   scheduler.Scheduler
-	database    *db.Database
-	cleanupTask *cleanup.CleanupTask
+	scheduler     scheduler.Scheduler
+	database      *db.Database
+	cleanupTask   *cleanup.CleanupTask
+	exportService *export.ExportService
+	mailer        notify.Sender
 }
 
 // NewTaskRegistry creates a new task registry
@@ -23,6 +27,18 @@ func NewTaskRegistry(sched scheduler.Scheduler, database *db.Database) *TaskRegi
 		scheduler: sched,
 		database:  database,
 	}
+}
+
+// WithExportService attaches the export service (for report scheduling).
+func (r *TaskRegistry) WithExportService(svc *export.ExportService) *TaskRegistry {
+	r.exportService = svc
+	return r
+}
+
+// WithMailer attaches the email sender (for report delivery).
+func (r *TaskRegistry) WithMailer(m notify.Sender) *TaskRegistry {
+	r.mailer = m
+	return r
 }
 
 // RegisterAll registers all scheduled tasks
@@ -40,6 +56,31 @@ func (r *TaskRegistry) RegisterAll() error {
 		return err
 	}
 
+	if err := r.registerReportScheduleTask(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// registerReportScheduleTask wires the recurring-report runner (ADR-001).
+func (r *TaskRegistry) registerReportScheduleTask() error {
+	if r.exportService == nil || r.mailer == nil {
+		slog.Info("Skipping report schedule task (export service or mailer not configured)", "component", "registry")
+		return nil
+	}
+	store := db.NewReportScheduleRepository(r.database.Pool)
+	runner := export.NewReportScheduleRunner(
+		store,
+		r.exportService,
+		r.mailer,
+		nil, // owner-email lookup optional; recipient_email is preferred
+		r.exportService.GetExport,
+	)
+	if err := r.scheduler.RegisterTask(runner); err != nil {
+		return err
+	}
+	slog.Info("Registered report schedule task", "component", "registry", "interval", runner.Interval())
 	return nil
 }
 

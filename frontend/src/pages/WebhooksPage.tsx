@@ -1,12 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { previewWebhookPayload, type CreateWebhookRequest, type WebhookEventFormat } from '@/api/webhooks'
+import { getWebhookLogs, previewWebhookPayload, type CreateWebhookRequest, type WebhookEventFormat, type WebhookDeliveryLogDTO } from '@/api/webhooks'
 import { useAuthStore } from '@/stores/authStore'
 import { useWebhooks } from '@/hooks/useWebhooks'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { WebhooksTable } from '@/components/webhooks/WebhooksTable'
 import { WebhookDialog } from '@/components/webhooks/WebhookDialog'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +37,10 @@ export default function WebhooksPage() {
   const [webhookToDelete, setWebhookToDelete] = useState<string>()
   const [testingWebhookId, setTestingWebhookId] = useState<string | null>(null)
   const [testNotice, setTestNotice] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
+  const [logsWebhookId, setLogsWebhookId] = useState<string | null>(null)
+  const [logs, setLogs] = useState<WebhookDeliveryLogDTO[]>([])
+  const [logsLoading, setLogsLoading] = useState(false)
+  const [logsError, setLogsError] = useState<string | null>(null)
 
   const selectedWebhook = useMemo(() => selectedWebhookId ? getWebhookById(selectedWebhookId) : undefined, [getWebhookById, selectedWebhookId])
   const canEdit = user?.role === 'admin'
@@ -83,6 +94,28 @@ export default function WebhooksPage() {
     return response.data.payload
   }
 
+  const handleViewLogs = (id: string) => {
+    setLogsWebhookId(id)
+  }
+
+  useEffect(() => {
+    if (!logsWebhookId) return
+    let cancelled = false
+    setLogsLoading(true)
+    setLogsError(null)
+    void getWebhookLogs(logsWebhookId, { limit: 100 })
+      .then((res) => {
+        if (!cancelled) setLogs(res.data?.logs || [])
+      })
+      .catch((err) => {
+        if (!cancelled) setLogsError(err instanceof Error ? err.message : t('errors.failedToLoad'))
+      })
+      .finally(() => {
+        if (!cancelled) setLogsLoading(false)
+      })
+    return () => { cancelled = true }
+  }, [logsWebhookId, t])
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -124,6 +157,7 @@ export default function WebhooksPage() {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onTest={handleTestWebhook}
+          onViewLogs={canEdit ? handleViewLogs : undefined}
           onToggleEnabled={handleToggleEnabled}
           testingWebhookId={testingWebhookId}
           canEdit={canEdit}
@@ -146,6 +180,45 @@ export default function WebhooksPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog open={!!logsWebhookId} onOpenChange={(open) => { if (!open) setLogsWebhookId(null) }}>
+        <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{t('webhooks.deliveryLogs', 'Delivery Logs')}</DialogTitle>
+          </DialogHeader>
+          {logsError && <div className="rounded-md bg-destructive/10 px-4 py-2 text-sm text-destructive">{logsError}</div>}
+          {logsLoading ? (
+            <div className="flex justify-center py-8"><div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
+          ) : logs.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">{t('webhooks.noLogs', 'No delivery attempts recorded yet.')}</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">{t('settings.timestamp', 'Time')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">{t('common.status', 'Status')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">{t('webhooks.retry', 'Retries')}</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium uppercase text-muted-foreground">{t('webhooks.error', 'Error')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {logs.map((log) => (
+                    <tr key={log.id} className="align-top">
+                      <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{log.created_at ? new Date(log.created_at).toLocaleString() : '—'}</td>
+                      <td className="whitespace-nowrap px-3 py-2">
+                        <Badge variant={log.status === 'success' ? 'default' : 'destructive'}>{log.status}</Badge>
+                      </td>
+                      <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">{log.retry_count}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">{log.error_message || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

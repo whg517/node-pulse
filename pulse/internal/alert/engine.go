@@ -54,10 +54,14 @@ func NewAlertEngine(
 	suppressionService := suppression.NewService(suppressionQuerier)
 
 	// Webhook push service: baseURL placeholder is overridden via
-	// WithWebhookBaseURL from the configured server.base_url.
+	// WithWebhookBaseURL from the configured server.base_url. A rule router is
+	// attached so per-webhook routing rules filter dispatch (ADR-002).
 	webhookQuerier := db.NewWebhookQuerier(pool)
 	webhookLogsQuerier := db.NewWebhookLogsQuerier(pool)
 	webhookPushService := webhook.NewPushService(webhookQuerier, webhookLogsQuerier, "http://localhost:6532")
+	if router := webhook.NewRuleRouter(db.NewAlertRoutingRulesRepository(pool)); router != nil {
+		webhookPushService.WithRouter(router)
+	}
 
 	dispatcher := &CompositeDispatcher{
 		Suppression: NewSuppressionChecker(suppressionService),

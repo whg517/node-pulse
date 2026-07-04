@@ -28,7 +28,10 @@
     "webhooks": "Webhooks",
     "performance": "性能分析",
     "users": "用户管理",
-    "exportHistory": "导出历史"
+    "exportHistory": "导出历史",
+    "apiKeys": "API 密钥",
+    "auditLogs": "审计日志",
+    "systemConfig": "系统配置"
   },
   "common": {
     "loading": "加载中...",
@@ -79,7 +82,14 @@
     "retry": "重试",
     "expand": "展开",
     "collapse": "收起",
-    "welcome": "欢迎"
+    "welcome": "欢迎",
+    "copy": "复制",
+    "copied": "已复制",
+    "done": "完成",
+    "apply": "应用",
+    "clear": "清除",
+    "showing": "显示",
+    "of": "共"
   },
   "navigation": {
     "dashboard": "仪表盘",
@@ -323,7 +333,14 @@
     "routeTo": "路由到",
     "notifyVia": "通知方式",
     "webhook": "Webhook",
-    "ruleEmail": "邮件"
+    "ruleEmail": "邮件",
+    "addNote": "添加备注",
+    "addNotePlaceholder": "添加调查细节（Ctrl/Cmd+Enter 提交）",
+    "addNoteHint": "按 Ctrl/Cmd+Enter 提交",
+    "submitNote": "提交备注",
+    "addNoteFailed": "添加备注失败",
+    "localOnlyTitle": "仅本地",
+    "localOnlyRouting": "路由规则仅保存在当前浏览器，服务端不会执行。当前每个启用的 Webhook 都会收到所有告警。详见 docs/adr/ADR-002-alert-routing.md。"
   },
   "reports": {
     "title": "报告",
@@ -425,7 +442,9 @@
     "noSchedules": "暂无定时报告配置。",
     "noSchedulesHint": "创建定时计划以自动生成报告。",
     "lastRun": "上次运行",
-    "never": "从未"
+    "never": "从未",
+    "localOnlyTitle": "仅本地",
+    "localOnlySchedule": "定时报告仅保存在当前浏览器，服务端不会执行。更换设备或清除浏览器数据将丢失。详见 docs/adr/ADR-001-report-scheduling.md。"
   },
   "integrations": {
     "title": "集成",
@@ -531,7 +550,54 @@
     "disable": "禁用",
     "delete": "删除",
     "savePreferences": "保存偏好设置",
-    "saved": "设置已保存"
+    "saved": "设置已保存",
+    "securityDescription": "修改账户密码。其他会话将被登出。",
+    "currentPassword": "当前密码",
+    "newPassword": "新密码",
+    "confirmPassword": "确认新密码",
+    "changePassword": "修改密码",
+    "passwordMismatch": "两次输入的新密码不一致",
+    "passwordTooShort": "密码至少 8 个字符",
+    "passwordChanged": "密码修改成功",
+    "passwordChangedSessionsRevoked": "密码已修改。其他会话已被登出。",
+    "passwordChangeFailed": "修改密码失败",
+    "forceLogout": "强制登出",
+    "confirmForceLogoutTitle": "强制登出？",
+    "confirmForceLogoutMessage": "将立即终止 {name} 的所有会话，对方需要重新登录。",
+    "apiKeys": "API 密钥",
+    "apiKeysDescription": "管理用于 Beacon 认证的 API 密钥。",
+    "createApiKey": "创建 API 密钥",
+    "keyName": "名称",
+    "keyNamePlaceholder": "例如 beacon-prod-01",
+    "keyPrefix": "前缀",
+    "lastUsed": "最近使用",
+    "created": "创建时间",
+    "noApiKeys": "尚无 API 密钥。创建一个用于 Beacon 认证。",
+    "create": "创建",
+    "rotate": "轮换",
+    "revoke": "吊销",
+    "revoked": "已吊销",
+    "apiKeyHelp": "完整密钥仅在创建后显示一次，请妥善保管。",
+    "createdKeyTitle": "API 密钥已创建",
+    "rotatedKeyTitle": "API 密钥已轮换",
+    "apiKeyOnceWarning": "请立即复制此密钥。出于安全考虑，将不再显示。",
+    "confirmRevokeKeyTitle": "吊销 API 密钥？",
+    "confirmRevokeKeyMessage": "确定吊销 \"{name}\"？使用此密钥的 Beacon 将立即无法认证。",
+    "adminOnly": "访问被拒 — 需要管理员权限。",
+    "auditLogs": "审计日志",
+    "auditLogsDescription": "安全事件审计记录。",
+    "eventType": "事件类型",
+    "allEvents": "全部事件",
+    "startTime": "开始时间",
+    "endTime": "结束时间",
+    "event": "事件",
+    "details": "详情",
+    "timestamp": "时间",
+    "noAuditLogs": "没有匹配筛选条件的审计记录。",
+    "systemConfig": "系统配置",
+    "systemConfigDescription": "查看生效的服务端配置并重新校验。",
+    "revalidate": "重新校验",
+    "configValid": "配置有效"
   },
   "auth": {
     "loginTitle": "登录",
@@ -582,7 +648,7 @@
   },
   "mtr": {
     "title": "MTR 路由追踪",
-    "pathVisualization": "MTR 路径可视化",
+    "pathVisualization": "路径可视化与风险条件",
     "networkPath": "网络路径",
     "pathTo": "目标路径",
     "target": "目标",
@@ -668,7 +734,11 @@
     "yesRevoke": "确认撤销",
     "confirmRevoke": "确认？",
     "logoutWarning": "这将使您退出登录。",
-    "cancelRevoke": "取消"
+    "cancelRevoke": "取消",
+    "revokeAll": "登出全部会话",
+    "revokingAll": "正在登出...",
+    "confirmRevokeAllTitle": "登出全部会话？",
+    "confirmRevokeAllDesc": "将登出所有设备（包括当前设备）。你需要重新登录。"
   },
   "alertHistory": {
     "title": "告警历史",
@@ -809,7 +879,17 @@
     "templateDescription": "描述（可选）",
     "noTemplates": "暂无保存的模板。",
     "confirmApply": "应用此模板？当前配置将被替换。",
-    "deleteTemplate": "删除模板"
+    "deleteTemplate": "删除模板",
+    "localOnlyTemplates": "模板仅保存在当前浏览器。更换设备或清除浏览器数据将丢失。详见 docs/adr/ADR-003-beacon-config-templates.md。",
+    "preview": "预览",
+    "previewValid": "配置有效",
+    "previewInvalid": "配置存在问题",
+    "batchDeploy": "批量下发到多个",
+    "exitBatch": "退出批量模式",
+    "batchHint": "选择要将当前配置下发到的目标 Beacon。",
+    "deployToN": "下发到 {n} 个 Beacon",
+    "batchResult": "批量下发：成功 {success}，失败 {failed}。",
+    "batchFailedIds": "失败：{ids}"
   },
   "probes": {
     "title": "探测管理",

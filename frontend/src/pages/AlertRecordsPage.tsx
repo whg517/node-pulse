@@ -9,6 +9,8 @@ import type { NodeDTO } from '@/api/types'
 import { AlertRecordsTable } from '@/components/alerts/AlertRecordsTable'
 import { AlertRecordsFilter } from '@/components/alerts/AlertRecordsFilter'
 import { AlertRecordDetailModal } from '@/components/alerts/AlertRecordDetailModal'
+import { AlertDetailMobile } from '@/components/alerts/AlertDetailMobile'
+import { useIsMobile } from '@/hooks/use-mobile'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 
@@ -38,6 +40,8 @@ export default function AlertRecordsPage() {
 
   const isMounted = useRef(true)
   const canEdit = user?.role === 'admin' || user?.role === 'operator'
+  // G20: use the mobile-tailored detail UI on small screens, the desktop modal otherwise.
+  const isMobile = useIsMobile()
 
   const loadNodes = useCallback(async () => {
     if (nodes.length > 0) return nodes
@@ -222,14 +226,24 @@ export default function AlertRecordsPage() {
       )}
 
       {selectedRecord && (
-        <AlertRecordDetailModal
-          record={selectedRecord}
-          nodes={nodes}
-          canEdit={canEdit}
-          open={!!selectedRecord}
-          onClose={() => setSelectedRecord(null)}
-          onStatusUpdate={handleStatusUpdate}
-        />
+        isMobile ? (
+          <AlertDetailMobile
+            record={selectedRecord}
+            nodes={nodes}
+            canEdit={canEdit}
+            onClose={() => setSelectedRecord(null)}
+            onStatusUpdate={handleStatusUpdate}
+          />
+        ) : (
+          <AlertRecordDetailModal
+            record={selectedRecord}
+            nodes={nodes}
+            canEdit={canEdit}
+            open={!!selectedRecord}
+            onClose={() => setSelectedRecord(null)}
+            onStatusUpdate={handleStatusUpdate}
+          />
+        )
       )}
     </div>
   )

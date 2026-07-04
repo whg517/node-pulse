@@ -91,3 +91,17 @@ export async function batchUpdateConfig(
     body: JSON.stringify(request),
   })
 }
+
+/**
+ * Roll back a beacon's config to a prior history version (J5).
+ * The backend reads the named version and re-applies it as a new version.
+ */
+export async function rollbackBeaconConfig(
+  beaconId: string,
+  version: number
+): Promise<{ data: BeaconConfigDTO; message: string; timestamp: string }> {
+  return apiClient(`/api/v1/beacons/${beaconId}/config/rollback`, {
+    method: 'POST',
+    body: JSON.stringify({ version }),
+  })
+}

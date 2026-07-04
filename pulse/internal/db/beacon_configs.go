@@ -63,6 +63,7 @@ type BeaconConfigsQuerier interface {
 	UpsertBeaconConfig(ctx context.Context, beaconID uuid.UUID, update BeaconConfigUpdate) (*BeaconConfig, error)
 	GetBeaconConfigHistory(ctx context.Context, beaconID uuid.UUID, limit int) ([]BeaconConfigHistoryEntry, error)
 	AcknowledgeBeaconConfig(ctx context.Context, beaconID uuid.UUID, version int, status string, errorMessage string) error
+	RollbackBeaconConfig(ctx context.Context, beaconID uuid.UUID, targetVersion int, changedBy string) (*BeaconConfig, error)
 }
 
 // GetBeaconConfig returns the persisted beacon config.
@@ -215,6 +216,45 @@ func GetBeaconConfigHistory(ctx context.Context, pool *pgxpool.Pool, beaconID uu
 	}
 
 	return history, rows.Err()
+}
+
+// RollbackBeaconConfig restores a beacon's config to a prior history version.
+// It reads the named version from beacon_config_history and re-applies it as a
+// new version (version+1) via UpsertBeaconConfig, producing a fresh history
+// entry with changed_by recorded as the rollback actor. This preserves the
+// audit trail (the rolled-back version is not deleted) and is idempotent to the
+// Beacon ack flow (it sees a normal new version).
+func RollbackBeaconConfig(ctx context.Context, pool *pgxpool.Pool, beaconID uuid.UUID, targetVersion int, changedBy string) (*BeaconConfig, error) {
+	if targetVersion < 1 {
+		return nil, fmt.Errorf("target version must be >= 1")
+	}
+
+	// Fetch the target history entry.
+	var (
+		configJSON []byte
+	)
+	err := pool.QueryRow(ctx, `
+		SELECT config FROM beacon_config_history
+		WHERE beacon_id = $1 AND version = $2
+	`, beaconID, targetVersion).Scan(&configJSON)
+	if err != nil {
+		return nil, fmt.Errorf("history version %d not found: %w", targetVersion, err)
+	}
+
+	var prior BeaconConfig
+	if err := json.Unmarshal(configJSON, &prior); err != nil {
+		return nil, fmt.Errorf("decode history config: %w", err)
+	}
+
+	// Re-apply as a new version. UpsertBeaconConfig snapshots the *current*
+	// config into history (so the rollback itself is audited) and bumps version.
+	update := BeaconConfigUpdate{
+		Probes:          &prior.Probes,
+		IntervalSeconds: &prior.IntervalSeconds,
+		TimeoutSeconds:  &prior.TimeoutSeconds,
+		ChangedBy:       changedBy,
+	}
+	return UpsertBeaconConfig(ctx, pool, beaconID, update)
 }
 
 // AcknowledgeBeaconConfig stores a beacon's config apply status.

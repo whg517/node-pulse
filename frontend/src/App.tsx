@@ -13,6 +13,8 @@ import { initializeTheme } from './stores/settingsStore'
 initializeTheme()
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage'))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage'))
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const NodeDetailPage = lazy(() => import('./pages/NodeDetailPage'))
 const NodeComparisonPage = lazy(() => import('./pages/NodeComparison'))
@@ -28,6 +30,9 @@ const SessionsPage = lazy(() => import('./pages/SessionsPage'))
 const ReportsPage = lazy(() => import('./pages/Reports'))
 const PreferencesPage = lazy(() => import('./pages/PreferencesPage'))
 const UsersPage = lazy(() => import('./pages/UsersPage'))
+const ApiKeysPage = lazy(() => import('./pages/ApiKeysPage'))
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage'))
+const SystemConfigPage = lazy(() => import('./pages/SystemConfigPage'))
 const SystemHealthPage = lazy(() => import('./pages/SystemHealthPage'))
 const PerformanceDashboard = lazy(() => import('./pages/PerformanceDashboard'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
@@ -89,6 +94,8 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Protected routes with AppLayout */}
         <Route element={<ProtectedLayout />}>
@@ -126,6 +133,9 @@ function App() {
           <Route path="/settings/preferences" element={<PreferencesPage />} />
           <Route path="/settings/sessions" element={<SessionsPage />} />
           <Route path="/settings/users" element={<UsersPage />} />
+          <Route path="/settings/api-keys" element={<ApiKeysPage />} />
+          <Route path="/settings/audit-logs" element={<AuditLogsPage />} />
+          <Route path="/settings/system-config" element={<SystemConfigPage />} />
 
           {/* Short aliases for E2E and legacy navigation */}
           <Route path="/webhooks" element={<Navigate to="/integrations/webhooks" replace />} />

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { fetchUsers, createUser, updateUser, deleteUser } from '@/api/users'
+import { adminRevokeAllUserSessions } from '@/api/adminAuth'
 import type { UserDTO, CreateUserRequest, UpdateUserRequest } from '@/api/users'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -37,6 +38,8 @@ export default function UsersPage() {
   const [error, setError] = useState<string | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [userToDelete, setUserToDelete] = useState<string>()
+  const [forceLogoutUser, setForceLogoutUser] = useState<{ id: string; name: string } | null>(null)
+  const [forceLogoutLoading, setForceLogoutLoading] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [dialogState, setDialogState] = useState<UserDialogState>({ mode: 'create' })
   const [dialogLoading, setDialogLoading] = useState(false)
@@ -113,6 +116,24 @@ export default function UsersPage() {
     finally { setDeleteConfirmOpen(false); setUserToDelete(undefined) }
   }
 
+  const handleForceLogout = (u: UserDTO) => {
+    setForceLogoutUser({ id: u.user_id, name: u.username })
+  }
+
+  const confirmForceLogout = async () => {
+    if (!forceLogoutUser) return
+    setForceLogoutLoading(true)
+    try {
+      await adminRevokeAllUserSessions(forceLogoutUser.id)
+      setError(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setForceLogoutLoading(false)
+      setForceLogoutUser(null)
+    }
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader title={t('settings.users')} subtitle={t('settings.usersDescription')} actions={<Button onClick={openCreateDialog}>{t('settings.addUser')}</Button>} />
@@ -155,6 +176,9 @@ export default function UsersPage() {
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm space-x-2">
                           <Button variant="link" size="sm" onClick={() => openEditDialog(u)}>{t('settings.edit')}</Button>
+                          <Button variant="link" size="sm" onClick={() => handleForceLogout(u)} disabled={u.user_id === user?.id}>
+                            {t('settings.forceLogout', 'Force logout')}
+                          </Button>
                           <Button variant="link" size="sm" className="text-destructive" onClick={() => handleDelete(u.user_id)} disabled={u.user_id === user?.id}>{t('settings.delete')}</Button>
                         </td>
                       </tr>
@@ -210,6 +234,23 @@ export default function UsersPage() {
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setUserToDelete(undefined) }}>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} variant="destructive">{t('common.delete')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!forceLogoutUser} onOpenChange={(open) => { if (!open) setForceLogoutUser(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('settings.confirmForceLogoutTitle', 'Force sign out?')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('settings.confirmForceLogoutMessage', 'This will immediately end all sessions for {name}. They will need to sign in again.', { name: forceLogoutUser?.name })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={forceLogoutLoading}>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={() => void confirmForceLogout()} disabled={forceLogoutLoading}>
+              {forceLogoutLoading ? t('common.saving', 'Working...') : t('settings.forceLogout', 'Force logout')}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

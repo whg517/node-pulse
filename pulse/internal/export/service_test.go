@@ -20,7 +20,7 @@ func TestExportService_CreateExport_Success(t *testing.T) {
 	// Setup
 	pool := setupTestDB(t)
 
-	service := NewExportService(pool)
+	service := NewExportService(pool, nil)
 	ctx := context.Background()
 
 	// Create test data
@@ -161,7 +161,7 @@ func TestExportService_CreateExport_ValidationErrors(t *testing.T) {
 			// Setup
 			pool := setupTestDB(t)
 
-			service := NewExportService(pool)
+			service := NewExportService(pool, nil)
 			ctx := context.Background()
 
 			// Initialize node IDs slice if needed
@@ -189,7 +189,7 @@ func TestExportService_GetExport_Success(t *testing.T) {
 	// Setup
 	pool := setupTestDB(t)
 
-	service := NewExportService(pool)
+	service := NewExportService(pool, nil)
 	ctx := context.Background()
 
 	// Create test data
@@ -226,7 +226,7 @@ func TestExportService_GetExport_NotFound(t *testing.T) {
 	pool := setupTestDB(t)
 	defer pool.Close()
 
-	service := NewExportService(pool)
+	service := NewExportService(pool, nil)
 
 	// Execute
 	task, err := service.GetExport("non-existent-id")
@@ -241,7 +241,7 @@ func TestExportService_ProcessExport_CompletesSuccessfully(t *testing.T) {
 	// Setup
 	pool := setupTestDB(t)
 
-	service := NewExportService(pool)
+	service := NewExportService(pool, nil)
 	ctx := context.Background()
 
 	// Create test data
@@ -301,7 +301,7 @@ func TestExportService_ProcessExport_NoData(t *testing.T) {
 	// Setup
 	pool := setupTestDB(t)
 
-	service := NewExportService(pool)
+	service := NewExportService(pool, nil)
 	ctx := context.Background()
 
 	// Create a node but no metrics
@@ -351,7 +351,7 @@ func TestExportService_ProcessExport_MultipleNodesAndMetrics(t *testing.T) {
 	// Setup
 	pool := setupTestDB(t)
 
-	service := NewExportService(pool)
+	service := NewExportService(pool, nil)
 	ctx := context.Background()
 
 	// Create test data for multiple nodes

@@ -170,8 +170,29 @@ func runStart(cmd *cobra.Command, args []string) error {
 
 	logger.Info("Starting metrics server...")
 
+	// Degraded-mode state machine (G16). Drives metrics only; it deliberately
+	// does NOT touch probe intervals to avoid conflicting with the resource
+	// monitor (which remains the sole owner of interval backoff).
+	modeMgr := config.NewModeManager(&cfg.Mode)
+
+	// Resume-upload cache (G18). Constructed up here so metrics can read its
+	// stats; the constructor auto-loads any persisted failed payloads from disk.
+	var resumeCache *reporter.PriorityCache
+	if cfg.Resume.Enabled {
+		resumeCache = reporter.NewPriorityCache(cfg.Resume.MaxCacheSizeBytes, cfg.Resume.CacheFilePath, true)
+	}
+
+	// Compression stats provider (G17). Created up here for metrics even when
+	// compression is disabled (stats stay zero), to keep wiring unconditional.
+	compressor := reporter.NewCompressor(cfg.Compression.Level, cfg.Compression.MinSizeBytes)
+
 	// Create and start metrics server (Story 3.8)
 	metricsServer := metrics.NewMetrics(cfg, scheduler)
+	metricsServer.SetModeProvider(modeMgr)
+	metricsServer.SetCompressionStatsProvider(compressor)
+	if resumeCache != nil {
+		metricsServer.SetCacheStatsProvider(resumeCache)
+	}
 	if err := metricsServer.Start(); err != nil {
 		logger.WithError(err).Warn("Failed to start metrics server")
 	}
@@ -183,6 +204,7 @@ func runStart(cmd *cobra.Command, args []string) error {
 		logger.Info("Beacon running in standalone mode; skipping Pulse authentication and heartbeat reporting")
 		waitForStop(ctx, configWatcher)
 		logger.Info("Shutting down gracefully...")
+		persistResumeCache(resumeCache)
 		return nil
 	}
 
@@ -209,27 +231,55 @@ func runStart(cmd *cobra.Command, args []string) error {
 	stopMTRReporting := startMTRResultReporting(ctx, cfg, jwtClient, scheduler)
 	defer stopMTRReporting()
 
-	// Create Pulse API client with 5 second timeout (NFR-PERF-001)
-	apiClient := reporter.NewPulseAPIClient(cfg.PulseServer, 5*time.Second, jwtClient)
+	// Create Pulse API client with 5 second timeout (NFR-PERF-001). Use the
+	// compressed-endpoint client when compression is enabled (G17).
+	var apiClient *reporter.PulseAPIClient
+	if cfg.Compression.Enabled {
+		apiClient = reporter.NewPulseAPIClientWithCompression(cfg.PulseServer, 5*time.Second, jwtClient, cfg.Compression.Level)
+	} else {
+		apiClient = reporter.NewPulseAPIClient(cfg.PulseServer, 5*time.Second, jwtClient)
+	}
 
-	// Create heartbeat reporter with scheduler integration
-	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, scheduler)
+	// Create heartbeat reporter with scheduler integration + reconnect config
+	// (G19), degraded-mode listener (G16), and resume cache (G18).
+	reporterOpts := []reporter.ReporterOption{
+		reporter.WithReconnectConfig(cfg.Reconnect.MaxRetries, cfg.Reconnect.RetryInterval, cfg.Reconnect.Backoff),
+		reporter.WithOutcomeListener(modeMgr),
+	}
+	if resumeCache != nil {
+		reporterOpts = append(reporterOpts, reporter.WithResumeCache(resumeCache, metricsServer))
+	}
+	heartbeatReporter := reporter.NewHeartbeatReporter(apiClient, scheduler, reporterOpts...)
 
 	// Start heartbeat reporting (using existing context)
 	heartbeatReporter.StartReporting(ctx)
 	defer heartbeatReporter.StopReporting()
 
 	logger.WithFields(map[string]interface{}{
-		"node_id":   cfg.NodeID,
-		"node_name": cfg.NodeName,
+		"node_id":            cfg.NodeID,
+		"node_name":          cfg.NodeName,
+		"compression":        cfg.Compression.Enabled,
+		"resume_cache":       cfg.Resume.Enabled,
+		"reconnect_strategy": cfg.Reconnect.Backoff,
 	}).Info("Beacon started successfully")
 	logger.Info("Press Ctrl+C to stop...")
 
 	waitForStop(ctx, configWatcher)
 
 	logger.Info("Shutting down gracefully...")
+	persistResumeCache(resumeCache)
 
 	return nil
+}
+
+// persistResumeCache flushes the resume cache to disk on graceful shutdown (G18).
+func persistResumeCache(cache *reporter.PriorityCache) {
+	if cache == nil {
+		return
+	}
+	if err := cache.Persist(); err != nil {
+		logger.WithError(err).Warn("Failed to persist resume cache on shutdown")
+	}
 }
 
 type accessTokenProvider interface {

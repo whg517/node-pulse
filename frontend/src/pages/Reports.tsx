@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useExportStore } from '@/stores/exportStore'
-import { useSettingsStore, type ReportSchedule } from '@/stores/settingsStore'
+import { type ReportSchedule } from "@/stores/settingsStore"
+import { listReportSchedules, createReportSchedule, updateReportSchedule, deleteReportSchedule, type ReportScheduleDTO } from '@/api/reportSchedules'
 import { fetchNodes } from '@/api/nodes'
 import { fetchMetrics } from '@/api/data'
 import { ReportGenerator, NodeComparisonTable, type ReportConfig, type NodeComparisonData } from '@/components/reports'
@@ -38,7 +39,19 @@ export default function ReportsPage() {
     isLoading: exportLoading,
   } = useExportStore()
 
-  const { reportSchedules, addReportSchedule, updateReportSchedule, deleteReportSchedule } = useSettingsStore()
+  // Schedules now come from the server (ADR-001) and are executed + emailed by the scheduler.
+  const [serverSchedules, setServerSchedules] = useState<ReportScheduleDTO[]>([])
+
+  const loadSchedules = async () => {
+    try {
+      const res = await listReportSchedules()
+      setServerSchedules(res.data?.schedules || [])
+    } catch {
+      // best-effort
+    }
+  }
+
+  useEffect(() => { void loadSchedules() }, [])
 
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -117,17 +130,16 @@ export default function ReportsPage() {
       await createExport(exportRequest)
   }
 
-  const handleCreateSchedule = () => {
-    const schedule: ReportSchedule = {
-      id: crypto.randomUUID(),
+  const handleCreateSchedule = async () => {
+    await createReportSchedule({
       name: scheduleForm.name,
       frequency: scheduleForm.frequency,
-      time: scheduleForm.time,
-      nodeIds: scheduleForm.nodeIds,
+      time_of_day: scheduleForm.time,
+      node_ids: scheduleForm.nodeIds,
       format: scheduleForm.format,
       enabled: scheduleForm.enabled,
-    }
-    addReportSchedule(schedule)
+    }).catch(() => { /* best-effort */ })
+    await loadSchedules()
     setShowScheduleDialog(false)
     setScheduleForm({ name: '', frequency: 'daily', time: '09:00', format: 'pdf', nodeIds: [], enabled: true })
   }
@@ -174,29 +186,37 @@ export default function ReportsPage() {
                 <h3 className="text-lg font-semibold">{t('reports.scheduled')}</h3>
                 <Button onClick={() => setShowScheduleDialog(true)} size="sm">{t('reports.createSchedule')}</Button>
               </div>
-              {reportSchedules.length === 0 ? (
+              {serverSchedules.length === 0 ? (
                 <div className="py-8 text-center">
                   <p className="text-sm text-muted-foreground">{t('reports.noSchedules')}</p>
                   <p className="text-xs text-muted-foreground mt-1">{t('reports.noSchedulesHint')}</p>
                 </div>
               ) : (
                 <div className="divide-y">
-                  {reportSchedules.map((schedule) => (
+                  {serverSchedules.map((schedule) => (
                     <div key={schedule.id} className="py-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <Switch
                           checked={schedule.enabled}
-                          onCheckedChange={(checked) => updateReportSchedule(schedule.id, { enabled: checked })}
+                          onCheckedChange={async (checked) => {
+                            await updateReportSchedule(schedule.id, {
+                              name: schedule.name, frequency: schedule.frequency,
+                              time_of_day: schedule.time_of_day, node_ids: schedule.node_ids,
+                              metrics: schedule.metrics, format: schedule.format,
+                              recipient_email: schedule.recipient_email, enabled: checked,
+                            }).catch(() => {})
+                            await loadSchedules()
+                          }}
                         />
                         <div>
                           <p className="text-sm font-medium">{schedule.name}</p>
                           <p className="text-xs text-muted-foreground">
-                            {t(`reports.${schedule.frequency}`)} · {schedule.time} · {schedule.format.toUpperCase()}
-                            {schedule.lastRun && ` · ${t('reports.lastRun')}: ${new Date(schedule.lastRun).toLocaleString()}`}
+                            {t(`reports.${schedule.frequency}`)} · {schedule.time_of_day} · {schedule.format.toUpperCase()}
+                            {schedule.last_run_at && ` · ${t('reports.lastRun')}: ${new Date(schedule.last_run_at).toLocaleString()}`}
                           </p>
                         </div>
                       </div>
-                      <Button variant="link" size="sm" className="text-destructive" onClick={() => deleteReportSchedule(schedule.id)}>
+                      <Button variant="link" size="sm" className="text-destructive" onClick={async () => { await deleteReportSchedule(schedule.id).catch(() => {}); await loadSchedules() }}>
                         {t('common.delete')}
                       </Button>
                     </div>

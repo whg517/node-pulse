@@ -14,6 +14,8 @@ import (
 type WebhookLogsQuerier interface {
 	CreateWebhookLog(ctx context.Context, log *models.WebhookLog) error
 	CountRecentWebhookLogs(ctx context.Context, totalCount, successCount *int64, limit int) error
+	// GetWebhookLogs returns delivery logs for a webhook, newest first, plus the total count.
+	GetWebhookLogs(ctx context.Context, webhookID string, limit, offset int) ([]*models.WebhookLog, int, error)
 }
 
 type webhookLogsQuerier struct {
@@ -65,4 +67,52 @@ func (q *webhookLogsQuerier) CountRecentWebhookLogs(ctx context.Context, totalCo
 	}
 
 	return nil
+}
+
+// GetWebhookLogs returns delivery logs for a webhook ordered newest-first with the total count.
+func (q *webhookLogsQuerier) GetWebhookLogs(ctx context.Context, webhookID string, limit, offset int) ([]*models.WebhookLog, int, error) {
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
+	var total int
+	countQuery := `SELECT COUNT(*) FROM webhook_logs WHERE webhook_id = $1`
+	if err := q.pool.QueryRow(ctx, countQuery, webhookID).Scan(&total); err != nil {
+		return nil, 0, errors.New("failed to count webhook logs: " + err.Error())
+	}
+
+	query := `
+		SELECT id, webhook_id, alert_event_id, status, retry_count, error_message, sent_at, created_at
+		FROM webhook_logs
+		WHERE webhook_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+	rows, err := q.pool.Query(ctx, query, webhookID, limit, offset)
+	if err != nil {
+		return nil, 0, errors.New("failed to query webhook logs: " + err.Error())
+	}
+	defer rows.Close()
+
+	logs := make([]*models.WebhookLog, 0)
+	for rows.Next() {
+		log := &models.WebhookLog{}
+		if err := rows.Scan(
+			&log.ID, &log.WebhookID, &log.AlertEventID, &log.Status,
+			&log.RetryCount, &log.ErrorMessage, &log.SentAt, &log.CreatedAt,
+		); err != nil {
+			return nil, 0, errors.New("failed to scan webhook log: " + err.Error())
+		}
+		logs = append(logs, log)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+	return logs, total, nil
 }

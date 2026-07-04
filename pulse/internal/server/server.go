@@ -15,6 +15,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/api"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/health"
+	"github.com/whg517/node-pulse/pulse/internal/notify"
 	"github.com/whg517/node-pulse/pulse/internal/scheduler"
 	"github.com/whg517/node-pulse/pulse/pkg/telemetry"
 )
@@ -29,6 +30,7 @@ type Server struct {
 	scheduler         scheduler.Scheduler
 	cacheManager      *api.CacheManager
 	telemetryProvider *telemetry.Provider
+	mailer            notify.Sender
 	shutdownCtx       context.Context
 	shutdownCancel    context.CancelFunc
 }
@@ -173,13 +175,25 @@ func (s *Server) setupRoutes() {
 		dbPool = s.database.Pool
 	}
 
-	s.cacheManager = api.SetupRoutes(s.router, s.healthChecker, dbPool)
-	slog.Info("Routes configured", "component", "server")
+	// Build the outbound-email sender. When SMTP is unconfigured this returns a
+	// log-only NoopSender, so password-reset / report email degrades gracefully.
+	s.mailer = notify.New(notify.SMTPConfig{
+		Host:     s.config.Notify.SMTP.Host,
+		Port:     s.config.Notify.SMTP.Port,
+		Username: s.config.Notify.SMTP.Username,
+		Password: s.config.Notify.SMTP.Password,
+		From:     s.config.Notify.SMTP.From,
+	})
+
+	s.cacheManager = api.SetupRoutes(s.router, s.healthChecker, dbPool, s.config.Config, s.mailer)
+	slog.Info("Routes configured", "component", "server", "smtp_configured", s.mailer.Configured())
 }
 
 // setupSchedulerTasks registers all scheduled tasks
 func (s *Server) setupSchedulerTasks() error {
-	registry := NewTaskRegistry(s.scheduler, s.database)
+	registry := NewTaskRegistry(s.scheduler, s.database).
+		WithExportService(s.cacheManager.ExportService).
+		WithMailer(s.mailer)
 	return registry.RegisterAll()
 }
 

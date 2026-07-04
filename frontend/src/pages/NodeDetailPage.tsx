@@ -14,6 +14,8 @@ import TrendChart, { type TimeRange, type DataPoint } from '@/components/dashboa
 import { fetchDiagnosis, fetchHistory, fetchLatestMTR, fetchMTRHistory, type DiagnosisResultDTO, type MTRResultData } from '@/api/data'
 import { fetchNodes } from '@/api/nodes'
 import MTRVisualization from '@/components/nodes/MTRVisualization'
+import MTRPathVisualization from '@/components/nodes/MTRPathVisualization'
+import type { MTRHop } from '@/components/nodes/MTRVisualization'
 
 function mapApiProblemToUi(problemType: string): ProblemType {
   switch (problemType) {
@@ -404,6 +406,21 @@ export default function NodeDetailPage() {
             isLoading={isLoadingMTR}
             error={mtrError}
           />
+
+          {/* G21: rich path visualization with risk-condition detection.
+               Rendered below the summary table; MTRHopData is structurally
+               identical to MTRHop, so the hop list casts cleanly. */}
+          {mtrData && mtrData.hops && mtrData.hops.length > 0 && (
+            <div className="mt-4">
+              <h4 className="mb-2 text-sm font-semibold text-foreground">
+                {t('mtr.pathVisualization', 'Path visualization & risk conditions')}
+              </h4>
+              <MTRPathVisualization
+                hops={mtrData.hops as unknown as MTRHop[]}
+                target={mtrData.target}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

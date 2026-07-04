@@ -4,10 +4,13 @@ package reporter
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"net/http"
 	"sync"
@@ -21,11 +24,39 @@ import (
 const (
 	// ReportInterval is the interval between heartbeat reports (60 seconds)
 	ReportInterval = 60 * time.Second
-	// MaxRetries is the maximum number of retry attempts for failed reports
-	MaxRetries = 3
+	// defaultMaxRetries is the default maximum number of retry attempts for failed reports
+	defaultMaxRetries = 3
 	// MaxUploadLatency is the maximum acceptable upload latency (NFR-PERF-001)
 	MaxUploadLatency = 5 * time.Second
 )
+
+// HeartbeatOutcomeListener is notified of heartbeat report outcomes. The Beacon's
+// config.ModeManager satisfies this to drive degraded-mode state transitions
+// (G16). Defined locally to avoid a reporter→config import cycle.
+type HeartbeatOutcomeListener interface {
+	RecordHeartbeatSuccess()
+	RecordHeartbeatFailure()
+}
+
+// ResumeCache stores heartbeat payloads that could not be delivered and replays
+// them once connectivity is restored (G18). reporter.PriorityCache satisfies this.
+type ResumeCache interface {
+	Add(entry *CacheEntry) error
+	Remove(id string) bool
+	GetAllEntriesForUpload() []*CacheEntry
+}
+
+// ResumeUploadRecorder records replayed bytes for Prometheus metrics (G18).
+type ResumeUploadRecorder interface {
+	RecordResumeUpload(bytes int64)
+}
+
+// emptyOutcomeListener is a no-op listener used when none is configured.
+type emptyOutcomeListener struct{}
+
+func (emptyOutcomeListener) RecordHeartbeatSuccess() {}
+func (emptyOutcomeListener) RecordHeartbeatFailure() {}
+
 
 // HeartbeatData represents the heartbeat data structure for reporting to Pulse
 type HeartbeatData struct {
@@ -45,10 +76,20 @@ type TokenProvider interface {
 
 // PulseAPIClient handles HTTP/HTTPS communication with Pulse server
 type PulseAPIClient struct {
-	serverURL  string
-	httpClient *http.Client
-	timeout    time.Duration
-	jwtClient  TokenProvider
+	serverURL        string
+	httpClient       *http.Client
+	timeout          time.Duration
+	jwtClient        TokenProvider
+	compressionOn    bool
+	compressionLevel int
+}
+
+// compressedHeartbeatRequest is the wire shape expected by Pulse's
+// POST /api/v1/beacon/heartbeat/compressed handler: base64(gzip(payload)) plus a
+// CRC32 checksum of the compressed bytes.
+type compressedHeartbeatRequest struct {
+	Data     string `json:"data"`
+	Checksum uint32 `json:"checksum"`
 }
 
 // ProbeScheduler interface for accessing probe results
@@ -67,6 +108,55 @@ type HeartbeatReporter struct {
 	wg        sync.WaitGroup
 	mu        sync.Mutex
 	reporting bool
+
+	// Retry behavior (G19). Defaults preserve the legacy 3-attempt exponential
+	// backoff when no ReconnectConfig is supplied.
+	maxRetries int
+	retryBase  time.Duration
+	backoff    string // "exponential" | "linear" | "constant"
+
+	// Optional collaborators (G16/G18). When nil, a no-op listener / no cache.
+	outcomeListener HeartbeatOutcomeListener
+	cache           ResumeCache
+	resumeRecorder  ResumeUploadRecorder
+}
+
+// ReporterOption configures a HeartbeatReporter.
+type ReporterOption func(*HeartbeatReporter)
+
+// WithReconnectConfig applies the Beacon's reconnect settings to retry behavior.
+// Zero-value fields fall back to safe defaults (G19).
+func WithReconnectConfig(maxRetries int, retryIntervalSeconds int, backoff string) ReporterOption {
+	return func(r *HeartbeatReporter) {
+		if maxRetries > 0 {
+			r.maxRetries = maxRetries
+		}
+		if retryIntervalSeconds > 0 {
+			r.retryBase = time.Duration(retryIntervalSeconds) * time.Second
+		}
+		if backoff == "exponential" || backoff == "linear" || backoff == "constant" {
+			r.backoff = backoff
+		}
+	}
+}
+
+// WithOutcomeListener wires a degraded-mode listener (G16).
+func WithOutcomeListener(l HeartbeatOutcomeListener) ReporterOption {
+	return func(r *HeartbeatReporter) {
+		if l != nil {
+			r.outcomeListener = l
+		}
+	}
+}
+
+// WithResumeCache wires the failed-payload cache + replay recorder (G18).
+func WithResumeCache(cache ResumeCache, recorder ResumeUploadRecorder) ReporterOption {
+	return func(r *HeartbeatReporter) {
+		r.cache = cache
+		if recorder != nil {
+			r.resumeRecorder = recorder
+		}
+	}
 }
 
 // NewHeartbeatData creates a new HeartbeatData with current timestamp
@@ -82,6 +172,16 @@ func NewHeartbeatData(nodeID string, latencyMs, packetLossRate, jitterMs float64
 
 // NewPulseAPIClient creates a new Pulse API client with TLS and JWT support
 func NewPulseAPIClient(serverURL string, timeout time.Duration, jwtClient TokenProvider) *PulseAPIClient {
+	return newPulseAPIClient(serverURL, timeout, jwtClient, false, 0)
+}
+
+// NewPulseAPIClientWithCompression creates a client that sends compressed
+// heartbeats when enabled (G17).
+func NewPulseAPIClientWithCompression(serverURL string, timeout time.Duration, jwtClient TokenProvider, level int) *PulseAPIClient {
+	return newPulseAPIClient(serverURL, timeout, jwtClient, true, level)
+}
+
+func newPulseAPIClient(serverURL string, timeout time.Duration, jwtClient TokenProvider, compressionOn bool, level int) *PulseAPIClient {
 	// Create HTTP client with TLS config
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{
@@ -104,21 +204,33 @@ func NewPulseAPIClient(serverURL string, timeout time.Duration, jwtClient TokenP
 	}
 
 	return &PulseAPIClient{
-		serverURL:  serverURL,
-		httpClient: httpClient,
-		timeout:    timeout,
-		jwtClient:  jwtClient,
+		serverURL:        serverURL,
+		httpClient:       httpClient,
+		timeout:          timeout,
+		jwtClient:        jwtClient,
+		compressionOn:    compressionOn,
+		compressionLevel: level,
 	}
 }
 
-// NewHeartbeatReporter creates a new HeartbeatReporter with probe scheduler integration
-func NewHeartbeatReporter(apiClient *PulseAPIClient, scheduler ProbeScheduler) *HeartbeatReporter {
-	return &HeartbeatReporter{
-		apiClient: apiClient,
-		nodeID:    apiClient.jwtClient.GetNodeID(),
-		scheduler: scheduler,
-		reporting: false,
+// NewHeartbeatReporter creates a new HeartbeatReporter with probe scheduler integration.
+// Optional behavior (reconnect config, degraded-mode listener, resume cache) can be
+// supplied via ReporterOption (G16/G18/G19).
+func NewHeartbeatReporter(apiClient *PulseAPIClient, scheduler ProbeScheduler, opts ...ReporterOption) *HeartbeatReporter {
+	r := &HeartbeatReporter{
+		apiClient:       apiClient,
+		nodeID:          apiClient.jwtClient.GetNodeID(),
+		scheduler:       scheduler,
+		reporting:       false,
+		maxRetries:      defaultMaxRetries,
+		retryBase:       1 * time.Second,
+		backoff:         "exponential",
+		outcomeListener: emptyOutcomeListener{},
 	}
+	for _, opt := range opts {
+		opt(r)
+	}
+	return r
 }
 
 // SendHeartbeat sends heartbeat data to Pulse server with JWT authentication
@@ -177,6 +289,74 @@ func (c *PulseAPIClient) SendHeartbeat(ctx context.Context, data *HeartbeatData)
 	}
 
 	logger.WithFields(map[string]interface{}{"component": "reporter", "latency": elapsed.String()}).Info("Heartbeat reported successfully")
+	return nil
+}
+
+// SendCompressedHeartbeat gzip-compresses the JSON payload and POSTs it to the
+// /api/v1/beacon/heartbeat/compressed endpoint (G17). The wire format matches
+// Pulse's HandleCompressedHeartbeat: { "data": base64(gzip(json)), "checksum": crc32(gzip) }.
+func (c *PulseAPIClient) SendCompressedHeartbeat(ctx context.Context, data *HeartbeatData) error {
+	startTime := time.Now()
+
+	accessToken, err := c.jwtClient.GetAccessToken(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get access token: %w", err)
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("failed to marshal heartbeat data: %w", err)
+	}
+
+	level := c.compressionLevel
+	if level < gzip.DefaultCompression || level > gzip.BestCompression {
+		level = gzip.DefaultCompression
+	}
+	gz, err := CompressWithLevel(jsonData, level)
+	if err != nil {
+		return fmt.Errorf("failed to compress heartbeat: %w", err)
+	}
+
+	checksum := crc32.ChecksumIEEE(gz)
+	body := compressedHeartbeatRequest{
+		Data:     base64.StdEncoding.EncodeToString(gz),
+		Checksum: checksum,
+	}
+	bodyBytes, err := json.Marshal(body)
+	if err != nil {
+		return fmt.Errorf("failed to marshal compressed request: %w", err)
+	}
+
+	url := c.serverURL + "/api/v1/beacon/heartbeat/compressed"
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(bodyBytes))
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to send request: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		c.jwtClient.InvalidateToken()
+		return fmt.Errorf("authentication failed: invalid or expired token")
+	}
+
+	elapsed := time.Since(startTime)
+	if resp.StatusCode != http.StatusOK {
+		respBody, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("pulse API returned error %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	if elapsed > MaxUploadLatency {
+		logger.WithFields(map[string]interface{}{"component": "reporter", "latency": elapsed.String(), "threshold": MaxUploadLatency.String()}).Warn("Compressed heartbeat upload latency exceeds requirement")
+	}
+
+	logger.WithFields(map[string]interface{}{"component": "reporter", "latency": elapsed.String(), "original_bytes": len(jsonData), "compressed_bytes": len(gz)}).Info("Compressed heartbeat reported successfully")
 	return nil
 }
 
@@ -286,28 +466,123 @@ func (r *HeartbeatReporter) StopReporting() {
 	r.wg.Wait()
 }
 
-// reportWithRetry sends heartbeat with retry mechanism (max 3 retries, exponential backoff)
+// reportWithRetry sends heartbeat with retry mechanism. Behavior:
+//   - G18: on a fresh report, first drain any cached payloads from prior failures.
+//   - G19: retry count and backoff follow the configured ReconnectConfig.
+//   - G16: on terminal success/failure the outcome listener is notified (mode manager).
+//   - G18: on terminal failure the payload is cached for later replay (when a cache is wired).
 func (r *HeartbeatReporter) reportWithRetry() {
+	// Replay previously failed payloads before sending the fresh heartbeat.
+	r.drainCache()
+
 	// Get latest probe results from scheduler
 	tcpResults, udpResults := r.scheduler.GetLatestResults()
 
 	// Aggregate metrics from actual probe results
 	data := r.AggregateMetrics(tcpResults, udpResults)
+	payload, err := json.Marshal(data)
+	if err != nil {
+		logger.WithFields(map[string]interface{}{"component": "reporter", "error": err.Error()}).Error("Failed to marshal heartbeat for caching")
+		payload = nil
+	}
 
-	for attempt := 0; attempt < MaxRetries; attempt++ {
-		err := r.apiClient.SendHeartbeat(r.ctx, data)
+	for attempt := 0; attempt < r.maxRetries; attempt++ {
+		err := r.send(data)
 		if err == nil {
+			r.outcomeListener.RecordHeartbeatSuccess()
 			return // Success
 		}
 
-		logger.WithFields(map[string]interface{}{"component": "reporter", "attempt": attempt + 1, "max_retries": MaxRetries, "error": err.Error()}).Error("Heartbeat report failed")
+		logger.WithFields(map[string]interface{}{"component": "reporter", "attempt": attempt + 1, "max_retries": r.maxRetries, "error": err.Error()}).Error("Heartbeat report failed")
 
-		if attempt < MaxRetries-1 {
-			// Exponential backoff: 1s, 2s, 4s
-			backoff := time.Duration(1<<uint(attempt)) * time.Second
-			time.Sleep(backoff)
+		if attempt < r.maxRetries-1 {
+			time.Sleep(r.computeBackoff(attempt))
 		}
 	}
 
-	logger.WithFields(map[string]interface{}{"component": "reporter", "attempts": MaxRetries}).Error("Heartbeat report failed after retries, giving up")
+	logger.WithFields(map[string]interface{}{"component": "reporter", "attempts": r.maxRetries}).Error("Heartbeat report failed after retries, giving up")
+	r.outcomeListener.RecordHeartbeatFailure()
+	r.cacheFailedPayload(payload, data.Timestamp)
+}
+
+// send dispatches the heartbeat via the compressed or plain endpoint.
+func (r *HeartbeatReporter) send(data *HeartbeatData) error {
+	if r.apiClient.compressionOn {
+		return r.apiClient.SendCompressedHeartbeat(r.ctx, data)
+	}
+	return r.apiClient.SendHeartbeat(r.ctx, data)
+}
+
+// computeBackoff returns the backoff for a given 0-based attempt based on the
+// configured strategy (G19).
+func (r *HeartbeatReporter) computeBackoff(attempt int) time.Duration {
+	switch r.backoff {
+	case "linear":
+		return r.retryBase * time.Duration(attempt+1)
+	case "constant":
+		return r.retryBase
+	default: // "exponential" (also the fallback for unknown/empty)
+		return r.retryBase * time.Duration(1<<uint(attempt))
+	}
+}
+
+// drainCache replays cached failed payloads once connectivity is restored (G18).
+func (r *HeartbeatReporter) drainCache() {
+	if r.cache == nil {
+		return
+	}
+	entries := r.cache.GetAllEntriesForUpload()
+	for _, entry := range entries {
+		if err := r.replayEntry(entry); err != nil {
+			logger.WithFields(map[string]interface{}{"component": "reporter", "cache_id": entry.ID, "error": err.Error()}).Warn("Failed to drain cached heartbeat; stopping drain")
+			return
+		}
+		r.cache.Remove(entry.ID)
+		if r.resumeRecorder != nil {
+			r.resumeRecorder.RecordResumeUpload(int64(len(entry.Data)))
+		}
+	}
+}
+
+// replayEntry re-POSTs a cached payload. The cache stores raw HeartbeatData JSON.
+func (r *HeartbeatReporter) replayEntry(entry *CacheEntry) error {
+	var data HeartbeatData
+	if err := json.Unmarshal(entry.Data, &data); err != nil {
+		return fmt.Errorf("decode cached payload: %w", err)
+	}
+	// Send up to 3 attempts; this is best-effort drain, not the full retry policy.
+	for attempt := 0; attempt < defaultMaxRetries; attempt++ {
+		if err := r.send(&data); err == nil {
+			return nil
+		} else if attempt == defaultMaxRetries-1 {
+			return err
+		}
+		time.Sleep(r.computeBackoff(attempt))
+	}
+	return fmt.Errorf("drain failed")
+}
+
+// cacheFailedPayload stores the payload that could not be delivered (G18). Heartbeat
+// payloads use CacheP2 (P1 is rejected by the cache by design).
+func (r *HeartbeatReporter) cacheFailedPayload(payload []byte, timestamp string) {
+	if r.cache == nil || len(payload) == 0 {
+		return
+	}
+	ts, err := time.Parse(time.RFC3339, timestamp)
+	if err != nil {
+		ts = time.Now()
+	}
+	entry := &CacheEntry{
+		ID:        r.nodeID + "-" + timestamp,
+		Priority:  CacheP2,
+		Data:      payload,
+		Checksum:  crc32.ChecksumIEEE(payload),
+		Size:      int64(len(payload)),
+		Timestamp: ts,
+	}
+	if err := r.cache.Add(entry); err != nil {
+		logger.WithFields(map[string]interface{}{"component": "reporter", "error": err.Error()}).Warn("Failed to cache failed heartbeat payload")
+	} else {
+		logger.WithField("component", "reporter").Info("Cached failed heartbeat payload for later replay")
+	}
 }
