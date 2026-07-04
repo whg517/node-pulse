@@ -218,10 +218,11 @@ npm run report       # HTML report
 
 ### Production stack (recommended)
 
-A single `docker-compose.prod.yml` brings up PostgreSQL + Pulse. The frontend
-is **embedded into the Pulse binary** (`//go:embed`), so one container serves
-both the SPA and the API — there is no separate frontend or nginx container.
-Beacon agents are deployed separately on each monitored node (`beacon/Dockerfile`).
+A single `deploy/docker/docker-compose.prod.yml` brings up PostgreSQL + Pulse.
+The frontend is **embedded into the Pulse binary** (`//go:embed`), so one
+container serves both the SPA and the API — there is no separate frontend or
+nginx container. Beacon agents are deployed separately on each monitored node
+(`beacon/Dockerfile`).
 
 ```bash
 # 1. Configure secrets (copy and edit)
@@ -232,7 +233,7 @@ cp .env.example .env
 #    - set PULSE_SERVER_BASE_URL to the externally reachable URL
 
 # 2. Build and start the whole stack
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f deploy/docker/docker-compose.prod.yml up -d --build
 
 # App (SPA + API):  http://localhost:6532   (Swagger at /swagger/index.html in debug)
 ```

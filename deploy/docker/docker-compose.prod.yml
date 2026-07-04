@@ -7,9 +7,9 @@
 # Beacon agents are deployed separately on each monitored node (see
 # beacon/Dockerfile); they report into the pulse service over the network.
 #
-# Usage:
+# Usage (run from the repository root):
 #   cp .env.example .env   # then edit secrets
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose -f deploy/docker/docker-compose.prod.yml up -d --build
 #
 # Override any PULSE_* / POSTGRES_* value via the shell environment or .env.
 
@@ -34,9 +34,10 @@ services:
 
   pulse:
     build:
-      # Context is the repo root because the Dockerfile builds the frontend
-      # (../frontend) and embeds it into the Go binary.
-      context: .
+      # Context is the repo root (two levels up from deploy/docker/) because
+      # the Dockerfile builds the frontend (../frontend) and embeds it into
+      # the Go binary. dockerfile is resolved relative to that context.
+      context: ../..
       dockerfile: pulse/Dockerfile
     restart: unless-stopped
     depends_on:

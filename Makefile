@@ -78,7 +78,7 @@ docker-build: ## Build the production images (pulse embeds the frontend)
 	docker build -t node-pulse-beacon -f beacon/Dockerfile ./beacon
 
 docker-up: ## Start the production stack (requires .env; see .env.example)
-	docker compose -f docker-compose.prod.yml up -d --build
+	docker compose -f deploy/docker/docker-compose.prod.yml up -d --build
 
 docker-down: ## Stop the production stack
-	docker compose -f docker-compose.prod.yml down
+	docker compose -f deploy/docker/docker-compose.prod.yml down

@@ -5,12 +5,14 @@ on:
     paths:
       - .github/workflows/**
       - beacon/**
+      - deploy/**
       - frontend/**
       - pulse/**
   pull_request:
     paths:
       - .github/workflows/**
       - beacon/**
+      - deploy/**
       - frontend/**
       - pulse/**
   workflow_dispatch:
@@ -55,6 +57,7 @@ jobs:
               - '**/Dockerfile.*'
               - '**/*.dockerfile'
               - 'docker-compose*.yml'
+              - 'deploy/docker/**'
               - 'frontend/nginx.conf'
 
   beacon:
