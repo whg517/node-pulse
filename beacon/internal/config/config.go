@@ -413,6 +413,26 @@ func applyEnvOverrides(config *Config, v *viper.Viper) {
 	if v.IsSet("resume.alert_reserve_percent") {
 		config.Resume.AlertReservePercent = v.GetInt("resume.alert_reserve_percent")
 	}
+
+	// Telemetry overrides — BEACON_TELEMETRY_* (aligns with Pulse's
+	// PULSE_TELEMETRY_* coverage; ADR-004 contract 2). Previously telemetry was
+	// file-only, which made env-only deployments (e.g. containerized beacons)
+	// unable to enable tracing without mounting a YAML file.
+	if v.IsSet("telemetry.enabled") {
+		config.Telemetry.Enabled = v.GetBool("telemetry.enabled")
+	}
+	if v.IsSet("telemetry.service_name") {
+		config.Telemetry.ServiceName = v.GetString("telemetry.service_name")
+	}
+	if v.IsSet("telemetry.service_version") {
+		config.Telemetry.ServiceVersion = v.GetString("telemetry.service_version")
+	}
+	if v.IsSet("telemetry.otlp_endpoint") {
+		config.Telemetry.OTLPEndpoint = v.GetString("telemetry.otlp_endpoint")
+	}
+	if v.IsSet("telemetry.sampling_rate") {
+		config.Telemetry.SamplingRate = v.GetFloat64("telemetry.sampling_rate")
+	}
 }
 
 // resolveConfigPath resolves config file path with fallback

@@ -343,11 +343,60 @@ NodeID:      "test-node",
 NodeName:    "Test Node",
 MetricsPort: 2112,
 MetricsUpdateSeconds: 10,
-LogLevel:    "INVALID",  // Invalid level
-LogFile:     "/tmp/beacon.log",
+	LogLevel:    "INVALID",  // Invalid level
+	LogFile:     "/tmp/beacon.log",
+	}
+
+	if err := cfg.Validate(); err == nil {
+		t.Error("Expected error for invalid log config")
+	}
 }
 
-if err := cfg.Validate(); err == nil {
-t.Error("Expected error for invalid log config")
-}
+// TestLoadConfig_TelemetryEnvOverrides verifies BEACON_TELEMETRY_* env vars
+// override the telemetry section (ADR-004 contract 2). Previously telemetry was
+// file-only, which made env-only deployments unable to enable tracing.
+func TestLoadConfig_TelemetryEnvOverrides(t *testing.T) {
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "beacon.yaml")
+	// Minimal valid config; telemetry intentionally absent from the file.
+	configContent := `
+pulse_server: "http://localhost:6532"
+node_id: "tel-test"
+node_name: "Telemetry Test"
+telemetry:
+  enabled: false
+  service_name: "from-file"
+  sampling_rate: 1.0
+`
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("Failed to write test config: %v", err)
+	}
+
+	// Env overrides (these must win over the file values above).
+	t.Setenv("BEACON_TELEMETRY_ENABLED", "true")
+	t.Setenv("BEACON_TELEMETRY_SERVICE_NAME", "from-env")
+	t.Setenv("BEACON_TELEMETRY_SERVICE_VERSION", "1.2.3")
+	t.Setenv("BEACON_TELEMETRY_OTLP_ENDPOINT", "collector:4317")
+	t.Setenv("BEACON_TELEMETRY_SAMPLING_RATE", "0.25")
+
+	cfg, err := LoadConfig(configPath)
+	if err != nil {
+		t.Fatalf("LoadConfig failed: %v", err)
+	}
+
+	if !cfg.Telemetry.Enabled {
+		t.Error("Expected telemetry.enabled to be overridden to true by env")
+	}
+	if cfg.Telemetry.ServiceName != "from-env" {
+		t.Errorf("Expected telemetry.service_name 'from-env', got %q", cfg.Telemetry.ServiceName)
+	}
+	if cfg.Telemetry.ServiceVersion != "1.2.3" {
+		t.Errorf("Expected telemetry.service_version '1.2.3', got %q", cfg.Telemetry.ServiceVersion)
+	}
+	if cfg.Telemetry.OTLPEndpoint != "collector:4317" {
+		t.Errorf("Expected telemetry.otlp_endpoint 'collector:4317', got %q", cfg.Telemetry.OTLPEndpoint)
+	}
+	if cfg.Telemetry.SamplingRate != 0.25 {
+		t.Errorf("Expected telemetry.sampling_rate 0.25, got %f", cfg.Telemetry.SamplingRate)
+	}
 }
