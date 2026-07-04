@@ -89,8 +89,29 @@ session:
 # JWT Configuration
 # ==================================
 jwt:
-  secret: ""                # JWT secret (auto-generated if empty)
-  expiration_hours: 24      # JWT expiration time in hours
+  secret: ""                              # Legacy HMAC secret (auto-generated if empty;
+                                          # ignored when private_key/public_key are set)
+  private_key: ""                         # RSA private key PEM (auto-generated if empty)
+  public_key: ""                          # RSA public key PEM (auto-generated if empty)
+  access_token_expiration_minutes: 15     # Access token lifetime (minutes)
+  refresh_token_expiration_days: 7        # Refresh token lifetime (days)
+  refresh_token_max_validity_days: 30     # Absolute cap on refresh token validity (days)
+  key_id: ""                              # JWT "kid" header (auto-generated if empty)
+
+# ==================================
+# Notify (Email / SMTP) Configuration
+# ==================================
+# Outbound email for password reset, report delivery, and alert notifications.
+# When smtp.host is empty the system uses a log-only NoopSender (no mail sent).
+notify:
+  smtp:
+    host: ""                # SMTP server host, e.g. "smtp.example.com"
+    port: 587               # SMTP server port (587 STARTTLS, 465 SSL)
+    username: ""            # SMTP auth username
+    password: ""            # SMTP auth password
+    from: ""                # "From" address, e.g. "NodePulse <noreply@example.com>"
+  password_reset_url: ""    # Public frontend URL for password-reset links,
+                            # e.g. "https://app.example.com/reset-password"
 
 # ==================================
 # Rate Limit Configuration

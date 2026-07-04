@@ -8,49 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestParseInt64 tests parseInt64 helper
-func TestParseInt64(t *testing.T) {
-	tests := []struct {
-		input    string
-		def      int64
-		expected int64
-	}{
-		{"100", 0, 100},
-		{"0", 5, 0},
-		{"-1", 0, -1},
-		{"invalid", 42, 42},
-		{"", 10, 10},
-		{"9223372036854775807", 0, 9223372036854775807}, // max int64
-	}
-
-	for _, tt := range tests {
-		result := parseInt64(tt.input, tt.def)
-		assert.Equal(t, tt.expected, result, "parseInt64(%q, %d)", tt.input, tt.def)
-	}
-}
-
-// TestParseBool tests parseBool helper
-func TestParseBool(t *testing.T) {
-	trueValues := []string{"true", "1", "yes", "on", "TRUE", "True", "YES", "ON"}
-	falseValues := []string{"false", "0", "no", "off", "FALSE", "False", "NO", "OFF"}
-
-	for _, v := range trueValues {
-		assert.True(t, parseBool(v, false), "parseBool(%q) should be true", v)
-	}
-
-	for _, v := range falseValues {
-		assert.False(t, parseBool(v, true), "parseBool(%q) should be false", v)
-	}
-
-	// Empty string should return default
-	assert.True(t, parseBool("", true))
-	assert.False(t, parseBool("", false))
-
-	// Unknown value returns false (not true/1/yes/on)
-	assert.False(t, parseBool("unknown", false))
-	assert.False(t, parseBool("unknown", true))
-}
-
 // TestConfig_String tests Config.String()
 func TestConfig_String(t *testing.T) {
 	cfg := &Config{

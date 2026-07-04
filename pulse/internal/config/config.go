@@ -9,146 +9,146 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
 
 // Config holds all application configuration
 type Config struct {
-	Server    ServerConfig    `yaml:"server"`
-	DB        DatabaseConfig  `yaml:"database"`
-	Cleanup   CleanupConfig   `yaml:"cleanup"`
-	Log       LogConfig       `yaml:"log"`
-	CORS      CORSConfig      `yaml:"cors"`
-	Admin     AdminConfig     `yaml:"admin"`
-	Session   SessionConfig   `yaml:"session"`
-	JWT       JWTConfig       `yaml:"jwt"`
-	RateLimit RateLimitConfig `yaml:"rate_limit"`
-	Telemetry TelemetryConfig `yaml:"telemetry"`
-	Notify    NotifyConfig    `yaml:"notify"`
+	Server    ServerConfig    `yaml:"server" mapstructure:"server"`
+	DB        DatabaseConfig  `yaml:"database" mapstructure:"database"`
+	Cleanup   CleanupConfig   `yaml:"cleanup" mapstructure:"cleanup"`
+	Log       LogConfig       `yaml:"log" mapstructure:"log"`
+	CORS      CORSConfig      `yaml:"cors" mapstructure:"cors"`
+	Admin     AdminConfig     `yaml:"admin" mapstructure:"admin"`
+	Session   SessionConfig   `yaml:"session" mapstructure:"session"`
+	JWT       JWTConfig       `yaml:"jwt" mapstructure:"jwt"`
+	RateLimit RateLimitConfig `yaml:"rate_limit" mapstructure:"rate_limit"`
+	Telemetry TelemetryConfig `yaml:"telemetry" mapstructure:"telemetry"`
+	Notify    NotifyConfig    `yaml:"notify" mapstructure:"notify"`
 }
 
 // TelemetryConfig holds OpenTelemetry / distributed-tracing configuration.
 type TelemetryConfig struct {
 	// Enabled controls whether distributed tracing is active.
-	Enabled bool `yaml:"enabled"`
+	Enabled bool `yaml:"enabled" mapstructure:"enabled"`
 
 	// ServiceName is the logical service name reported in traces (default: "pulse").
-	ServiceName string `yaml:"service_name"`
+	ServiceName string `yaml:"service_name" mapstructure:"service_name"`
 
 	// ServiceVersion is the deployed version string (default: "unknown").
-	ServiceVersion string `yaml:"service_version"`
+	ServiceVersion string `yaml:"service_version" mapstructure:"service_version"`
 
 	// Environment is the deployment environment, e.g. "production", "staging", "development".
-	Environment string `yaml:"environment"`
+	Environment string `yaml:"environment" mapstructure:"environment"`
 
 	// OTLPEndpoint is the gRPC address of an OTLP-compatible collector,
 	// e.g. "localhost:4317".  When empty, traces are written to stdout.
-	OTLPEndpoint string `yaml:"otlp_endpoint"`
+	OTLPEndpoint string `yaml:"otlp_endpoint" mapstructure:"otlp_endpoint"`
 
 	// SamplingRate controls what fraction of requests are traced (0.0 – 1.0, default 1.0).
-	SamplingRate float64 `yaml:"sampling_rate"`
+	SamplingRate float64 `yaml:"sampling_rate" mapstructure:"sampling_rate"`
 }
 
 // ServerConfig holds server configuration
 type ServerConfig struct {
-	Port         string `yaml:"port"`
-	ReadTimeout  int    `yaml:"read_timeout"`
-	WriteTimeout int    `yaml:"write_timeout"`
-	IdleTimeout  int    `yaml:"idle_timeout"`
-	Mode         string `yaml:"mode"`
+	Port         string `yaml:"port" mapstructure:"port"`
+	ReadTimeout  int    `yaml:"read_timeout" mapstructure:"read_timeout"`
+	WriteTimeout int    `yaml:"write_timeout" mapstructure:"write_timeout"`
+	IdleTimeout  int    `yaml:"idle_timeout" mapstructure:"idle_timeout"`
+	Mode         string `yaml:"mode" mapstructure:"mode"`
 	// BaseURL is the externally reachable URL of this Pulse instance (no trailing
 	// slash), used to render absolute links in webhook payloads and exported data.
 	// Defaults to http://localhost:<port> for local development.
-	BaseURL string `yaml:"base_url"`
+	BaseURL string `yaml:"base_url" mapstructure:"base_url"`
 }
 
 // DatabaseConfig holds database configuration
 type DatabaseConfig struct {
-	URL             string `yaml:"url"`
-	MaxConnections  int    `yaml:"max_connections"`
-	MinConnections  int    `yaml:"min_connections"`
-	ConnMaxLifetime int    `yaml:"conn_max_lifetime"`
-	ConnMaxIdleTime int    `yaml:"conn_max_idle_time"`
+	URL             string `yaml:"url" mapstructure:"url"`
+	MaxConnections  int    `yaml:"max_connections" mapstructure:"max_connections"`
+	MinConnections  int    `yaml:"min_connections" mapstructure:"min_connections"`
+	ConnMaxLifetime int    `yaml:"conn_max_lifetime" mapstructure:"conn_max_lifetime"`
+	ConnMaxIdleTime int    `yaml:"conn_max_idle_time" mapstructure:"conn_max_idle_time"`
 }
 
 // CleanupConfig holds cleanup task configuration
 type CleanupConfig struct {
-	Enabled         bool  `yaml:"enabled"`
-	IntervalSeconds int   `yaml:"interval_seconds"`
-	RetentionDays   int   `yaml:"retention_days"`
-	SlowThresholdMs int64 `yaml:"slow_threshold_ms"`
+	Enabled         bool  `yaml:"enabled" mapstructure:"enabled"`
+	IntervalSeconds int   `yaml:"interval_seconds" mapstructure:"interval_seconds"`
+	RetentionDays   int   `yaml:"retention_days" mapstructure:"retention_days"`
+	SlowThresholdMs int64 `yaml:"slow_threshold_ms" mapstructure:"slow_threshold_ms"`
 }
 
 // LogConfig holds logging configuration
 type LogConfig struct {
-	Level  string `yaml:"level"`
-	Format string `yaml:"format"`
-	Output string `yaml:"output"`
+	Level  string `yaml:"level" mapstructure:"level"`
+	Format string `yaml:"format" mapstructure:"format"`
+	Output string `yaml:"output" mapstructure:"output"`
 }
 
 // CORSConfig holds CORS configuration
 type CORSConfig struct {
-	AllowedOrigins string `yaml:"allowed_origins"`
-	AllowedMethods string `yaml:"allowed_methods"`
-	AllowedHeaders string `yaml:"allowed_headers"`
-	MaxAge         int    `yaml:"max_age"`
+	AllowedOrigins string `yaml:"allowed_origins" mapstructure:"allowed_origins"`
+	AllowedMethods string `yaml:"allowed_methods" mapstructure:"allowed_methods"`
+	AllowedHeaders string `yaml:"allowed_headers" mapstructure:"allowed_headers"`
+	MaxAge         int    `yaml:"max_age" mapstructure:"max_age"`
 }
 
 // AdminConfig holds admin user configuration
 type AdminConfig struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Username string `yaml:"username" mapstructure:"username"`
+	Password string `yaml:"password" mapstructure:"password"`
 }
 
 // SessionConfig holds session configuration
 type SessionConfig struct {
-	Secret          string `yaml:"secret"`
-	ExpirationHours int    `yaml:"expiration_hours"`
-	CookieSecure    bool   `yaml:"cookie_secure"`
-	CookieSameSite  string `yaml:"cookie_samesite"`
+	Secret          string `yaml:"secret" mapstructure:"secret"`
+	ExpirationHours int    `yaml:"expiration_hours" mapstructure:"expiration_hours"`
+	CookieSecure    bool   `yaml:"cookie_secure" mapstructure:"cookie_secure"`
+	CookieSameSite  string `yaml:"cookie_samesite" mapstructure:"cookie_samesite"`
 }
 
 // JWTConfig holds JWT configuration
 type JWTConfig struct {
-	Secret                       string `yaml:"secret"`
-	PrivateKey                   string `yaml:"private_key"`
-	PublicKey                    string `yaml:"public_key"`
-	AccessTokenExpirationMinutes int    `yaml:"access_token_expiration_minutes"`
-	RefreshTokenExpirationDays   int    `yaml:"refresh_token_expiration_days"`
-	RefreshTokenMaxValidityDays  int    `yaml:"refresh_token_max_validity_days"`
-	KeyID                        string `yaml:"key_id"`
+	Secret                       string `yaml:"secret" mapstructure:"secret"`
+	PrivateKey                   string `yaml:"private_key" mapstructure:"private_key"`
+	PublicKey                    string `yaml:"public_key" mapstructure:"public_key"`
+	AccessTokenExpirationMinutes int    `yaml:"access_token_expiration_minutes" mapstructure:"access_token_expiration_minutes"`
+	RefreshTokenExpirationDays   int    `yaml:"refresh_token_expiration_days" mapstructure:"refresh_token_expiration_days"`
+	RefreshTokenMaxValidityDays  int    `yaml:"refresh_token_max_validity_days" mapstructure:"refresh_token_max_validity_days"`
+	KeyID                        string `yaml:"key_id" mapstructure:"key_id"`
 }
 
 // RateLimitConfig holds rate limiting configuration for auth endpoints
 type RateLimitConfig struct {
-	LoginMaxPerMinute   int `yaml:"login_max_per_minute"`
-	LoginMaxPerDay      int `yaml:"login_max_per_day"`
-	RefreshMaxPerMinute int `yaml:"refresh_max_per_minute"`
-	RefreshMaxPerDay    int `yaml:"refresh_max_per_day"`
-	APIKeyMaxPerMinute  int `yaml:"apikey_max_per_minute"`
+	LoginMaxPerMinute   int `yaml:"login_max_per_minute" mapstructure:"login_max_per_minute"`
+	LoginMaxPerDay      int `yaml:"login_max_per_day" mapstructure:"login_max_per_day"`
+	RefreshMaxPerMinute int `yaml:"refresh_max_per_minute" mapstructure:"refresh_max_per_minute"`
+	RefreshMaxPerDay    int `yaml:"refresh_max_per_day" mapstructure:"refresh_max_per_day"`
+	APIKeyMaxPerMinute  int `yaml:"apikey_max_per_minute" mapstructure:"apikey_max_per_minute"`
 }
 
 // NotifyConfig holds outbound-email (SMTP) configuration plus the public
 // frontend URL used to build links embedded in emails (password reset, etc.).
 // When SMTP.Host is empty the system uses a log-only NoopSender.
 type NotifyConfig struct {
-	SMTP             SMTPConfig `yaml:"smtp"`
-	PasswordResetURL string     `yaml:"password_reset_url"` // e.g. https://app.example.com/reset-password
+	SMTP             SMTPConfig `yaml:"smtp" mapstructure:"smtp"`
+	PasswordResetURL string     `yaml:"password_reset_url" mapstructure:"password_reset_url"` // e.g. https://app.example.com/reset-password
 }
 
 // SMTPConfig holds SMTP transport settings. Mirrors notify.SMTPConfig but kept
 // here so the config layer has no dependency on the notify package.
 type SMTPConfig struct {
-	Host     string `yaml:"host"`
-	Port     int    `yaml:"port"`
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
-	From     string `yaml:"from"`
+	Host     string `yaml:"host" mapstructure:"host"`
+	Port     int    `yaml:"port" mapstructure:"port"`
+	Username string `yaml:"username" mapstructure:"username"`
+	Password string `yaml:"password" mapstructure:"password"`
+	From     string `yaml:"from" mapstructure:"from"`
 }
 
 var (
@@ -184,25 +184,49 @@ func Get() *Config {
 	return globalConfig
 }
 
-// loadConfig implements the configuration loading logic
+// loadConfig implements the configuration loading logic.
+//
+// Pipeline: defaults → config file (via Viper, overrides defaults) → environment
+// variables (Viper AutomaticEnv, overrides file) → secret generation → derived
+// values → validation. See ADR-004 for the contract.
 func loadConfig() (*Config, error) {
-	// Start with defaults
+	// Start with defaults. Viper merges file + env onto this via Unmarshal.
 	cfg := defaultConfig()
 
-	// Load from config file if exists (merged onto defaults)
-	if err := loadFromFile(cfg); err != nil {
-		return nil, fmt.Errorf("failed to load config file: %w", err)
+	// Locate the config file (if any). A missing file is not an error — env vars
+	// and defaults still apply.
+	configPath, found := findConfigFile()
+	if found {
+		// Strict YAML check FIRST: reject unknown fields with a precise yaml.v3
+		// error before Viper's lenient parse silently drops them. This preserves
+		// the KnownFields(true) behavior callers rely on.
+		if err := strictYAMLCheck(configPath); err != nil {
+			return nil, fmt.Errorf("failed to parse YAML from %s: %w", configPath, err)
+		}
 	}
 
-	// Override with environment variables
-	cfg = mergeFromEnv(cfg)
+	// Always run Viper so environment variables override defaults even when no
+	// config file is present. When a file exists it contributes the middle layer
+	// (defaults < file < env).
+	if err := loadWithViper(cfg, configPath, found); err != nil {
+		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
 
-	// Auto-generate secrets if needed
+	// Normalize BaseURL (strip trailing slash) regardless of source.
+	cfg.Server.BaseURL = strings.TrimRight(cfg.Server.BaseURL, "/")
+
+	// Auto-generate secrets if needed.
 	if err := generateSecrets(cfg); err != nil {
 		return nil, fmt.Errorf("failed to generate secrets: %w", err)
 	}
 
-	// Validate final configuration
+	// Derive CookieSecure from Mode when not explicitly set. Mirrors the previous
+	// mergeFromEnv post-processing step.
+	if !cfg.Session.CookieSecure {
+		cfg.Session.CookieSecure = cfg.IsProduction()
+	}
+
+	// Validate final configuration.
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
 	}
@@ -210,44 +234,98 @@ func loadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// loadFromFile attempts to load configuration from YAML file.
-// Search order: PULSE_CONFIG_PATH env var → ./pulse.yaml → /etc/node-pulse/pulse.yaml
-// Returns nil if no file found (not an error)
-func loadFromFile(cfg *Config) error {
-	var configPaths []string
+// findConfigFile resolves the config file path per ADR-004 contract 3:
+// PULSE_CONFIG_PATH env var → ./pulse.yaml → /etc/node-pulse/pulse.yaml.
+// Returns the path and true when a file exists, "" and false otherwise.
+func findConfigFile() (string, bool) {
+	candidates := []string{}
+	if p := os.Getenv("PULSE_CONFIG_PATH"); p != "" {
+		candidates = append(candidates, p)
+	}
+	candidates = append(candidates, "./pulse.yaml", "/etc/node-pulse/pulse.yaml")
+	for _, p := range candidates {
+		if info, err := os.Stat(p); err == nil && !info.IsDir() {
+			return p, true
+		}
+	}
+	return "", false
+}
 
-	// Check PULSE_CONFIG_PATH environment variable first
-	if configPath := os.Getenv("PULSE_CONFIG_PATH"); configPath != "" {
-		configPaths = append(configPaths, configPath)
+// strictYAMLCheck re-decodes the file with yaml.v3 KnownFields(true) to reject
+// unknown/misspelled keys. Viper's own parse is lenient and would silently drop
+// them, so this keeps the strict contract (and its tests) intact.
+func strictYAMLCheck(path string) error {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("failed to read config file %s: %w", path, err)
+	}
+	probe := defaultConfig()
+	dec := yaml.NewDecoder(bytes.NewReader(data))
+	dec.KnownFields(true)
+	if err := dec.Decode(probe); err != nil {
+		return err
+	}
+	return nil
+}
+
+// loadWithViper wires PULSE_<SECTION>_<FIELD> env-var binding via AutomaticEnv
+// and unmarshals onto cfg (which already holds defaults). When hasFile is true
+// the YAML file contributes the middle layer (defaults < file < env); when
+// false, only defaults and env vars apply.
+//
+// The defaults are re-applied through v.SetDefault so Viper is aware of every
+// key — this is what lets AutomaticEnv override values that are never mentioned
+// in the config file (Viper only consults the env for keys it already knows).
+func loadWithViper(cfg *Config, configPath string, hasFile bool) error {
+	v := viper.New()
+	v.SetConfigType("yaml")
+	v.SetEnvPrefix("PULSE")
+	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	v.AutomaticEnv()
+
+	// Backwards-compat env aliases: the original hand-written binding used a few
+	// shortened names that do not match the mapstructure tag (from which
+	// AutomaticEnv derives the canonical env var). BindEnv wires the legacy name
+	// to the canonical key so existing deployments keep working; the canonical
+	// name continues to work too. See ADR-004 contract 2.
+	v.BindEnv("cleanup.interval_seconds", "PULSE_CLEANUP_INTERVAL_SECONDS", "PULSE_CLEANUP_INTERVAL")    //nolint:errcheck // alias best-effort
+	v.BindEnv("cleanup.slow_threshold_ms", "PULSE_CLEANUP_SLOW_THRESHOLD_MS", "PULSE_CLEANUP_SLOW_THRESHOLD") //nolint:errcheck // alias best-effort
+
+	// Register defaults through Viper so AutomaticEnv can override them. The
+	// defaults must arrive as a map keyed by the mapstructure tags.
+	defaultMap, err := structToMap(defaultConfig())
+	if err != nil {
+		return fmt.Errorf("failed to encode config defaults: %w", err)
+	}
+	for key, value := range defaultMap {
+		v.SetDefault(key, value)
 	}
 
-	// Check current working directory
-	configPaths = append(configPaths, "./pulse.yaml")
-
-	// Check system-wide config directory
-	configPaths = append(configPaths, "/etc/node-pulse/pulse.yaml")
-
-	// Try each path
-	for _, path := range configPaths {
-		if _, err := os.Stat(path); err == nil {
-			// File exists, try to load it
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return fmt.Errorf("failed to read config file %s: %w", path, err)
-			}
-
-			decoder := yaml.NewDecoder(bytes.NewReader(data))
-			decoder.KnownFields(true)
-			if err := decoder.Decode(cfg); err != nil {
-				return fmt.Errorf("failed to parse YAML from %s: %w", path, err)
-			}
-
-			return nil
+	if hasFile {
+		v.SetConfigFile(configPath)
+		if err := v.ReadInConfig(); err != nil {
+			return err
 		}
 	}
 
-	// No config file found - this is OK, will use env vars and defaults
+	if err := v.Unmarshal(cfg); err != nil {
+		return fmt.Errorf("failed to unmarshal config: %w", err)
+	}
 	return nil
+}
+
+// structToMap converts a *Config into the flat map[string]any form Viper's
+// SetDefault expects (lowercased, dot-separated keys, e.g. "server.port").
+func structToMap(c *Config) (map[string]any, error) {
+	data, err := yaml.Marshal(c)
+	if err != nil {
+		return nil, err
+	}
+	m := map[string]any{}
+	if err := yaml.Unmarshal(data, m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // generateSecrets auto-generates secrets if not provided
@@ -290,11 +368,11 @@ func generateSecrets(cfg *Config) error {
 
 // generateRandomSecret generates a cryptographically secure random secret
 func generateRandomSecret(length int) (string, error) {
-	bytes := make([]byte, length)
-	if _, err := rand.Read(bytes); err != nil {
+	b := make([]byte, length)
+	if _, err := rand.Read(b); err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(bytes), nil
+	return hex.EncodeToString(b), nil
 }
 
 // generateRSAKeyPair generates an RSA-2048 key pair for JWT RS256 signing
@@ -367,7 +445,7 @@ func defaultConfig() *Config {
 		Session: SessionConfig{
 			Secret:          "", // Will be auto-generated if empty
 			ExpirationHours: 24,
-			CookieSecure:    false, // Derived from Mode in mergeFromEnv
+			CookieSecure:    false, // Derived from Mode after load
 			CookieSameSite:  "Lax",
 		},
 		JWT: JWTConfig{
@@ -392,216 +470,6 @@ func defaultConfig() *Config {
 			SamplingRate:   1.0, // trace every request by default
 		},
 	}
-}
-
-// mergeFromEnv overrides configuration with environment variables
-func mergeFromEnv(cfg *Config) *Config {
-	// Server configuration
-	if v := os.Getenv("PULSE_SERVER_PORT"); v != "" {
-		cfg.Server.Port = v
-	}
-	if v := os.Getenv("PULSE_SERVER_READ_TIMEOUT"); v != "" {
-		if i := parseInt(v, cfg.Server.ReadTimeout); i > 0 {
-			cfg.Server.ReadTimeout = i
-		}
-	}
-	if v := os.Getenv("PULSE_SERVER_WRITE_TIMEOUT"); v != "" {
-		if i := parseInt(v, cfg.Server.WriteTimeout); i > 0 {
-			cfg.Server.WriteTimeout = i
-		}
-	}
-	if v := os.Getenv("PULSE_SERVER_IDLE_TIMEOUT"); v != "" {
-		if i := parseInt(v, cfg.Server.IdleTimeout); i > 0 {
-			cfg.Server.IdleTimeout = i
-		}
-	}
-	if v := os.Getenv("PULSE_SERVER_MODE"); v != "" {
-		cfg.Server.Mode = v
-	}
-	if v := os.Getenv("PULSE_SERVER_BASE_URL"); v != "" {
-		cfg.Server.BaseURL = strings.TrimRight(v, "/")
-	}
-
-	// Database configuration
-	if v := os.Getenv("PULSE_DATABASE_URL"); v != "" {
-		cfg.DB.URL = v
-	}
-	if v := os.Getenv("PULSE_DATABASE_MAX_CONNECTIONS"); v != "" {
-		if i := parseInt(v, cfg.DB.MaxConnections); i > 0 {
-			cfg.DB.MaxConnections = i
-		}
-	}
-	if v := os.Getenv("PULSE_DATABASE_MIN_CONNECTIONS"); v != "" {
-		if i := parseInt(v, cfg.DB.MinConnections); i >= 0 {
-			cfg.DB.MinConnections = i
-		}
-	}
-	if v := os.Getenv("PULSE_DATABASE_CONN_MAX_LIFETIME"); v != "" {
-		if i := parseInt(v, cfg.DB.ConnMaxLifetime); i > 0 {
-			cfg.DB.ConnMaxLifetime = i
-		}
-	}
-	if v := os.Getenv("PULSE_DATABASE_CONN_MAX_IDLE_TIME"); v != "" {
-		if i := parseInt(v, cfg.DB.ConnMaxIdleTime); i >= 0 {
-			cfg.DB.ConnMaxIdleTime = i
-		}
-	}
-
-	// Cleanup configuration
-	if v := os.Getenv("PULSE_CLEANUP_ENABLED"); v != "" {
-		cfg.Cleanup.Enabled = parseBool(v, cfg.Cleanup.Enabled)
-	}
-	if v := os.Getenv("PULSE_CLEANUP_INTERVAL"); v != "" {
-		if i := parseInt(v, cfg.Cleanup.IntervalSeconds); i > 0 {
-			cfg.Cleanup.IntervalSeconds = i
-		}
-	}
-	if v := os.Getenv("PULSE_CLEANUP_RETENTION_DAYS"); v != "" {
-		if i := parseInt(v, cfg.Cleanup.RetentionDays); i > 0 {
-			cfg.Cleanup.RetentionDays = i
-		}
-	}
-	if v := os.Getenv("PULSE_CLEANUP_SLOW_THRESHOLD"); v != "" {
-		if i := parseInt64(v, cfg.Cleanup.SlowThresholdMs); i >= 0 {
-			cfg.Cleanup.SlowThresholdMs = i
-		}
-	}
-
-	// Log configuration
-	if v := os.Getenv("PULSE_LOG_LEVEL"); v != "" {
-		cfg.Log.Level = v
-	}
-	if v := os.Getenv("PULSE_LOG_FORMAT"); v != "" {
-		cfg.Log.Format = v
-	}
-	if v := os.Getenv("PULSE_LOG_OUTPUT"); v != "" {
-		cfg.Log.Output = v
-	}
-
-	// CORS configuration
-	if v := os.Getenv("PULSE_CORS_ALLOWED_ORIGINS"); v != "" {
-		cfg.CORS.AllowedOrigins = v
-	}
-	if v := os.Getenv("PULSE_CORS_ALLOWED_METHODS"); v != "" {
-		cfg.CORS.AllowedMethods = v
-	}
-	if v := os.Getenv("PULSE_CORS_ALLOWED_HEADERS"); v != "" {
-		cfg.CORS.AllowedHeaders = v
-	}
-	if v := os.Getenv("PULSE_CORS_MAX_AGE"); v != "" {
-		if i := parseInt(v, cfg.CORS.MaxAge); i > 0 {
-			cfg.CORS.MaxAge = i
-		}
-	}
-
-	// Admin configuration
-	if v := os.Getenv("PULSE_ADMIN_USERNAME"); v != "" {
-		cfg.Admin.Username = v
-	}
-	if v := os.Getenv("PULSE_ADMIN_PASSWORD"); v != "" {
-		cfg.Admin.Password = v
-	}
-
-	// Session configuration
-	if v := os.Getenv("PULSE_SESSION_SECRET"); v != "" {
-		cfg.Session.Secret = v
-	}
-	if v := os.Getenv("PULSE_SESSION_EXPIRATION_HOURS"); v != "" {
-		if i := parseInt(v, cfg.Session.ExpirationHours); i > 0 {
-			cfg.Session.ExpirationHours = i
-		}
-	}
-	if v := os.Getenv("PULSE_SESSION_COOKIE_SECURE"); v != "" {
-		cfg.Session.CookieSecure = parseBool(v, cfg.Session.CookieSecure)
-	}
-	if v := os.Getenv("PULSE_SESSION_COOKIE_SAMESITE"); v != "" {
-		cfg.Session.CookieSameSite = v
-	}
-
-	// JWT configuration
-	if v := os.Getenv("PULSE_JWT_SECRET"); v != "" {
-		cfg.JWT.Secret = v
-	}
-	if v := os.Getenv("PULSE_JWT_PRIVATE_KEY"); v != "" {
-		cfg.JWT.PrivateKey = v
-	}
-	if v := os.Getenv("PULSE_JWT_PUBLIC_KEY"); v != "" {
-		cfg.JWT.PublicKey = v
-	}
-	if v := os.Getenv("PULSE_JWT_KEY_ID"); v != "" {
-		cfg.JWT.KeyID = v
-	}
-	if v := os.Getenv("PULSE_JWT_ACCESS_TOKEN_EXPIRATION_MINUTES"); v != "" {
-		if i := parseInt(v, cfg.JWT.AccessTokenExpirationMinutes); i > 0 {
-			cfg.JWT.AccessTokenExpirationMinutes = i
-		}
-	}
-	if v := os.Getenv("PULSE_JWT_REFRESH_TOKEN_EXPIRATION_DAYS"); v != "" {
-		if i := parseInt(v, cfg.JWT.RefreshTokenExpirationDays); i > 0 {
-			cfg.JWT.RefreshTokenExpirationDays = i
-		}
-	}
-	if v := os.Getenv("PULSE_JWT_REFRESH_TOKEN_MAX_VALIDITY_DAYS"); v != "" {
-		if i := parseInt(v, cfg.JWT.RefreshTokenMaxValidityDays); i > 0 {
-			cfg.JWT.RefreshTokenMaxValidityDays = i
-		}
-	}
-
-	// Rate Limit configuration
-	if v := os.Getenv("PULSE_RATE_LIMIT_LOGIN_MAX_PER_MINUTE"); v != "" {
-		if i := parseInt(v, cfg.RateLimit.LoginMaxPerMinute); i > 0 {
-			cfg.RateLimit.LoginMaxPerMinute = i
-		}
-	}
-	if v := os.Getenv("PULSE_RATE_LIMIT_LOGIN_MAX_PER_DAY"); v != "" {
-		if i := parseInt(v, cfg.RateLimit.LoginMaxPerDay); i > 0 {
-			cfg.RateLimit.LoginMaxPerDay = i
-		}
-	}
-	if v := os.Getenv("PULSE_RATE_LIMIT_REFRESH_MAX_PER_MINUTE"); v != "" {
-		if i := parseInt(v, cfg.RateLimit.RefreshMaxPerMinute); i > 0 {
-			cfg.RateLimit.RefreshMaxPerMinute = i
-		}
-	}
-	if v := os.Getenv("PULSE_RATE_LIMIT_REFRESH_MAX_PER_DAY"); v != "" {
-		if i := parseInt(v, cfg.RateLimit.RefreshMaxPerDay); i > 0 {
-			cfg.RateLimit.RefreshMaxPerDay = i
-		}
-	}
-	if v := os.Getenv("PULSE_RATE_LIMIT_APIKEY_MAX_PER_MINUTE"); v != "" {
-		if i := parseInt(v, cfg.RateLimit.APIKeyMaxPerMinute); i > 0 {
-			cfg.RateLimit.APIKeyMaxPerMinute = i
-		}
-	}
-
-	// Derive CookieSecure from Mode if not explicitly set
-	if !cfg.Session.CookieSecure {
-		cfg.Session.CookieSecure = cfg.IsProduction()
-	}
-
-	// Telemetry configuration
-	if v := os.Getenv("PULSE_TELEMETRY_ENABLED"); v != "" {
-		cfg.Telemetry.Enabled = parseBool(v, cfg.Telemetry.Enabled)
-	}
-	if v := os.Getenv("PULSE_TELEMETRY_SERVICE_NAME"); v != "" {
-		cfg.Telemetry.ServiceName = v
-	}
-	if v := os.Getenv("PULSE_TELEMETRY_SERVICE_VERSION"); v != "" {
-		cfg.Telemetry.ServiceVersion = v
-	}
-	if v := os.Getenv("PULSE_TELEMETRY_ENVIRONMENT"); v != "" {
-		cfg.Telemetry.Environment = v
-	}
-	if v := os.Getenv("PULSE_TELEMETRY_OTLP_ENDPOINT"); v != "" {
-		cfg.Telemetry.OTLPEndpoint = v
-	}
-	if v := os.Getenv("PULSE_TELEMETRY_SAMPLING_RATE"); v != "" {
-		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && f <= 1 {
-			cfg.Telemetry.SamplingRate = f
-		}
-	}
-
-	return cfg
 }
 
 // Validate validates the configuration
@@ -836,32 +704,6 @@ func (c *TelemetryConfig) Validate() error {
 		return fmt.Errorf("telemetry sampling_rate must be between 0.0 and 1.0, got %f", c.SamplingRate)
 	}
 	return nil
-}
-
-// Helper functions
-
-func parseInt(s string, defaultValue int) int {
-	val, err := strconv.Atoi(s)
-	if err != nil {
-		return defaultValue
-	}
-	return val
-}
-
-func parseInt64(s string, defaultValue int64) int64 {
-	val, err := strconv.ParseInt(s, 10, 64)
-	if err != nil {
-		return defaultValue
-	}
-	return val
-}
-
-func parseBool(s string, defaultValue bool) bool {
-	s = strings.ToLower(strings.TrimSpace(s))
-	if s == "" {
-		return defaultValue
-	}
-	return s == "true" || s == "1" || s == "yes" || s == "on"
 }
 
 // Reset resets the global configuration (mainly for testing)
