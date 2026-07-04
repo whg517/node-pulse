@@ -11,6 +11,7 @@ considered, and the consequences.
 | [ADR-001](./ADR-001-report-scheduling.md) | Report scheduling (server-side schedules + email) | Accepted (implemented v2.3) |
 | [ADR-002](./ADR-002-alert-routing.md) | Alert routing rules (per-webhook dispatch filtering) | Accepted (implemented v2.3) |
 | [ADR-003](./ADR-003-beacon-config-templates.md) | Beacon configuration templates (server vs. local) | Accepted (implemented v2.3) |
+| [ADR-004](./ADR-004-unified-config-pattern.md) | Unified configuration pattern across components | Accepted |
 
 ## When to add an ADR
 
