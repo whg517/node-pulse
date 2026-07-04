@@ -144,6 +144,12 @@ func LoadConfig(configPath string) (*Config, error) {
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	v.AutomaticEnv()
 
+	// Register all defaults through Viper BEFORE reading the file. SetDefault
+	// only applies when a key is absent from the file/env, so explicit file
+	// values (including explicit `false` booleans) still win. This is the single
+	// source of truth for defaults — see ADR-004.
+	setDefaults(v)
+
 	if err := v.ReadInConfig(); err != nil {
 		// Extract line number from YAML parse error for UX-friendly messages
 		return nil, parseYAMLError(err, data)
@@ -184,118 +190,16 @@ func LoadConfig(configPath string) (*Config, error) {
 		return nil, fmt.Errorf("reconnect configuration validation failed: %w", err)
 	}
 
-	// Set default values for metrics configuration (Story 3.8)
-	// If metrics_port is not set, use default port
-	if config.MetricsPort == 0 {
-		config.MetricsPort = 2112 // Default Prometheus port
-	}
-	// Preserve explicit false from YAML; only default to true when key is absent
-	if !v.IsSet("metrics_enabled") {
-		config.MetricsEnabled = true
-	}
-	// Fix #4: Set default metrics update interval (10-60 seconds range)
-	if config.MetricsUpdateSeconds == 0 {
-		config.MetricsUpdateSeconds = 10 // Default 10 seconds
-	}
+	// All subsystem defaults (metrics, log, resource_monitor, mode, compression,
+	// resume) are now registered via setDefaults(v) above — there is no inline
+	// zero-value backfill here. SetDefault applies only when the key is absent
+	// from the file/env, so explicit `false` booleans and explicit zero ints in
+	// the file are respected (the old `if x == 0` pattern would wrongly override
+	// a legitimate 0).
 
-	// Set default values for logging configuration (Story 3.9)
-	if config.LogLevel == "" {
-		config.LogLevel = "INFO" // Default log level
-	}
-	if config.LogFile == "" {
-		config.LogFile = "/var/log/beacon/beacon.log" // Default log file path
-	}
-	if config.LogMaxSize == 0 {
-		config.LogMaxSize = 10 // Default 10 MB
-	}
-	if config.LogMaxAge == 0 {
-		config.LogMaxAge = 7 // Default 7 days
-	}
-	if config.LogMaxBackups == 0 {
-		config.LogMaxBackups = 10 // Default 10 backups
-	}
-	// LogCompress and LogToConsole default to false (bool default)
-
-	// Apply debug mode configuration (Story 3.10)
-	// When debug_mode is true, automatically set log level to DEBUG
+	// Derive: debug_mode forces log level to DEBUG (not a default — a side effect).
 	if config.DebugMode {
 		config.LogLevel = "DEBUG"
-	}
-
-	// Set default values for resource monitor configuration (Story 3.11)
-	if config.ResourceMonitor.CheckIntervalSeconds == 0 {
-		config.ResourceMonitor.CheckIntervalSeconds = 60 // Default 60 seconds
-	}
-	if config.ResourceMonitor.Thresholds.CPUMicrocores == 0 {
-		config.ResourceMonitor.Thresholds.CPUMicrocores = 100 // Default 100 microcores
-	}
-	if config.ResourceMonitor.Thresholds.MemoryMB == 0 {
-		config.ResourceMonitor.Thresholds.MemoryMB = 100 // Default 100 MB
-	}
-	if config.ResourceMonitor.Degradation.DegradedLevel.CPUMicrocores == 0 {
-		config.ResourceMonitor.Degradation.DegradedLevel.CPUMicrocores = 200 // Default 200 microcores
-	}
-	if config.ResourceMonitor.Degradation.DegradedLevel.MemoryMB == 0 {
-		config.ResourceMonitor.Degradation.DegradedLevel.MemoryMB = 150 // Default 150 MB
-	}
-	if config.ResourceMonitor.Degradation.DegradedLevel.IntervalMultiplier == 0 {
-		config.ResourceMonitor.Degradation.DegradedLevel.IntervalMultiplier = 2 // Default 2x
-	}
-	if config.ResourceMonitor.Degradation.CriticalLevel.CPUMicrocores == 0 {
-		config.ResourceMonitor.Degradation.CriticalLevel.CPUMicrocores = 300 // Default 300 microcores
-	}
-	if config.ResourceMonitor.Degradation.CriticalLevel.MemoryMB == 0 {
-		config.ResourceMonitor.Degradation.CriticalLevel.MemoryMB = 200 // Default 200 MB
-	}
-	if config.ResourceMonitor.Degradation.CriticalLevel.IntervalMultiplier == 0 {
-		config.ResourceMonitor.Degradation.CriticalLevel.IntervalMultiplier = 3 // Default 3x
-	}
-	if config.ResourceMonitor.Degradation.Recovery.ConsecutiveNormalChecks == 0 {
-		config.ResourceMonitor.Degradation.Recovery.ConsecutiveNormalChecks = 3 // Default 3 checks
-	}
-	if config.ResourceMonitor.Alerting.SuppressionWindowSeconds == 0 {
-		config.ResourceMonitor.Alerting.SuppressionWindowSeconds = 300 // Default 5 minutes
-	}
-
-	// Set default values for dual mode support configuration (FR-4.1.2)
-	if config.Mode.Mode == "" {
-		config.Mode.Mode = ModeRegistered // Default to registered mode
-	}
-	if config.Mode.ConfigCheckIntervalSeconds == 0 {
-		config.Mode.ConfigCheckIntervalSeconds = 60 // Default 60 seconds
-	}
-	if config.Mode.DegradedModeThreshold == 0 {
-		config.Mode.DegradedModeThreshold = 3 // Default 3 consecutive failures
-	}
-
-	// Set default values for compression configuration (FR-4.1.5)
-	if config.Compression.Level == 0 {
-		config.Compression.Level = 6 // Default compression level
-	}
-	if config.Compression.MinSizeBytes == 0 {
-		config.Compression.MinSizeBytes = 1024 // Default 1KB minimum
-	}
-	// Preserve explicit false from YAML; only default to true when key is absent
-	if !v.IsSet("compression.enabled") {
-		config.Compression.Enabled = true
-	}
-
-	// Set default values for resume configuration (FR-4.1.5, FR-4.1.7)
-	if config.Resume.MaxCacheSizeBytes == 0 {
-		config.Resume.MaxCacheSizeBytes = 10 * 1024 * 1024 // Default 10MB
-	}
-	if config.Resume.CacheFilePath == "" {
-		config.Resume.CacheFilePath = "/var/lib/beacon/resume_cache.dat"
-	}
-	if config.Resume.AlertReservePercent == 0 {
-		config.Resume.AlertReservePercent = 30 // Default 30% reserved for alerts
-	}
-	// Preserve explicit false from YAML; only default to true when keys are absent
-	if !v.IsSet("resume.enabled") {
-		config.Resume.Enabled = true
-	}
-	if !v.IsSet("resume.alert_priority_mode") {
-		config.Resume.AlertPriorityMode = true
 	}
 
 	// Validate metrics configuration
@@ -310,6 +214,56 @@ func LoadConfig(configPath string) (*Config, error) {
 
 	config.ConfigPath = resolvedPath
 	return &config, nil
+}
+
+// setDefaults registers every subsystem's default value with Viper. This is the
+// single source of truth for defaults (ADR-004). SetDefault values are used only
+// when the key is absent from both the config file and the environment, so an
+// explicit `false` boolean or an explicit `0` integer in the file is preserved
+// (unlike the previous `if x == 0` / `if !v.IsSet(...)` backfill, which could
+// overwrite a legitimate zero).
+func setDefaults(v *viper.Viper) {
+	// Metrics (Story 3.8)
+	v.SetDefault("metrics_port", 2112)
+	v.SetDefault("metrics_enabled", true)
+	v.SetDefault("metrics_update_seconds", 10)
+
+	// Logging (Story 3.9). log_compress / log_to_console default to false (zero value).
+	v.SetDefault("log_level", "INFO")
+	v.SetDefault("log_file", "/var/log/beacon/beacon.log")
+	v.SetDefault("log_max_size", 10)
+	v.SetDefault("log_max_age", 7)
+	v.SetDefault("log_max_backups", 10)
+
+	// Resource monitor (Story 3.11)
+	v.SetDefault("resource_monitor.check_interval_seconds", 60)
+	v.SetDefault("resource_monitor.thresholds.cpu_microcores", 100)
+	v.SetDefault("resource_monitor.thresholds.memory_mb", 100)
+	v.SetDefault("resource_monitor.degradation.degraded_level.cpu_microcores", 200)
+	v.SetDefault("resource_monitor.degradation.degraded_level.memory_mb", 150)
+	v.SetDefault("resource_monitor.degradation.degraded_level.interval_multiplier", 2)
+	v.SetDefault("resource_monitor.degradation.critical_level.cpu_microcores", 300)
+	v.SetDefault("resource_monitor.degradation.critical_level.memory_mb", 200)
+	v.SetDefault("resource_monitor.degradation.critical_level.interval_multiplier", 3)
+	v.SetDefault("resource_monitor.degradation.recovery.consecutive_normal_checks", 3)
+	v.SetDefault("resource_monitor.alerting.suppression_window_seconds", 300)
+
+	// Dual mode (FR-4.1.2)
+	v.SetDefault("mode.mode", ModeRegistered)
+	v.SetDefault("mode.config_check_interval_seconds", 60)
+	v.SetDefault("mode.degraded_mode_threshold", 3)
+
+	// Compression (FR-4.1.5)
+	v.SetDefault("compression.enabled", true)
+	v.SetDefault("compression.level", 6)
+	v.SetDefault("compression.min_size_bytes", 1024)
+
+	// Resume / offline buffering (FR-4.1.5, FR-4.1.7)
+	v.SetDefault("resume.enabled", true)
+	v.SetDefault("resume.max_cache_size_bytes", 10*1024*1024)
+	v.SetDefault("resume.cache_file_path", "/var/lib/beacon/resume_cache.dat")
+	v.SetDefault("resume.alert_priority_mode", true)
+	v.SetDefault("resume.alert_reserve_percent", 30)
 }
 
 func applyEnvOverrides(config *Config, v *viper.Viper) {

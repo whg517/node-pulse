@@ -121,29 +121,3 @@ func TestResumeConfig_Validate(t *testing.T) {
 		})
 	}
 }
-
-// TestDefaultResumeConfig tests DefaultResumeConfig
-func TestDefaultResumeConfig(t *testing.T) {
-	cfg := DefaultResumeConfig()
-
-	if !cfg.Enabled {
-		t.Error("Expected Enabled=true")
-	}
-	if cfg.MaxCacheSizeBytes != 10*1024*1024 {
-		t.Errorf("Expected MaxCacheSizeBytes=10MB, got %d", cfg.MaxCacheSizeBytes)
-	}
-	if cfg.CacheFilePath == "" {
-		t.Error("Expected non-empty CacheFilePath")
-	}
-	if !cfg.AlertPriorityMode {
-		t.Error("Expected AlertPriorityMode=true")
-	}
-	if cfg.AlertReservePercent != 30 {
-		t.Errorf("Expected AlertReservePercent=30, got %d", cfg.AlertReservePercent)
-	}
-
-	// Validate default config is valid
-	if err := cfg.Validate(); err != nil {
-		t.Errorf("Default config should be valid, got: %v", err)
-	}
-}

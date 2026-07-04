@@ -64,21 +64,6 @@ type CompressionConfig struct {
 	MinSizeBytes int `mapstructure:"min_size_bytes" yaml:"min_size_bytes"`
 }
 
-// CacheConfig contains configuration for priority cache (FR-4.1.7)
-type CacheConfig struct {
-	// Enable data caching for resume upload (default: true)
-	Enabled bool `mapstructure:"enabled" yaml:"enabled"`
-
-	// Maximum cache size in bytes (default: 10MB)
-	MaxSizeBytes int64 `mapstructure:"max_size_bytes" yaml:"max_size_bytes"`
-
-	// Persist cache to disk on shutdown (default: true)
-	PersistOnShutdown bool `mapstructure:"persist_on_shutdown" yaml:"persist_on_shutdown"`
-
-	// Cache file path (default: /var/lib/beacon/cache.dat)
-	CacheFilePath string `mapstructure:"cache_file_path" yaml:"cache_file_path"`
-}
-
 // ModeManager manages the beacon's operating mode and state transitions
 type ModeManager struct {
 	mu sync.RWMutex
@@ -310,44 +295,6 @@ func (c *CompressionConfig) Validate() error {
 	return nil
 }
 
-// Validate validates the cache configuration
-func (c *CacheConfig) Validate() error {
-	// Validate max size (max 100MB)
-	if c.MaxSizeBytes != 0 && (c.MaxSizeBytes < 0 || c.MaxSizeBytes > 100*1024*1024) {
-		return fmt.Errorf("max_size_bytes must be between 0 and 100MB, got %d", c.MaxSizeBytes)
-	}
-
-	return nil
-}
-
-// DefaultModeConfig returns the default mode configuration
-func DefaultModeConfig() ModeConfig {
-	return ModeConfig{
-		Mode:                       ModeRegistered,
-		ConfigCheckIntervalSeconds: 60,
-		DegradedModeThreshold:      3,
-	}
-}
-
-// DefaultCompressionConfig returns the default compression configuration
-func DefaultCompressionConfig() CompressionConfig {
-	return CompressionConfig{
-		Enabled:      true,
-		Level:        6,
-		MinSizeBytes: 1024,
-	}
-}
-
-// DefaultCacheConfig returns the default cache configuration
-func DefaultCacheConfig() CacheConfig {
-	return CacheConfig{
-		Enabled:            true,
-		MaxSizeBytes:       10 * 1024 * 1024, // 10MB
-		PersistOnShutdown:  true,
-		CacheFilePath:      "/var/lib/beacon/cache.dat",
-	}
-}
-
 // ResumeConfig contains configuration for resume upload feature (FR-4.1.5, FR-4.1.7)
 type ResumeConfig struct {
 	// Enable resume upload feature (default: true)
@@ -379,15 +326,4 @@ func (c *ResumeConfig) Validate() error {
 	}
 
 	return nil
-}
-
-// DefaultResumeConfig returns the default resume configuration
-func DefaultResumeConfig() ResumeConfig {
-	return ResumeConfig{
-		Enabled:             true,
-		MaxCacheSizeBytes:   10 * 1024 * 1024, // 10MB
-		CacheFilePath:       "/var/lib/beacon/resume_cache.dat",
-		AlertPriorityMode:   true,
-		AlertReservePercent: 30,
-	}
 }
