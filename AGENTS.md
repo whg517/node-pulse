@@ -94,7 +94,7 @@ Beacon (per node) ──POST /heartbeat (JWT)──► Pulse Server ──► Po
 ## Important Patterns
 
 - **Error handling**: Beacon retries 5xx/network with exponential backoff (1s, 2s, 4s). Pulse distinguishes retryable (5xx, network) vs non-retryable (4xx). Frontend auto-refreshes JWT on 401 via Axios interceptor; surface errors with `ErrorBanner`.
-- **Frontend design system**: Use `PageContainer` + `PageHeader` for layouts; `ErrorBanner` / `ActionButton` / `ConfirmDialog` for standard interactions; `statusColors` / `statusClasses` from `src/config/designTokens.ts`. Always add `dark:` variants. All user-visible strings via `t()` from `useTranslation()`, with keys added to both `en.json` and `zh-CN.json`.
+- **Frontend design system**: Use `PageContainer` + `PageHeader` for layouts; `ErrorBanner` / `ActionButton` / `ConfirmDialog` for standard interactions. The theme is a shadcn/ui + Tailwind 4 CSS-variable system defined in `src/index.css` (`:root` light, `.dark` dark) — consume it via semantic Tailwind utilities (`bg-card`, `text-foreground`, `bg-healthy-bg`, `text-destructive`), never raw color literals. Always add `dark:` variants. All user-visible strings via `t()` from `useTranslation()`, with keys added to both `en.json` and `zh-CN.json`.
 - **Security**: JWT secrets auto-generated (512-bit) if unset; TLS 1.2+ for Beacon→Pulse; SHA-256 hashing for API keys/refresh tokens; rate limiting (5 logins/IP/min); account lockout (5 fails = 10 min); RBAC (admin, operator, viewer, beacon); CSRF on mutations; access tokens in memory only.
 - **Performance**: Async batch DB writes (non-blocking heartbeat); ring-buffer cache (60 points/node); 10-worker alert pool; access token 15 min expiry with refresh-on-401; drop-on-overflow metric writes.
 

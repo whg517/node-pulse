@@ -6,6 +6,7 @@
  */
 
 import { apiClient } from './client'
+import { API_BASE_URL } from '../config/constants'
 import type {
   ExportTask,
   CreateExportRequest,
@@ -134,7 +135,7 @@ export async function listExports(
  * document.body.removeChild(a)
  */
 export async function downloadExport(exportId: string): Promise<Blob> {
-  const url = `${import.meta.env.VITE_API_BASE_URL}/api/v1/data/export/${exportId}/download`
+  const url = `${API_BASE_URL}/api/v1/data/export/${exportId}/download`
 
   const response = await fetch(url, {
     method: 'GET',
