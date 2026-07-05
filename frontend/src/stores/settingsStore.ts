@@ -3,6 +3,10 @@
  *
  * Zustand store for user preferences including language, theme, and timezone.
  * Persists settings to localStorage for cross-session persistence.
+ *
+ * Note: report schedules, beacon config templates, and alert routing rules used
+ * to live here as localStorage-only stubs. They are now server-backed — see
+ * api/reportSchedules.ts, api/beaconConfigTemplates.ts, api/alertRouting.ts.
  */
 
 import { create } from 'zustand'
@@ -13,48 +17,6 @@ import i18n from '../i18n'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type TimezoneDisplayMode = 'utc' | 'local' | 'nodeLocal' | 'multi'
-
-export interface ReportSchedule {
-  id: string
-  name: string
-  frequency: 'daily' | 'weekly' | 'monthly'
-  time: string
-  nodeIds: string[]
-  format: 'pdf' | 'csv'
-  enabled: boolean
-  lastRun?: string
-}
-
-export interface ConfigTemplate {
-  id: string
-  name: string
-  description?: string
-  probes: Array<{
-    type: 'TCP' | 'UDP'
-    target: string
-    port: number
-    interval_seconds: number
-    timeout_seconds: number
-    count: number
-  }>
-  interval_seconds: number
-  timeout_seconds: number
-}
-
-export interface AlertRoutingRule {
-  id: string
-  name: string
-  conditions: {
-    metric?: string
-    severity?: string
-    nodeGroup?: string
-  }
-  action: {
-    type: 'webhook' | 'email'
-    target: string
-  }
-  enabled: boolean
-}
 
 export interface TimezoneOption {
   value: string
@@ -67,9 +29,6 @@ export interface SettingsState {
   theme: ThemeMode
   timezone: string
   timezoneDisplayMode: TimezoneDisplayMode
-  reportSchedules: ReportSchedule[]
-  configTemplates: ConfigTemplate[]
-  routingRules: AlertRoutingRule[]
 }
 
 export interface SettingsActions {
@@ -78,15 +37,6 @@ export interface SettingsActions {
   setTimezone: (timezone: string) => void
   setTimezoneDisplayMode: (mode: TimezoneDisplayMode) => void
   resetSettings: () => void
-  addReportSchedule: (schedule: ReportSchedule) => void
-  updateReportSchedule: (id: string, updates: Partial<ReportSchedule>) => void
-  deleteReportSchedule: (id: string) => void
-  addConfigTemplate: (template: ConfigTemplate) => void
-  updateConfigTemplate: (id: string, updates: Partial<ConfigTemplate>) => void
-  deleteConfigTemplate: (id: string) => void
-  addRoutingRule: (rule: AlertRoutingRule) => void
-  updateRoutingRule: (id: string, updates: Partial<AlertRoutingRule>) => void
-  deleteRoutingRule: (id: string) => void
 }
 
 type SettingsStore = SettingsState & SettingsActions
@@ -126,9 +76,6 @@ const DEFAULT_SETTINGS: SettingsState = {
   theme: 'system',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
   timezoneDisplayMode: 'local',
-  reportSchedules: [],
-  configTemplates: [],
-  routingRules: [],
 }
 
 // ============== Store ==============
@@ -161,42 +108,6 @@ export const useSettingsStore = create<SettingsStore>()(
         set(DEFAULT_SETTINGS)
         applyTheme(DEFAULT_SETTINGS.theme)
       },
-
-      addReportSchedule: (schedule) => {
-        set((s) => ({ reportSchedules: [...s.reportSchedules, schedule] }))
-      },
-      updateReportSchedule: (id, updates) => {
-        set((s) => ({
-          reportSchedules: s.reportSchedules.map((r) => (r.id === id ? { ...r, ...updates } : r)),
-        }))
-      },
-      deleteReportSchedule: (id) => {
-        set((s) => ({ reportSchedules: s.reportSchedules.filter((r) => r.id !== id) }))
-      },
-
-      addConfigTemplate: (template) => {
-        set((s) => ({ configTemplates: [...s.configTemplates, template] }))
-      },
-      updateConfigTemplate: (id, updates) => {
-        set((s) => ({
-          configTemplates: s.configTemplates.map((t) => (t.id === id ? { ...t, ...updates } : t)),
-        }))
-      },
-      deleteConfigTemplate: (id) => {
-        set((s) => ({ configTemplates: s.configTemplates.filter((t) => t.id !== id) }))
-      },
-
-      addRoutingRule: (rule) => {
-        set((s) => ({ routingRules: [...s.routingRules, rule] }))
-      },
-      updateRoutingRule: (id, updates) => {
-        set((s) => ({
-          routingRules: s.routingRules.map((r) => (r.id === id ? { ...r, ...updates } : r)),
-        }))
-      },
-      deleteRoutingRule: (id) => {
-        set((s) => ({ routingRules: s.routingRules.filter((r) => r.id !== id) }))
-      },
     }),
     {
       name: 'settings-store',
@@ -205,9 +116,6 @@ export const useSettingsStore = create<SettingsStore>()(
         theme: state.theme,
         timezone: state.timezone,
         timezoneDisplayMode: state.timezoneDisplayMode,
-        reportSchedules: state.reportSchedules,
-        configTemplates: state.configTemplates,
-        routingRules: state.routingRules,
       }),
     }
   )

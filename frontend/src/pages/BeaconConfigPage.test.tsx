@@ -69,14 +69,6 @@ vi.mock('../api/beaconConfig', () => ({
   updateBeaconConfig: vi.fn(),
 }))
 
-vi.mock('../stores/settingsStore', () => ({
-  useSettingsStore: () => ({
-    configTemplates: [],
-    addConfigTemplate: vi.fn(),
-    deleteConfigTemplate: vi.fn(),
-  }),
-}))
-
 const mockFetchNodes = fetchNodes as ReturnType<typeof vi.fn>
 const mockFetchBeaconConfig = fetchBeaconConfig as ReturnType<typeof vi.fn>
 const mockFetchConfigHistory = fetchConfigHistory as ReturnType<typeof vi.fn>

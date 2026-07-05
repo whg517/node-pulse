@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 import { useExportStore } from '@/stores/exportStore'
-import { type ReportSchedule } from "@/stores/settingsStore"
 import { listReportSchedules, createReportSchedule, updateReportSchedule, deleteReportSchedule, type ReportScheduleDTO } from '@/api/reportSchedules'
 import { fetchNodes } from '@/api/nodes'
 import { fetchMetrics } from '@/api/data'
@@ -61,9 +60,9 @@ export default function ReportsPage() {
   const [showScheduleDialog, setShowScheduleDialog] = useState(false)
   const [scheduleForm, setScheduleForm] = useState({
     name: '',
-    frequency: 'daily' as ReportSchedule['frequency'],
+    frequency: 'daily' as ReportScheduleDTO['frequency'],
     time: '09:00',
-    format: 'pdf' as ReportSchedule['format'],
+    format: 'pdf' as ReportScheduleDTO['format'],
     nodeIds: [] as string[],
     enabled: true,
   })
@@ -267,7 +266,7 @@ export default function ReportsPage() {
                 <select
                   id="schedule-frequency"
                   value={scheduleForm.frequency}
-                  onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value as ReportSchedule['frequency'] })}
+                  onChange={(e) => setScheduleForm({ ...scheduleForm, frequency: e.target.value as ReportScheduleDTO['frequency'] })}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
                   <option value="daily">{t('reports.daily')}</option>
@@ -285,7 +284,7 @@ export default function ReportsPage() {
               <select
                 id="schedule-format"
                 value={scheduleForm.format}
-                onChange={(e) => setScheduleForm({ ...scheduleForm, format: e.target.value as ReportSchedule['format'] })}
+                onChange={(e) => setScheduleForm({ ...scheduleForm, format: e.target.value as ReportScheduleDTO['format'] })}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               >
                 <option value="pdf">PDF</option>

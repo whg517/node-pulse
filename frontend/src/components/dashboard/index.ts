@@ -4,10 +4,7 @@
  * Exports all dashboard-related components for convenient importing.
  */
 
-export { NodeListTable } from './NodeListTable'
 export { HealthStatusBadge } from './HealthStatusBadge'
-export { TopAnomaliesList } from './TopAnomaliesList'
-export { MetricsSummaryCards } from './MetricsSummaryCards'
 export { default as TrendChart } from './TrendChart'
 export type { DataPoint, TimeRange, MetricType, TrendChartProps } from './TrendChart'
 export { default as ComparisonChart } from './ComparisonChart'

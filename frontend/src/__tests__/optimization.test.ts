@@ -79,23 +79,3 @@ describe('memoCompare function', () => {
     expect(memoCompare(prevProps, nextProps)).toBe(false) // Should re-render
   })
 })
-
-describe('Component Optimization', () => {
-  it('MetricsSummaryCards should be memoized', async () => {
-    const module = await import('../components/dashboard/MetricsSummaryCards')
-    expect(module.MetricsSummaryCards).toBeDefined()
-    // Component is wrapped with React.memo
-  })
-
-  it('NodeListTable should be memoized', async () => {
-    const module = await import('../components/dashboard/NodeListTable')
-    expect(module.NodeListTable).toBeDefined()
-    // Component is wrapped with React.memo
-  })
-
-  it('TopAnomaliesList should be memoized', async () => {
-    const module = await import('../components/dashboard/TopAnomaliesList')
-    expect(module.TopAnomaliesList).toBeDefined()
-    // Component is wrapped with React.memo
-  })
-})
