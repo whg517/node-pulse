@@ -165,3 +165,19 @@ export async function downloadExport(exportId: string): Promise<Blob> {
 
   return response.blob()
 }
+
+/**
+ * Delete an export task and its generated file.
+ *
+ * Removes both the export record and the file on disk. Admin only.
+ * Returns void on success (HTTP 204).
+ *
+ * @param exportId - Export task ID
+ * @throws AuthorizationError if user is not admin
+ * @throws NotFoundError if export task doesn't exist
+ */
+export async function deleteExport(exportId: string): Promise<void> {
+  await apiClient<void>(`/api/v1/data/export/${exportId}`, {
+    method: 'DELETE',
+  })
+}

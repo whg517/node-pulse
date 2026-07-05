@@ -2,8 +2,8 @@
 
 **Owner:** Kevin
 **Date:** 2026-07-05
-**Version:** 3.0
-**Status:** 三生命周期重构版 —— 在 v2.x 功能旅程（J1–J13）基础上新增「安装部署」与「系统维护」两大生命周期，覆盖从零到运行、日常运维、灾难恢复的完整用户旅途；缺口如实标注。
+**Version:** 3.1
+**Status:** QA 驱动修复轮 —— 基于 `docs/qa-journey-audit.md` 对 17 条旅程的代码级审计，修复 O-G1（审计清理接线）、F1（Reports 角色守卫）两条 P0，新增 4 项代码修复（UpdateUser self-role 防护、/health scheduler 降级、routes.go CSRF 归属、导出删除端点），并完成 8 项文档勘误（v3.0 三生命周期重构的过时/不严谨描述）。
 
 > 本文档从**使用者视角**系统拆解 NodePulse 的全部用户旅途与操作流程。
 >
@@ -81,7 +81,7 @@ NodePulse 面向海外基础设施的运维监控。结合 RBAC 实现
 > 前端**没有基于角色的路由守卫**（`App.tsx` 所有受保护路由一视同仁），角色限制在
 > 各页面内部用 `user?.role === 'admin'` 等 `canEdit` 标志控制操作按钮可见性。
 > 因此 Viewer 可以浏览所有页面 URL，但在写操作页会看到精简或只读界面。
-> **注意**：`Reports.tsx` 的计划按钮遗漏了角色关卡（见 §23 F1），是真实的权限漏洞。
+> **注意**：`Reports.tsx` 的计划按钮曾遗漏角色关卡（见 §23 F1），v3.1 已修复（`isAdmin` 守卫创建/启用/删除）。
 
 ### 1.2 需求状态标签（沿用 PRD §2，v3.0 新增「未实现」）
 
@@ -194,7 +194,7 @@ NodePulse 存在大量**分层不完整**的能力 —— 后端实现了路由�
 | **升级/回滚文档** | ❌ | — | — | ❌ **[未实现]** | 无 upgrade.md/runbook |
 | **Beacon systemd unit** | ❌ | — | — | ❌ **[未实现]** | `make install` 仅拷贝二进制 |
 | **版本/发布系统** | ❌ | — | — | ❌ **[未实现]** | `service_version="unknown"`，无 git tags |
-| **审计/会话/Token 清理** | ⚠️ | — | — | ❌ **[未实现]** | 函数存在但**未注册到 scheduler**；文档谎称已实现 |
+| **审计/会话/Token 清理** | ✅ | — | — | ✅ 可用（v3.1） | `auth-cleanup` 任务（`registry.go registerAuthCleanupTask`），包装 `auth.CleanupJob.RunAll` |
 | **Pulse 配置热重载** | ❌ | — | — | ❌ **[未实现]** | Beacon 有；Pulse 改配置需重启 |
 | **管理员解锁用户** | ✅ | ❌ | ❌ | ❌ **[未实现]** | `locked_until` 只读；无「立即解锁」UI |
 | **JWT 密钥轮换窗口** | ❌ | — | — | ❌ **[未实现]** | 仅单活动密钥；轮换即全员失效 |
@@ -421,10 +421,9 @@ flowchart TD
 | 指标数据清理（保留 7 天） | `metrics-cleanup` 调度任务 | ✅ 运行 |
 | 告警抑制清理 | `suppression-cleanup` 调度任务 | ✅ 运行 |
 | 导出文件清理 | `cleanupOldExports` | ✅ 运行 |
-| **会话过期清理** | `CleanupExpiredSessions` 函数 | ❌ **未注册到 scheduler** |
-| **Refresh Token 清理** | `CleanupExpiredTokens` 函数 | ❌ **未注册到 scheduler** |
-| **API Key 清理** | `CleanupExpiredKeys` 函数 | ❌ **未注册到 scheduler** |
-| **审计日志清理（90 天）** | 无代码 | ❌ **文档谎称已实现**（`authentication.md:515`） |
+| **审计/会话/Token/API Key 清理** | `auth-cleanup` 任务（包装 `auth.CleanupJob.RunAll`） | ✅ 运行（v3.1 接线，`registry.go registerAuthCleanupTask`） |
+
+> v3.1 变更：原 O-G1 缺口（清理函数存在但未注册到 scheduler）已修复。`auth-cleanup` 任务由 `server/auth_cleanup_task.go` 适配 `auth.CleanupJob` 到 `scheduler.Task`，在 `registerAuthCleanupTask` 中注册，随 `cleanup.IntervalSeconds`（默认 86400s）节奏运行，覆盖 refresh_tokens / token_blacklist / rate_limits（24h）/ auth_audit_logs（90 天）/ expired_api_keys（30 天）。`authentication.md` 的「Audit Log Retention」段已同步为真实实现。
 
 ### 9.3 升级
 
@@ -442,14 +441,14 @@ flowchart TD
 | DB 不可达 | Pulse 启动进入 DEGRADED MODE（nil DB），`/health` 显示 `database:disabled` | 恢复 DB → 重启 |
 | Beacon 无法连 Pulse | 心跳重试（reconnect 配置）+ PriorityCache 本地持久化 | 网络恢复后断点续传 |
 | 节点超时（5min） | NodeStatusSweeper 标 offline + 广播 node:offline（v2.4） | 节点恢复心跳 → 广播 node:online |
-| 磁盘满 | 无显式处理；审计/会话表无限增长加剧风险 | 见 O-G1 |
-| 优雅关闭 | SIGTERM → 刷批处理 → 停调度 → HTTP drain（硬超时 10s） | — |
+| 磁盘满 | 无显式处理；审计/会话表曾无限增长（v3.1 O-G1 已修复，现在有 `auth-cleanup` 任务定期清理） | — |
+| 优雅关闭 | SIGTERM → 停 cache/BatchWriter（刷批）→ 停 NodeStatusSweeper → 停 scheduler → HTTP drain（`server.go:70-97`，硬超时 10s 不可配，见 O-G5） | — |
 
 ### 9.5 运维缺口清单（O 系列）
 
 | # | 缺口 | 状态 | 后果 | 修复方向 |
 |---|------|------|------|----------|
-| **O-G1** | **审计/会话/Token 清理未接线** | ❌ **[未实现]** | `auth_audit_logs`/`sessions`/`refresh_tokens`/`api_keys` 表无限增长，撑爆磁盘、拖慢查询；**文档谎称已实现，合规风险** | 注册到 scheduler + 修正 `authentication.md` |
+| **O-G1** | **审计/会话/Token 清理未接线** | ✅ **[已修复 v3.1]** | ~~`auth_audit_logs`/`sessions`/`refresh_tokens`/`api_keys` 表无限增长~~；v3.1 起 `auth-cleanup` 任务注册到 scheduler | v3.1：`registry.go registerAuthCleanupTask` 包装 `auth.CleanupJob` |
 | **O-G2** | **无管理员「解锁用户」** | ❌ **[未实现]** | 被锁用户必须等 10 分钟或 DB 干预 | UsersPage 加「立即解锁」按钮 |
 | **O-G3** | **无 JWT 轮换窗口** | ❌ **[未实现]** | 轮换即全员 token 失效，无法平滑 | 支持并发旧+新密钥验证（kid 多密钥） |
 | **O-G4** | **Pulse 无热重载** | ❌ **[未实现]** | 改配置需重启；Beacon 有而 Pulse 无，不对称 | SIGHUP 重载或 admin reload 端点 |
@@ -461,7 +460,7 @@ flowchart TD
 ### 9.6 状态
 
 - 可观测性、健康端点、优雅关闭、指标清理 **[支持]**。
-- **清理任务接线、备份、升级文档、TLS、热重载** 为关键缺口（见 O-G1–O-G8）。
+- **清理任务接线**：✅ 已修复（v3.1，O-G1）。备份、升级文档、TLS、热重载仍为关键缺口（见 O-G2–O-G8）。
 
 ---
 
@@ -507,7 +506,7 @@ flowchart LR
 ### 10.3 系统行为
 
 - 大盘走 **内存环形缓冲缓存**（每节点 60 点），常态 < 300ms。
-- 告警流走 **WebSocket**（`alert:new`/`alert:updated`/`alert:resolved`/`alert:note_created`），30s ping、断线指数退避重连（1s×2，上限 30s）。
+- 告警流走 **WebSocket**，前端消费 `alert:new`/`alert:updated`/`alert:resolved` 三个事件（`useGlobalRealtime.ts:48-89`）。后端额外广播 `alert:note_created`（`hub.go:149-158`），但前端目前**不消费**该事件（备注通过备注接口的响应或重新拉取记录刷新，不依赖 WS）。30s ping、断线指数退避重连（1s×2，上限 30s）。
 - **全局通知层（v2.3）**：`AppLayout` 持有 `useGlobalRealtime` 单例，所有受保护页面生效浏览器通知。
 - **节点上下线实时事件（v2.4）**：心跳到达转换 → 广播 `node:online`；sweeper 超时 → 广播 `node:offline`；前端 `useGlobalRealtime` 实时更新 `nodesStore`。
 
@@ -543,7 +542,7 @@ stateDiagram-v2
 | 4 | 导出当前告警为 CSV | `/alerts/records` 顶部按钮 | view | ✅ |
 | 5 | 打开告警详情 Modal | "查看详情" | view | ✅ |
 | 6 | 查看统一时间线（创建/状态变更/备注） | `AlertRecordDetailModal` timeline | view | ✅ |
-| 7 | 更新状态（接手/解决） | Modal 内按钮，`isValidStatusTransition` 校验 | admin/operator | ✅ |
+| 7 | 更新状态（接手/解决） | Modal 内按钮；后端 `models.CanTransitionTo`（`alert_record.go:64-80`）校验，前端镜像纯函数 `isValidStatusTransition`（`api/alertRecords.ts:106`） | admin/operator | ✅ |
 | 8 | **添加调查备注** | `AlertRecordDetailModal` 输入框 + Ctrl/Cmd+Enter | admin/operator | ✅（v2.1 修复） |
 | 9 | 从详情跳转节点 | "查看节点" → `/nodes/:id` | view | ✅ |
 | 10 | 在 `/alerts/history` 行内流转状态 | `/alerts/history` | admin | ✅ |
@@ -565,14 +564,14 @@ stateDiagram-v2
 |------|------|------|------|
 | 1 | 查看节点列表 | `/nodes` | view（所有角色） |
 | 2 | 点击节点名 → 详情 | `/nodes/:id` | view |
-| 3 | 创建节点 | `NodeDialog` | admin（前端 `canEdit = role==='admin'`） |
-| 4 | 编辑/删除节点 | Dialog / AlertDialog | admin |
+| 3 | 创建节点 | `NodeDialog` | admin/operator（前端 `canEdit = role==='admin' \|\| role==='operator'`） |
+| 4 | 编辑/删除节点 | Dialog / AlertDialog | admin/operator |
 
-> 前端 `NodeManagementPage.tsx:34` 把 `canEdit` 限定为 `admin`，但后端 `routes.go:347-353` 允许 `admin/operator`。**Operator 在 UI 上看不到创建按钮**，与 RBAC 不一致。
+> 前后端 RBAC 已对齐：前端 `NodeManagementPage.tsx:34-36` 现将 `canEdit` 设为 `admin || operator`（注释保留历史：此前曾错误地对 operator 隐藏，已修复），后端 `routes.go:379,382,385,388` 通过 `RBACMiddleware(["admin","operator"])` 守护 POST/PUT/DELETE。Operator 能看到创建/编辑/删除按钮。
 
 ### 12.2 状态
 
-[支持]；Operator 的创建/编辑入口被 UI 隐藏（与后端 RBAC 不一致）。
+[支持]（v3.1 勘误：前后端 RBAC 已对齐为 admin+operator；此前的「Operator UI 入口隐藏」描述为已修复的旧行为）。
 
 ---
 
@@ -582,11 +581,11 @@ stateDiagram-v2
 
 ### 13.1 操作步骤
 
-按节点筛选 → 创建/编辑/删除探针（TCP/UDP，MTR 走 Beacon 配置）。前端无显式角色关卡，Viewer 点按钮会收到后端 403。
+按节点筛选 → 创建/编辑/删除探针（TCP/UDP，MTR 走 Beacon 配置）。前端 `ProbeManagementPage.tsx:48-50` 已有显式 UI 关卡 `canEdit = admin || operator`（注释：「gate the UI so viewers don't trigger 403s on click」），Viewer 点不到写按钮；后端 `routes.go:407` 通过 `RBACMiddleware(["admin","operator"])` 守护。
 
 ### 13.2 状态
 
-[支持]；前端缺少角色关卡（体验问题）。
+[支持]（v3.1 勘误：前端已加 admin/operator UI 关卡，Viewer 不再触发 403；此前的「前端缺少角色关卡」描述为已修复的旧行为）。
 
 ---
 
@@ -688,7 +687,8 @@ stateDiagram-v2
 | 预览 payload + 测试投递 + 启用切换 | ✅ |
 | **投递日志查询**（`GET /webhooks/:id/logs` + Dialog） | ✅（v2.1 G4） |
 | **告警路由规则**（`alert_routing_rules` + RouteMatcher 注入） | ✅（v2.3，ADR-002） |
-| 自定义 headers / 严重级别过滤 | ❌ 计划中 |
+| **严重级别过滤**（`rule.Severities` 匹配 `event.Level`，ADR-002 Tier 1） | ✅（`router.go:66-86`） |
+| 自定义 headers（`Webhook` 结构无 Headers 字段） | ❌ 计划中 |
 
 ### 18.2 状态
 
@@ -734,7 +734,7 @@ stateDiagram-v2
 
 > 主角色：Admin。
 
-API Key 全套生命周期（list/get/create/rotate/revoke）+ 审计日志查询，前端 v2.1 已补齐完整 UI。轮换时旧 key 24h 过渡（零停机）。`api_keys` 表 XOR 约束归属 user 或 service_account。
+API Key 全套生命周期（list/get/create/rotate/revoke），前端 v2.1 已补齐完整 UI。轮换时旧 key 24h 过渡（零停机）。`api_keys` 表 XOR 约束归属 user 或 service_account。**审计日志查询**是独立的 `/settings/audit-logs` 全局页面（`AuditLogsPage`，按时间/用户/事件筛选），并非嵌在 API Key 详情里查询单个 key 的操作历史。
 
 ### 21.1 状态
 
@@ -774,9 +774,9 @@ v3.0 合并三大生命周期的全部缺口，按严重度分级。处置标记
 
 | # | 缺口 | 类别 | 状态 | 后果 | 修复方向 |
 |---|------|------|------|------|----------|
-| **O-G1** | 审计/会话/Token 清理未接线 | 运维 | 🔴 **【文档谎称】** | `auth_audit_logs`/`sessions`/`refresh_tokens` 无限增长，撑爆磁盘；`authentication.md:515` 谎称 90 天清理 | 注册到 scheduler + 修正文档 |
+| **O-G1** | 审计/会话/Token 清理未接线 | 运维 | ✅ **【已修复 v3.1】** | ~~`auth_audit_logs`/`sessions`/`refresh_tokens` 无限增长~~；v3.1 起 `auth-cleanup` 任务注册到 scheduler | v3.1：`registry.go registerAuthCleanupTask` + `auth_cleanup_task.go` + 修正 `authentication.md` |
 | **D-G2** | 无数据库备份/恢复 | 部署 | ❌ **【未实现】** | 单卷单点失败；数据丢失不可恢复 | pg_dump cron + 恢复 runbook |
-| **F1** | `Reports.tsx` 计划按钮无角色关卡 | 功能 | 🔴 真实 bug | 非管理员看到按钮→点→403 | 加 `isAdmin` 守卫 |
+| **F1** | `Reports.tsx` 计划按钮无角色关卡 | 功能 | ✅ **【已修复 v3.1】** | ~~非管理员看到按钮→点→403~~；v3.1 起 `isAdmin` 守卫创建/启用/删除 | v3.1：`Reports.tsx` 用 `useAuthStore().role` 守卫所有 schedule 写操作 |
 
 ### 23.2 P1 — 生产可用性（应优先）
 
@@ -862,7 +862,7 @@ G1 告警备注、G2 API Keys 页、G3 导出持久化、G4 Webhook 投递日志
 | D1 Docker 部署 | 单主机栈、自动迁移、密钥生成 | NFR-2 | **[支持]** | TLS/备份（D-G1/G2） |
 | D2 二进制部署 | 构建、分发 | NFR-2 | **[部分支持]** | systemd/版本（D-G4/G5） |
 | O1 可观测性 | 日志/指标/健康/追踪 | NFR-4 | **[支持]** | Pulse 日志无轮换 |
-| O2 维护 | 清理/升级/备份/解锁 | NFR-2/6 | **[部分支持]** | O-G1~O-G8 |
+| O2 维护 | 清理/升级/备份/解锁 | NFR-2/6 | **[部分支持]** | O-G1 已修复（v3.1）；余 O-G2~O-G8 |
 | J1 大盘 | 大盘四件套、下钻、WS、全局通知、节点实时 | FR-3 | **[支持]** | — |
 | J2 告警 | 创建/状态/时间线/备注/路由 | FR-4 | **[支持]** | — |
 | J3 节点 | CRUD、详情 | FR-3 | **[支持]** | Operator UI 入口 |
@@ -903,7 +903,7 @@ G1 告警备注、G2 API Keys 页、G3 导出持久化、G4 Webhook 投递日志
 ### 26.4 部署/运维异常
 
 - **DB 不可达**：Pulse 启动进入 DEGRADED MODE（nil DB），`/health` 显示 `database:disabled`。
-- **磁盘满**：无显式处理；审计/会话表无限增长加剧风险（O-G1）。
+- **磁盘满**：无显式处理；审计/会话表曾无限增长（v3.1 O-G1 已修复，`auth-cleanup` 任务定期清理）。
 - **优雅关闭**：SIGTERM → 刷批处理 → 停调度 → HTTP drain（硬超时 10s，O-G5）。
 
 ### 26.5 前端范式
@@ -927,6 +927,7 @@ G1 告警备注、G2 API Keys 页、G3 导出持久化、G4 Webhook 投递日志
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 3.1 | 2026-07-05 | **QA 驱动修复轮**（基于 `docs/qa-journey-audit.md` 17 条旅程审计）：① **O-G1 修复** —— `auth-cleanup` 任务接线到 scheduler（`server/auth_cleanup_task.go` + `registry.go registerAuthCleanupTask`），`authentication.md` 的「Audit Log Retention」同步为真实实现；② **F1 修复** —— `Reports.tsx` 用 `useAuthStore().role` 守卫 schedule 创建/启用/删除（`isAdmin`）；③ **新增修复**：后端 `UpdateUser` 加 self-role-change 防护（`ErrCannotChangeOwnRole`）、`/health` scheduler 探测参与降级判定、`routes.go:406` CSRF 中间件归属修正、导出删除端点（`DELETE /data/export/:id` + 前端接线）；④ **文档勘误**：J3/J4 RBAC 不一致（已修复回写）、§12 行号、J9 严重级别过滤（已实现）、J2 状态机符号名（`CanTransitionTo`）、J12 审计页措辞、§9.4 优雅关闭顺序、§10.3 `alert:note_created`（前端不消费）。 |
 | 3.0 | 2026-07-05 | **三生命周期重构**：新增第一部分「安装部署」（D1/D2 + D-G1~G8 部署缺口）、第二部分「系统维护与运维」（O1/O2 + O-G1~G8 运维缺口）、§3.1 部署/运维能力分层表；新增 Deployer/SRE 角色；引入 **[未实现]** 状态标签消除「文档谎称」；合并所有缺口为 §23 总表（P0/P1/P2/P3 四级）；修正 v2.x 各旅程正文里未回写的过时「断裂」描述（告警备注/配置预览/回滚/模板/报告计划/投递日志/路由规则 等均已在 v2.1-v2.4 修复）；新增 §23.1 P0 含 **O-G1 审计清理文档谎称**（authentication.md:515 谎称 90 天清理，代码未注册）、**D-G2 无备份**、**F1 Reports 角色关卡 bug**。 |
 | 2.4 | 2026-07-05 | 文档勘误：纠正 §3/§4.3 WebSocket 虚报；回写 §15 J12、§20.2 心跳持久化；澄清密码重置路由。前端死代码清理（独立 commit）。 |
 | 2.3 | 2026-07-04 | 三处假服务端能力落地（报告计划/告警路由/Beacon 模板，ADR-001/002/003）；Beacon 回滚端点；密码重置邮件接通 SMTP；全局浏览器通知。**勘误（v2.4）**：原称「消费 node:online/offline」不实，已在 v2.4 修复。 |

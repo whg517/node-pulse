@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
+import { useAuthStore } from '@/stores/authStore'
 import { useExportStore } from '@/stores/exportStore'
 import { listReportSchedules, createReportSchedule, updateReportSchedule, deleteReportSchedule, type ReportScheduleDTO } from '@/api/reportSchedules'
 import { fetchNodes } from '@/api/nodes'
@@ -25,6 +26,12 @@ import type { CreateExportRequest } from '@/types/export'
 
 export default function ReportsPage() {
   const { t } = useTranslation()
+  const { role } = useAuthStore()
+  // Report schedule mutations are admin-only (POST/PUT/DELETE /reports/schedules,
+  // see routes.go). The list itself is open to all authenticated users, so we
+  // only hide/disable the action buttons for non-admins instead of the whole
+  // card. This closes the F1 gap from docs/user-journey.md §23.1.
+  const isAdmin = role === 'admin'
   const [searchParams] = useSearchParams()
   const preselectedNodeId = searchParams.get('nodeId')
   const defaultNodeIds = preselectedNodeId ? [preselectedNodeId] : undefined
@@ -34,6 +41,7 @@ export default function ReportsPage() {
     currentExports,
     exportHistory,
     downloadExport,
+    deleteExport,
     fetchExportHistory,
     isLoading: exportLoading,
   } = useExportStore()
@@ -183,7 +191,9 @@ export default function ReportsPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">{t('reports.scheduled')}</h3>
-                <Button onClick={() => setShowScheduleDialog(true)} size="sm">{t('reports.createSchedule')}</Button>
+                {isAdmin && (
+                  <Button onClick={() => setShowScheduleDialog(true)} size="sm">{t('reports.createSchedule')}</Button>
+                )}
               </div>
               {serverSchedules.length === 0 ? (
                 <div className="py-8 text-center">
@@ -197,6 +207,7 @@ export default function ReportsPage() {
                       <div className="flex items-center gap-3">
                         <Switch
                           checked={schedule.enabled}
+                          disabled={!isAdmin}
                           onCheckedChange={async (checked) => {
                             await updateReportSchedule(schedule.id, {
                               name: schedule.name, frequency: schedule.frequency,
@@ -215,9 +226,11 @@ export default function ReportsPage() {
                           </p>
                         </div>
                       </div>
-                      <Button variant="link" size="sm" className="text-destructive" onClick={async () => { await deleteReportSchedule(schedule.id).catch(() => {}); await loadSchedules() }}>
-                        {t('common.delete')}
-                      </Button>
+                      {isAdmin && (
+                        <Button variant="link" size="sm" className="text-destructive" onClick={async () => { await deleteReportSchedule(schedule.id).catch(() => {}); await loadSchedules() }}>
+                          {t('common.delete')}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -242,7 +255,7 @@ export default function ReportsPage() {
             <Card>
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">{t('reports.exportHistory')}</h3>
-                <ExportHistoryTable exports={exportHistory} onDownload={downloadExport} onDelete={() => {}} />
+                <ExportHistoryTable exports={exportHistory} onDownload={downloadExport} onDelete={(id) => { void deleteExport(id) }} />
               </CardContent>
             </Card>
           )}

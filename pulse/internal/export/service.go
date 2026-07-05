@@ -46,6 +46,7 @@ type TaskStore interface {
 	ListByUser(ctx context.Context, userID string, limit int) ([]*models.ExportTask, error)
 	Update(ctx context.Context, task *models.ExportTask) error
 	ListByStatuses(ctx context.Context, statuses []string) ([]*models.ExportTask, error)
+	Delete(ctx context.Context, id string) error
 }
 
 // ExportService handles data export operations
@@ -254,6 +255,43 @@ func (s *ExportService) ListExports(userID string, limit int) []*models.ExportTa
 		return tasks[:limit]
 	}
 	return tasks
+}
+
+// DeleteExport removes an export task: it deletes the generated file (if any),
+// drops the in-memory entry, and deletes the durable row. Returns an error if
+// the task cannot be found. Deleting a still-processing task is allowed; the
+// background goroutine will tolerate its disappearance (updateTaskStatus is a
+// no-op on a missing in-memory task).
+func (s *ExportService) DeleteExport(exportID string) error {
+	s.mu.Lock()
+	var filePath string
+	if task, ok := s.tasks[exportID]; ok {
+		filePath = task.FilePath
+		delete(s.tasks, exportID)
+	}
+	s.mu.Unlock()
+
+	// Remove the on-disk file. A missing file is not an error (it may already
+	// have been cleaned up by the retention sweeper).
+	if filePath != "" {
+		if err := os.Remove(filePath); err != nil && !os.IsNotExist(err) {
+			slog.Error("Failed to delete export file during DeleteExport",
+				"component", "export", "file", filePath, "error", err)
+			// Continue: we still want to remove the DB row.
+		}
+	}
+
+	// Remove the durable row.
+	if s.store != nil {
+		ctx, cancel := context.WithTimeout(s.ctx, 5*time.Second)
+		defer cancel()
+		if err := s.store.Delete(ctx, exportID); err != nil {
+			return fmt.Errorf("failed to delete export task: %w", err)
+		}
+	}
+
+	slog.Info("Deleted export task", "component", "export", "export_id", exportID)
+	return nil
 }
 
 // processExport processes the export task asynchronously

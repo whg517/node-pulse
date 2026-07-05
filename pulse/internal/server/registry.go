@@ -3,6 +3,7 @@ package server
 import (
 	"log/slog"
 
+	"github.com/whg517/node-pulse/pulse/internal/auth"
 	"github.com/whg517/node-pulse/pulse/internal/cleanup"
 	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/db"
@@ -60,6 +61,33 @@ func (r *TaskRegistry) RegisterAll() error {
 		return err
 	}
 
+	if err := r.registerAuthCleanupTask(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// registerAuthCleanupTask wires the periodic cleanup of auth-related tables
+// (refresh_tokens, token_blacklist, rate_limits, auth_audit_logs, api_keys).
+// This closes the O-G1 gap from docs/user-journey.md §23.1: these tables
+// previously grew without bound while authentication.md claimed daily cleanup.
+func (r *TaskRegistry) registerAuthCleanupTask() error {
+	cfg := config.MustLoad()
+	intervalSeconds := cfg.Cleanup.IntervalSeconds
+	if intervalSeconds <= 0 {
+		intervalSeconds = 86400 // daily, matches authentication.md
+	}
+	job := auth.NewCleanupJob(r.database.Pool, intervalSeconds, cfg.Cleanup.RetentionDays)
+	task := newAuthCleanupTask(job, intervalSeconds)
+	if err := r.scheduler.RegisterTask(task); err != nil {
+		return err
+	}
+	slog.Info("Auth cleanup task registered",
+		"component", "registry",
+		"interval_seconds", intervalSeconds,
+		"retention_days", cfg.Cleanup.RetentionDays,
+	)
 	return nil
 }
 

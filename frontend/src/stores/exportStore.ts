@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand'
-import { createExport, getExportStatus, downloadExport, listExports } from '../api/export'
+import { createExport, getExportStatus, downloadExport, listExports, deleteExport as deleteExportApi } from '../api/export'
 import type { ExportTask, CreateExportRequest } from '../types/export'
 
 interface ExportStore {
@@ -23,6 +23,7 @@ interface ExportStore {
   pollExportStatus: (exportId: string) => Promise<void>
   downloadExport: (exportId: string) => Promise<void>
   fetchExportHistory: () => Promise<void>
+  deleteExport: (exportId: string) => Promise<void>
   clearError: () => void
   stopPolling: (exportId: string) => void
   stopAllPolling: () => void
@@ -213,6 +214,35 @@ export const useExportStore = create<ExportStore>()((set, get) => ({
           const errorMessage =
             error instanceof Error ? error.message : 'Failed to fetch export history'
           set({ exportHistory: fallbackHistory, error: errorMessage })
+        }
+      },
+
+      /**
+       * Delete an export task: stop its poll, remove from local state + storage,
+       * then call the backend DELETE endpoint. Errors surface via `error` state.
+       */
+      deleteExport: async (exportId: string) => {
+        set({ error: null })
+        try {
+          // Stop any active polling first to avoid races with the deletion.
+          get().stopPolling(exportId)
+
+          // Optimistically remove from local state.
+          const { currentExports, exportHistory } = get()
+          set({
+            currentExports: currentExports.filter((t) => t.id !== exportId),
+            exportHistory: exportHistory.filter((t) => t.id !== exportId),
+          })
+          saveHistoryToStorage(exportHistory.filter((t) => t.id !== exportId))
+
+          await deleteExportApi(exportId)
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : 'Failed to delete export'
+          set({ error: errorMessage })
+          // Re-fetch to restore consistent state after a failed delete.
+          void get().fetchExportHistory()
+          throw error
         }
       },
 

@@ -12,7 +12,7 @@ import type { CreateExportRequest } from '@/types/export'
 export default function DataExportPage() {
   const { t } = useTranslation()
   const { user } = useAuthStore()
-  const { createExport, currentExports, exportHistory, downloadExport, fetchExportHistory, isLoading: exportLoading } = useExportStore()
+  const { createExport, currentExports, exportHistory, downloadExport, deleteExport, fetchExportHistory, isLoading: exportLoading } = useExportStore()
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)
   const [nodes, setNodes] = useState<NodeDTO[]>([])
@@ -81,7 +81,7 @@ export default function DataExportPage() {
 
       {!isLoading && !error && exportHistory.length > 0 && (
         <div className="mt-8 rounded-lg border bg-card p-6">
-          <ExportHistoryTable exports={exportHistory} onDownload={downloadExport} onDelete={() => {}} />
+          <ExportHistoryTable exports={exportHistory} onDownload={downloadExport} onDelete={(id) => { void deleteExport(id) }} />
         </div>
       )}
     </div>

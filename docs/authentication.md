@@ -516,15 +516,24 @@ All authentication events are logged to `auth_audit_logs`:
 
 | Log Type | Retention Period | Cleanup Method |
 |----------|------------------|----------------|
-| Authentication Events | 90 days | Automated daily cleanup |
-| Session Events | 90 days | Automated daily cleanup |
-| API Key Operations | 90 days | Automated daily cleanup |
-| RBAC Permission Checks | 30 days | Automated daily cleanup |
+| Authentication Events | 90 days | Scheduled `auth-cleanup` task |
+| Refresh Tokens | `cleanup.retention_days` (default 7) | Scheduled `auth-cleanup` task |
+| Token Blacklist | `cleanup.retention_days` (default 7) | Scheduled `auth-cleanup` task |
+| API Keys (expired) | 30 days | Scheduled `auth-cleanup` task |
+| Rate-limit counters | 24 hours | Scheduled `auth-cleanup` task |
 
 **Retention Policy Implementation:**
-- Background job runs daily at 02:00 UTC
-- Deletes records older than retention period
-- Audit logs are immutable (no updates after creation)
+- The `auth-cleanup` task is registered with the scheduler in
+  `pulse/internal/server/registry.go` (`registerAuthCleanupTask`) and runs
+  every `cleanup.interval_seconds` (default 86400s = daily). It wraps
+  `auth.CleanupJob.RunAll`, which performs the five cleanup steps above.
+- Retention for auth events defaults to 90 days (audit logs) and 30 days
+  (expired API keys); token retention follows `cleanup.retention_days`.
+- Audit logs are immutable (no updates after creation).
+- **Note (history):** prior to v3.1 the cleanup functions existed in
+  `pulse/internal/auth/cleanup_job.go` but were never wired to the scheduler,
+  so the table above did not actually run. This was the O-G1 gap from
+  `docs/user-journey.md §23.1`; v3.1 closes it.
 
 ---
 

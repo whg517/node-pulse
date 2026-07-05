@@ -347,3 +347,40 @@ func (h *ExportHandler) DownloadExportHandler(c *gin.Context) {
 	// Send file
 	c.File(task.FilePath)
 }
+
+// DeleteExportHandler deletes an export task and its generated file.
+//
+// @Summary		Delete export task
+// @Description	Removes an export task record and the associated file. Admin only.
+// @Tags			export
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string	true	"Export task ID"
+// @Success		204	{object}	nil		"Deleted"
+// @Failure		400	{object}	map[string]interface{}	"Missing export ID"
+// @Failure		404	{object}	map[string]interface{}	"Export not found"
+// @Failure		500	{object}	map[string]interface{}	"Internal error"
+// @Security		BearerAuth
+// @Router			/data/export/{id} [delete]
+func (h *ExportHandler) DeleteExportHandler(c *gin.Context) {
+	exportID := c.Param("id")
+	if exportID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "Missing export ID",
+			"details": "export_id is required",
+		})
+		return
+	}
+
+	if err := h.exportService.DeleteExport(exportID); err != nil {
+		// DeleteExport only returns an error from the durable store; a missing
+		// in-memory task is not an error (the row may still exist).
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "Failed to delete export",
+			"details": err.Error(),
+		})
+		return
+	}
+
+	c.Status(http.StatusNoContent)
+}

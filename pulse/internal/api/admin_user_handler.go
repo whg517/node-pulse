@@ -29,6 +29,12 @@ var (
 	ErrUserNotFoundCode = "ERR_USER_NOT_FOUND"
 	// ErrCannotDeleteSelf is returned when attempting to delete own account
 	ErrCannotDeleteSelf = "ERR_CANNOT_DELETE_SELF"
+	// ErrCannotChangeOwnRole is returned when an admin tries to change their own
+	// role via UpdateUser. This prevents self-lockout (e.g. admin demoting
+	// themselves to viewer and losing the ability to manage users). Front-end
+	// disables the role select for the current user, but the API must enforce it
+	// independently since RBAC only checks "is admin", not "is this me".
+	ErrCannotChangeOwnRole = "ERR_CANNOT_CHANGE_OWN_ROLE"
 	// ErrLastAdminCode is returned when attempting to delete last admin
 	ErrLastAdminCode = "ERR_LAST_ADMIN"
 	// ErrPasswordInvalid is returned when password doesn't meet requirements
@@ -452,6 +458,19 @@ func (h *AdminUserHandler) UpdateUser(c *gin.Context) {
 				Details: map[string]interface{}{
 					"provided_role": *req.Role,
 					"valid_roles":   []string{"admin", "operator", "viewer"},
+				},
+			})
+			return
+		}
+		// Reject changing one's own role. An admin demoting themselves would lose
+		// user-management capability with no way back (no other admin to fix it).
+		// Mirrors the self-delete guard below (DeleteUser → ErrCannotDeleteSelf).
+		if idParam == requestingUserID {
+			c.JSON(http.StatusBadRequest, models.ErrorResponse{
+				Code:    ErrCannotChangeOwnRole,
+				Message: "Cannot change your own role",
+				Details: map[string]interface{}{
+					"user_id": idParam,
 				},
 			})
 			return

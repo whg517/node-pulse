@@ -401,9 +401,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// GET /api/v1/probes/:id - Get probe by ID (all roles)
 		probes.GET("/:id", probeHandler.GetProbeByIDHandler)
 
-		// Create/Update/Delete routes require RBAC (admin or operator)
-		// Add CSRF protection for state-changing operations
-		nodes.Use(csrf.CSRFMiddleware())
+		// Create/Update/Delete routes require RBAC (admin or operator).
+		// Add CSRF protection for state-changing operations on probes.
+		probes.Use(csrf.CSRFMiddleware())
 		probes.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 
 		// POST /api/v1/probes - Create probe (admin/operator only)
@@ -448,6 +448,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		exports := v1.Group("/data/export")
 		exports.Use(middleware.JWTAuthMiddleware(jwtService))
 		exports.Use(middleware.RBACMiddleware([]string{"admin"}))
+		exports.Use(csrf.CSRFMiddleware())
 		{
 			// GET /api/v1/data/export - List export tasks (admin only)
 			exports.GET("", exportHandler.ListExportsHandler)
@@ -460,6 +461,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 			// GET /api/v1/data/export/:id/download - Download export file (admin only)
 			exports.GET("/:id/download", exportHandler.DownloadExportHandler)
+
+			// DELETE /api/v1/data/export/:id - Delete export task + file (admin only)
+			exports.DELETE("/:id", exportHandler.DeleteExportHandler)
 		}
 
 		// Report schedules (ADR-001). Admin-managed recurring reports.

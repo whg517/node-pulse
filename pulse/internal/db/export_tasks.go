@@ -21,6 +21,9 @@ type ExportTaskRepository interface {
 	ListByUser(ctx context.Context, userID string, limit int) ([]*models.ExportTask, error)
 	Update(ctx context.Context, task *models.ExportTask) error
 	ListByStatuses(ctx context.Context, statuses []string) ([]*models.ExportTask, error)
+	// Delete removes an export task record by id. Callers should remove the
+	// associated file first (see ExportService.DeleteExport).
+	Delete(ctx context.Context, id string) error
 }
 
 type exportTaskRepository struct {
@@ -164,6 +167,16 @@ func (r *exportTaskRepository) Update(ctx context.Context, task *models.ExportTa
 		return errors.New("failed to update export task: " + err.Error())
 	}
 	return nil
+}
+
+// Delete removes an export task row by id.
+func (r *exportTaskRepository) Delete(ctx context.Context, id string) error {
+	_, err := r.pool.Exec(ctx, `DELETE FROM export_tasks WHERE id = $1`, id)
+	if err != nil {
+		return errors.New("failed to delete export task: " + err.Error())
+	}
+	return nil
+}
 }
 
 func (r *exportTaskRepository) scanTask(ctx context.Context, query string, args ...interface{}) (*models.ExportTask, error) {

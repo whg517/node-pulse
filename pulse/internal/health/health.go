@@ -87,9 +87,11 @@ func (h *HealthChecker) Handler(c *gin.Context) {
 		}
 	}
 
-	// Check scheduler status
+	// Check scheduler status. A registered task with a non-empty LastError, or a
+	// task whose LastRun is far behind its expected interval, degrades health.
+	// Failure to look up the metrics-cleanup task at all (it should always be
+	// registered when a database is present) is treated as unhealthy.
 	if h.scheduler != nil {
-		// Try to get cleanup task status
 		if taskStatus, err := h.scheduler.GetTaskStatus("metrics-cleanup"); err == nil {
 			schedulerStatus = &SchedulerStatus{
 				Running: true,
@@ -102,12 +104,34 @@ func (h *HealthChecker) Handler(c *gin.Context) {
 					},
 				},
 			}
+			checks["scheduler"] = "ok"
+
+			// A recorded task error degrades; a task that has never run or has
+			// not run for more than 3x its expected interval is unhealthy.
+			if taskStatus.LastError != "" {
+				isDegraded = true
+				checks["scheduler"] = "degraded: last task error: " + taskStatus.LastError
+			}
+			if !taskStatus.LastRun.IsZero() && taskStatus.NextRun.Sub(taskStatus.LastRun) > 0 {
+				expectedInterval := taskStatus.NextRun.Sub(taskStatus.LastRun)
+				if time.Since(taskStatus.LastRun) > 3*expectedInterval {
+					isHealthy = false
+					checks["scheduler"] = "unhealthy: metrics-cleanup is stale"
+				}
+			} else if taskStatus.RunCount == 0 {
+				// Task registered but never executed yet — surface as degraded.
+				isDegraded = true
+				checks["scheduler"] = "degraded: metrics-cleanup has not run yet"
+			}
 		} else {
-			// Scheduler exists but task not found or not registered
+			// Scheduler exists but the metrics-cleanup task is missing — this is
+			// not normal when a database is configured.
 			schedulerStatus = &SchedulerStatus{
 				Running: true,
 				Tasks:   map[string]TaskStatusInfo{},
 			}
+			isDegraded = true
+			checks["scheduler"] = "degraded: metrics-cleanup task not registered"
 		}
 	}
 
