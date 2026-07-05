@@ -189,13 +189,13 @@ NodePulse 存在大量**分层不完整**的能力 —— 后端实现了路由�
 | **API Key 管理** | ✅ | ✅ | ✅ | ✅ 可用（v2.1） | `/settings/api-keys` 新页面 |
 | **审计日志查询** | ✅ | ✅ | ✅ | ✅ 可用（v2.1） | `/settings/audit-logs` 新页面 |
 | **密码自助修改** | ✅ | ✅ | ✅ | ✅ 可用（v2.1） | PreferencesPage Security Card |
-| **密码重置邮件** | ✅ | ✅ | ✅ | ✅ 可用（v2.3） | notify SMTP sender + `/forgot-password` + `/reset-password` 路由 |
+| **密码重置邮件** | ✅ | ✅ | ✅ | ✅ 可用（v2.3） | notify SMTP sender；后端 API `/auth/password/reset/request` + `/confirm`；前端页面 `/forgot-password` + `/reset-password` |
 | **管理员强制踢人** | ✅ | ✅ | ✅ | ✅ 可用（v2.1） | UsersPage "强制登出" |
 | **批量吊销自己所有会话** | ✅ | ✅ | ✅ | ✅ 可用（v2.1） | SessionsPage "登出全部会话" |
 | 系统配置查看/校验 | ✅ | ✅ | ✅ | ✅ 可用（v2.2） | `/settings/system-config` 只读 + 重新校验 |
 | 主题/语言/时区偏好 | — | — | ✅ | ✅ 可用 | 客户端偏好本应本地 |
 | 浏览器通知 | — | — | ✅ | ✅ 可用（v2.3） | AppLayout 持有全局 WS + 通知（`useGlobalRealtime`），全页面生效 |
-| WebSocket 实时 | ✅ | ✅ | ✅ | ✅ 可用（v2.3） | 消费 alert:new/updated/resolved + node:online/offline（v2.3 扩展） |
+| WebSocket 实时 | ✅ | ✅ | ✅ | ✅ 可用（v2.3） | 消费 alert:new/updated/resolved/note_created + 浏览器通知；`node:online/offline` 前端有分支但后端未发射（v2.4 规划补齐） |
 
 > 这张表是排期的核心依据：U 列的每一个 ❌/⚠️ 都是一个用户可感知的缺口。
 
@@ -240,17 +240,20 @@ flowchart LR
 ### 4.3 系统行为
 
 - 大盘走 **内存环形缓冲缓存**（每节点 60 点），常态 < 300ms。
-- 告警流走 **WebSocket**（`alert:new`/`alert:updated`/`alert:resolved`），30s ping、
+- 告警流走 **WebSocket**（`alert:new`/`alert:updated`/`alert:resolved`/`alert:note_created`），30s ping、
   断线指数退避重连（1s 起步 ×2，上限 30s）。
-- 浏览器通知仅在 Dashboard 页面挂载时生效（`AlertStream` 是唯一 WS 连接点与通知点），
-  离开 Dashboard 即无实时通知 —— **无全局通知层**。
-- 后端定义了 10 种 WS 事件，前端实际仅消费 3 种 alert 事件；`node:online/offline`、
-  `system:heartbeat/error` 全部被忽略。
+- **全局通知层（v2.3）**：`AppLayout` 持有 `useGlobalRealtime` 单例，所有受保护页面
+  均生效浏览器通知（不再局限于 Dashboard）。
+- 后端在 `realtime/hub.go` 定义了 7 种 WS 事件常量（4 个 alert + `system:heartbeat` +
+  `system:error` + `pong`），实际广播 4 种 alert 事件；`system:heartbeat/error` 已定义
+  但无发射点。前端 `useGlobalRealtime` 消费 3 种 alert 事件 + 浏览器通知；`node:online/offline`
+  分支存在但后端不发送（**v2.4 规划中**，见 §17）。
 
 ### 4.4 状态
 
-- 大盘四件套、下钻、WebSocket 告警流、轮询兜底 **[支持]**。
-- **全局通知层缺失**、**WS 事件利用率低** 为已知短板（见 §17）。
+- 大盘四件套、下钻、WebSocket 告警流、轮询兜底、全局通知 **[支持]**。
+- **节点上下线实时事件**（`node:online/offline`）当前**后端未发射**，节点状态靠各页面轮询
+  发现 —— 为已知短板（v2.4 规划补齐，见 §17）。
 - 诊断显式责任归属（FR-2 Planned）已在后端 `data_handler.go` 返回 owner 字段，
   但 PRD 仍标 Planned —— 存在文档与实现不同步。
 
@@ -719,11 +722,13 @@ flowchart LR
 
 | 操作 | 端点 | 状态 |
 |------|------|------|
-| 列出 API Key | `GET /admin/apikeys` | ❌ 前端无 |
-| 查询单个 | `GET /admin/apikeys/:id` | ❌ 前端无 |
-| 创建（返回明文，仅一次） | `POST /admin/apikeys` | ❌ 前端无 |
-| 轮换 | `POST /admin/apikeys/:id/rotate` | ❌ 前端无 |
-| 吊销 | `DELETE /admin/apikeys/:id` | ❌ 前端无 |
+| 列出 API Key | `GET /admin/apikeys` | ✅ `/settings/api-keys` |
+| 查询单个 | `GET /admin/apikeys/:id` | ✅ |
+| 创建（返回明文，仅一次） | `POST /admin/apikeys` | ✅（明文一次性展示） |
+| 轮换 | `POST /admin/apikeys/:id/rotate` | ✅ |
+| 吊销 | `DELETE /admin/apikeys/:id` | ✅ |
+
+> v2.1 G2 已补齐前端：`api/apiKeys.ts` + `/settings/api-keys` 页面（CRUD + 轮换 + 吊销）。
 
 ### 15.2 数据模型
 
@@ -731,22 +736,16 @@ flowchart LR
 - `service_accounts.scopes` 支持细粒度 scope 授权。
 - 有 `last_used_at` 字段用于跟踪。
 
-### 15.3 实现断裂
+### 15.3 状态
 
-**整个旅程前端完全缺失**：无 api 文件、无页面、无路由（`App.tsx` 无对应 path）。
-这意味着 Admin **无法通过 UI 为 Beacon 签发 API Key** —— 而 API Key 是 J5
-（Beacon registered 模式）的前置依赖。当前只能通过 API 直接调用或种子配置创建。
+- 后端 [支持]；前端 v2.1 已补齐完整 UI（CRUD + 轮换 + 吊销），见 §17.1 G2。
 
-### 15.4 状态
-
-- 后端 [支持]，**前端整体为 [部分支持]/缺失**。
-
-### 15.5 关联：安全审计日志查询（同样缺失）
+### 15.5 关联：安全审计日志查询
 
 后端 `GET /admin/audit/logs`（带过滤）、`GET /admin/audit/logs/:id`
 （`routes.go:258-260`，仅 admin），`auth_audit_logs` 表记录 login/logout/refresh 等
-安全事件，`AuditLogFilter` DTO 已定义。但**前端无 api 文件、无页面**。
-PRD NFR 提"审计保留 90 天"，但查询能力对用户不可见。
+安全事件。前端 v2.1 G6 已补齐：`api/auditLogs.ts` + `/settings/audit-logs` 页面（筛选 + 分页）。
+PRD NFR 提"审计保留 90 天"。
 
 ---
 
@@ -912,7 +911,8 @@ PRD NFR 提"审计保留 90 天"，但查询能力对用户不可见。
 
 ### 20.2 数据上报异常（Beacon）
 
-- **Pulse 不可达**：心跳 3 次指数退避（1s/2s/4s）；**失败丢弃，不本地持久化**（G18）。
+- **Pulse 不可达**：心跳重试由 `reconnect` 配置驱动（默认 3 次指数退避 1s/2s/4s，v2.2 G19 接线）；
+  **失败 payload 本地持久化**（v2.2 G18，`PriorityCache` 缓存 + 启动恢复 + 关闭落盘），网络恢复后断点续传。
 - **JWT 401**：自动失效 token 并重换。
 - **配置同步/MTR 上传失败**：无重试，warn 等下周期。
 - **MTR 权限不足**：需 root/CAP_NET_RAW，否则 ICMP socket 创建失败。
@@ -951,7 +951,8 @@ PRD NFR 提"审计保留 90 天"，但查询能力对用户不可见。
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 2.3 | 2026-07-04 | 三处假服务端能力落地为真实后端：报告计划（0003 迁移 + scheduler 任务 + 服务端 PDF 渲染 gopdf + CSV + SMTP 邮件投递，ADR-001 Accepted）、告警路由规则（0004 迁移 + push_service RouteMatcher 注入，ADR-002 Accepted）、Beacon 配置模板（0005 迁移 + CRUD，ADR-003 Accepted）；Beacon 配置回滚端点；密码重置邮件接通真实 SMTP（notify 包 + `/forgot-password`、`/reset-password` 路由）；全局浏览器通知 + WS 连接上移到 AppLayout（`useGlobalRealtime`），消费 node:online/offline。至此 13 条旅程全部 [支持]，§3 分层表无 ❌/⚠️ 残留。 |
+| 2.4 | 2026-07-05 | 文档勘误：纠正 §3/§4.3 关于 WebSocket 事件的虚报（后端实际定义 7 种事件常量、广播 4 种 alert，`node:online/offline` 后端从未发射，v2.3 条目"消费 node:online/offline"不实，回写为"v2.4 规划补齐"）；回写 §15 J12 API Key 表格与 §15.5 审计日志段（v2.1 已补齐但正文未回写）；修正 §20.2 心跳失败持久化描述（与 §17.5 G18 的 v2.2 修复矛盾）；澄清密码重置的前端页面路由 vs 后端 API 路由。前端死代码清理（独立 commit）：删除 settingsStore 的 reportSchedules/configTemplates/routingRules 三个 localStorage 孤儿实现 + 3 个零引用 dashboard 组件。 |
+| 2.3 | 2026-07-04 | 三处假服务端能力落地为真实后端：报告计划（0003 迁移 + scheduler 任务 + 服务端 PDF 渲染 gopdf + CSV + SMTP 邮件投递，ADR-001 Accepted）、告警路由规则（0004 迁移 + push_service RouteMatcher 注入，ADR-002 Accepted）、Beacon 配置模板（0005 迁移 + CRUD，ADR-003 Accepted）；Beacon 配置回滚端点；密码重置邮件接通真实 SMTP（notify 包；后端 API `/auth/password/reset/request`+`/confirm`，前端页面 `/forgot-password`+`/reset-password`）；全局浏览器通知 + WS 连接上移到 AppLayout（`useGlobalRealtime`）。**勘误（v2.4）**：原条目称"消费 node:online/offline"，实际后端从未发射这两个事件，前端分支为空操作，此为 v2.4 规划项。 |
 | 2.2 | 2026-07-04 | 全量闭环剩余 13 条断裂点：Beacon 运行时接线 G16-G19（降级/压缩/续传/reconnect，含兼容后端 wire-format 与 ModeManager 仅驱动 metrics 的冲突规避）；前端能力补齐 G8 配置预览、G9 批量下发、G11 系统配置页；孤儿组件接入 G20 AlertDetailMobile(isMobile)、G21 MTRPathVisualization；死代码清理 G22/G23 + 闲置 hooks G24；G12 调研确认无需 UI。至此 24 条断裂点全部闭环，无"显式不做"残留。 |
 | 2.1 | 2026-07-04 | 实现 8 条断裂点端到端修复（G1 告警备注、G2 API Keys 页、G3 导出持久化、G4 Webhook 投递日志、G5 改密、G6 审计日志页、G7 强制登出、G10 批量吊销）+ J3/J4 角色一致性；3 条假服务端能力加警示横幅并产出 ADR-001/002/003；G8/G9/G11/G12/G16-G24 逐条标注"显式不做+理由"。§3/§17/§19 状态全面回写。 |
 | 2.0 | 2026-07-04 | 五维交叉验证重建：旅程从 6 条扩至 13 条；新增 §3 实现分层模型、§17 断裂点清单（24 条）、§18 跨角色剧本（3 个）、§12 API Key 旅程；修正 v1.0 把"后端有 API"等同于"用户可用"的错误。 |
