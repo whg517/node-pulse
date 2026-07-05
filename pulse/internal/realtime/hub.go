@@ -9,13 +9,15 @@ import (
 )
 
 const (
-	EventAlertNew          = "alert:new"
-	EventAlertUpdated      = "alert:updated"
-	EventAlertResolved     = "alert:resolved"
-	EventAlertNoteCreated  = "alert:note_created"
-	EventSystemHeartbeat   = "system:heartbeat"
-	EventSystemError       = "system:error"
-	EventPong              = "pong"
+	EventAlertNew         = "alert:new"
+	EventAlertUpdated     = "alert:updated"
+	EventAlertResolved    = "alert:resolved"
+	EventAlertNoteCreated = "alert:note_created"
+	EventNodeOnline       = "node:online"
+	EventNodeOffline      = "node:offline"
+	EventSystemHeartbeat  = "system:heartbeat"
+	EventSystemError      = "system:error"
+	EventPong             = "pong"
 	defaultClientQueueSize = 64
 )
 
@@ -48,6 +50,13 @@ type AlertNotePayload struct {
 	UserName  string `json:"user_name"`
 	Content   string `json:"content"`
 	CreatedAt string `json:"created_at"`
+}
+
+// NodeStatusPayload carries a node online/offline transition event. The frontend
+// useGlobalRealtime hook consumes these to update nodesStore in real time.
+type NodeStatusPayload struct {
+	NodeID string `json:"node_id"`
+	Status string `json:"status"`
 }
 
 // Client is a registered realtime connection.
@@ -145,6 +154,22 @@ func (h *Hub) BroadcastAlertNote(note *models.AlertNote) {
 	h.Broadcast(Message{
 		Type:    EventAlertNoteCreated,
 		Payload: AlertNotePayloadFromNote(note),
+	})
+}
+
+// BroadcastNodeStatus sends a node online/offline transition event. eventType
+// must be EventNodeOnline or EventNodeOffline.
+func (h *Hub) BroadcastNodeStatus(eventType, nodeID, status string) {
+	if h == nil || nodeID == "" {
+		return
+	}
+
+	h.Broadcast(Message{
+		Type: eventType,
+		Payload: NodeStatusPayload{
+			NodeID: nodeID,
+			Status: status,
+		},
 	})
 }
 

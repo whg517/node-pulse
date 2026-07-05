@@ -20,14 +20,17 @@ import (
 
 // MockNodesQuerier is a simple mock for NodesQuerier interface
 type MockNodesQuerier struct {
-	createNodeFunc         func(context.Context, uuid.UUID, string, string, string, map[string]interface{}) error
-	getNodesFunc           func(context.Context) ([]*models.Node, error)
-	getNodesByRegionFunc   func(context.Context, string) ([]*models.Node, error)
-	getNodeByIDFunc        func(context.Context, uuid.UUID) (*models.Node, error)
-	getNodeByNameAndIPFunc func(context.Context, string, string) (*models.Node, error)
-	getNodeStatusFunc      func(context.Context, uuid.UUID) (*models.NodeStatus, error)
-	updateNodeFunc         func(context.Context, uuid.UUID, map[string]interface{}) error
-	deleteNodeFunc         func(context.Context, uuid.UUID) error
+	createNodeFunc           func(context.Context, uuid.UUID, string, string, string, map[string]interface{}) error
+	getNodesFunc             func(context.Context) ([]*models.Node, error)
+	getNodesByRegionFunc     func(context.Context, string) ([]*models.Node, error)
+	getNodeByIDFunc          func(context.Context, uuid.UUID) (*models.Node, error)
+	getNodeByNameAndIPFunc   func(context.Context, string, string) (*models.Node, error)
+	getNodeStatusFunc        func(context.Context, uuid.UUID) (*models.NodeStatus, error)
+	updateNodeFunc           func(context.Context, uuid.UUID, map[string]interface{}) error
+	deleteNodeFunc           func(context.Context, uuid.UUID) error
+	updateNodeHeartbeatFunc  func(context.Context, uuid.UUID) (string, error)
+	markNodeOfflineFunc      func(context.Context, uuid.UUID) error
+	getStaleNodesFunc        func(context.Context, time.Duration) ([]db.StaleNode, error)
 }
 
 func (m *MockNodesQuerier) CreateNode(ctx context.Context, nodeID uuid.UUID, name string, ip string, region string, tags map[string]interface{}) error {
@@ -84,6 +87,27 @@ func (m *MockNodesQuerier) DeleteNode(ctx context.Context, nodeID uuid.UUID) err
 		return m.deleteNodeFunc(ctx, nodeID)
 	}
 	return nil
+}
+
+func (m *MockNodesQuerier) UpdateNodeHeartbeat(ctx context.Context, nodeID uuid.UUID) (string, error) {
+	if m.updateNodeHeartbeatFunc != nil {
+		return m.updateNodeHeartbeatFunc(ctx, nodeID)
+	}
+	return "online", nil
+}
+
+func (m *MockNodesQuerier) MarkNodeOffline(ctx context.Context, nodeID uuid.UUID) error {
+	if m.markNodeOfflineFunc != nil {
+		return m.markNodeOfflineFunc(ctx, nodeID)
+	}
+	return nil
+}
+
+func (m *MockNodesQuerier) GetStaleNodes(ctx context.Context, timeout time.Duration) ([]db.StaleNode, error) {
+	if m.getStaleNodesFunc != nil {
+		return m.getStaleNodesFunc(ctx, timeout)
+	}
+	return nil, nil
 }
 
 // setupTestContext creates a Gin context with user authentication

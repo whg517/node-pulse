@@ -47,6 +47,12 @@ type NodesQuerier interface {
 	GetNodeStatus(ctx context.Context, nodeID uuid.UUID) (*models.NodeStatus, error)
 	UpdateNode(ctx context.Context, nodeID uuid.UUID, updates map[string]interface{}) error
 	DeleteNode(ctx context.Context, nodeID uuid.UUID) error
+	// UpdateNodeHeartbeat stamps last_heartbeat and returns the prior status.
+	UpdateNodeHeartbeat(ctx context.Context, nodeID uuid.UUID) (prevStatus string, err error)
+	// MarkNodeOffline sets status='offline'.
+	MarkNodeOffline(ctx context.Context, nodeID uuid.UUID) error
+	// GetStaleNodes returns nodes past the heartbeat threshold not yet offline.
+	GetStaleNodes(ctx context.Context, timeout time.Duration) ([]StaleNode, error)
 }
 
 // CreateNode inserts a new node into database
@@ -240,6 +246,99 @@ func GetNodeStatus(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUID) (*
 	status.LastReportTime = lastReportTime
 
 	return &status, nil
+}
+
+// UpdateNodeHeartbeat stamps last_heartbeat/last_report_time to now and flips
+// status to 'online' (marking the node alive). It returns the previous value of
+// status so callers can detect a transition (offline|connecting -> online) and
+// emit a node:online realtime event. This fixes a pre-existing gap where the
+// heartbeat path never wrote the status/last_heartbeat columns.
+func UpdateNodeHeartbeat(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUID) (prevStatus string, err error) {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer conn.Release()
+
+	// Use a CTE to read the prior status in the same statement that updates it,
+	// avoiding a separate read-then-write race.
+	const q = `
+		WITH prev AS (
+			SELECT status FROM nodes WHERE id = $1
+		)
+		UPDATE nodes
+		SET last_heartbeat = NOW(),
+		    last_report_time = NOW(),
+		    status = 'online'
+		FROM prev
+		WHERE nodes.id = $1
+		RETURNING prev.status
+	`
+	err = conn.QueryRow(ctx, q, nodeID).Scan(&prevStatus)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", ErrNodeNotFound
+		}
+		return "", err
+	}
+	return prevStatus, nil
+}
+
+// MarkNodeOffline sets a node's status to 'offline'. Used by the status sweeper
+// when last_heartbeat has exceeded the timeout threshold.
+func MarkNodeOffline(ctx context.Context, pool *pgxpool.Pool, nodeID uuid.UUID) error {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return err
+	}
+	defer conn.Release()
+
+	const query = `UPDATE nodes SET status = 'offline' WHERE id = $1`
+	_, err = conn.Exec(ctx, query, nodeID)
+	return err
+}
+
+// StaleNode identifies a node whose heartbeat is older than the threshold and
+// whose stored status is not yet 'offline'. Returned by GetStaleNodes for the
+// sweeper to flip and broadcast.
+type StaleNode struct {
+	ID     uuid.UUID
+	Name   string
+	Status string
+}
+
+// GetStaleNodes returns nodes whose last_heartbeat is older than the timeout
+// threshold (or null) and whose status is not already 'offline'. The sweeper
+// marks each of these offline and emits node:offline events.
+func GetStaleNodes(ctx context.Context, pool *pgxpool.Pool, timeout time.Duration) ([]StaleNode, error) {
+	conn, err := pool.Acquire(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Release()
+
+	cutoff := time.Now().Add(-timeout)
+	query := `
+		SELECT id, name, COALESCE(status, '')
+		FROM nodes
+		WHERE (last_heartbeat IS NULL OR last_heartbeat < $1)
+		  AND (status IS NULL OR status <> 'offline')
+	`
+	rows, err := conn.Query(ctx, query, cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var result []StaleNode
+	for rows.Next() {
+		var n StaleNode
+		if err := rows.Scan(&n.ID, &n.Name, &n.Status); err != nil {
+			return nil, err
+		}
+		result = append(result, n)
+	}
+	return result, rows.Err()
 }
 
 // UpdateNode updates an existing node

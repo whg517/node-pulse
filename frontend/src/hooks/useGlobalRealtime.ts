@@ -1,6 +1,8 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAlertsStore } from '@/stores/alertsStore'
+import { useNodesStore } from '@/stores/nodesStore'
+import type { NodeStatus } from '@/stores/types'
 import * as NotificationService from '@/services/NotificationService'
 import * as WebSocketService from '@/services/WebSocketService'
 
@@ -23,13 +25,15 @@ type NodeStatusPayload = {
 /**
  * useGlobalRealtime keeps the WebSocket + browser-notification connection alive
  * for the whole authenticated session (mounted once in AppLayout), instead of
- * only on the Dashboard. It also consumes more event types than before:
- * alert:new/updated/resolved (store upsert), alert:new (notification), and
- * node:online/offline (best-effort node-status refresh).
+ * only on the Dashboard. Consumed event types:
+ * - alert:new/updated/resolved (alertsStore upsert)
+ * - alert:new (browser notification)
+ * - node:online/node:offline (nodesStore.setNodeStatus — realtime node tile)
  */
 export function useGlobalRealtime() {
   const navigate = useNavigate()
   const upsertAlertRecord = useAlertsStore((state) => state.upsertAlertRecord)
+  const setNodeStatus = useNodesStore((state) => state.setNodeStatus)
 
   // Browser notifications: request permission + wire click handler app-wide.
   useEffect(() => {
@@ -70,18 +74,17 @@ export function useGlobalRealtime() {
         )
       }
 
-      // node:online/offline — best-effort: refresh node lists by invalidating the
-      // alerts store's perception; a full node store refresh is page-driven.
+      // node:online/offline — update the node tile in real time. The backend
+      // emits these on heartbeat-arrival transitions (offline/connecting -> online)
+      // and from the node-status sweeper (online -> offline after timeout).
       if (message.type === 'node:online' || message.type === 'node:offline') {
-        // Deliberately minimal: avoid coupling to nodesStore here. Pages that
-        // render node status re-fetch on their own polling cadence; this event
-        // is logged at debug level for observability.
         const payload = message.payload as NodeStatusPayload
-        console.debug('[realtime] node status event', payload.node_id, message.type)
+        const status = (message.type === 'node:online' ? 'online' : 'offline') as NodeStatus
+        setNodeStatus(payload.node_id, status)
       }
     }
     WebSocketService.initialize(handleMessage)
     WebSocketService.connect()
     return () => WebSocketService.disconnect()
-  }, [upsertAlertRecord])
+  }, [upsertAlertRecord, setNodeStatus])
 }

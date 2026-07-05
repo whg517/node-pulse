@@ -23,6 +23,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/health"
 	"github.com/whg517/node-pulse/pulse/internal/models"
 	"github.com/whg517/node-pulse/pulse/internal/notify"
+	"github.com/whg517/node-pulse/pulse/internal/realtime"
 	"github.com/whg517/node-pulse/pulse/internal/testutil"
 )
 
@@ -46,7 +47,7 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *pgxpool.Pool, *api.CacheManage
 
 	router := gin.New()
 	healthChecker := health.New(nil, nil, nil) // No scheduler or alert system in tests
-	cacheManager := api.SetupRoutes(router, healthChecker, pool, cfg, &notify.NoopSender{})
+	cacheManager := api.SetupRoutes(router, healthChecker, pool, realtime.NewHub(), cfg, &notify.NoopSender{})
 
 	// Defer cache cleanup for test cleanup
 	t.Cleanup(func() {

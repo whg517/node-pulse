@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -58,6 +59,21 @@ func (p *PoolQuerier) UpdateNode(ctx context.Context, nodeID uuid.UUID, updates 
 // DeleteNode implements NodesQuerier
 func (p *PoolQuerier) DeleteNode(ctx context.Context, nodeID uuid.UUID) error {
 	return DeleteNode(ctx, p.pool, nodeID)
+}
+
+// UpdateNodeHeartbeat implements NodesQuerier
+func (p *PoolQuerier) UpdateNodeHeartbeat(ctx context.Context, nodeID uuid.UUID) (string, error) {
+	return UpdateNodeHeartbeat(ctx, p.pool, nodeID)
+}
+
+// MarkNodeOffline implements NodesQuerier
+func (p *PoolQuerier) MarkNodeOffline(ctx context.Context, nodeID uuid.UUID) error {
+	return MarkNodeOffline(ctx, p.pool, nodeID)
+}
+
+// GetStaleNodes implements NodesQuerier
+func (p *PoolQuerier) GetStaleNodes(ctx context.Context, timeout time.Duration) ([]StaleNode, error) {
+	return GetStaleNodes(ctx, p.pool, timeout)
 }
 
 // CreateProbe implements ProbesQuerier

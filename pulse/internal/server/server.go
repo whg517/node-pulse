@@ -16,6 +16,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/health"
 	"github.com/whg517/node-pulse/pulse/internal/notify"
+	"github.com/whg517/node-pulse/pulse/internal/realtime"
 	"github.com/whg517/node-pulse/pulse/internal/scheduler"
 	"github.com/whg517/node-pulse/pulse/pkg/telemetry"
 )
@@ -31,6 +32,8 @@ type Server struct {
 	cacheManager      *api.CacheManager
 	telemetryProvider *telemetry.Provider
 	mailer            notify.Sender
+	realtimeHub       *realtime.Hub
+	nodeSweeper       *realtime.NodeStatusSweeper
 	shutdownCtx       context.Context
 	shutdownCancel    context.CancelFunc
 }
@@ -44,6 +47,12 @@ func (s *Server) Start() error {
 		return err
 	}
 	slog.Info("Scheduler started", "component", "server")
+
+	// Start node-status sweeper (offline detection + node:offline broadcasts)
+	if s.nodeSweeper != nil {
+		s.nodeSweeper.Start(s.shutdownCtx)
+		slog.Info("Node status sweeper started", "component", "server")
+	}
 
 	// Start HTTP server in background
 	go func() {
@@ -68,6 +77,12 @@ func (s *Server) Shutdown() error {
 	// Stop cache components
 	if s.cacheManager != nil {
 		s.stopCacheComponents()
+	}
+
+	// Stop node-status sweeper
+	if s.nodeSweeper != nil {
+		s.nodeSweeper.Stop()
+		slog.Info("Node status sweeper stopped", "component", "server")
 	}
 
 	// Stop scheduler
@@ -185,8 +200,23 @@ func (s *Server) setupRoutes() {
 		From:     s.config.Notify.SMTP.From,
 	})
 
-	s.cacheManager = api.SetupRoutes(s.router, s.healthChecker, dbPool, s.config.Config, s.mailer)
+	// Server-owned realtime hub: shared by the /ws handler, the alert engine,
+	// and the node-status sweeper. Created here so its lifecycle is bound to
+	// the server (not to the route-wiring function).
+	s.realtimeHub = realtime.NewHub()
+
+	s.cacheManager = api.SetupRoutes(s.router, s.healthChecker, dbPool, s.realtimeHub, s.config.Config, s.mailer)
 	slog.Info("Routes configured", "component", "server", "smtp_configured", s.mailer.Configured())
+
+	// Node-status sweeper: marks nodes offline when their heartbeat goes stale
+	// and broadcasts node:offline events. Only runs when a DB pool is present.
+	if dbPool != nil {
+		s.nodeSweeper = realtime.NewNodeStatusSweeper(
+			s.realtimeHub,
+			db.NewPoolQuerier(dbPool),
+			db.HeartbeatTimeout,
+		)
+	}
 }
 
 // setupSchedulerTasks registers all scheduled tasks

@@ -21,6 +21,7 @@ import (
 	"github.com/whg517/node-pulse/pulse/internal/cache"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/models"
+	"github.com/whg517/node-pulse/pulse/internal/realtime"
 	"github.com/whg517/node-pulse/pulse/pkg/middleware"
 )
 
@@ -40,19 +41,41 @@ var (
 
 // BeaconHandler handles beacon heartbeat API requests
 type BeaconHandler struct {
-	nodeQuerier db.NodesQuerier
-	memoryCache *cache.MemoryCache
-	batchWriter *cache.BatchWriter
-	alertEngine *alert.AlertEngine
+	nodeQuerier  db.NodesQuerier
+	memoryCache  *cache.MemoryCache
+	batchWriter  *cache.BatchWriter
+	alertEngine  *alert.AlertEngine
+	realtimeHub  *realtime.Hub
 }
 
-// NewBeaconHandler creates a new BeaconHandler
-func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCache, batchWriter *cache.BatchWriter, alertEngine *alert.AlertEngine) *BeaconHandler {
-	return &BeaconHandler{
+// NewBeaconHandler creates a new BeaconHandler. realtimeHub is optional; when
+// provided, heartbeat processing emits node:online events on offline/connecting
+// -> online transitions.
+func NewBeaconHandler(nodeQuerier db.NodesQuerier, memoryCache *cache.MemoryCache, batchWriter *cache.BatchWriter, alertEngine *alert.AlertEngine, realtimeHub ...*realtime.Hub) *BeaconHandler {
+	h := &BeaconHandler{
 		nodeQuerier: nodeQuerier,
 		memoryCache: memoryCache,
 		batchWriter: batchWriter,
 		alertEngine: alertEngine,
+	}
+	if len(realtimeHub) > 0 {
+		h.realtimeHub = realtimeHub[0]
+	}
+	return h
+}
+
+// recordHeartbeat stamps the node's last_heartbeat and broadcasts node:online if
+// the node was previously offline/connecting. This centralizes the status-write
+// + transition-detection logic shared by the normal and compressed handlers.
+func (h *BeaconHandler) recordHeartbeat(ctx context.Context, nodeID uuid.UUID) {
+	prevStatus, err := h.nodeQuerier.UpdateNodeHeartbeat(ctx, nodeID)
+	if err != nil {
+		slog.Warn("failed to update node heartbeat status", "node_id", nodeID, "error", err)
+		return
+	}
+	// Transition into 'online' from a non-online prior state => broadcast.
+	if h.realtimeHub != nil && prevStatus != "online" {
+		h.realtimeHub.BroadcastNodeStatus(realtime.EventNodeOnline, nodeID.String(), "online")
 	}
 }
 
@@ -199,6 +222,11 @@ func (h *BeaconHandler) HandleHeartbeat(c *gin.Context) {
 		})
 		return
 	}
+
+	// Stamp last_heartbeat and emit node:online on offline/connecting -> online
+	// transition. This also fixes a pre-existing gap where the heartbeat path
+	// never wrote the status/last_heartbeat columns.
+	h.recordHeartbeat(ctx, nodeID)
 
 	// Validate latency range (0-60000ms)
 	if req.LatencyMs < 0 || req.LatencyMs > 60000 {
@@ -492,6 +520,10 @@ func (h *BeaconHandler) HandleCompressedHeartbeat(c *gin.Context) {
 		})
 		return
 	}
+
+	// Stamp last_heartbeat and emit node:online on transition (same as the
+	// normal heartbeat path).
+	h.recordHeartbeat(ctx, nodeID)
 
 	// Validate timestamp
 	parsedTime, err := time.Parse(time.RFC3339, req.Timestamp)

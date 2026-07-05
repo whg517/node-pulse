@@ -56,9 +56,11 @@ func (m mailAdapter) Send(ctx context.Context, to, subject, body string, attachm
 }
 
 // SetupRoutes configures all API routes and returns cache manager for shutdown.
+// realtimeHub is the server-owned event hub (also used by the node-status
+// sweeper); SetupRoutes wires it into the alert engine and /ws handler.
 // cfg provides app config (notify/reset URL); mailer sends outbound email and
 // may be a NoopSender when SMTP is unconfigured.
-func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *pgxpool.Pool, cfg *config.Config, mailer notify.Sender) *CacheManager {
+func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *pgxpool.Pool, realtimeHub *realtime.Hub, cfg *config.Config, mailer notify.Sender) *CacheManager {
 	// Apply CORS middleware (must be first)
 	router.Use(middleware.CORSMiddleware())
 
@@ -107,8 +109,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	// Initialize JWT service with RS256
 	jwtService := auth.NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, 15, pool)
 
-	// Initialize realtime event hub for dashboard alert stream
-	realtimeHub := realtime.NewHub()
+	// realtimeHub is provided by the caller (server-owned); wire it into the
+	// alert engine and the /ws handler below.
 
 	// Initialize auth handler
 	authHandler := auth.NewAuthHandler(
@@ -189,7 +191,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		v1.GET("/health", healthChecker.Handler)
 
 		// Beacon endpoints (JWT auth for beacons)
-		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter, alertEngine)
+		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter, alertEngine, realtimeHub)
 
 		beacon := v1.Group("/beacon")
 		{
