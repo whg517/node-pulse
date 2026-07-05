@@ -122,6 +122,13 @@ type JWTConfig struct {
 	RefreshTokenExpirationDays   int    `yaml:"refresh_token_expiration_days" mapstructure:"refresh_token_expiration_days"`
 	RefreshTokenMaxValidityDays  int    `yaml:"refresh_token_max_validity_days" mapstructure:"refresh_token_max_validity_days"`
 	KeyID                        string `yaml:"key_id" mapstructure:"key_id"`
+	// Rotation window (O-G3): when provided, ValidateAccessToken accepts
+	// tokens signed by the previous key pair as well as the current one.
+	// New tokens are always signed with PrivateKey/KeyID. Set all three
+	// during a rotation, then unset them once all old tokens have expired.
+	PreviousPrivateKey string `yaml:"previous_private_key" mapstructure:"previous_private_key"`
+	PreviousPublicKey  string `yaml:"previous_public_key" mapstructure:"previous_public_key"`
+	PreviousKeyID      string `yaml:"previous_key_id" mapstructure:"previous_key_id"`
 }
 
 // RateLimitConfig holds rate limiting configuration for auth endpoints

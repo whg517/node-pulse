@@ -1,0 +1,42 @@
+# Node-Pulse Caddy reverse proxy reference.
+#
+# Caddy obtains and renews a Let's Encrypt certificate automatically — no
+# certbot step required. Replace pulse.example.com with your domain and
+# ensure DNS points here before `caddy run`.
+#
+# Run:  caddy run --config deploy/reverse-proxy/Caddyfile
+#
+# Closes the D-G1 gap (docs/deployment-tls.md).
+
+pulse.example.com {
+	# All requests reverse-proxy to the Pulse container / localhost.
+	# Pulse embeds the SPA + API on one origin, so a single reverse_proxy
+	# covers everything (UI, /api/v1/*, /metrics, /swagger/*).
+	reverse_proxy 127.0.0.1:6532 {
+		# Pass through the original Host and client IP for audit logs /
+		# c.ClientIP() correctness. (Pulse trusted-proxy config is the
+		# separate O-G6 gap; for now ensure only Caddy can reach Pulse.)
+		header_up Host {host}
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+	}
+
+	# WebSocket (used by /api/v1/realtime) is handled automatically by
+	# Caddy's reverse_proxy — no explicit upgrade block needed.
+
+	# Rational compression for non-already-compressed responses.
+	encode gzip zstd
+
+	# Sensible security headers (the SPA sets its own CSP where needed).
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		# HSTS: 1 year, include subdomains, preload once you're sure.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+
+	# Redirect any plaintext http:// request to https:// — Caddy does this
+	# implicitly when the site block is on HTTPS, kept here for clarity.
+}

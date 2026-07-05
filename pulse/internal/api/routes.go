@@ -106,8 +106,14 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		}
 	}
 
-	// Initialize JWT service with RS256
-	jwtService := auth.NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, 15, pool)
+	// Initialize JWT service with RS256. When previous_* env vars are set,
+	// open a rotation window (O-G3) so tokens signed by the previous key
+	// remain valid until they expire; new tokens always use the current key.
+	jwtService := auth.NewJWTService(jwtPrivateKey, jwtPublicKey, jwtKeyID, 15, pool).
+		WithPreviousKey(
+			getEnvOrDefault("PULSE_JWT_PREVIOUS_PUBLIC_KEY", ""),
+			getEnvOrDefault("PULSE_JWT_PREVIOUS_KEY_ID", ""),
+		)
 
 	// realtimeHub is provided by the caller (server-owned); wire it into the
 	// alert engine and the /ws handler below.
@@ -189,6 +195,9 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 	{
 		// Health check endpoint (public)
 		v1.GET("/health", healthChecker.Handler)
+
+		// Version endpoint (public) — build metadata for SRE triage / about panel.
+		v1.GET("/version", VersionHandler)
 
 		// Beacon endpoints (JWT auth for beacons)
 		beaconHandler := NewBeaconHandler(db.NewPoolQuerier(pool), memoryCache, batchWriter, alertEngine, realtimeHub)
@@ -317,6 +326,10 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 			// DELETE /api/v1/admin/users/:id - Delete user (admin only)
 			adminUsers.DELETE("/:id", adminUserHandler.DeleteUser)
+
+			// POST /api/v1/admin/users/:id/unlock - Clear account lock (admin only).
+			// Releases a 10-min lock imposed by 5 failed logins. See O-G2.
+			adminUsers.POST("/:id/unlock", adminUserHandler.UnlockUserHandler)
 		}
 
 		// Admin API key management routes (admin only)

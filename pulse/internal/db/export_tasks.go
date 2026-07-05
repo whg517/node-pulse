@@ -177,7 +177,6 @@ func (r *exportTaskRepository) Delete(ctx context.Context, id string) error {
 	}
 	return nil
 }
-}
 
 func (r *exportTaskRepository) scanTask(ctx context.Context, query string, args ...interface{}) (*models.ExportTask, error) {
 	row := r.pool.QueryRow(ctx, query, args...)

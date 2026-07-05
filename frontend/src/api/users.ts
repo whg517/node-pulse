@@ -73,3 +73,18 @@ export async function deleteUser(
     method: 'DELETE',
   })
 }
+
+/**
+ * Unlock a user account (admin only).
+ *
+ * Clears the account lock imposed by 5 failed logins (failed_login_attempts → 0,
+ * locked_until → NULL). Returns immediately; the next login attempt proceeds
+ * normally.
+ */
+export async function unlockUser(
+  id: string
+): Promise<{ message: string; user_id: string; timestamp: string }> {
+  return apiClient(`/api/v1/admin/users/${id}/unlock`, {
+    method: 'POST',
+  })
+}

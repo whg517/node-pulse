@@ -13,8 +13,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/whg517/node-pulse/pulse/internal/api"
+	"github.com/whg517/node-pulse/pulse/internal/config"
 	"github.com/whg517/node-pulse/pulse/internal/db"
 	"github.com/whg517/node-pulse/pulse/internal/health"
+	"github.com/whg517/node-pulse/pulse/internal/logger"
 	"github.com/whg517/node-pulse/pulse/internal/notify"
 	"github.com/whg517/node-pulse/pulse/internal/realtime"
 	"github.com/whg517/node-pulse/pulse/internal/scheduler"
@@ -115,18 +117,47 @@ func (s *Server) Shutdown() error {
 	return nil
 }
 
-// WaitForShutdown waits for interrupt signal and triggers graceful shutdown
+// WaitForShutdown waits for interrupt signal and triggers graceful shutdown.
+// On SIGHUP it hot-reloads a subset of configuration (currently the log level,
+// O-G4) without dropping connections; SIGINT/SIGTERM perform a clean shutdown.
 func (s *Server) WaitForShutdown() {
 	quit := make(chan os.Signal, 1)
+	hup := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
+	signal.Notify(hup, syscall.SIGHUP)
 
-	if err := s.Shutdown(); err != nil {
-		slog.Error("Shutdown error", "component", "server", "error", err)
-		os.Exit(1)
+	for {
+		select {
+		case <-hup:
+			s.reloadConfig()
+			// keep waiting for the next signal
+		case <-quit:
+			if err := s.Shutdown(); err != nil {
+				slog.Error("Shutdown error", "component", "server", "error", err)
+				os.Exit(1)
+			}
+			os.Exit(0)
+		}
 	}
+}
 
-	os.Exit(0)
+// reloadConfig applies a subset of configuration changes without restarting.
+// Anything not handled here still requires a full restart (port, DB url,
+// JWT keys, worker pool sizes). Each applied field logs what changed so
+// operators can confirm the reload took effect.
+//
+// Current scope (O-G4, Phase 1):
+//   - log.level
+//
+// Future phases can extend to CORS origins, rate-limit thresholds, etc.
+func (s *Server) reloadConfig() {
+	slog.Info("SIGHUP received, reloading configuration", "component", "server")
+	cfg := config.MustLoad()
+	if err := logger.SetLevel(cfg.Log.Level); err != nil {
+		slog.Error("config reload: invalid log level, keeping previous", "component", "server", "level", cfg.Log.Level, "error", err)
+		return
+	}
+	slog.Info("config reloaded", "component", "server", "log_level", cfg.Log.Level)
 }
 
 // stopCacheComponents stops all cache-related components

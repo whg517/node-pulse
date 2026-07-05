@@ -214,6 +214,23 @@ npm run test:headed  # Browser visible
 npm run report       # HTML report
 ```
 
+## Operations & Deployment
+
+Beyond this README, operational knowledge lives under `docs/` and `deploy/`:
+
+| Topic | Where |
+|-------|-------|
+| Production stack (compose) | `deploy/docker/docker-compose.prod.yml` + this README §Docker |
+| TLS termination (nginx/Caddy) | `docs/deployment-tls.md` + `deploy/reverse-proxy/` |
+| Backups | `deploy/backup/pg-backup.sh` (+ systemd timer) + `docs/operations.md §3` |
+| Upgrade & rollback | `docs/upgrade.md` |
+| SRE runbook (health triage, incidents) | `docs/operations.md` |
+| Beacon systemd service | `beacon/deploy/` + `make install-systemd` |
+| Observability (metrics/tracing) | `docs/observability.md` |
+| Authentication & RBAC | `docs/authentication.md` |
+
+Build version is exposed at `GET /api/v1/version` (no auth) for SRE triage.
+
 ## Docker
 
 ### Production stack (recommended)

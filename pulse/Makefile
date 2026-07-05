@@ -3,6 +3,15 @@
 .PHONY: migrate-up migrate-down migrate-force migrate-version migrate-create
 .PHONY: web-build
 
+##@ Build-time version stamping (D-G5)
+# Derive version/commit/date from git; fall back to "dev"/unknown when not in a
+# git worktree (e.g. extracting a tarball). Override with `make build VERSION=v1.2.3`.
+VERSION  ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+COMMIT   ?= $(shell git rev-parse --short=12 HEAD 2>/dev/null || echo "unknown")
+BUILD_DATE ?= $(shell date -u +"%Y-%m-%dT%H:%M:%SZ")
+VERSION_PKG := github.com/whg517/node-pulse/pulse/internal/version
+LDFLAGS  := -X $(VERSION_PKG).Version=$(VERSION) -X $(VERSION_PKG).Commit=$(COMMIT) -X $(VERSION_PKG).BuildDate=$(BUILD_DATE)
+
 # Default target
 help: ## Show this help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nPulse API - Node Pulse Backend Server\n\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
@@ -33,13 +42,13 @@ run: swag-ensure ## Run the server (default port 6532)
 	@go run cmd/server/main.go
 
 build: swag-ensure ## Build the server binary
-	@echo "🔨 Building server..."
-	@go build -o bin/pulse-api cmd/server/main.go
-	@echo "✅ Binary created: bin/pulse-api"
+	@echo "🔨 Building server (version=$(VERSION) commit=$(COMMIT))..."
+	@go build -ldflags "$(LDFLAGS)" -o bin/pulse-api cmd/server/main.go
+	@echo "✅ Binary created: bin/pulse-api ($(VERSION) @ $(COMMIT))"
 
 build-debug: swag-ensure ## Build debug binary with optimizations disabled
 	@echo "🔨 Building debug binary..."
-	@go build -gcflags="all=-N -l" -o bin/pulse-api-debug cmd/server/main.go
+	@go build -gcflags="all=-N -l" -ldflags "$(LDFLAGS)" -o bin/pulse-api-debug cmd/server/main.go
 	@echo "✅ Debug binary created: bin/pulse-api-debug"
 
 clean: ## Clean build artifacts and generated files

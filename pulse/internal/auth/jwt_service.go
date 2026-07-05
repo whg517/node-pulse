@@ -27,6 +27,11 @@ type JWTService struct {
 	issuer            string
 	audience          []string
 	keyID             string // Key identifier for key rotation (kid header)
+	// Rotation window (O-G3): when previousPublicKeyPEM + previousKeyID are
+	// set, ValidateAccessToken accepts tokens signed by the previous key as
+	// well as the current one. New tokens are always signed with privateKey.
+	previousPublicKeyPEM []byte
+	previousKeyID        string
 }
 
 // NewJWTService creates a new JWT service instance with RS256 signing
@@ -46,6 +51,28 @@ func NewJWTService(privateKeyPEM, publicKeyPEM, keyID string, accessExpirationMi
 		audience:          []string{TokenAudience},
 		keyID:             keyID,
 	}
+}
+
+// WithPreviousKey enables a key-rotation window (O-G3): tokens signed by
+// the previous key remain valid until they expire, while new tokens are
+// signed with the current key. Returns the receiver for chaining.
+//
+// Rotate by:
+//  1. Generate a new key pair + keyID.
+//  2. Move current → previous (set previous_* to the current values).
+//  3. Set the new key as the current PrivateKey/PublicKey/KeyID.
+//  4. Restart Pulse.
+//  5. Once the longest access token (default 15 min) has expired, unset
+//     previous_* and restart again.
+//
+// Passing empty previousPublicKeyPEM disables the window (no-op).
+func (s *JWTService) WithPreviousKey(previousPublicKeyPEM, previousKeyID string) *JWTService {
+	if previousPublicKeyPEM == "" {
+		return s
+	}
+	s.previousPublicKeyPEM = []byte(previousPublicKeyPEM)
+	s.previousKeyID = previousKeyID
+	return s
 }
 
 // Claims represents JWT custom claims
@@ -206,9 +233,18 @@ func (s *JWTService) GenerateAccessTokenWithExpiry(userID, role string, expiryMi
 // ValidateAccessToken validates an RS256-signed access token and returns the claims
 // Uses 60-second clock skew tolerance as specified in tech-spec
 func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
-	publicKey, err := s.parsePublicKey()
+	currentPublicKey, err := s.parsePublicKey()
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public key for verification: %w", err)
+	}
+
+	// Pre-parse the rotation-window public key once (O-G3), so the per-token
+	// keyfunc below can select the right key without re-parsing on every request.
+	var previousPublicKey interface{}
+	if len(s.previousPublicKeyPEM) > 0 {
+		if pk, perr := jwt.ParseRSAPublicKeyFromPEM(s.previousPublicKeyPEM); perr == nil {
+			previousPublicKey = pk
+		}
 	}
 
 	// Create parser with 60-second leeway for clock skew
@@ -220,14 +256,29 @@ func (s *JWTService) ValidateAccessToken(tokenString string) (*Claims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v (expected RS256)", token.Header["alg"])
 		}
 
-		// Validate key ID if present in token
-		if tokenKid, ok := token.Header["kid"].(string); ok {
-			if s.keyID != "" && tokenKid != s.keyID {
-				return nil, fmt.Errorf("token key ID %s does not match current key ID %s", tokenKid, s.keyID)
-			}
-		}
+		// Resolve which key verifies this token. With a rotation window
+		// (O-G3) a token's kid selects either the current or the previous
+		// public key. Without one, behavior is unchanged from before:
+		// current key only, kid (if present) must match.
+		tokenKid, _ := token.Header["kid"].(string)
 
-		return publicKey, nil
+		if tokenKid != "" && s.keyID != "" && tokenKid == s.keyID {
+			return currentPublicKey, nil
+		}
+		// Rotation window: accept a token signed by the previous key.
+		if tokenKid != "" && s.previousKeyID != "" && tokenKid == s.previousKeyID && previousPublicKey != nil {
+			return previousPublicKey, nil
+		}
+		// No kid in the token (older client) or kid matches the sole key:
+		// fall through to the current key. When a rotation window is
+		// configured and the kid doesn't match either key, reject.
+		if tokenKid == "" || s.keyID == "" || s.previousKeyID == "" {
+			if s.previousKeyID != "" && tokenKid != "" && tokenKid != s.keyID {
+				return nil, fmt.Errorf("token key ID %s does not match current (%s) or previous (%s)", tokenKid, s.keyID, s.previousKeyID)
+			}
+			return currentPublicKey, nil
+		}
+		return nil, fmt.Errorf("token key ID %s does not match current key ID %s", tokenKid, s.keyID)
 	})
 
 	if err != nil {

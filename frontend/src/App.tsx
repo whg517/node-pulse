@@ -3,6 +3,7 @@ import { lazy, useEffect, useRef, Suspense } from 'react'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from './lib/query-client'
 import ProtectedRoute from './components/common/ProtectedRoute'
+import { RequireRole } from './components/common/RequireRole'
 import { AppLayout } from './components/layout'
 import { useAuthStore, setupCrossTabLogoutSync, setupVisibilityHandler } from './stores/authStore'
 import { useAlertsStore } from './stores/alertsStore'
@@ -125,17 +126,17 @@ function App() {
 
           {/* Integrations */}
           <Route path="/integrations" element={<Navigate to="/integrations/webhooks" replace />} />
-          <Route path="/integrations/webhooks" element={<WebhooksPage />} />
+          <Route path="/integrations/webhooks" element={<RequireRole roles={['admin']}><WebhooksPage /></RequireRole>} />
           <Route path="/integrations/health" element={<SystemHealthPage />} />
 
           {/* Settings */}
           <Route path="/settings" element={<Navigate to="/settings/preferences" replace />} />
           <Route path="/settings/preferences" element={<PreferencesPage />} />
           <Route path="/settings/sessions" element={<SessionsPage />} />
-          <Route path="/settings/users" element={<UsersPage />} />
-          <Route path="/settings/api-keys" element={<ApiKeysPage />} />
-          <Route path="/settings/audit-logs" element={<AuditLogsPage />} />
-          <Route path="/settings/system-config" element={<SystemConfigPage />} />
+          <Route path="/settings/users" element={<RequireRole roles={['admin']}><UsersPage /></RequireRole>} />
+          <Route path="/settings/api-keys" element={<RequireRole roles={['admin']}><ApiKeysPage /></RequireRole>} />
+          <Route path="/settings/audit-logs" element={<RequireRole roles={['admin']}><AuditLogsPage /></RequireRole>} />
+          <Route path="/settings/system-config" element={<RequireRole roles={['admin']}><SystemConfigPage /></RequireRole>} />
 
           {/* Short aliases for E2E and legacy navigation */}
           <Route path="/webhooks" element={<Navigate to="/integrations/webhooks" replace />} />

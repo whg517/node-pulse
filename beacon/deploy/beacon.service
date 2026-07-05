@@ -1,0 +1,34 @@
+[Unit]
+Description=Node-Pulse Beacon monitoring agent
+Documentation=https://github.com/whg517/node-pulse
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Binary installed by `make install` (or this script) to /usr/local/bin/beacon.
+ExecStart=/usr/local/bin/beacon start
+# Config lives at /etc/beacon/beacon.yaml (the path beacon checks first).
+# Override per-instance via an EnvironmentFile drop-in if you run more than one.
+Restart=on-failure
+RestartSec=5s
+# Beacon reads its own logs via slog+lumberjack to files; systemd still
+# captures stdout/stderr for journalctl inspection.
+StandardOutput=journal
+StandardError=journal
+# Run as a dedicated unprivileged user created by the install script.
+User=beacon
+Group=beacon
+# Hardening — beacon only needs network + its own state/cache files.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/beacon /var/log/beacon
+# Config is read at startup and hot-reloaded via SIGHUP; keep it readable.
+ConfigurationDirectory=beacon
+StateDirectory=beacon
+LogsDirectory=beacon
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Node-Pulse PostgreSQL backup daily at 02:00
+Documentation=https://github.com/whg517/node-pulse
+
+[Timer]
+OnCalendar=*-*-* 02:00:00
+Persistent=true
+# Spread startups to avoid hammering the DB exactly at 02:00 with other jobs.
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

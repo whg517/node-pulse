@@ -663,3 +663,93 @@ func (h *AdminUserHandler) DeleteUser(c *gin.Context) {
 		Timestamp: time.Now().Format(time.RFC3339),
 	})
 }
+
+// UnlockUserHandler clears the account-lock state for a user.
+//
+// After 5 failed logins the account is locked for 10 minutes
+// (auth_handler.go: MaxFailedLoginAttempts / AccountLockDuration). This
+// endpoint lets an admin release that lock immediately rather than waiting.
+// It resets both `failed_login_attempts` and `locked_until`.
+//
+// @Summary		Unlock user account
+// @Description	Admin-only: immediately clear an account lock (failed-login counter + locked_until)
+// @Tags			admin,users
+// @Accept			json
+// @Produce		json
+// @Param			id	path		string	true	"User ID to unlock"
+// @Success		200	{object}	map[string]interface{}	"Unlocked"
+// @Failure		400	{object}	models.ErrorResponse	"Invalid user ID"
+// @Failure		404	{object}	models.ErrorResponse	"User not found"
+// @Failure		500	{object}	models.ErrorResponse	"Internal error"
+// @Security		BearerAuth
+// @Router			/admin/users/{id}/unlock [post]
+func (h *AdminUserHandler) UnlockUserHandler(c *gin.Context) {
+	// RBAC is handled by middleware - only admin can reach this handler
+
+	requestingUserID := c.GetString("user_id")
+
+	idParam := c.Param("id")
+	userID, err := uuid.Parse(idParam)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{
+			Code:    middleware.ERR_INVALID_REQUEST,
+			Message: "Invalid user ID format",
+			Details: map[string]interface{}{
+				"user_id": idParam,
+				"error":   err.Error(),
+			},
+		})
+		return
+	}
+
+	ctx := context.Background()
+
+	// Verify the user exists (so we can 404 instead of silently no-op'ing).
+	user, err := h.userQuerier.GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, db.ErrUserNotFound) {
+			c.JSON(http.StatusNotFound, models.ErrorResponse{
+				Code:    ErrUserNotFoundCode,
+				Message: "User not found",
+				Details: map[string]interface{}{"user_id": idParam},
+			})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_DATABASE_ERROR",
+			Message: "Failed to retrieve user",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	// Clear the lock: failed_login_attempts → 0, locked_until → NULL.
+	// Reuses the generic UpdateUser to avoid a new repository method.
+	err = h.userQuerier.UpdateUser(ctx, userID, map[string]interface{}{
+		"failed_login_attempts": 0,
+		"locked_until":          nil,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{
+			Code:    "ERR_DATABASE_ERROR",
+			Message: "Failed to unlock user",
+			Details: err.Error(),
+		})
+		return
+	}
+
+	// Audit logging
+	if h.auditLogger != nil {
+		requestingUserUUID, _ := uuid.Parse(requestingUserID)
+		_ = h.auditLogger.LogEvent(ctx, "user_unlocked", &requestingUserUUID, c.ClientIP(), map[string]interface{}{
+			"unlocked_user_id": userID.String(),
+			"username":         user.Username,
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":   "User unlocked successfully",
+		"user_id":   userID.String(),
+		"timestamp": time.Now().Format(time.RFC3339),
+	})
+}

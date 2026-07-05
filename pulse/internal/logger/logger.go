@@ -10,8 +10,17 @@ import (
 	"log/slog"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/whg517/node-pulse/pulse/internal/config"
+)
+
+// handlerOpts is the shared options backing the default logger. It is kept at
+// package level so SetLevel can mutate it in place for hot-reload (O-G4),
+// avoiding the cost of rebuilding the handler on every reload.
+var (
+	handlerOpts   *slog.HandlerOptions
+	handlerOptsMu sync.RWMutex
 )
 
 // InitLogger configures the global slog default logger from the application config.
@@ -25,7 +34,9 @@ func InitLogger(cfg *config.LogConfig) error {
 		return err
 	}
 
-	opts := &slog.HandlerOptions{
+	handlerOptsMu.Lock()
+	defer handlerOptsMu.Unlock()
+	handlerOpts = &slog.HandlerOptions{
 		Level: level,
 		// Map standard slog keys to the project's log schema
 		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
@@ -41,13 +52,31 @@ func InitLogger(cfg *config.LogConfig) error {
 
 	var handler slog.Handler
 	if strings.ToLower(cfg.Format) == "text" {
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		handler = slog.NewTextHandler(os.Stdout, handlerOpts)
 	} else {
 		// Default to JSON for structured production logging
-		handler = slog.NewJSONHandler(os.Stdout, opts)
+		handler = slog.NewJSONHandler(os.Stdout, handlerOpts)
 	}
 
 	slog.SetDefault(slog.New(handler))
+	return nil
+}
+
+// SetLevel hot-reloads the global logger's level (O-G4). It mutates the
+// backing handler options in place, so all subsequent log calls observe the
+// new level without rebuilding the handler. Called from the SIGHUP reload
+// path in server.WaitForShutdown.
+func SetLevel(levelStr string) error {
+	level, err := parseLevel(levelStr)
+	if err != nil {
+		return err
+	}
+	handlerOptsMu.Lock()
+	defer handlerOptsMu.Unlock()
+	if handlerOpts == nil {
+		return fmt.Errorf("logger not initialized")
+	}
+	handlerOpts.Level = level
 	return nil
 }
 

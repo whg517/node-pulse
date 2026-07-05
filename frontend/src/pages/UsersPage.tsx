@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAuthStore } from '@/stores/authStore'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { fetchUsers, createUser, updateUser, deleteUser } from '@/api/users'
+import { fetchUsers, createUser, updateUser, deleteUser, unlockUser } from '@/api/users'
 import { adminRevokeAllUserSessions } from '@/api/adminAuth'
 import type { UserDTO, CreateUserRequest, UpdateUserRequest } from '@/api/users'
 import { Card, CardContent } from '@/components/ui/card'
@@ -120,6 +120,19 @@ export default function UsersPage() {
     setForceLogoutUser({ id: u.user_id, name: u.username })
   }
 
+  // Unlock is a low-risk admin action (clears the 10-min failed-login lock),
+  // so it executes immediately without a confirmation dialog. Errors surface
+  // in the shared error banner; success reloads the list to clear the badge.
+  const handleUnlock = async (u: UserDTO) => {
+    try {
+      await unlockUser(u.user_id)
+      setError(null)
+      await loadUsers()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
+  }
+
   const confirmForceLogout = async () => {
     if (!forceLogoutUser) return
     setForceLogoutLoading(true)
@@ -176,6 +189,9 @@ export default function UsersPage() {
                         </td>
                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm space-x-2">
                           <Button variant="link" size="sm" onClick={() => openEditDialog(u)}>{t('settings.edit')}</Button>
+                          {isLocked && (
+                            <Button variant="link" size="sm" onClick={() => handleUnlock(u)}>{t('settings.unlock', 'Unlock')}</Button>
+                          )}
                           <Button variant="link" size="sm" onClick={() => handleForceLogout(u)} disabled={u.user_id === user?.id}>
                             {t('settings.forceLogout', 'Force logout')}
                           </Button>

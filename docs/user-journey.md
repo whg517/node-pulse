@@ -1,9 +1,9 @@
 # NodePulse 用户旅程与操作流程
 
 **Owner:** Kevin
-**Date:** 2026-07-05
-**Version:** 3.1
-**Status:** QA 驱动修复轮 —— 基于 `docs/qa-journey-audit.md` 对 17 条旅程的代码级审计，修复 O-G1（审计清理接线）、F1（Reports 角色守卫）两条 P0，新增 4 项代码修复（UpdateUser self-role 防护、/health scheduler 降级、routes.go CSRF 归属、导出删除端点），并完成 8 项文档勘误（v3.0 三生命周期重构的过时/不严谨描述）。
+**Date:** 2026-07-06
+**Version:** 3.2
+**Status:** Group C 全量交付 —— 基于 `docs/iteration-plan-v3.1.md` Group C 四 cohort，补齐部署/运维阶段全部 P1/P2 缺口：TLS 反代文档（D-G1）、数据库备份脚本（D-G2）、升级 runbook（D-G3）、Beacon systemd（D-G4）、版本系统 + `/version` 端点（D-G5）、`.env.example` 死引用清理（D-G6）、管理员解锁用户（O-G2）、JWT 多密钥轮换窗口（O-G3）、Pulse SIGHUP 热重载 Phase 1（O-G4）、运维 runbook（O-G7）、前端集中式 RBAC 路由守卫（F2）。
 
 > 本文档从**使用者视角**系统拆解 NodePulse 的全部用户旅途与操作流程。
 >
@@ -189,15 +189,15 @@ NodePulse 存在大量**分层不完整**的能力 —— 后端实现了路由�
 | OpenTelemetry 追踪 | ✅ | — | — | ✅ 可用（opt-in） | `telemetry.enabled` |
 | 指标数据清理（保留 7 天） | ✅ | — | — | ✅ 可用 | `metrics-cleanup` 任务 |
 | 优雅关闭 | ✅ | — | — | ✅ 可用 | SIGTERM 刷批处理 + drain（硬超时 10s） |
-| **TLS 终止/证书供应** | ❌ | — | — | ❌ **[未实现]** | Pulse 监听明文 HTTP；文档却说「TLS 1.2+ 强制」 |
-| **数据库备份/恢复** | ❌ | — | — | ❌ **[未实现]** | 无 pg_dump/cron/快照；仅 `postgres_data` 卷 |
-| **升级/回滚文档** | ❌ | — | — | ❌ **[未实现]** | 无 upgrade.md/runbook |
-| **Beacon systemd unit** | ❌ | — | — | ❌ **[未实现]** | `make install` 仅拷贝二进制 |
-| **版本/发布系统** | ❌ | — | — | ❌ **[未实现]** | `service_version="unknown"`，无 git tags |
+| **TLS 终止/证书供应** | ✅ | — | — | ✅ 可用（v3.2） | 经反代终止；`deploy/reverse-proxy/{nginx.conf,Caddyfile}` + `docs/deployment-tls.md` |
+| **数据库备份/恢复** | ✅ | — | — | ✅ 可用（v3.2） | `deploy/backup/pg-backup.sh` + systemd timer；恢复见 `docs/operations.md §3` |
+| **升级/回滚文档** | ✅ | — | — | ✅ 可用（v3.2） | `docs/upgrade.md`（前向迁移 + 三种回滚路径 + 兼容矩阵） |
+| **Beacon systemd unit** | ✅ | — | — | ✅ 可用（v3.2） | `beacon/deploy/beacon.service` + `install-systemd.sh` + `make install-systemd` |
+| **版本/发布系统** | ✅ | ✅ | — | ✅ 可用（v3.2） | Makefile ldflags 注入 `version` 包；`GET /api/v1/version` |
 | **审计/会话/Token 清理** | ✅ | — | — | ✅ 可用（v3.1） | `auth-cleanup` 任务（`registry.go registerAuthCleanupTask`），包装 `auth.CleanupJob.RunAll` |
-| **Pulse 配置热重载** | ❌ | — | — | ❌ **[未实现]** | Beacon 有；Pulse 改配置需重启 |
-| **管理员解锁用户** | ✅ | ❌ | ❌ | ❌ **[未实现]** | `locked_until` 只读；无「立即解锁」UI |
-| **JWT 密钥轮换窗口** | ❌ | — | — | ❌ **[未实现]** | 仅单活动密钥；轮换即全员失效 |
+| **Pulse 配置热重载** | ✅ | — | — | ✅ 可用（v3.2，Phase 1） | SIGHUP 触发 `reloadConfig()`；当前覆盖 `log.level`（DB/端口/JWT 仍需重启） |
+| **管理员解锁用户** | ✅ | ✅ | ✅ | ✅ 可用（v3.2） | `POST /admin/users/:id/unlock` + UsersPage「立即解锁」按钮 |
+| **JWT 密钥轮换窗口** | ✅ | — | — | ✅ 可用（v3.2） | `JWTService.WithPreviousKey` + `PULSE_JWT_PREVIOUS_*` env，旧 key 过渡窗口 |
 
 ### 3.2 功能层能力快照（J1–J13，沿用 v2.4）
 
@@ -313,19 +313,19 @@ beacon start                  # 读 ./beacon.yaml 或 BEACON_CONFIG_PATH
 
 | # | 缺口 | 状态 | 后果 | 修复方向 |
 |---|------|------|------|----------|
-| **D-G1** | **无 TLS 终止/证书供应** | ❌ **[未实现]** | Pulse 监听明文 HTTP；`README`/`AGENTS.md` 却说「TLS 1.2+ 强制」—— 文档与实现不符，生产暴露 | 提供 nginx/Caddy 反代示例 + certbot 集成，或内置 TLS |
-| **D-G2** | **无数据库备份/恢复机制** | ❌ **[未实现]** | 仅 `postgres_data` 卷，单点数据丢失；PRD NFR-6 标注「未来阶段」 | pg_dump cron 脚本 + 恢复 runbook |
-| **D-G3** | **无升级/回滚文档与流程** | ❌ **[未实现]** | 升级靠盲操作；迁移不兼容时无指导；`migrate-down` 存在但无生产指引 | `docs/upgrade.md` + 版本兼容矩阵 + 回滚 runbook |
-| **D-G4** | **Beacon 无服务管理（systemd）** | ❌ **[未实现]** | 每个被监控节点手工造进程监管；`make install` 仅拷贝二进制 | systemd unit 模板 + install 脚本 + 注册流程 |
-| **D-G5** | **无版本/发布系统** | ❌ **[未实现]** | `service_version="unknown"`；无 git tags、无 release workflow、无镜像推送；无法判断部署版本 | `-ldflags -X version` + git tags + CI release |
-| **D-G6** | 根 `.env.example` 的 "Frontend (nginx)" 段是死引用 | 🟡 误导 | `FRONTEND_PORT=80` 无消费者（前端嵌入 Pulse，无 nginx 服务） | 删除误导段 |
+| **D-G1** | **无 TLS 终止/证书供应** | ✅ **[已修复 v3.2]** | ~~Pulse 监听明文 HTTP；文档与实现不符~~ → `docs/deployment-tls.md` + `deploy/reverse-proxy/{nginx.conf,Caddyfile}` |
+| **D-G2** | **无数据库备份/恢复机制** | ✅ **[已修复 v3.2]** | ~~仅 `postgres_data` 卷，单点数据丢失~~ → `deploy/backup/pg-backup.sh` + systemd timer + `docs/operations.md §3` |
+| **D-G3** | **无升级/回滚文档与流程** | ✅ **[已修复 v3.2]** | ~~升级靠盲操作~~ → `docs/upgrade.md`（三回滚路径 + 兼容矩阵） |
+| **D-G4** | **Beacon 无服务管理（systemd）** | ✅ **[已修复 v3.2]** | ~~`make install` 仅拷贝二进制~~ → `beacon/deploy/{beacon.service,install-systemd.sh}` + `make install-systemd` |
+| **D-G5** | **无版本/发布系统** | ✅ **[已修复 v3.2]** | ~~`service_version="unknown"`~~ → `pulse/internal/version` + `beacon/internal/version` + Makefile ldflags + `GET /api/v1/version` |
+| **D-G6** | 根 `.env.example` 的 "Frontend (nginx)" 段是死引用 | ✅ **[已修复 v3.2]** | 已删除 `FRONTEND_PORT=80` 死引用段 |
 | **D-G7** | 无「首次运行向导」/空态引导 | 🟡 体验 | 新 Admin 看到 0 节点空 Dashboard，无引导 | 空态 CTA + Getting Started 清单 |
 | **D-G8** | README Quick Start 与 API Key 创建脱节 | 🟡 体验 | 步骤说「从 UI 生成 api_key」但不说在哪个页面（`/settings/api-keys`） | 交叉引用 |
 
 ### 6.3 状态
 
-- 二进制构建与分发 **[部分支持]（D-G4/G5 阻塞生产化）**
-- 其余部署能力见 D-G1–D-G8
+- 二进制构建与分发 **[支持]（v3.2 D-G4/G5 已修复：systemd unit + 版本系统）**
+- 其余部署能力：D-G1~G6 已全部修复（v3.2），D-G7/G8 体验问题待处置
 
 ---
 
@@ -406,13 +406,14 @@ flowchart TD
 
 | 任务 | 入口 | 频率 | 状态 |
 |------|------|------|------|
-| 用户锁定排查 | `/settings/users`（`locked_until` 只读徽章） | 按需 | ⚠️ 无「立即解锁」按钮 |
+| 用户锁定排查 | `/settings/users` | 按需 | ✅（v3.2「立即解锁」按钮，O-G2）|
 | API Key 轮换 | `/settings/api-keys` | 推荐 90 天 | ✅（旧 key 24h 过渡） |
 | Webhook URL 变更 + 测试 | `/integrations/webhooks` | 按需 | ✅ |
 | 审计日志复查 | `/settings/audit-logs` | 定期 | ✅ |
 | 强制踢人 | `/settings/users` | 紧急 | ✅ |
-| 配置变更（CORS/限流/日志级） | 编辑 `pulse.yaml` → **重启** | 按需 | ❌ Pulse 无热重载 |
-| JWT/Session 密钥轮换 | 改 env → **重启** | 定期 | ❌ 无并发旧+新验证窗口 |
+| 配置变更（日志级） | 编辑 `pulse.yaml` → `kill -HUP <pid>` | 按需 | ✅（v3.2 O-G4，Phase 1：仅 log.level；DB/端口/JWT 仍需重启）|
+| JWT 密钥轮换 | 设置 `PULSE_JWT_PREVIOUS_*` env → 重启 → 等过期 → 清空 → 重启 | 定期 | ✅（v3.2 O-G3，旧 key 过渡窗口）|
+| Session 密钥轮换 | 改 env → **重启** | 定期 | ❌ 无并发旧+新验证窗口（仍需重启，所有 session 失效）|
 
 ### 9.2 数据保留与清理
 
@@ -449,18 +450,20 @@ flowchart TD
 | # | 缺口 | 状态 | 后果 | 修复方向 |
 |---|------|------|------|----------|
 | **O-G1** | **审计/会话/Token 清理未接线** | ✅ **[已修复 v3.1]** | ~~`auth_audit_logs`/`sessions`/`refresh_tokens`/`api_keys` 表无限增长~~；v3.1 起 `auth-cleanup` 任务注册到 scheduler | v3.1：`registry.go registerAuthCleanupTask` 包装 `auth.CleanupJob` |
-| **O-G2** | **无管理员「解锁用户」** | ❌ **[未实现]** | 被锁用户必须等 10 分钟或 DB 干预 | UsersPage 加「立即解锁」按钮 |
-| **O-G3** | **无 JWT 轮换窗口** | ❌ **[未实现]** | 轮换即全员 token 失效，无法平滑 | 支持并发旧+新密钥验证（kid 多密钥） |
-| **O-G4** | **Pulse 无热重载** | ❌ **[未实现]** | 改配置需重启；Beacon 有而 Pulse 无，不对称 | SIGHUP 重载或 admin reload 端点 |
+| **O-G2** | **无管理员「解锁用户」** | ✅ **[已修复 v3.2]** | ~~被锁用户必须等 10 分钟或 DB 干预~~ → `POST /admin/users/:id/unlock` + UI「立即解锁」按钮 |
+| **O-G3** | **无 JWT 轮换窗口** | ✅ **[已修复 v3.2]** | ~~轮换即全员 token 失效~~ → `JWTService.WithPreviousKey` + `PULSE_JWT_PREVIOUS_*` env，旧 key 过渡窗口 |
+| **O-G4** | **Pulse 无热重载** | ✅ **[已修复 v3.2，Phase 1]** | ~~改配置需重启~~ → SIGHUP 触发 `reloadConfig()`，当前覆盖 `log.level`（DB/端口/JWT 仍需重启） |
 | **O-G5** | 优雅关闭硬超时 10s 不可配置 | 🟡 中 | 大批量刷写/长导出可能被截断 | 暴露 `server.shutdown_timeout` 配置 |
 | **O-G6** | 无 TrustedProxies 配置 | 🟡 中 | 反代后 `ClientIP()`/审计 IP 错误 | 暴露 `server.trusted_proxies` 配置 |
-| **O-G7** | 无运维 runbook/故障排查文档 | ❌ **[未实现]** | 运维知识分散在 8+ 文档/代码 | 新建 `docs/operations.md` 集中 |
+| **O-G7** | 无运维 runbook/故障排查文档 | ✅ **[已修复 v3.2]** | ~~运维知识分散在 8+ 文档/代码~~ → `docs/operations.md` 集中（健康分级、事故剧本、备份恢复、配置变更） |
 | **O-G8** | 未随仓库提供 Prometheus/仪表板配置 | 🟡 体验 | `docs/observability.md` 有示例但 `deploy/` 无随附 | 提供可应用的 `prometheus.yml` + 仪表板 JSON |
 
 ### 9.6 状态
 
 - 可观测性、健康端点、优雅关闭、指标清理 **[支持]**。
-- **清理任务接线**：✅ 已修复（v3.1，O-G1）。备份、升级文档、TLS、热重载仍为关键缺口（见 O-G2–O-G8）。
+- **清理任务接线**：✅ 已修复（v3.1，O-G1）。
+- **备份、升级文档、运维 runbook、TLS、解锁用户、JWT 轮换、热重载**：✅ 已修复（v3.2，D-G1~G6、O-G2/G3/G4/G7）。
+- 余缺口：O-G5（关闭超时不可配）、O-G6（TrustedProxies）、O-G8（Prometheus/仪表板配置未随附）。
 
 ---
 
@@ -775,27 +778,27 @@ v3.0 合并三大生命周期的全部缺口，按严重度分级。处置标记
 | # | 缺口 | 类别 | 状态 | 后果 | 修复方向 |
 |---|------|------|------|------|----------|
 | **O-G1** | 审计/会话/Token 清理未接线 | 运维 | ✅ **【已修复 v3.1】** | ~~`auth_audit_logs`/`sessions`/`refresh_tokens` 无限增长~~；v3.1 起 `auth-cleanup` 任务注册到 scheduler | v3.1：`registry.go registerAuthCleanupTask` + `auth_cleanup_task.go` + 修正 `authentication.md` |
-| **D-G2** | 无数据库备份/恢复 | 部署 | ❌ **【未实现】** | 单卷单点失败；数据丢失不可恢复 | pg_dump cron + 恢复 runbook |
+| **D-G2** | 无数据库备份/恢复 | 部署 | ✅ **【已修复 v3.2】** | ~~单卷单点失败；数据丢失不可恢复~~；v3.2 `deploy/backup/pg-backup.sh` + systemd timer + `docs/operations.md §3` 恢复 runbook |
 | **F1** | `Reports.tsx` 计划按钮无角色关卡 | 功能 | ✅ **【已修复 v3.1】** | ~~非管理员看到按钮→点→403~~；v3.1 起 `isAdmin` 守卫创建/启用/删除 | v3.1：`Reports.tsx` 用 `useAuthStore().role` 守卫所有 schedule 写操作 |
 
 ### 23.2 P1 — 生产可用性（应优先）
 
 | # | 缺口 | 类别 | 状态 | 后果 |
 |---|------|------|------|------|
-| **D-G1** | 无 TLS 终止/证书 | 部署 | ❌ **【未实现】** | 文档说「TLS 1.2+」实际明文 HTTP |
-| **D-G3** | 无升级/回滚文档 | 部署 | ❌ **【未实现】** | 升级盲操作 |
-| **O-G7** | 无运维 runbook | 运维 | ❌ **【未实现】** | 运维知识分散 8+ 文档 |
-| **O-G2** | 无管理员解锁用户 | 运维 | ❌ **【未实现】** | 被锁用户等 10 分钟或改库 |
-| **F2** | 无集中式 RBAC 路由守卫 | 功能 | 🟠 隐患 | 各页分散 `role===` 检查易漏（F1 即此症） |
+| **D-G1** | 无 TLS 终止/证书 | 部署 | ✅ **【已修复 v3.2】** | ~~文档说「TLS 1.2+」实际明文 HTTP~~；v3.2 提供 nginx/Caddy 反代参考 + `docs/deployment-tls.md` |
+| **D-G3** | 无升级/回滚文档 | 部署 | ✅ **【已修复 v3.2】** | ~~升级盲操作~~；v3.2 `docs/upgrade.md` 三种回滚路径 + 兼容矩阵 |
+| **O-G7** | 无运维 runbook | 运维 | ✅ **【已修复 v3.2】** | ~~运维知识分散 8+ 文档~~；v3.2 `docs/operations.md` 集中 |
+| **O-G2** | 无管理员解锁用户 | 运维 | ✅ **【已修复 v3.2】** | ~~被锁用户等 10 分钟或改库~~；v3.2 `POST /admin/users/:id/unlock` + UI 按钮 |
+| **F2** | 无集中式 RBAC 路由守卫 | 功能 | ✅ **【已修复 v3.2】** | ~~各页分散 `role===` 检查易漏~~；v3.2 `RequireRole` 组件守卫 5 个 admin-only 页面 |
 
 ### 23.3 P2 — 完善性 / 体验
 
 | # | 缺口 | 类别 | 状态 |
 |---|------|------|------|
-| **D-G4** | Beacon 无 systemd unit | 部署 | ❌ **【未实现】** |
-| **D-G5** | 无版本/发布系统 | 部署 | ❌ **【未实现】** |
-| **O-G3** | 无 JWT 轮换窗口 | 运维 | ❌ **【未实现】** |
-| **O-G4** | Pulse 无热重载 | 运维 | ❌ **【未实现】** |
+| **D-G4** | Beacon 无 systemd unit | 部署 | ✅ **【已修复 v3.2】** —— `beacon/deploy/beacon.service` + `install-systemd.sh` + `make install-systemd` |
+| **D-G5** | 无版本/发布系统 | 部署 | ✅ **【已修复 v3.2】** —— `pulse/internal/version` + `beacon/internal/version` + Makefile ldflags 注入 + `GET /api/v1/version` |
+| **O-G3** | 无 JWT 轮换窗口 | 运维 | ✅ **【已修复 v3.2】** —— `JWTService.WithPreviousKey` + `JWTConfig.Previous*` 字段 + `PULSE_JWT_PREVIOUS_*` env |
+| **O-G4** | Pulse 无热重载 | 运维 | ✅ **【已修复 v3.2，Phase 1】** —— SIGHUP 触发 `server.reloadConfig()`，当前覆盖 `log.level`（其他配置仍需重启） |
 | **F3** | Viewer 无只读 Webhook/导出视图 | 功能 | 🟡 体验 |
 | **F4** | 无通知偏好/多通道 | 功能 | ❌ **【未实现】** |
 | **F5** | 无 2FA/MFA | 功能 | ❌ **【未实现】** |
@@ -807,7 +810,7 @@ v3.0 合并三大生命周期的全部缺口，按严重度分级。处置标记
 |---|------|------|
 | **F7** | `architecture.md`/`ui-design.md` 路由表过时（仅 3 个 `/settings/*`，实际 6 个） | 待修 |
 | **F8** | `prd.md:297` 引用 `docs/iteration-roadmap.md`（不存在） | 待修 |
-| **D-G6** | 根 `.env.example` 的 "Frontend (nginx)" 段是死引用 | 待修 |
+| **D-G6** | 根 `.env.example` 的 "Frontend (nginx)" 段是死引用 | ✅ 已修复（v3.2）|
 
 ### 23.5 已修复（v2.1–v2.4，历史记录）
 
@@ -859,10 +862,10 @@ G1 告警备注、G2 API Keys 页、G3 导出持久化、G4 Webhook 投递日志
 
 | 旅程 | 关键能力 | PRD FR/NFR | 整体状态 | 主要缺口（见 §23） |
 |------|----------|-----------|----------|--------------------|
-| D1 Docker 部署 | 单主机栈、自动迁移、密钥生成 | NFR-2 | **[支持]** | TLS/备份（D-G1/G2） |
-| D2 二进制部署 | 构建、分发 | NFR-2 | **[部分支持]** | systemd/版本（D-G4/G5） |
+| D1 Docker 部署 | 单主机栈、自动迁移、密钥生成、TLS、备份 | NFR-2 | **[支持]** | TLS/备份已修复（v3.2 D-G1/G2） |
+| D2 二进制部署 | 构建、分发、systemd、版本系统 | NFR-2 | **[支持]** | systemd/版本已修复（v3.2 D-G4/G5） |
 | O1 可观测性 | 日志/指标/健康/追踪 | NFR-4 | **[支持]** | Pulse 日志无轮换 |
-| O2 维护 | 清理/升级/备份/解锁 | NFR-2/6 | **[部分支持]** | O-G1 已修复（v3.1）；余 O-G2~O-G8 |
+| O2 维护 | 清理/升级/备份/解锁/轮换/热重载 | NFR-2/6 | **[支持]** | O-G1/G2/G3/G4/G7 已修复（v3.1+v3.2）；余 O-G5/G6/G8 |
 | J1 大盘 | 大盘四件套、下钻、WS、全局通知、节点实时 | FR-3 | **[支持]** | — |
 | J2 告警 | 创建/状态/时间线/备注/路由 | FR-4 | **[支持]** | — |
 | J3 节点 | CRUD、详情 | FR-3 | **[支持]** | Operator UI 入口 |
@@ -927,6 +930,7 @@ G1 告警备注、G2 API Keys 页、G3 导出持久化、G4 Webhook 投递日志
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 3.2 | 2026-07-06 | **Group C 全量交付**（基于 `docs/iteration-plan-v3.1.md` Group C 四 cohort）：① **Cohort 1 低风险高收益** —— D-G6 删 `.env.example` nginx 死引用、O-G2 管理员「立即解锁用户」（`POST /admin/users/:id/unlock` + UI）、F2 集中式 RBAC 路由守卫（`RequireRole` 组件守卫 5 个 admin-only 页面）；② **Cohort 2 部署增强** —— D-G4 Beacon systemd unit + `install-systemd.sh`、D-G5 版本系统（`pulse/internal/version` + `beacon/internal/version` + Makefile ldflags + `GET /api/v1/version`）、D-G1 TLS 反代文档（nginx/Caddy 参考 + `docs/deployment-tls.md`）；③ **Cohort 3 运维 runbook** —— D-G2 备份脚本（`deploy/backup/pg-backup.sh` + systemd timer）、D-G3 `docs/upgrade.md`（三回滚路径 + 兼容矩阵）、O-G7 `docs/operations.md`（健康分级/事故剧本/备份恢复）；④ **Cohort 4 架构级** —— O-G3 JWT 多密钥轮换窗口（`JWTService.WithPreviousKey` + `PULSE_JWT_PREVIOUS_*`）、O-G4 Pulse SIGHUP 热重载（Phase 1：log.level）。**附带**：修复 v3.1 A6 commit 在 `export_tasks.go` 引入的语法 bug（gate 当时未抓到）。 |
 | 3.1 | 2026-07-05 | **QA 驱动修复轮**（基于 `docs/qa-journey-audit.md` 17 条旅程审计）：① **O-G1 修复** —— `auth-cleanup` 任务接线到 scheduler（`server/auth_cleanup_task.go` + `registry.go registerAuthCleanupTask`），`authentication.md` 的「Audit Log Retention」同步为真实实现；② **F1 修复** —— `Reports.tsx` 用 `useAuthStore().role` 守卫 schedule 创建/启用/删除（`isAdmin`）；③ **新增修复**：后端 `UpdateUser` 加 self-role-change 防护（`ErrCannotChangeOwnRole`）、`/health` scheduler 探测参与降级判定、`routes.go:406` CSRF 中间件归属修正、导出删除端点（`DELETE /data/export/:id` + 前端接线）；④ **文档勘误**：J3/J4 RBAC 不一致（已修复回写）、§12 行号、J9 严重级别过滤（已实现）、J2 状态机符号名（`CanTransitionTo`）、J12 审计页措辞、§9.4 优雅关闭顺序、§10.3 `alert:note_created`（前端不消费）。 |
 | 3.0 | 2026-07-05 | **三生命周期重构**：新增第一部分「安装部署」（D1/D2 + D-G1~G8 部署缺口）、第二部分「系统维护与运维」（O1/O2 + O-G1~G8 运维缺口）、§3.1 部署/运维能力分层表；新增 Deployer/SRE 角色；引入 **[未实现]** 状态标签消除「文档谎称」；合并所有缺口为 §23 总表（P0/P1/P2/P3 四级）；修正 v2.x 各旅程正文里未回写的过时「断裂」描述（告警备注/配置预览/回滚/模板/报告计划/投递日志/路由规则 等均已在 v2.1-v2.4 修复）；新增 §23.1 P0 含 **O-G1 审计清理文档谎称**（authentication.md:515 谎称 90 天清理，代码未注册）、**D-G2 无备份**、**F1 Reports 角色关卡 bug**。 |
 | 2.4 | 2026-07-05 | 文档勘误：纠正 §3/§4.3 WebSocket 虚报；回写 §15 J12、§20.2 心跳持久化；澄清密码重置路由。前端死代码清理（独立 commit）。 |
