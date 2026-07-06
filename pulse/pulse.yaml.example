@@ -29,6 +29,16 @@ server:
   base_url: "http://localhost:6532"  # Externally reachable URL (no trailing slash);
                                      # used in webhook payloads and export links.
                                      # Override with PULSE_SERVER_BASE_URL in production.
+  shutdown_timeout_seconds: 10       # Graceful-shutdown hard cap (O-G5). Pulse
+                                     # flushes the batch writer, stops the
+                                     # scheduler, and drains HTTP in this window.
+                                     # 0 keeps the 10s default.
+  trusted_proxies: []                # Trusted reverse-proxy CIDRs (O-G6), e.g.
+                                     #   ["127.0.0.1/32", "10.0.0.0/8"]
+                                     # When set, only these parse X-Forwarded-*
+                                     # so c.ClientIP()/audit IPs reflect the real
+                                     # client. Empty trusts all (legacy; unsafe
+                                     # behind a proxy you don't control).
 
 # ==================================
 # Database Configuration

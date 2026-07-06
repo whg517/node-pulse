@@ -72,8 +72,13 @@ func (s *Server) Start() error {
 func (s *Server) Shutdown() error {
 	slog.Info("Shutting down", "component", "server")
 
-	// Create shutdown context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Create shutdown context with a configurable timeout (O-G5). Falls back
+	// to the legacy 10s default when ShutdownTimeoutSeconds is unset.
+	timeoutSecs := 10
+	if s.config != nil && s.config.Server.ShutdownTimeoutSeconds > 0 {
+		timeoutSecs = s.config.Server.ShutdownTimeoutSeconds
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSecs)*time.Second)
 	defer cancel()
 
 	// Stop cache components

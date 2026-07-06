@@ -26,8 +26,10 @@ Whichever proxy you choose, it must:
 2. **Forward to `127.0.0.1:6532`** (or the Pulse container's address).
 3. **Preserve the original client IP** via `X-Forwarded-For` /
    `X-Forwarded-Proto` — Pulse's `c.ClientIP()` and audit log rely on it.
-   > Note: configuring trusted proxies in Pulse itself is the O-G6 gap
-   > (not yet exposed); for now ensure only your proxy can reach Pulse.
+   Tell Pulse which proxy to trust: set `server.trusted_proxies` in
+   `pulse.yaml` (or `PULSE_SERVER_TRUSTED_PROXIES`) to the proxy's CIDR
+   (e.g. `["127.0.0.1/32"]`). Empty trusts all callers — fine for direct
+   exposure but unsafe behind a proxy you don't fully control.
 4. **Upgrade WebSocket** connections — Node-Pulse uses `/api/v1/realtime`
    for live alert/node events. Without `Upgrade`/`Connection` headers the
    WS handshake fails and the dashboard falls back to polling.

@@ -65,6 +65,16 @@ type ServerConfig struct {
 	// slash), used to render absolute links in webhook payloads and exported data.
 	// Defaults to http://localhost:<port> for local development.
 	BaseURL string `yaml:"base_url" mapstructure:"base_url"`
+	// ShutdownTimeoutSeconds is the hard cap for graceful shutdown (O-G5).
+	// During this window Pulse flushes the batch writer, stops the scheduler,
+	// and drains in-flight HTTP requests. 0 keeps the legacy 10s default.
+	ShutdownTimeoutSeconds int `yaml:"shutdown_timeout_seconds" mapstructure:"shutdown_timeout_seconds"`
+	// TrustedProxies is a comma-separated list of trusted proxy CIDRs (O-G6).
+	// When set, gin trusts only these for X-Forwarded-* header parsing, so
+	// c.ClientIP() and audit-log IPs reflect the real client behind a reverse
+	// proxy instead of the proxy itself. Empty trusts all (legacy behavior,
+	// fine for direct exposure but unsafe behind a proxy you don't control).
+	TrustedProxies []string `yaml:"trusted_proxies" mapstructure:"trusted_proxies"`
 }
 
 // DatabaseConfig holds database configuration
@@ -415,12 +425,14 @@ func generateRSAKeyPair() (string, string, error) {
 func defaultConfig() *Config {
 	return &Config{
 		Server: ServerConfig{
-			Port:         "6532",
-			ReadTimeout:  15,
-			WriteTimeout: 15,
-			IdleTimeout:  60,
-			Mode:         "debug",
-			BaseURL:      "http://localhost:6532", // overwritten by PULSE_SERVER_BASE_URL in production
+			Port:                   "6532",
+			ReadTimeout:            15,
+			WriteTimeout:           15,
+			IdleTimeout:            60,
+			Mode:                   "debug",
+			BaseURL:                "http://localhost:6532", // overwritten by PULSE_SERVER_BASE_URL in production
+			ShutdownTimeoutSeconds: 10,                       // O-G5: legacy default
+			TrustedProxies:         nil,                      // O-G6: nil trusts all (legacy)
 		},
 		DB: DatabaseConfig{
 			MaxConnections:  25,
@@ -530,6 +542,12 @@ func (c *ServerConfig) Validate() error {
 	}
 	if c.Mode != "" && c.Mode != "debug" && c.Mode != "release" && c.Mode != "test" {
 		return fmt.Errorf("mode must be one of: debug, release, test, got %s", c.Mode)
+	}
+	// shutdown_timeout_seconds == 0 is allowed (falls back to the default), but a
+	// negative value is a config mistake. Sanity-bound it; operators wanting an
+	// instant kill can set 1.
+	if c.ShutdownTimeoutSeconds < 0 {
+		return fmt.Errorf("shutdown_timeout_seconds must be >= 0, got %d", c.ShutdownTimeoutSeconds)
 	}
 	return nil
 }

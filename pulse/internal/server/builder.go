@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
@@ -43,6 +44,22 @@ func (b *Builder) Build() (*Server, error) {
 	srv := &Server{
 		config: b.config,
 		router: gin.Default(),
+	}
+
+	// Configure trusted proxies (O-G6). gin.Default() trusts everything by
+	// default, which is wrong behind a reverse proxy — it would let any client
+	// spoof its IP via X-Forwarded-For. When the operator lists the proxy
+	// CIDRs (e.g. the nginx/Caddy host), only those parse the header and
+	// c.ClientIP() / audit-log IPs reflect the real caller. An empty/nil list
+	// keeps the legacy "trust all" behavior (fine for direct exposure).
+	if proxies := b.config.Server.TrustedProxies; len(proxies) > 0 {
+		if err := srv.router.SetTrustedProxies(proxies); err != nil {
+			return nil, fmt.Errorf("invalid trusted_proxies: %w", err)
+		}
+		slog.Info("Configured trusted proxies", "component", "server", "proxies", proxies)
+	} else {
+		// Explicit nil → gin trusts all remote addrs (legacy default).
+		_ = srv.router.SetTrustedProxies(nil)
 	}
 
 	// Setup shutdown context
