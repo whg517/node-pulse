@@ -6,7 +6,7 @@
 #
 # Run:  caddy run --config deploy/reverse-proxy/Caddyfile
 #
-# Closes the D-G1 gap (docs/deployment-tls.md).
+# Closes the D-G1 gap (docs/operation/deployment-tls.md).
 
 pulse.example.com {
 	# All requests reverse-proxy to the Pulse container / localhost.

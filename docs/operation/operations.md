@@ -6,8 +6,8 @@ scattered across 8+ docs/files.
 
 > See also: [deployment-tls.md](deployment-tls.md) (TLS proxy),
 > [upgrade.md](upgrade.md) (version migrations),
-> [observability.md](observability.md) (metrics/tracing reference),
-> [authentication.md](authentication.md) (RBAC, sessions).
+> [observability.md](../observability.md) (metrics/tracing reference),
+> [authentication.md](../authentication.md) (RBAC, sessions).
 
 ## 1. Health & daily checks
 

@@ -221,10 +221,10 @@ Beyond this README, operational knowledge lives under `docs/` and `deploy/`:
 | Topic | Where |
 |-------|-------|
 | Production stack (compose) | `deploy/docker/docker-compose.prod.yml` + this README §Docker |
-| TLS termination (nginx/Caddy) | `docs/deployment-tls.md` + `deploy/reverse-proxy/` |
-| Backups | `deploy/backup/pg-backup.sh` (+ systemd timer) + `docs/operations.md §3` |
-| Upgrade & rollback | `docs/upgrade.md` |
-| SRE runbook (health triage, incidents) | `docs/operations.md` |
+| TLS termination (nginx/Caddy) | `docs/operation/deployment-tls.md` + `deploy/reverse-proxy/` |
+| Backups | `deploy/backup/pg-backup.sh` (+ systemd timer) + `docs/operation/operations.md §3` |
+| Upgrade & rollback | `docs/operation/upgrade.md` |
+| SRE runbook (health triage, incidents) | `docs/operation/operations.md` |
 | Beacon systemd service | `beacon/deploy/` + `make install-systemd` |
 | Observability (metrics/tracing) | `docs/observability.md` + `deploy/observability/` (Prometheus config + alert rules) |
 | Authentication & RBAC | `docs/authentication.md` (incl. 2FA / MFA) |

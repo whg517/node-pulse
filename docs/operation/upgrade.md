@@ -91,7 +91,7 @@ docker compose -f deploy/docker/docker-compose.prod.yml up -d --build
 ### 3.3 Last resort: restore from backup
 
 If the upgrade corrupted data or a down-migration is unsafe, restore the
-backup taken before the upgrade (see `docs/operations.md` §Backup & Restore).
+backup taken before the upgrade (see [operations.md](operations.md) §Backup & Restore).
 
 ## 4. Compatibility matrix
 

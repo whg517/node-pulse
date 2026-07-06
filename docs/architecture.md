@@ -281,10 +281,15 @@ Integration and browser workflows live under `e2e/` and require the Docker-based
 
 ## 9. Documentation Boundaries
 
-- `docs/prd.md`: product requirements, user journeys, success criteria.
-- `docs/user-journey.md`: personas, 13 end-to-end user journeys, operation flows, the Backend/Frontend/UI implementation-layer model, an implementation-gap catalog, and cross-role scenarios.
-- `docs/architecture.md`: implementation architecture and repository structure.
-- `docs/ui-design.md`: current frontend design system and UI component usage.
-- `docs/authentication.md`: authentication, sessions, CSRF, and token flows.
+The authoritative documentation index lives at [`docs/README.md`](README.md),
+organized by audience (Product / Engineering / Operations / Decisions).
+Quick orientation for where this document fits:
+
+- `docs/prd.md`: product requirements, success criteria, functional/non-functional numbers.
+- `docs/user-journey.md`: personas, 18 end-to-end journeys (D1/D2/O1/O2 + J1–J13), the B/F/U implementation-layer model, the implementation-gap catalog.
+- `docs/architecture.md` *(this file)*: implementation architecture and repository structure.
+- `docs/ui-design.md`: frontend design system and UI component usage.
+- `docs/authentication.md`: authentication, sessions, CSRF, token flows, 2FA.
 - `docs/observability.md`: OpenTelemetry and metrics behavior.
-- `docs/adr/`: Architecture Decision Records — non-obvious design decisions (report scheduling, alert routing, beacon config templates) with context, alternatives, and consequences.
+- `docs/operation/`: SRE runbook, TLS termination guide, upgrade & rollback.
+- `docs/adr/`: Architecture Decision Records.

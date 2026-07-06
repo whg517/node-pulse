@@ -53,27 +53,27 @@ This PRD uses explicit status labels so product scope, roadmap, and code stay al
 - Pulse Prometheus metrics and Beacon Prometheus metrics.
 - OpenTelemetry tracing integration for Pulse and Beacon HTTP paths.
 
-### 3.2 Partially Supported Capabilities
+### 3.2 Status of partial / planned capabilities
 
-- **Cross-border transport optimization:** Compression, CRC, and priority cache utilities exist, and Pulse exposes a compressed heartbeat endpoint, but Beacon does not yet use compression/resume upload in its runtime heartbeat path.
-- **Alert timeline UX:** Alert note persistence, status history, realtime note events, and desktop timeline UI exist, but mobile detail still needs to consume the persisted timeline API.
-- **Webhook operations:** Delivery retries and manual test delivery exist, but endpoint health state, queue depth enforcement, delivery history UI, success-rate UI, timeout metrics, and unhealthy recovery checks are incomplete.
-- **Scheduled reports:** The Reports page can create schedules in local frontend state, but there is no server-side schedule persistence, execution, PDF generation job, or email delivery.
-- **Excel export:** The UI acknowledges Excel as unavailable and backend export supports CSV only.
-- **Configuration rollback:** Beacon config history can be viewed, but rollback-to-version is not implemented.
-- **Internationalization:** The main framework is present, but some operational strings remain hardcoded.
+The per-capability implementation status (Supported / Partially Supported /
+Planned / Not Implemented) for **everything listed above and below** lives in
+a single authoritative place:
+
+→ [`docs/user-journey.md` §3 (Implementation Layer Model) and §23 (Implementation Gaps)](user-journey.md)
+
+Each capability there carries the three-layer (Backend / Frontend API / UI)
+markers and an honest gap/no-gap verdict. Earlier revisions of this PRD kept
+a prose list here that drifted out of sync with the code (e.g. it listed
+"server-side report schedules" as planned long after ADR-001 shipped them);
+consolidating to a single status source eliminates that drift. The remaining
+subsections capture only product-level intent that the status table does not.
+
+### 3.3 Notable product-level gaps still open
+
+- **Excel export:** the UI acknowledges Excel as unavailable; backend export supports CSV only. Tracked as the XLSX row in `user-journey.md` J8.
 - **Accessibility:** UI components generally use labels and semantic primitives, but WCAG 2.1 AA has not been fully audited or enforced.
-
-### 3.3 Planned Capabilities
-
-- End-to-end compressed and resumable Beacon upload.
-- Unified alert status and note timeline UI.
-- Webhook health state, delivery statistics, and history view.
-- Server-side report schedules with email delivery.
-- XLSX export.
-- Config rollback.
-- Production hardening for TLS/mTLS defaults, health endpoints, backup, and load-test gates.
-- Better diagnostic recommendations and owner attribution.
+- **Internationalization:** the main framework is present, but some operational strings remain hardcoded.
+- **Diagnostic recommendations / owner attribution:** current output is rule-based; richer ML-assisted attribution is deferred (see §3.4).
 
 ### 3.4 Deferred Capabilities
 
@@ -83,6 +83,8 @@ This PRD uses explicit status labels so product scope, roadmap, and code stay al
 - Public SEO optimization.
 
 ## 4. Primary User Journeys
+
+> **Authoritative journey catalogue**: [`docs/user-journey.md`](user-journey.md) holds the full set of 18 implementation-status-annotated journeys (D1/D2 deploy, O1/O2 ops, J1–J13 feature use), each with operation steps, system behavior, and B/F/U layer status. The entries below keep only each journey's **success criteria** — the quantitative acceptance targets that `user-journey.md` deliberately does not duplicate.
 
 ### 4.1 Operations Dashboard
 
