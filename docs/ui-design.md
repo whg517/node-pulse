@@ -220,7 +220,7 @@ Primary navigation groups:
 | Alerts | `/alerts/rules`, `/alerts/records`, `/alerts/history` |
 | Reports | `/reports`, `/reports/history` |
 | Integrations | `/integrations/webhooks`, `/integrations/health` |
-| Settings | `/settings/preferences`, `/settings/sessions`, `/settings/users` |
+| Settings | `/settings/preferences`, `/settings/sessions`, `/settings/users`, `/settings/api-keys`, `/settings/audit-logs`, `/settings/system-config` |
 
 Short aliases exist for legacy and e2e navigation: `/webhooks`, `/sessions`, `/comparison`.
 

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { useAuthStore } from '@/stores/authStore'
-import { login as apiLogin } from '@/api/auth'
+import { login as apiLogin, mfaLogin as apiMfaLogin } from '@/api/auth'
 import { ACCESS_TOKEN_EXPIRY_MINUTES } from '@/config/constants'
 import type { User } from '@/stores/types'
 
@@ -29,12 +29,29 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+  // 2FA second factor: when login returns mfa_required we render the code
+  // input instead of the password form and trade the ticket for tokens.
+  const [mfaTicket, setMfaTicket] = useState<string | null>(null)
+  const [mfaCode, setMfaCode] = useState('')
 
   useEffect(() => {
     if (isAuthenticated && !authLoading) {
       navigate(from, { replace: true })
     }
   }, [isAuthenticated, authLoading, navigate, from])
+
+  // Apply a completed-login response (either step) to the auth store and navigate.
+  const applyLoginResponse = (response: { data: { user_id: string; username: string; role: 'admin' | 'operator' | 'viewer'; access_token: string; csrf_token?: string } }) => {
+    const user: User = {
+      id: response.data.user_id,
+      username: response.data.username,
+      role: response.data.role,
+    }
+    setUser(user)
+    setAccessToken(response.data.access_token, ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000)
+    if (response.data.csrf_token) setCsrfToken(response.data.csrf_token)
+    navigate(from, { replace: true })
+  }
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -44,15 +61,13 @@ export default function LoginPage() {
     setIsLoading(true)
     try {
       const response = await apiLogin({ username: username.trim(), password })
-      const user: User = {
-        id: response.data.user_id,
-        username: response.data.username,
-        role: response.data.role,
+      if (response.data.mfa_required && response.data.mfa_ticket) {
+        // First step succeeded; render the TOTP code input.
+        setMfaTicket(response.data.mfa_ticket)
+        setMfaCode('')
+        return
       }
-      setUser(user)
-      setAccessToken(response.data.access_token, ACCESS_TOKEN_EXPIRY_MINUTES * 60 * 1000)
-      if (response.data.csrf_token) setCsrfToken(response.data.csrf_token)
-      navigate(from, { replace: true })
+      applyLoginResponse(response)
     } catch (error) {
       const err = error as { code?: string }
       if (err.code === 'ERR_INVALID_CREDENTIALS') {
@@ -61,6 +76,28 @@ export default function LoginPage() {
         setApiError('Too many login attempts. Please try again later.')
       } else {
         setApiError('Connection failed. Please check your network connection.')
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // 2FA second step: trade the pending ticket + TOTP code for tokens.
+  const handleMfaSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setApiError(null)
+    if (!mfaTicket || !mfaCode.trim()) return
+    setIsLoading(true)
+    try {
+      const response = await apiMfaLogin(mfaTicket, mfaCode.trim())
+      applyLoginResponse(response)
+    } catch (error) {
+      const err = error as { code?: string }
+      if (err.code === 'ERR_MFA_INVALID') {
+        setApiError('Invalid authentication code. Try again.')
+      } else {
+        setApiError('Verification failed. Please sign in again.')
+        setMfaTicket(null) // ticket likely expired; force a fresh login
       }
     } finally {
       setIsLoading(false)
@@ -83,10 +120,46 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">NodePulse</CardTitle>
-          <p className="text-sm text-muted-foreground">Sign in to your account</p>
+          {mfaTicket && (
+            <p className="mt-1 text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
+          )}
         </CardHeader>
         <CardContent>
+          {mfaTicket ? (
+            <form onSubmit={handleMfaSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="mfa-code">Authentication code</Label>
+                <Input
+                  id="mfa-code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]*"
+                  maxLength={6}
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value.replace(/\D/g, ''))}
+                  disabled={isLoading}
+                  autoFocus
+                  className="text-center text-lg tracking-widest"
+                />
+              </div>
+              {apiError && (
+                <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">{apiError}</div>
+              )}
+              <Button type="submit" className="w-full" disabled={isLoading || mfaCode.length !== 6}>
+                {isLoading ? 'Verifying...' : 'Verify'}
+              </Button>
+              <button
+                type="button"
+                onClick={() => { setMfaTicket(null); setMfaCode(''); setApiError(null) }}
+                className="w-full text-sm text-muted-foreground hover:text-foreground"
+              >
+                Back to sign in
+              </button>
+            </form>
+          ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
+          <p className="text-sm text-muted-foreground">Sign in to your account</p>
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
               <Input
@@ -132,6 +205,7 @@ export default function LoginPage() {
               {isLoading ? 'Signing in...' : 'Sign in'}
             </Button>
           </form>
+          )}
           <div className="mt-3 text-center text-sm">
             <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
           </div>

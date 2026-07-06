@@ -1,0 +1,44 @@
+# Prometheus scrape configuration for Node-Pulse.
+#
+# Drop-in reference for the scrape config + alerting rules that accompany
+# Node-Pulse. Closes the O-G8 gap from docs/user-journey.md §23.3 —
+# observability.md had the example inline but deploy/ did not ship a
+# directly applicable file.
+#
+# Usage:
+#   1. Install Prometheus (https://prometheus.io/docs/prometheus/latest/installation/)
+#   2. Copy this file to your Prometheus config dir and edit targets:
+#        cp deploy/observability/prometheus.yml /etc/prometheus/prometheus.yml
+#   3. Reference the rules file (relative to the Prometheus config):
+#        rule_files:
+#          - /etc/prometheus/pulse-alerts.yml
+#      (this file already points at pulse-alerts.yml next to it)
+#   4. Reload Prometheus:  systemctl reload prometheus
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - pulse-alerts.yml
+
+scrape_configs:
+  # Pulse API + embedded frontend. /metrics is served on the same port as
+  # the API (default 6532). Use the host:port of your Pulse deployment.
+  - job_name: pulse
+    static_configs:
+      - targets: ["localhost:6532"]
+        labels:
+          service: pulse
+
+  # Beacon agents — one target per monitored node. /metrics is served on
+  # port 2112 by default (beacon.yaml metrics_port). For more than a couple
+  # of nodes prefer file_sd_config or a discovery mechanism over a long
+  # static list.
+  - job_name: beacon
+    static_configs:
+      - targets: ["localhost:2112"]
+        labels:
+          service: beacon
+    # Beacons may be on dynamic hosts; allow longer timeout for cross-WAN.
+    scrape_timeout: 10s

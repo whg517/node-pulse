@@ -68,6 +68,9 @@ type AuthHandler struct {
 	// Outbound email + the public frontend URL for embedded reset links.
 	mailer   Mailer
 	resetURL string
+	// Optional MFA service. When nil, 2FA endpoints return 503 and Login
+	// skips the second factor entirely (backward compatible).
+	mfaService *MFAService
 }
 
 // Option configures an AuthHandler after construction.
@@ -81,6 +84,15 @@ func WithPasswordResetMailer(mailer Mailer, resetURL string) Option {
 			h.mailer = mailer
 		}
 		h.resetURL = resetURL
+	}
+}
+
+// WithMFAService enables TOTP two-factor auth on the handler. When wired,
+// accounts with mfa_enabled=true require a second step at login, and the
+// /auth/mfa/{setup,verify,disable} endpoints become usable.
+func WithMFAService(svc *MFAService) Option {
+	return func(h *AuthHandler) {
+		h.mfaService = svc
 	}
 }
 
@@ -267,6 +279,28 @@ func (h *AuthHandler) Login(c *gin.Context) {
 			Message: "Invalid username or password",
 		})
 		return
+	}
+
+	// 2FA: if the account has MFA enabled, do NOT issue tokens yet — return
+	// an mfa_ticket the client redeems at /auth/login/mfa with a TOTP code.
+	// Resetting failed_attempts happens on the second step, not here, so a
+	// half-completed 2FA login still counts as a credential success.
+	if h.mfaService != nil {
+		var mfaEnabled bool
+		if err := h.pool.QueryRow(ctx, `SELECT mfa_enabled FROM users WHERE user_id = $1`, userID).Scan(&mfaEnabled); err == nil && mfaEnabled {
+			userAgent := c.GetHeader("User-Agent")
+			ticket := h.mfaService.IssueLoginTicket(userID, req.Username, role, ipAddress, userAgent)
+			c.JSON(http.StatusOK, gin.H{
+				"data": gin.H{
+					"mfa_required": true,
+					"mfa_ticket":   ticket,
+					"username":     req.Username,
+				},
+				"message":   "MFA verification required",
+				"timestamp": time.Now().Format(time.RFC3339),
+			})
+			return
+		}
 	}
 
 	// Reset failed attempts on successful login

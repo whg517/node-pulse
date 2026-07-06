@@ -23,6 +23,22 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// MFALoginRequest is the second step of a 2FA login: the user supplies the
+// TOTP code from their authenticator app. MFATicket is the short-lived token
+// returned by Login when the account has MFA enabled.
+type MFALoginRequest struct {
+	MFATicket string `json:"mfa_ticket" binding:"required"`
+	Code      string `json:"code" binding:"required"`
+}
+
+// MFASetupResponse is returned when a user begins enabling 2FA: the secret
+// (to be shown as a QR/otpauth URI) and a pending-ticket the verify step needs.
+type MFASetupResponse struct {
+	Secret     string `json:"secret"`
+	OTPAuthURI string `json:"otpauth_uri"`
+	Ticket     string `json:"ticket"`
+}
+
 // LoginResponse represents successful login response
 type LoginResponse struct {
 	Data struct {

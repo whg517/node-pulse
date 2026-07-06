@@ -207,9 +207,12 @@ Routes are lazy-loaded with `React.lazy` and rendered under a shared authenticat
 | `/reports/history` | Data export history |
 | `/integrations/webhooks` | Webhooks |
 | `/integrations/health` | System health |
-| `/settings/preferences` | Preferences |
-| `/settings/sessions` | Sessions |
-| `/settings/users` | Users |
+| `/settings/preferences` | User preferences (theme, language, timezone, password, 2FA) |
+| `/settings/sessions` | Active sessions + revoke |
+| `/settings/users` | User management (admin) |
+| `/settings/api-keys` | API keys for Beacon auth (admin) |
+| `/settings/audit-logs` | Audit log query (admin) |
+| `/settings/system-config` | System config read + revalidate (admin) |
 
 Short aliases exist for legacy and e2e navigation: `/webhooks`, `/sessions`, and `/comparison`.
 

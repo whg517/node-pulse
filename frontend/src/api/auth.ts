@@ -67,6 +67,58 @@ export async function login(credentials: LoginRequest): Promise<LoginResponse> {
 }
 
 /**
+ * Complete 2FA login — exchange the MFA ticket returned by `login` plus a
+ * TOTP code for access/refresh tokens. On success the response shape matches
+ * a normal login.
+ */
+export async function mfaLogin(mfaTicket: string, code: string): Promise<LoginResponse> {
+  try {
+    return await apiClient<LoginResponse>('/api/v1/auth/login/mfa', {
+      method: 'POST',
+      body: JSON.stringify({ mfa_ticket: mfaTicket, code }),
+    })
+  } catch (error) {
+    throw error instanceof AuthenticationError
+      ? error
+      : new AuthenticationError(error instanceof Error ? error.message : 'MFA login failed')
+  }
+}
+
+// --- 2FA self-service (authenticated) ---
+
+export interface MFASetupResponse {
+  data: { secret: string; otpauth_uri: string; ticket: string }
+  message: string
+  timestamp: string
+}
+
+/** Begin 2FA enrollment: returns a TOTP secret + otpauth URI and a setup ticket. */
+export async function mfaSetup(): Promise<MFASetupResponse> {
+  return apiClient<MFASetupResponse>('/api/v1/auth/mfa/setup', { method: 'POST' })
+}
+
+/** Confirm enrollment by validating a live TOTP code against the pending secret. */
+export async function mfaVerify(ticket: string, code: string): Promise<void> {
+  await apiClient<void>('/api/v1/auth/mfa/verify', {
+    method: 'POST',
+    body: JSON.stringify({ ticket, code }),
+  })
+}
+
+/** Turn 2FA off (requires the current password as a re-auth guard). */
+export async function mfaDisable(password: string): Promise<void> {
+  await apiClient<void>('/api/v1/auth/mfa/disable', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  })
+}
+
+/** Report whether the current user has 2FA enabled (preferences page). */
+export async function mfaStatus(): Promise<{ data: { enabled: boolean } }> {
+  return apiClient<{ data: { enabled: boolean} }>('/api/v1/auth/mfa/status')
+}
+
+/**
  * Refresh access token
  *
  * Uses the refresh token from HttpOnly cookie to get a new access token.

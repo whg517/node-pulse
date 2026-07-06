@@ -94,10 +94,51 @@ export function showNotification(title: string, options: NotificationOptions, no
 }
 
 export function showAlertNotification(alertId: string, alertLevel: string, nodeName: string, metric: string, threshold: string): Notification | null {
+  // Honor user notification preferences (F4): a master switch and a minimum
+  // severity filter. We read lazily so the service stays usable before the
+  // settings store is wired (tests, partial init).
+  const prefs = readNotificationPrefs()
+  if (!prefs.enabled) return null
+  if (!meetsMinLevel(alertLevel, prefs.minLevel)) return null
+
   const titles: Record<string, string> = { P0: '🚨 Critical Alert', P1: '⚠️ Warning Alert', P2: '📋 Notice Alert' }
   const title = titles[alertLevel] || 'Alert Notification'
   const body = `${nodeName}: ${metric} exceeded threshold (${threshold})`
   return showNotification(title, { body, requireInteraction: alertLevel === 'P0', tag: `alert-${alertId}` }, alertId)
+}
+
+// --- F4 preference plumbing ---
+
+interface NotificationPrefsLite {
+  enabled: boolean
+  minLevel: 'P0' | 'P1' | 'P2'
+}
+
+// Decoupled from the settings store so this service file has no React/zustand
+// import cycle; useGlobalRealtime wires the real store via setNotificationPrefsSource.
+let prefsSource: (() => NotificationPrefsLite | null) | null = null
+
+export function setNotificationPrefsSource(fn: () => NotificationPrefsLite | null) {
+  prefsSource = fn
+}
+
+function readNotificationPrefs(): NotificationPrefsLite {
+  if (prefsSource) {
+    const p = prefsSource()
+    if (p) return p
+  }
+  return { enabled: true, minLevel: 'P1' }
+}
+
+const LEVEL_RANK: Record<string, number> = { P0: 0, P1: 1, P2: 2 }
+
+function meetsMinLevel(level: string, min: string): boolean {
+  const lv = LEVEL_RANK[level]
+  const mn = LEVEL_RANK[min]
+  if (lv === undefined || mn === undefined) return true
+  // Lower rank = more severe (P0=0). Notify when level is at least as severe
+  // as the minimum — i.e. level rank <= min rank.
+  return lv <= mn
 }
 
 export function toggleSilenceMode(): boolean {

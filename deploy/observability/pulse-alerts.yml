@@ -1,0 +1,51 @@
+# Prometheus alerting rules for Node-Pulse.
+#
+# Loaded by prometheus.yml via `rule_files`. Tune thresholds and severities
+# to your operational baseline. Closes the O-G8 gap.
+
+groups:
+  - name: pulse
+    rules:
+      # API surface — high P99 latency indicates overload or a slow query.
+      - alert: PulseHighLatency
+        expr: histogram_quantile(0.99, rate(pulse_api_response_time_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pulse API P99 latency > 1 s"
+          description: "P99 response time has exceeded 1 second for 5 minutes."
+
+      # Heartbeat ingestion dropping below 1/s during business hours usually
+      # means beacons can't reach Pulse (network split) or Pulse is wedged.
+      - alert: PulseHeartbeatIngestionLow
+        expr: rate(pulse_heartbeats_received_total[5m]) < 1
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Pulse heartbeat rate < 1/s"
+          description: "No or very few heartbeats received in the last 10 minutes."
+
+  - name: beacon
+    rules:
+      # A beacon that stops scraping is either down or can't reach Pulse.
+      # 2 min for avoids flapping on brief network blips.
+      - alert: BeaconDown
+        expr: beacon_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Beacon {{ $labels.instance }} is unreachable"
+          description: "Beacon has reported beacon_up == 0 for 2 minutes."
+
+      # Resource exhaustion on a monitored node.
+      - alert: BeaconHighCpu
+        expr: beacon_cpu_usage_percent > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Beacon {{ $labels.instance }} CPU > 90%"
+          description: "Sustained CPU usage above 90% for 10 minutes."

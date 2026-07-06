@@ -130,6 +130,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		cookieSecure,
 		rateLimitOpts,
 		auth.WithPasswordResetMailer(mailAdapter{sender: mailer}, cfg.Notify.PasswordResetURL),
+		auth.WithMFAService(auth.NewMFAService(pool)),
 	)
 
 	// Initialize memory cache and batch writer (Story 3.2)
@@ -259,6 +260,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		{
 			// POST /api/v1/auth/login - User login
 			authGroup.POST("/login", authHandler.Login)
+			// POST /api/v1/auth/login/mfa - Complete 2FA login (public; ticket-bound)
+			authGroup.POST("/login/mfa", authHandler.MFALoginHandler)
 			// POST /api/v1/auth/refresh - Refresh access token
 			authGroup.POST("/refresh", authHandler.Refresh)
 			// POST /api/v1/auth/logout - Logout (requires valid token to blacklist it)
@@ -281,6 +284,14 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			authGroup.POST("/password/reset/confirm", authHandler.ConfirmPasswordReset)
 			// POST /api/v1/auth/password/change - Change password (requires auth + CSRF)
 			authGroup.POST("/password/change", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.ChangePassword)
+
+			// MFA (2FA) self-service endpoints — require an authenticated session.
+			// Setup returns a secret+QR (not persisted); verify confirms enrollment;
+			// disable requires the current password; status is read-only.
+			authGroup.GET("/mfa/status", middleware.JWTAuthMiddleware(jwtService), authHandler.MFAStatusHandler)
+			authGroup.POST("/mfa/setup", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.MFASetupHandler)
+			authGroup.POST("/mfa/verify", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.MFAVerifySetupHandler)
+			authGroup.POST("/mfa/disable", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.MFADisableHandler)
 		}
 
 		// Admin auth routes (admin only)

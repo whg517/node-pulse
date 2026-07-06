@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAlertsStore } from '@/stores/alertsStore'
 import { useNodesStore } from '@/stores/nodesStore'
+import { useSettingsStore } from '@/stores/settingsStore'
 import type { NodeStatus } from '@/stores/types'
 import * as NotificationService from '@/services/NotificationService'
 import * as WebSocketService from '@/services/WebSocketService'
@@ -37,6 +38,13 @@ export function useGlobalRealtime() {
 
   // Browser notifications: request permission + wire click handler app-wide.
   useEffect(() => {
+    // Wire the user's notification preferences into NotificationService so the
+    // severity filter (F4) applies to every alert:new event globally.
+    NotificationService.setNotificationPrefsSource(() => {
+      const prefs = useSettingsStore.getState().notificationPrefs
+      return { enabled: prefs.enabled, minLevel: prefs.minLevel }
+    })
+
     const handleNotificationClick = (alertId: string) =>
       navigate(`/alerts/records?highlight=${alertId}`)
     NotificationService.initialize(handleNotificationClick)

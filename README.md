@@ -226,8 +226,8 @@ Beyond this README, operational knowledge lives under `docs/` and `deploy/`:
 | Upgrade & rollback | `docs/upgrade.md` |
 | SRE runbook (health triage, incidents) | `docs/operations.md` |
 | Beacon systemd service | `beacon/deploy/` + `make install-systemd` |
-| Observability (metrics/tracing) | `docs/observability.md` |
-| Authentication & RBAC | `docs/authentication.md` |
+| Observability (metrics/tracing) | `docs/observability.md` + `deploy/observability/` (Prometheus config + alert rules) |
+| Authentication & RBAC | `docs/authentication.md` (incl. 2FA / MFA) |
 
 Build version is exposed at `GET /api/v1/version` (no auth) for SRE triage.
 

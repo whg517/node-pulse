@@ -34,6 +34,10 @@ export interface LoginResponse {
     role: UserRole
     access_token: string
     csrf_token: string
+    // Present when the account has 2FA enabled — the client must then call
+    // /auth/login/mfa with this ticket + a TOTP code to finish login.
+    mfa_required?: boolean
+    mfa_ticket?: string
   }
   message: string
   timestamp: string

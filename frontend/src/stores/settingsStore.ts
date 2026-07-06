@@ -18,6 +18,17 @@ import i18n from '../i18n'
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type TimezoneDisplayMode = 'utc' | 'local' | 'nodeLocal' | 'multi'
 
+// Notification preferences (F4). Lives in localStorage like the rest of the
+// settings store — this is a client-side filter on browser notifications,
+// not a server-side delivery preference. The minimum alert level lets a user
+// suppress low-severity noise (e.g. only be notified for P0/P1).
+export type AlertLevel = 'P0' | 'P1' | 'P2'
+export interface NotificationPrefs {
+  enabled: boolean          // master switch for browser notifications
+  minLevel: AlertLevel      // notify only for alerts at or above this severity
+  nodeOnlineOffline: boolean // also notify on node:online/offline events
+}
+
 export interface TimezoneOption {
   value: string
   label: string
@@ -29,6 +40,7 @@ export interface SettingsState {
   theme: ThemeMode
   timezone: string
   timezoneDisplayMode: TimezoneDisplayMode
+  notificationPrefs: NotificationPrefs
 }
 
 export interface SettingsActions {
@@ -36,6 +48,7 @@ export interface SettingsActions {
   setTheme: (theme: ThemeMode) => void
   setTimezone: (timezone: string) => void
   setTimezoneDisplayMode: (mode: TimezoneDisplayMode) => void
+  setNotificationPrefs: (prefs: Partial<NotificationPrefs>) => void
   resetSettings: () => void
 }
 
@@ -76,6 +89,7 @@ const DEFAULT_SETTINGS: SettingsState = {
   theme: 'system',
   timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
   timezoneDisplayMode: 'local',
+  notificationPrefs: { enabled: true, minLevel: 'P1', nodeOnlineOffline: false },
 }
 
 // ============== Store ==============
@@ -104,6 +118,10 @@ export const useSettingsStore = create<SettingsStore>()(
         set({ timezoneDisplayMode })
       },
 
+      setNotificationPrefs: (prefs) => {
+        set((state) => ({ notificationPrefs: { ...state.notificationPrefs, ...prefs } }))
+      },
+
       resetSettings: () => {
         set(DEFAULT_SETTINGS)
         applyTheme(DEFAULT_SETTINGS.theme)
@@ -116,6 +134,7 @@ export const useSettingsStore = create<SettingsStore>()(
         theme: state.theme,
         timezone: state.timezone,
         timezoneDisplayMode: state.timezoneDisplayMode,
+        notificationPrefs: state.notificationPrefs,
       }),
     }
   )

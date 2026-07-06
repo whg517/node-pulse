@@ -176,7 +176,14 @@ export default function ReportsPage() {
           <Card>
             <CardContent className="p-6">
               <h3 className="text-lg font-semibold mb-4">{t('reports.generateReport')}</h3>
-              <ReportGenerator nodes={nodes} onSubmit={handleReportSubmit} loading={exportLoading} defaultNodeIds={defaultNodeIds} />
+              {isAdmin ? (
+                <ReportGenerator nodes={nodes} onSubmit={handleReportSubmit} loading={exportLoading} defaultNodeIds={defaultNodeIds} />
+              ) : (
+                <div className="rounded-md border-l-4 border-yellow-500 bg-yellow-50 p-4 dark:bg-yellow-950">
+                  <p className="text-sm font-medium">{t('dataExport.adminOnly')}</p>
+                  <p className="text-sm">{t('dataExport.adminOnlyDescription')}</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

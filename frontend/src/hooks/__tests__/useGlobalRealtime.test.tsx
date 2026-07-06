@@ -26,6 +26,9 @@ vi.mock('@/services/NotificationService', () => ({
   initialize: vi.fn(),
   destroy: vi.fn(),
   showAlertNotification: mockShowAlertNotification,
+  // F4: setNotificationPrefsSource is called on mount to wire the settings
+  // store into the service; the test doesn't exercise filtering so a noop is fine.
+  setNotificationPrefsSource: vi.fn(),
 }))
 
 vi.mock('@/services/WebSocketService', () => ({

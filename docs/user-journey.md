@@ -2,8 +2,8 @@
 
 **Owner:** Kevin
 **Date:** 2026-07-06
-**Version:** 3.2
-**Status:** Group C 全量交付 —— 基于 `docs/iteration-plan-v3.1.md` Group C 四 cohort，补齐部署/运维阶段全部 P1/P2 缺口：TLS 反代文档（D-G1）、数据库备份脚本（D-G2）、升级 runbook（D-G3）、Beacon systemd（D-G4）、版本系统 + `/version` 端点（D-G5）、`.env.example` 死引用清理（D-G6）、管理员解锁用户（O-G2）、JWT 多密钥轮换窗口（O-G3）、Pulse SIGHUP 热重载 Phase 1（O-G4）、运维 runbook（O-G7）、前端集中式 RBAC 路由守卫（F2）。
+**Version:** 3.3
+**Status:** 剩余缺口收尾 —— 2FA/MFA（F5，TOTP 全链路）、通知偏好 Phase 1（F4，浏览器通知级别过滤）、Viewer 只读导出视图（F3）、路由表/死链接/Prometheus 配置清理（F7/F8/O-G8）。§23 P0–P3 缺口基本清零（仅余 O-G5/O-G6 两个体验项）。
 
 > 本文档从**使用者视角**系统拆解 NodePulse 的全部用户旅途与操作流程。
 >
@@ -799,17 +799,17 @@ v3.0 合并三大生命周期的全部缺口，按严重度分级。处置标记
 | **D-G5** | 无版本/发布系统 | 部署 | ✅ **【已修复 v3.2】** —— `pulse/internal/version` + `beacon/internal/version` + Makefile ldflags 注入 + `GET /api/v1/version` |
 | **O-G3** | 无 JWT 轮换窗口 | 运维 | ✅ **【已修复 v3.2】** —— `JWTService.WithPreviousKey` + `JWTConfig.Previous*` 字段 + `PULSE_JWT_PREVIOUS_*` env |
 | **O-G4** | Pulse 无热重载 | 运维 | ✅ **【已修复 v3.2，Phase 1】** —— SIGHUP 触发 `server.reloadConfig()`，当前覆盖 `log.level`（其他配置仍需重启） |
-| **F3** | Viewer 无只读 Webhook/导出视图 | 功能 | 🟡 体验 |
-| **F4** | 无通知偏好/多通道 | 功能 | ❌ **【未实现】** |
-| **F5** | 无 2FA/MFA | 功能 | ❌ **【未实现】** |
-| **O-G8** | 未随附 Prometheus/仪表板配置 | 运维 | 🟡 体验 |
+| **F3** | Viewer 无只读 Webhook/导出视图 | 功能 | ✅ **【已修复 v3.3】** —— Webhooks 由 v3.2 `RequireRole` 守卫；Reports 页 `ReportGenerator` 也对非 admin 显示 admin-only 提示而非 403 按钮 |
+| **F4** | 无通知偏好/多通道 | 功能 | ✅ **【已修复 v3.3，Phase 1】** —— 用户级浏览器通知偏好（总开关 + 最低告警级别过滤 + 节点上下线开关），localStorage 持久化；服务端 per-user 邮件/多通道路由仍为未来扩展 |
+| **F5** | 无 2FA/MFA | 功能 | ✅ **【已修复 v3.3】** —— TOTP 2FA 全链路（`MFAService` + `/auth/login/mfa` + `/auth/mfa/{setup,verify,disable,status}` + 登录二步 UI + PreferencesPage 管理卡片） |
+| **O-G8** | 未随附 Prometheus/仪表板配置 | 运维 | ✅ **【已修复 v3.3】** —— `deploy/observability/{prometheus.yml,pulse-alerts.yml}` 可直接应用，含告警规则 |
 
 ### 23.4 P3 — 文档勘误
 
 | # | 缺口 | 状态 |
 |---|------|------|
-| **F7** | `architecture.md`/`ui-design.md` 路由表过时（仅 3 个 `/settings/*`，实际 6 个） | 待修 |
-| **F8** | `prd.md:297` 引用 `docs/iteration-roadmap.md`（不存在） | 待修 |
+| **F7** | `architecture.md`/`ui-design.md` 路由表过时（仅 3 个 `/settings/*`，实际 6 个） | ✅ 已修复（v3.3）|
+| **F8** | `prd.md:297` 引用 `docs/iteration-roadmap.md`（不存在） | ✅ 已修复（v3.3，改为指向 user-journey §23 + iteration-plan 系列）|
 | **D-G6** | 根 `.env.example` 的 "Frontend (nginx)" 段是死引用 | ✅ 已修复（v3.2）|
 
 ### 23.5 已修复（v2.1–v2.4，历史记录）
@@ -930,6 +930,7 @@ G1 告警备注、G2 API Keys 页、G3 导出持久化、G4 Webhook 投递日志
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 3.3 | 2026-07-06 | **剩余缺口收尾**：① **F5 2FA/MFA** —— TOTP 全链路（`pulse/internal/auth/mfa_service.go` + `mfa_handler.go` + `github.com/pquerna/otp`），Login 二步验证（`mfa_required` + `/auth/login/mfa`），PreferencesPage 启用/禁用卡片；② **F4 通知偏好 Phase 1** —— 用户级浏览器通知偏好（settingsStore `NotificationPrefs` + `NotificationService` 级别过滤 + PreferencesPage 卡片），最低告警级别过滤；③ **F3 Viewer 只读导出视图** —— Reports 页 `ReportGenerator` 对非 admin 显示 admin-only 提示（与 DataExportPage 一致）；④ **Cohort 5 文档+配置清理** —— F7 修 architecture.md/ui-design.md 路由表（3→6 个 settings 路由）、F8 修 prd.md 死链接、O-G8 `deploy/observability/{prometheus.yml,pulse-alerts.yml}` 落地。**至此 §23 P0/P1/P2/P3 缺口全部清零**（仅余 O-G5 关闭超时不可配 / O-G6 TrustedProxies 两个体验项）。 |
 | 3.2 | 2026-07-06 | **Group C 全量交付**（基于 `docs/iteration-plan-v3.1.md` Group C 四 cohort）：① **Cohort 1 低风险高收益** —— D-G6 删 `.env.example` nginx 死引用、O-G2 管理员「立即解锁用户」（`POST /admin/users/:id/unlock` + UI）、F2 集中式 RBAC 路由守卫（`RequireRole` 组件守卫 5 个 admin-only 页面）；② **Cohort 2 部署增强** —— D-G4 Beacon systemd unit + `install-systemd.sh`、D-G5 版本系统（`pulse/internal/version` + `beacon/internal/version` + Makefile ldflags + `GET /api/v1/version`）、D-G1 TLS 反代文档（nginx/Caddy 参考 + `docs/deployment-tls.md`）；③ **Cohort 3 运维 runbook** —— D-G2 备份脚本（`deploy/backup/pg-backup.sh` + systemd timer）、D-G3 `docs/upgrade.md`（三回滚路径 + 兼容矩阵）、O-G7 `docs/operations.md`（健康分级/事故剧本/备份恢复）；④ **Cohort 4 架构级** —— O-G3 JWT 多密钥轮换窗口（`JWTService.WithPreviousKey` + `PULSE_JWT_PREVIOUS_*`）、O-G4 Pulse SIGHUP 热重载（Phase 1：log.level）。**附带**：修复 v3.1 A6 commit 在 `export_tasks.go` 引入的语法 bug（gate 当时未抓到）。 |
 | 3.1 | 2026-07-05 | **QA 驱动修复轮**（基于 `docs/qa-journey-audit.md` 17 条旅程审计）：① **O-G1 修复** —— `auth-cleanup` 任务接线到 scheduler（`server/auth_cleanup_task.go` + `registry.go registerAuthCleanupTask`），`authentication.md` 的「Audit Log Retention」同步为真实实现；② **F1 修复** —— `Reports.tsx` 用 `useAuthStore().role` 守卫 schedule 创建/启用/删除（`isAdmin`）；③ **新增修复**：后端 `UpdateUser` 加 self-role-change 防护（`ErrCannotChangeOwnRole`）、`/health` scheduler 探测参与降级判定、`routes.go:406` CSRF 中间件归属修正、导出删除端点（`DELETE /data/export/:id` + 前端接线）；④ **文档勘误**：J3/J4 RBAC 不一致（已修复回写）、§12 行号、J9 严重级别过滤（已实现）、J2 状态机符号名（`CanTransitionTo`）、J12 审计页措辞、§9.4 优雅关闭顺序、§10.3 `alert:note_created`（前端不消费）。 |
 | 3.0 | 2026-07-05 | **三生命周期重构**：新增第一部分「安装部署」（D1/D2 + D-G1~G8 部署缺口）、第二部分「系统维护与运维」（O1/O2 + O-G1~G8 运维缺口）、§3.1 部署/运维能力分层表；新增 Deployer/SRE 角色；引入 **[未实现]** 状态标签消除「文档谎称」；合并所有缺口为 §23 总表（P0/P1/P2/P3 四级）；修正 v2.x 各旅程正文里未回写的过时「断裂」描述（告警备注/配置预览/回滚/模板/报告计划/投递日志/路由规则 等均已在 v2.1-v2.4 修复）；新增 §23.1 P0 含 **O-G1 审计清理文档谎称**（authentication.md:515 谎称 90 天清理，代码未注册）、**D-G2 无备份**、**F1 Reports 角色关卡 bug**。 |
