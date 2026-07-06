@@ -295,10 +295,10 @@ An operator configures webhooks, previews payloads, sends a test delivery, monit
 ## 7. Release Roadmap Baseline
 
 The active implementation status and per-gap roadmap live in
-`docs/user-journey.md` §23 (Implementation Gaps, P0–P3) and the
-`docs/iteration-plan-v3.*.md` / `docs/qa-journey-audit.md` series.
-This PRD defines product intent and requirement status; those docs
-define implementation order and current state.
+`docs/user-journey.md` §23 (Implementation Gaps, P0–P3) and its
+change history (§27.2). This PRD defines product intent and
+requirement status; that document defines implementation order and
+current state.
 
 Immediate roadmap themes:
 

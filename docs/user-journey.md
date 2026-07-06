@@ -2,8 +2,8 @@
 
 **Owner:** Kevin
 **Date:** 2026-07-06
-**Version:** 3.4
-**Status:** 最终缺口清零 —— O-G5（优雅关闭超时可配 `server.shutdown_timeout_seconds`）+ O-G6（TrustedProxies `server.trusted_proxies` CIDR 列表）。§23 P0–P4 全部缺口已修复，无遗留项。
+**Version:** 3.5
+**Status:** 迭代收尾 —— §23 P0–P4 缺口已于 v3.4 全部清零；v3.5 归档并移除过程中产生的临时迭代计划/审计文档（iteration-plan-v3.1、qa-journey-audit、qa-gap-report），实现成果沉淀至长期文档。
 
 > 本文档从**使用者视角**系统拆解 NodePulse 的全部用户旅途与操作流程。
 >
@@ -810,7 +810,7 @@ v3.0 合并三大生命周期的全部缺口，按严重度分级。处置标记
 | # | 缺口 | 状态 |
 |---|------|------|
 | **F7** | `architecture.md`/`ui-design.md` 路由表过时（仅 3 个 `/settings/*`，实际 6 个） | ✅ 已修复（v3.3）|
-| **F8** | `prd.md:297` 引用 `docs/iteration-roadmap.md`（不存在） | ✅ 已修复（v3.3，改为指向 user-journey §23 + iteration-plan 系列）|
+| **F8** | `prd.md:297` 引用 `docs/iteration-roadmap.md`（不存在） | ✅ 已修复（v3.3，改为指向 user-journey §23；v3.5 移除 iteration-plan 系列后再次收敛）|
 | **D-G6** | 根 `.env.example` 的 "Frontend (nginx)" 段是死引用 | ✅ 已修复（v3.2）|
 
 ### 23.5 已修复（v2.1–v2.4，历史记录）
@@ -931,10 +931,11 @@ G1 告警备注、G2 API Keys 页、G3 导出持久化、G4 Webhook 投递日志
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 3.5 | 2026-07-06 | **迭代文档归档**：v3.0→v3.4 缺口修复迭代已全部收尾（§23 P0–P4 清零），移除过程中产生的临时计划/审计文档 —— `docs/iteration-plan-v3.1.md`（迭代实现规划）、`docs/qa-journey-audit.md`（17 旅程 QA 审计）、`docs/qa-gap-report.md`（v2.x 测试覆盖报告）。实现成果已沉淀到本文件 §23 状态表 + §27.2 changelog + `authentication.md`/`operations.md`/`upgrade.md`/`deployment-tls.md` 等长期文档；同步清理 `prd.md` 与本文件中对三份文档的引用，避免死链接。 |
 | 3.4 | 2026-07-06 | **最终缺口清零**：① **O-G5 优雅关闭超时可配** —— `ServerConfig.ShutdownTimeoutSeconds`（默认 10，`PULSE_SERVER_SHUTDOWN_TIMEOUT_SECONDS`），`Server.Shutdown()` 读取代替硬编码；② **O-G6 TrustedProxies** —— `ServerConfig.TrustedProxies` CIDR 列表（`PULSE_SERVER_TRUSTED_PROXIES`），`builder.go` 调 `gin.SetTrustedProxies`，空列表保持 legacy「信任所有」。`pulse.yaml.example` 同步两个新字段。**至此 §23 P0–P4 全部缺口清零**，无遗留项。 |
 | 3.3 | 2026-07-06 | **剩余缺口收尾**：① **F5 2FA/MFA** —— TOTP 全链路（`pulse/internal/auth/mfa_service.go` + `mfa_handler.go` + `github.com/pquerna/otp`），Login 二步验证（`mfa_required` + `/auth/login/mfa`），PreferencesPage 启用/禁用卡片；② **F4 通知偏好 Phase 1** —— 用户级浏览器通知偏好（settingsStore `NotificationPrefs` + `NotificationService` 级别过滤 + PreferencesPage 卡片），最低告警级别过滤；③ **F3 Viewer 只读导出视图** —— Reports 页 `ReportGenerator` 对非 admin 显示 admin-only 提示（与 DataExportPage 一致）；④ **Cohort 5 文档+配置清理** —— F7 修 architecture.md/ui-design.md 路由表（3→6 个 settings 路由）、F8 修 prd.md 死链接、O-G8 `deploy/observability/{prometheus.yml,pulse-alerts.yml}` 落地。**至此 §23 P0/P1/P2/P3 缺口全部清零**（仅余 O-G5 关闭超时不可配 / O-G6 TrustedProxies 两个体验项）。 |
-| 3.2 | 2026-07-06 | **Group C 全量交付**（基于 `docs/iteration-plan-v3.1.md` Group C 四 cohort）：① **Cohort 1 低风险高收益** —— D-G6 删 `.env.example` nginx 死引用、O-G2 管理员「立即解锁用户」（`POST /admin/users/:id/unlock` + UI）、F2 集中式 RBAC 路由守卫（`RequireRole` 组件守卫 5 个 admin-only 页面）；② **Cohort 2 部署增强** —— D-G4 Beacon systemd unit + `install-systemd.sh`、D-G5 版本系统（`pulse/internal/version` + `beacon/internal/version` + Makefile ldflags + `GET /api/v1/version`）、D-G1 TLS 反代文档（nginx/Caddy 参考 + `docs/deployment-tls.md`）；③ **Cohort 3 运维 runbook** —— D-G2 备份脚本（`deploy/backup/pg-backup.sh` + systemd timer）、D-G3 `docs/upgrade.md`（三回滚路径 + 兼容矩阵）、O-G7 `docs/operations.md`（健康分级/事故剧本/备份恢复）；④ **Cohort 4 架构级** —— O-G3 JWT 多密钥轮换窗口（`JWTService.WithPreviousKey` + `PULSE_JWT_PREVIOUS_*`）、O-G4 Pulse SIGHUP 热重载（Phase 1：log.level）。**附带**：修复 v3.1 A6 commit 在 `export_tasks.go` 引入的语法 bug（gate 当时未抓到）。 |
-| 3.1 | 2026-07-05 | **QA 驱动修复轮**（基于 `docs/qa-journey-audit.md` 17 条旅程审计）：① **O-G1 修复** —— `auth-cleanup` 任务接线到 scheduler（`server/auth_cleanup_task.go` + `registry.go registerAuthCleanupTask`），`authentication.md` 的「Audit Log Retention」同步为真实实现；② **F1 修复** —— `Reports.tsx` 用 `useAuthStore().role` 守卫 schedule 创建/启用/删除（`isAdmin`）；③ **新增修复**：后端 `UpdateUser` 加 self-role-change 防护（`ErrCannotChangeOwnRole`）、`/health` scheduler 探测参与降级判定、`routes.go:406` CSRF 中间件归属修正、导出删除端点（`DELETE /data/export/:id` + 前端接线）；④ **文档勘误**：J3/J4 RBAC 不一致（已修复回写）、§12 行号、J9 严重级别过滤（已实现）、J2 状态机符号名（`CanTransitionTo`）、J12 审计页措辞、§9.4 优雅关闭顺序、§10.3 `alert:note_created`（前端不消费）。 |
+| 3.2 | 2026-07-06 | **Group C 全量交付**（基于迭代计划 Group C 四 cohort，计划文档已于 v3.5 归档移除）：① **Cohort 1 低风险高收益** —— D-G6 删 `.env.example` nginx 死引用、O-G2 管理员「立即解锁用户」（`POST /admin/users/:id/unlock` + UI）、F2 集中式 RBAC 路由守卫（`RequireRole` 组件守卫 5 个 admin-only 页面）；② **Cohort 2 部署增强** —— D-G4 Beacon systemd unit + `install-systemd.sh`、D-G5 版本系统（`pulse/internal/version` + `beacon/internal/version` + Makefile ldflags + `GET /api/v1/version`）、D-G1 TLS 反代文档（nginx/Caddy 参考 + `docs/deployment-tls.md`）；③ **Cohort 3 运维 runbook** —— D-G2 备份脚本（`deploy/backup/pg-backup.sh` + systemd timer）、D-G3 `docs/upgrade.md`（三回滚路径 + 兼容矩阵）、O-G7 `docs/operations.md`（健康分级/事故剧本/备份恢复）；④ **Cohort 4 架构级** —— O-G3 JWT 多密钥轮换窗口（`JWTService.WithPreviousKey` + `PULSE_JWT_PREVIOUS_*`）、O-G4 Pulse SIGHUP 热重载（Phase 1：log.level）。**附带**：修复 v3.1 A6 commit 在 `export_tasks.go` 引入的语法 bug（gate 当时未抓到）。 |
+| 3.1 | 2026-07-05 | **QA 驱动修复轮**（基于 17 条旅程审计，审计报告已于 v3.5 归档移除）：① **O-G1 修复** —— `auth-cleanup` 任务接线到 scheduler（`server/auth_cleanup_task.go` + `registry.go registerAuthCleanupTask`），`authentication.md` 的「Audit Log Retention」同步为真实实现；② **F1 修复** —— `Reports.tsx` 用 `useAuthStore().role` 守卫 schedule 创建/启用/删除（`isAdmin`）；③ **新增修复**：后端 `UpdateUser` 加 self-role-change 防护（`ErrCannotChangeOwnRole`）、`/health` scheduler 探测参与降级判定、`routes.go:406` CSRF 中间件归属修正、导出删除端点（`DELETE /data/export/:id` + 前端接线）；④ **文档勘误**：J3/J4 RBAC 不一致（已修复回写）、§12 行号、J9 严重级别过滤（已实现）、J2 状态机符号名（`CanTransitionTo`）、J12 审计页措辞、§9.4 优雅关闭顺序、§10.3 `alert:note_created`（前端不消费）。 |
 | 3.0 | 2026-07-05 | **三生命周期重构**：新增第一部分「安装部署」（D1/D2 + D-G1~G8 部署缺口）、第二部分「系统维护与运维」（O1/O2 + O-G1~G8 运维缺口）、§3.1 部署/运维能力分层表；新增 Deployer/SRE 角色；引入 **[未实现]** 状态标签消除「文档谎称」；合并所有缺口为 §23 总表（P0/P1/P2/P3 四级）；修正 v2.x 各旅程正文里未回写的过时「断裂」描述（告警备注/配置预览/回滚/模板/报告计划/投递日志/路由规则 等均已在 v2.1-v2.4 修复）；新增 §23.1 P0 含 **O-G1 审计清理文档谎称**（authentication.md:515 谎称 90 天清理，代码未注册）、**D-G2 无备份**、**F1 Reports 角色关卡 bug**。 |
 | 2.4 | 2026-07-05 | 文档勘误：纠正 §3/§4.3 WebSocket 虚报；回写 §15 J12、§20.2 心跳持久化；澄清密码重置路由。前端死代码清理（独立 commit）。 |
 | 2.3 | 2026-07-04 | 三处假服务端能力落地（报告计划/告警路由/Beacon 模板，ADR-001/002/003）；Beacon 回滚端点；密码重置邮件接通 SMTP；全局浏览器通知。**勘误（v2.4）**：原称「消费 node:online/offline」不实，已在 v2.4 修复。 |
