@@ -101,9 +101,10 @@ func (h *WebhookHandler) CreateWebhookHandler(c *gin.Context) {
 	}
 
 	webhook := &models.Webhook{
-		URL:         req.URL,
-		EventFormat: req.EventFormat,
-		Enabled:     *req.Enabled,
+		URL:           req.URL,
+		EventFormat:   req.EventFormat,
+		CustomHeaders: req.CustomHeaders,
+		Enabled:       *req.Enabled,
 	}
 
 	if err := h.querier.CreateWebhook(c.Request.Context(), webhook); err != nil {

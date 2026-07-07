@@ -3,6 +3,7 @@ import * as webhooksAPI from '../api/webhooks'
 import type {
   CreateWebhookRequest,
   UpdateWebhookRequest,
+  WebhookCustomHeaders,
   WebhookDTO,
   WebhookEventFormat,
 } from '../api/webhooks'
@@ -13,6 +14,7 @@ export interface Webhook {
   id: string
   url: string
   eventFormat: WebhookEventFormat
+  customHeaders?: WebhookCustomHeaders
   enabled: boolean
 }
 
@@ -55,6 +57,7 @@ function mapWebhook(webhook: WebhookDTO): Webhook {
     id: webhook.id,
     url: webhook.url,
     eventFormat: webhook.event_format,
+    customHeaders: webhook.custom_headers,
     enabled: webhook.enabled,
   }
 }

@@ -119,7 +119,7 @@ PULSE_SERVER_MODE=release
 | `pulse_server` | ✅ | Pulse server URL (HTTP/HTTPS) |
 | `node_id` | ✅ | Unique node ID (alphanumeric, `-`, `_`) |
 | `node_name` | ✅ | Human-readable name |
-| `api_key` | ✅ | API key generated from the Pulse UI |
+| `api_key` | ✅ | API key generated from the Pulse UI at **Settings → API Keys** (`/settings/api-keys`, admin-only). See [J12 API Key Management](docs/user-journey.md#21-j12-api-key--service-account-management). |
 | `region` | — | Region label |
 | `tags` | — | Custom string tags |
 | `probes` | — | TCP/UDP probe targets |

@@ -7,11 +7,14 @@
 import { apiClient } from './client'
 
 export type WebhookEventFormat = Record<string, unknown>
+/** Custom HTTP headers applied to every delivery (J9). Plain string map. */
+export type WebhookCustomHeaders = Record<string, string>
 
 export interface WebhookDTO {
   id: string
   url: string
   event_format: WebhookEventFormat
+  custom_headers?: WebhookCustomHeaders
   enabled: boolean
   created_at: string
 }
@@ -19,12 +22,14 @@ export interface WebhookDTO {
 export interface CreateWebhookRequest {
   url: string
   event_format?: WebhookEventFormat
+  custom_headers?: WebhookCustomHeaders
   enabled?: boolean
 }
 
 export interface UpdateWebhookRequest {
   url?: string
   event_format?: WebhookEventFormat
+  custom_headers?: WebhookCustomHeaders
   enabled?: boolean
 }
 

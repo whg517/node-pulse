@@ -8,21 +8,28 @@ type Webhook struct {
 	URL         string         `json:"url" db:"url"`
 	EventFormat map[string]any `json:"event_format,omitempty" db:"event_format"`
 	Enabled     bool           `json:"enabled" db:"enabled"`
-	CreatedAt   time.Time      `json:"created_at" db:"created_at"`
+	// CustomHeaders are extra HTTP headers applied to every delivery (J9).
+	// nil/empty means none. Keys are case-insensitive per HTTP; values must
+	// be plain strings. Reserved headers (Content-Type, User-Agent, etc.)
+	// are validated/filtered at the handler layer.
+	CustomHeaders map[string]string `json:"custom_headers,omitempty" db:"custom_headers"`
+	CreatedAt     time.Time         `json:"created_at" db:"created_at"`
 }
 
 // CreateWebhookRequest represents request to create a new webhook
 type CreateWebhookRequest struct {
-	URL         string         `json:"url" binding:"required,url"`
-	EventFormat map[string]any `json:"event_format,omitempty"`
-	Enabled     *bool          `json:"enabled,omitempty"` // Default to true if not provided
+	URL           string             `json:"url" binding:"required,url"`
+	EventFormat   map[string]any     `json:"event_format,omitempty"`
+	CustomHeaders map[string]string  `json:"custom_headers,omitempty"`
+	Enabled       *bool              `json:"enabled,omitempty"` // Default to true if not provided
 }
 
 // UpdateWebhookRequest represents request to update a webhook
 type UpdateWebhookRequest struct {
-	URL         *string         `json:"url,omitempty" binding:"omitempty,url"`
-	EventFormat *map[string]any `json:"event_format,omitempty"`
-	Enabled     *bool           `json:"enabled,omitempty"`
+	URL           *string            `json:"url,omitempty" binding:"omitempty,url"`
+	EventFormat   *map[string]any    `json:"event_format,omitempty"`
+	CustomHeaders *map[string]string `json:"custom_headers,omitempty"`
+	Enabled       *bool              `json:"enabled,omitempty"`
 }
 
 // PreviewWebhookEventRequest represents a request to render a webhook payload preview.

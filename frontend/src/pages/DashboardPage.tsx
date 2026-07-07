@@ -13,12 +13,15 @@ import WorldMap from '@/components/dashboard/WorldMap'
 import { LatencyTrendChart, PacketLossChart, ProbeSuccessGauge } from '@/components/charts'
 import type { NodeLocation } from '@/components/dashboard/WorldMap'
 import { useAlertsStore } from '@/stores/alertsStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useDashboardStore } from '@/stores/dashboardStore'
 import { estimateRegionBaseCoordinates, scatterAroundBase } from '@/utils/regionCoordinates'
 
 export default function DashboardPage() {
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { role } = useAuthStore()
+  const canManageNodes = role === 'admin' || role === 'operator'
   const { nodes, metrics, isLoading, error, refetch } = useDashboardData()
   const { stats, sortedByAnomaly, nodeHealthSummaries } = useDashboard(nodes, metrics)
   const fetchAlertRecords = useAlertsStore((s) => s.fetchAlertRecords)
@@ -93,6 +96,27 @@ export default function DashboardPage() {
           </div>
         }
       />
+
+      {/* Empty state: no nodes yet. Guide the new admin/operator through onboarding. */}
+      {nodes.length === 0 && !isLoading && !error && (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 p-6">
+          <h3 className="text-lg font-semibold">{t('dashboard.gettingStarted', 'Getting started')}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('dashboard.emptyHint', 'No nodes are reporting yet. Create a node, then deploy a Beacon agent to start monitoring.')}
+          </p>
+          <ol className="mt-4 space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+            <li>{t('dashboard.stepCreateNode', 'Create a node (Nodes → New).')}</li>
+            <li>{t('dashboard.stepCreateApiKey', 'Generate an API key (Settings → API Keys, admin-only).')}</li>
+            <li>{t('dashboard.stepDeployBeacon', 'Deploy a Beacon agent on the target node with that API key.')}</li>
+          </ol>
+          <div className="mt-4 flex gap-2">
+            {canManageNodes && (
+              <Button size="sm" onClick={() => navigate('/nodes')}>{t('dashboard.goToNodes', 'Go to Nodes')}</Button>
+            )}
+            <Button size="sm" variant="outline" onClick={() => navigate('/settings/api-keys')}>{t('dashboard.goToApiKeys', 'API Keys')}</Button>
+          </div>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive">

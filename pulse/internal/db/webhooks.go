@@ -48,14 +48,24 @@ func (q *webhookQuerier) CreateWebhook(ctx context.Context, webhook *models.Webh
 		return fmt.Errorf("failed to marshal event format: %w", err)
 	}
 
+	// custom_headers is nullable; marshal to JSONB or NULL.
+	var customHeadersJSON interface{}
+	if len(webhook.CustomHeaders) > 0 {
+		b, mErr := json.Marshal(webhook.CustomHeaders)
+		if mErr != nil {
+			return fmt.Errorf("failed to marshal custom headers: %w", mErr)
+		}
+		customHeadersJSON = b
+	}
+
 	query := `
-		INSERT INTO webhooks (id, url, event_format, enabled, created_at)
-		VALUES ($1, $2, $3, $4, NOW())
+		INSERT INTO webhooks (id, url, event_format, custom_headers, enabled, created_at)
+		VALUES ($1, $2, $3, $4, $5, NOW())
 		RETURNING created_at
 	`
 
 	err = q.pool.QueryRow(ctx, query,
-		webhook.ID, webhook.URL, eventFormatJSON, webhook.Enabled,
+		webhook.ID, webhook.URL, eventFormatJSON, customHeadersJSON, webhook.Enabled,
 	).Scan(&webhook.CreatedAt)
 
 	if err != nil {
@@ -68,7 +78,7 @@ func (q *webhookQuerier) CreateWebhook(ctx context.Context, webhook *models.Webh
 // GetWebhooks retrieves all webhook configurations
 func (q *webhookQuerier) GetWebhooks(ctx context.Context) ([]*models.Webhook, error) {
 	query := `
-		SELECT id, url, event_format, enabled, created_at
+		SELECT id, url, event_format, custom_headers, enabled, created_at
 		FROM webhooks
 		ORDER BY created_at DESC
 	`
@@ -83,9 +93,10 @@ func (q *webhookQuerier) GetWebhooks(ctx context.Context) ([]*models.Webhook, er
 	for rows.Next() {
 		webhook := &models.Webhook{}
 		var eventFormatJSON []byte
+		var customHeadersJSON []byte
 
 		err := rows.Scan(
-			&webhook.ID, &webhook.URL, &eventFormatJSON,
+			&webhook.ID, &webhook.URL, &eventFormatJSON, &customHeadersJSON,
 			&webhook.Enabled, &webhook.CreatedAt,
 		)
 		if err != nil {
@@ -97,6 +108,9 @@ func (q *webhookQuerier) GetWebhooks(ctx context.Context) ([]*models.Webhook, er
 			if err != nil {
 				return nil, fmt.Errorf("failed to unmarshal event format: %w", err)
 			}
+		}
+		if len(customHeadersJSON) > 0 {
+			_ = json.Unmarshal(customHeadersJSON, &webhook.CustomHeaders)
 		}
 
 		webhooks = append(webhooks, webhook)
@@ -113,15 +127,16 @@ func (q *webhookQuerier) GetWebhooks(ctx context.Context) ([]*models.Webhook, er
 func (q *webhookQuerier) GetWebhookByID(ctx context.Context, id string) (*models.Webhook, error) {
 	webhook := &models.Webhook{}
 	var eventFormatJSON []byte
+	var customHeadersJSON []byte
 
 	query := `
-		SELECT id, url, event_format, enabled, created_at
+		SELECT id, url, event_format, custom_headers, enabled, created_at
 		FROM webhooks
 		WHERE id = $1
 	`
 
 	err := q.pool.QueryRow(ctx, query, id).Scan(
-		&webhook.ID, &webhook.URL, &eventFormatJSON,
+		&webhook.ID, &webhook.URL, &eventFormatJSON, &customHeadersJSON,
 		&webhook.Enabled, &webhook.CreatedAt,
 	)
 
@@ -137,6 +152,9 @@ func (q *webhookQuerier) GetWebhookByID(ctx context.Context, id string) (*models
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal event format: %w", err)
 		}
+	}
+	if len(customHeadersJSON) > 0 {
+		_ = json.Unmarshal(customHeadersJSON, &webhook.CustomHeaders)
 	}
 
 	return webhook, nil
@@ -171,6 +189,22 @@ func (q *webhookQuerier) UpdateWebhook(ctx context.Context, id string, update *m
 		argCount++
 	}
 
+	if update.CustomHeaders != nil {
+		setClauses = append(setClauses, fmt.Sprintf("custom_headers = $%d", argCount))
+		var chJSON interface{}
+		if len(*update.CustomHeaders) > 0 {
+			b, mErr := json.Marshal(*update.CustomHeaders)
+			if mErr != nil {
+				return nil, fmt.Errorf("failed to marshal custom headers: %w", mErr)
+			}
+			chJSON = b
+		} else {
+			chJSON = nil // explicitly cleared
+		}
+		args = append(args, chJSON)
+		argCount++
+	}
+
 	if len(setClauses) == 0 {
 		return q.GetWebhookByID(ctx, id)
 	}
@@ -179,16 +213,17 @@ func (q *webhookQuerier) UpdateWebhook(ctx context.Context, id string, update *m
 		UPDATE webhooks
 		SET %s
 		WHERE id = $%d
-		RETURNING id, url, event_format, enabled, created_at
+		RETURNING id, url, event_format, custom_headers, enabled, created_at
 	`, strings.Join(setClauses, ", "), argCount)
 
 	args = append(args, id)
 
 	webhook := &models.Webhook{}
 	var eventFormatJSON []byte
+	var customHeadersJSON []byte
 
 	err := q.pool.QueryRow(ctx, query, args...).Scan(
-		&webhook.ID, &webhook.URL, &eventFormatJSON,
+		&webhook.ID, &webhook.URL, &eventFormatJSON, &customHeadersJSON,
 		&webhook.Enabled, &webhook.CreatedAt,
 	)
 
@@ -204,6 +239,9 @@ func (q *webhookQuerier) UpdateWebhook(ctx context.Context, id string, update *m
 		if err != nil {
 			return nil, fmt.Errorf("failed to unmarshal event format: %w", err)
 		}
+	}
+	if len(customHeadersJSON) > 0 {
+		_ = json.Unmarshal(customHeadersJSON, &webhook.CustomHeaders)
 	}
 
 	return webhook, nil
@@ -266,6 +304,9 @@ func (m *MockWebhookQuerier) UpdateWebhook(ctx context.Context, id string, updat
 	}
 	if update.EventFormat != nil {
 		webhook.EventFormat = *update.EventFormat
+	}
+	if update.CustomHeaders != nil {
+		webhook.CustomHeaders = *update.CustomHeaders
 	}
 	if update.Enabled != nil {
 		webhook.Enabled = *update.Enabled

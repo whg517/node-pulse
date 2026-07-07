@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"strings"
 	"sync"
@@ -234,6 +235,18 @@ func (s *PushService) sendHTTP(ctx context.Context, alertEvent *models.AlertEven
 
 	req.Header.Set("Content-Type", "application/json")
 
+	// Apply the webhook's custom headers (J9). Skip any that would overwrite
+	// transport-critical headers the HTTP client owns (Host, Content-Length,
+	// etc.); Content-Type is reserved above. Canonicalize keys via
+	// textproto.CanonicalMIMEHeaderKey so "x-foo" and "X-Foo" dedupe.
+	for k, v := range webhook.CustomHeaders {
+		canonical := textproto.CanonicalMIMEHeaderKey(k)
+		if isReservedWebhookHeader(canonical) {
+			continue
+		}
+		req.Header.Set(canonical, v)
+	}
+
 	// Send request
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
@@ -247,6 +260,23 @@ func (s *PushService) sendHTTP(ctx context.Context, alertEvent *models.AlertEven
 	}
 
 	return nil
+}
+
+// reservedWebhookHeaders are headers the HTTP client / Pulse owns; custom
+// headers cannot overwrite them.
+var reservedWebhookHeaders = map[string]struct{}{
+	"Content-Type":     {},
+	"Content-Length":   {},
+	"Host":             {},
+	"User-Agent":       {},
+	"Transfer-Encoding": {},
+	"Trailer":          {},
+	"Connection":       {},
+}
+
+func isReservedWebhookHeader(canonical string) bool {
+	_, ok := reservedWebhookHeaders[canonical]
+	return ok
 }
 
 // formatAlertEvent formats an alert event according to webhook's event_format or default template

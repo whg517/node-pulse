@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import type { Webhook } from '../../stores/webhooksStore'
-import type { CreateWebhookRequest, WebhookEventFormat } from '../../api/webhooks'
+import type { CreateWebhookRequest, WebhookCustomHeaders, WebhookEventFormat } from '../../api/webhooks'
 
 interface WebhookFormProps {
   mode: 'create' | 'edit'
@@ -43,6 +43,13 @@ export function WebhookForm({ mode, initialData, onSubmit, onPreview, onCancel }
       : JSON.stringify(DEFAULT_EVENT_FORMAT, null, 2)
   )
   const [enabled, setEnabled] = useState(initialData?.enabled ?? true)
+  // Custom headers as a JSON object string (J9). Empty/invalid JSON means
+  // "no custom headers"; we tolerate `{}` and whitespace.
+  const [customHeaders, setCustomHeaders] = useState(
+    initialData?.customHeaders && Object.keys(initialData.customHeaders).length > 0
+      ? JSON.stringify(initialData.customHeaders, null, 2)
+      : ''
+  )
 
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -97,9 +104,21 @@ export function WebhookForm({ mode, initialData, onSubmit, onPreview, onCancel }
 
     setIsSubmitting(true)
     try {
+      // Parse custom headers (J9). Empty/whitespace → undefined (don't send
+      // the field). Invalid JSON surfaces as a validation error rather than
+      // a silent drop.
+      let parsedHeaders: WebhookCustomHeaders | undefined
+      if (customHeaders.trim()) {
+        const parsed = JSON.parse(customHeaders) as WebhookCustomHeaders
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          parsedHeaders = parsed
+        }
+      }
+
       const data: CreateWebhookRequest = {
         url,
         event_format: JSON.parse(eventFormat) as WebhookEventFormat,
+        custom_headers: parsedHeaders,
         enabled,
       }
       await onSubmit(data)
@@ -206,6 +225,24 @@ export function WebhookForm({ mode, initialData, onSubmit, onPreview, onCancel }
             </pre>
           </div>
         )}
+      </div>
+
+      {/* Custom HTTP headers applied to every delivery (J9). Optional. */}
+      <div className="space-y-2">
+        <Label htmlFor="webhook-custom-headers">
+          {t('webhooks.customHeaders', 'Custom headers')} (JSON)
+        </Label>
+        <Textarea
+          id="webhook-custom-headers"
+          value={customHeaders}
+          onChange={(e) => setCustomHeaders(e.target.value)}
+          className="font-mono text-xs"
+          placeholder={t('webhooks.customHeadersPlaceholder', '{"Authorization": "Bearer xxx", "X-Tenant": "ops"}')}
+          rows={3}
+        />
+        <p className="text-sm text-muted-foreground">
+          {t('webhooks.customHeadersHint', 'Extra HTTP headers added to every delivery. Reserved headers (Content-Type, User-Agent, etc.) are ignored. Leave empty for none.')}
+        </p>
       </div>
 
       <div className="flex items-center gap-3">

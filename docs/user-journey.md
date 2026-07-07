@@ -672,7 +672,7 @@ Multi-select nodes (2–5) → grouping → time range → metric → `Compariso
 | **Delivery log query** (`GET /webhooks/:id/logs` + Dialog) | ✅ |
 | **Alert routing rules** (`alert_routing_rules` + RouteMatcher injection) | ✅ (ADR-002) |
 | **Severity filter** (`rule.Severities` matches `event.Level`, ADR-002 Tier 1) | ✅ (`router.go:66-86`) |
-| Custom headers (`Webhook` struct has no Headers field) | ❌ planned |
+| Custom headers (per-webhook, applied to every delivery; reserved headers filtered) | ✅ (migration 0006 + `push_service.go`) |
 
 ### 18.2 Status
 
