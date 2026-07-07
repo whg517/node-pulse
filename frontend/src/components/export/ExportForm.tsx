@@ -32,7 +32,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
   const [selectedMetrics, setSelectedMetrics] = useState<ExportMetric[]>(['latency'])
   const [format, setFormat] = useState<'csv' | 'excel'>('csv')
   const [errors, setErrors] = useState<FormErrors>({})
-  const excelSupported = false
+  const excelSupported = true
 
   /**
    * Calculate time range based on selection
@@ -104,13 +104,15 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
 
     const { start, end } = getTimeRange()
 
-    // Let errors propagate to parent for handling
+    // Let errors propagate to parent for handling.
+    // The backend's format value is "xlsx"; the UI uses "excel" as the
+    // option label, so map on submit.
     await onSubmit({
       node_ids: selectedNodeIds,
       start_time: start,
       end_time: end,
       metrics: selectedMetrics,
-      format,
+      format: format === 'excel' ? 'xlsx' : format,
     })
   }
 
@@ -319,7 +321,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
             />
             <span className="text-sm text-foreground">CSV</span>
           </label>
-          <label className="flex items-center space-x-2 cursor-not-allowed opacity-60">
+          <label className={`flex items-center space-x-2 ${excelSupported ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'}`}>
             <input
               type="radio"
               name="format"
@@ -330,7 +332,7 @@ export function ExportForm({ nodes, onSubmit, loading = false }: ExportFormProps
               className="h-4 w-4 text-primary focus:ring-primary border-border"
             />
             <span className="text-sm text-foreground">Excel</span>
-            <span className="text-xs text-muted-foreground">{t('dataExport.excelUnavailable')}</span>
+            <span className="text-xs text-muted-foreground">{excelSupported ? t('dataExport.excelXlsx', '.xlsx workbook') : t('dataExport.excelUnavailable')}</span>
           </label>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">{t('dataExport.csvOnlyHint')}</p>

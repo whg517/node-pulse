@@ -132,7 +132,8 @@ export default function ReportsPage() {
           ? new Date(config.customEndDate).toISOString()
           : new Date().toISOString(),
         metrics: config.metrics,
-        format: config.format as 'csv' | 'excel',
+        // UI uses 'excel'; backend API expects 'xlsx'.
+        format: config.format === 'excel' ? 'xlsx' : 'csv',
       }
       await createExport(exportRequest)
   }

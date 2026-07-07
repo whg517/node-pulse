@@ -339,9 +339,17 @@ func (h *ExportHandler) DownloadExportHandler(c *gin.Context) {
 		return
 	}
 
-	// Set headers for file download
-	c.Header("Content-Type", "text/csv; charset=utf-8")
-	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=metrics_export_%s.csv", exportID))
+	// Set headers for file download. Content-Type + filename extension depend
+	// on the task's format so xlsx downloads aren't mis-served as CSV (which
+	// Excel would garble). Fall back to CSV for older tasks with empty Format.
+	contentType := "text/csv; charset=utf-8"
+	filename := fmt.Sprintf("metrics_export_%s.csv", exportID)
+	if task.Format == "xlsx" {
+		contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+		filename = fmt.Sprintf("metrics_export_%s.xlsx", exportID)
+	}
+	c.Header("Content-Type", contentType)
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=%s", filename))
 	c.Header("Content-Length", fmt.Sprintf("%d", task.FileSize))
 
 	// Send file

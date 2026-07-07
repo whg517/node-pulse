@@ -651,11 +651,11 @@ Multi-select nodes (2–5) → grouping → time range → metric → `Compariso
 | CSV export task (persisted) → poll → download | ✅ |
 | Export history (filter/paginate/download/delete) | ✅ |
 | **Report schedule** (daily/weekly/monthly) → server-side scheduling + PDF/CSV + SMTP email | ✅ (ADR-001) |
-| XLSX export | ❌ disabled (planned) |
+| XLSX export | ✅ (`excelize` writer; `task.Format = "xlsx"`) |
 
 ### 17.2 Status
 
-[Supported]; XLSX still planned.
+[Supported] (CSV + PDF + XLSX via `excelize`).
 
 ---
 
@@ -856,7 +856,7 @@ G1 alert notes, G2 API Keys page, G3 export persistence, G4 webhook delivery log
 | J5 Beacon | Dual-mode/heartbeat/Ack/version/rollback/template/compression/resume/degraded | FR-1 | **[Supported]** | — |
 | J6 Diagnosis | Metrics/MTR/diagnosis/path-risk | FR-2 | **[Supported]** | — |
 | J7 Comparison | Multi-node comparison | FR-3 | **[Supported]** | — |
-| J8 Reports | PDF/CSV/history/schedule/email | FR-5 | **[Supported]** | XLSX planned |
+| J8 Reports | PDF/CSV/XLSX/history/schedule/email | FR-5 | **[Supported]** | — |
 | J9 Webhook | CRUD/preview/test/delivery-log/routing | FR-4 | **[Supported]** | — |
 | J10 Users | CRUD/role/force-logout | FR-6 | **[Supported]** | Custom roles not expanded |
 | J11 Sessions | Login/list/revoke/password-change/bulk/reset-email/2FA/notifications | FR-6 | **[Supported]** | — |

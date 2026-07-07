@@ -8,7 +8,12 @@ export type ExportStatus = 'pending' | 'processing' | 'completed' | 'failed'
 
 export type ExportMetric = 'latency' | 'packet_loss_rate' | 'jitter'
 
-export type ExportFormat = 'csv' | 'excel' // UI supports both, backend only CSV in MVP
+// UI label 'excel' is mapped to the backend 'xlsx' value at submit time.
+export type ExportFormat = 'csv' | 'excel'
+
+// API values actually sent to the backend (J8): 'xlsx' is the wire value,
+// 'excel' is only a UI label and never sent.
+export type ExportApiFormat = 'csv' | 'xlsx'
 
 /**
  * Export task representation from backend
@@ -38,7 +43,7 @@ export interface CreateExportRequest {
   start_time: string
   end_time: string
   metrics: ExportMetric[]
-  format?: ExportFormat // defaults to 'csv'
+  format?: ExportApiFormat // defaults to 'csv'
 }
 
 /**

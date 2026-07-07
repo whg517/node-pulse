@@ -86,7 +86,7 @@ describe('ReportGenerator', () => {
     mockGetAlertRecords.mockResolvedValue({ data: [] })
   })
 
-  it('shows Excel report export as unavailable', () => {
+  it('shows Excel report export as available (xlsx)', () => {
     render(
       <ReportGenerator
         nodes={nodes}
@@ -95,8 +95,9 @@ describe('ReportGenerator', () => {
       />
     )
 
-    expect(screen.getByRole('button', { name: 'Excel' })).toBeDisabled()
-    expect(screen.getByText('CSV export and PDF preview are available now. Excel export is planned for a later version.')).toBeInTheDocument()
+    // J8: Excel (.xlsx) export is now supported.
+    expect(screen.getByRole('button', { name: 'Excel' })).toBeEnabled()
+    expect(screen.getByText('CSV, PDF preview, and Excel (.xlsx) export are available.')).toBeInTheDocument()
   })
 
   it('uses live metrics and latest MTR data in PDF preview', async () => {

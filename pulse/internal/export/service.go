@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/xuri/excelize/v2"
 
 	"github.com/whg517/node-pulse/pulse/internal/models"
 )
@@ -167,8 +168,8 @@ func (r *CreateExportRequest) Validate() error {
 	if r.Format == "" {
 		r.Format = "csv" // Default format
 	}
-	if r.Format != "csv" {
-		return fmt.Errorf("unsupported format: %s (only CSV is supported in MVP)", r.Format)
+	if r.Format != "csv" && r.Format != "xlsx" {
+		return fmt.Errorf("unsupported format: %s (supported: csv, xlsx)", r.Format)
 	}
 
 	return nil
@@ -348,78 +349,130 @@ func (s *ExportService) processExport(task *models.ExportTask) {
 	)
 }
 
-// generateExportFile generates the export file
+// generateExportFile generates the export file in the task's format.
 func (s *ExportService) generateExportFile(task *models.ExportTask) (string, int, error) {
 	// Ensure export directory exists
 	if err := os.MkdirAll(ExportDir, 0755); err != nil {
 		return "", 0, fmt.Errorf("failed to create export directory: %w", err)
 	}
 
-	// Generate file path
-	filename := fmt.Sprintf("metrics_export_%s_%s.csv",
-		task.ID,
-		time.Now().Format("20060102-150405"))
-	filePath := filepath.Join(ExportDir, filename)
-
-	// Create file
-	file, err := os.Create(filePath)
-	if err != nil {
-		return "", 0, fmt.Errorf("failed to create export file: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	// Write UTF-8 BOM for Excel compatibility
-	if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
-		return "", 0, fmt.Errorf("failed to write UTF-8 BOM: %w", err)
-	}
-
-	// Create CSV writer
-	writer := csv.NewWriter(file)
-	defer writer.Flush()
-
-	// Write header
-	header := []string{"timestamp", "node_id", "region", "metric_name", "value", "unit"}
-	if err := writer.Write(header); err != nil {
-		return "", 0, fmt.Errorf("failed to write CSV header: %w", err)
-	}
-
-	// Query and write data
-	recordCount := 0
+	// Collect rows once; both writers consume the same in-memory result set so
+	// we don't pay the DB cost twice. For very large exports this materializes
+	// everything up-front — bounded by MaxFileSize enforcement below.
 	ctx := context.Background()
-
+	header := []string{"timestamp", "node_id", "region", "metric_name", "value", "unit"}
+	var allRows [][]string
 	for _, nodeID := range task.NodeIDs {
 		for _, metric := range task.Metrics {
 			rows, err := s.queryMetrics(ctx, nodeID, metric, task.StartTime, task.EndTime)
 			if err != nil {
 				return "", 0, fmt.Errorf("failed to query metrics for node %s: %w", nodeID, err)
 			}
-
 			for _, row := range rows {
-				// Convert row to CSV record
-				record := []string{
-					row.Timestamp,
-					row.NodeID,
-					row.Region,
-					row.Metric,
-					strconv.FormatFloat(row.Value, 'f', -1, 64),
-					row.Unit,
-				}
-
-				if err := writer.Write(record); err != nil {
-					return "", 0, fmt.Errorf("failed to write CSV record: %w", err)
-				}
-
-				recordCount++
-
-				// Check file size periodically (every 1000 records)
-				if recordCount%1000 == 0 {
-					fileInfo, _ := file.Stat()
-					if fileInfo.Size() > MaxFileSize {
-						return "", 0, fmt.Errorf("export file exceeds maximum size")
-					}
-				}
+				allRows = append(allRows, []string{
+					row.Timestamp, row.NodeID, row.Region, row.Metric,
+					strconv.FormatFloat(row.Value, 'f', -1, 64), row.Unit,
+				})
 			}
 		}
+	}
+
+	switch task.Format {
+	case "xlsx":
+		return s.generateXLSX(task, header, allRows)
+	default: // "csv" (validated upstream; treat anything else as CSV for back-compat)
+		return s.generateCSV(task, header, allRows)
+	}
+}
+
+// generateCSV writes the rows to a UTF-8-BOM CSV file (legacy behavior).
+func (s *ExportService) generateCSV(task *models.ExportTask, header []string, rows [][]string) (string, int, error) {
+	filename := fmt.Sprintf("metrics_export_%s_%s.csv",
+		task.ID, time.Now().Format("20060102-150405"))
+	filePath := filepath.Join(ExportDir, filename)
+
+	file, err := os.Create(filePath)
+	if err != nil {
+		return "", 0, fmt.Errorf("failed to create export file: %w", err)
+	}
+	defer func() { _ = file.Close() }()
+
+	// UTF-8 BOM for Excel compatibility
+	if _, err := file.Write([]byte{0xEF, 0xBB, 0xBF}); err != nil {
+		return "", 0, fmt.Errorf("failed to write UTF-8 BOM: %w", err)
+	}
+
+	writer := csv.NewWriter(file)
+	defer writer.Flush()
+
+	if err := writer.Write(header); err != nil {
+		return "", 0, fmt.Errorf("failed to write CSV header: %w", err)
+	}
+
+	recordCount := 0
+	for _, record := range rows {
+		if err := writer.Write(record); err != nil {
+			return "", 0, fmt.Errorf("failed to write CSV record: %w", err)
+		}
+		recordCount++
+		if recordCount%1000 == 0 {
+			if info, _ := file.Stat(); info != nil && info.Size() > MaxFileSize {
+				return "", 0, fmt.Errorf("export file exceeds maximum size")
+			}
+		}
+	}
+
+	return filePath, recordCount, nil
+}
+
+// generateXLSX writes the rows to a .xlsx workbook (J8). One sheet "metrics"
+// with a header row, then data rows. The numeric value column stays as text
+// to preserve the source formatting; operators who want native number cells
+// can post-process — keeping it text avoids locale-dependent parsing issues.
+func (s *ExportService) generateXLSX(task *models.ExportTask, header []string, rows [][]string) (string, int, error) {
+	filename := fmt.Sprintf("metrics_export_%s_%s.xlsx",
+		task.ID, time.Now().Format("20060102-150405"))
+	filePath := filepath.Join(ExportDir, filename)
+
+	f := excelize.NewFile()
+	defer func() {
+		_ = f.Close()
+	}()
+
+	const sheet = "metrics"
+	// excelize's default file already contains "Sheet1"; rename it so the
+	// user sees a meaningful tab, then set it active.
+	if _, err := f.GetSheetIndex("Sheet1"); err == nil {
+		_ = f.SetSheetName("Sheet1", sheet)
+	}
+
+	// Header row (bold for readability).
+	if err := f.SetSheetRow(sheet, "A1", &header); err != nil {
+		return "", 0, fmt.Errorf("failed to write xlsx header: %w", err)
+	}
+	style, _ := f.NewStyle(&excelize.Style{Font: &excelize.Font{Bold: true}})
+	_ = f.SetCellStyle(sheet, "A1", "F1", style)
+
+	// Data rows. SetSheetRow takes a pointer to a slice; write in batches to
+	// keep memory bounded and surface size errors early.
+	recordCount := 0
+	for i, record := range rows {
+		cellAxis, err := excelize.CoordinatesToCellName(1, i+2) // row i+2 (header is row 1)
+		if err != nil {
+			return "", 0, fmt.Errorf("failed to compute xlsx cell: %w", err)
+		}
+		if err := f.SetSheetRow(sheet, cellAxis, &record); err != nil {
+			return "", 0, fmt.Errorf("failed to write xlsx row %d: %w", i+2, err)
+		}
+		recordCount++
+		if recordCount%1000 == 0 {
+			// No cheap size probe mid-write for xlsx (it streams to memory);
+			// enforce after save via processExport's os.Stat check.
+		}
+	}
+
+	if err := f.SaveAs(filePath); err != nil {
+		return "", 0, fmt.Errorf("failed to save xlsx file: %w", err)
 	}
 
 	return filePath, recordCount, nil

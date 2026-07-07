@@ -79,7 +79,7 @@ export function ReportGenerator({ nodes, onSubmit, loading = false, defaultNodeI
   const formatOptions = [
     { value: 'csv' as const, label: t('reports.csv'), disabled: false, hint: '' },
     { value: 'pdf' as const, label: t('reports.pdf'), disabled: false, hint: '' },
-    { value: 'excel' as const, label: t('reports.excel'), disabled: true, hint: t('reports.excelUnavailable') },
+    { value: 'excel' as const, label: t('reports.excel'), disabled: false, hint: t('reports.excelXlsx', '.xlsx workbook') },
   ]
 
   const toggleNode = (nodeId: string) => {

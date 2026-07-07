@@ -38,6 +38,15 @@ let mockDashboardStoreState: Record<string, unknown> = {}
 vi.mock('@/stores/dashboardStore', () => ({
   useDashboardStore: vi.fn((selector: (s: unknown) => unknown) => selector(mockDashboardStoreState)),
 }))
+// DashboardPage reads `role` from authStore for the empty-state CTA buttons
+// (via `const { role } = useAuthStore()` — no selector). The mock returns the
+// full state object when called without a selector, and applies it when called with one.
+let mockAuthStoreState: Record<string, unknown> = { role: 'admin' }
+vi.mock('@/stores/authStore', () => ({
+  useAuthStore: vi.fn((selector?: (s: unknown) => unknown) =>
+    typeof selector === 'function' ? selector(mockAuthStoreState) : mockAuthStoreState
+  ),
+}))
 
 // Import after mocks.
 import DashboardPage from '../DashboardPage'
@@ -50,6 +59,7 @@ function defaultStores() {
     autoRefresh: true,
     toggleAutoRefresh: vi.fn(),
   }
+  mockAuthStoreState = { role: 'admin' }
 }
 
 function defaultHooks() {
@@ -103,7 +113,9 @@ describe('DashboardPage', () => {
 
   it('shows the empty-state copy when there are no nodes', () => {
     renderPage()
-    expect(screen.getByText(/no nodes/i)).toBeInTheDocument()
+    // Cohort A added a "Getting started" panel + the existing topNodes empty
+    // state — both contain "no nodes", so match either.
+    expect(screen.getAllByText(/no nodes/i).length).toBeGreaterThan(0)
   })
 
   it('renders node summary cards when nodes are present', () => {
