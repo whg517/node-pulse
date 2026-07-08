@@ -305,13 +305,13 @@ beacon start                  # reads ./beacon.yaml or BEACON_CONFIG_PATH
 | **D-G4** | **Beacon has no service management (systemd)** | ✅ Resolved | `make install` only copied the binary | `beacon/deploy/{beacon.service,install-systemd.sh}` + `make install-systemd` |
 | **D-G5** | **No version/release system** | ✅ Resolved | `service_version="unknown"`, no git tags | `pulse/internal/version` + `beacon/internal/version` + Makefile ldflags + `GET /api/v1/version` |
 | **D-G6** | `.env.example` "Frontend (nginx)" dead reference | ✅ Resolved | `FRONTEND_PORT=80` had no consumer (frontend embeds into Pulse) | Removed |
-| **D-G7** | No "first-run wizard" / empty-state guidance | 🟡 UX | New admin sees a 0-node empty dashboard with no guidance | Empty-state CTA + Getting Started checklist |
-| **D-G8** | README Quick Start disjoint from API Key creation | 🟡 UX | Step says "generate api_key from UI" but not which page (`/settings/api-keys`) | Cross-reference |
+| **D-G7** | No "first-run wizard" / empty-state guidance | ✅ Resolved | New admin saw a 0-node empty dashboard with no guidance | Dashboard "Getting started" panel (3-step checklist + CTA buttons) shown when `nodes.length === 0` |
+| **D-G8** | README Quick Start disjoint from API Key creation | ✅ Resolved | Step said "generate api_key from UI" without naming the page | README now points at Settings → API Keys (`/settings/api-keys`) with a cross-link to J12 |
 
 ### 6.3 Status
 
 - Binary build & distribution **[Supported]** (systemd unit + version system in place).
-- Other deployment capabilities: D-G1–G6 all resolved; D-G7/G8 are UX polish.
+- Other deployment capabilities: D-G1–G8 all resolved.
 
 ---
 
