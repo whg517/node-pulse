@@ -99,6 +99,16 @@ func (e *AlertEngine) WithRealtimeHub(hub *realtime.Hub) *AlertEngine {
 	return e
 }
 
+// WithEmailNotifier wires the F4 Phase 2 per-user email notifier into the
+// dispatcher. Call after NewAlertEngine, before Start. Passing nil is safe
+// (email fan-out is skipped).
+func (e *AlertEngine) WithEmailNotifier(notifier EmailNotifier) *AlertEngine {
+	if d, ok := e.dispatcher.(*CompositeDispatcher); ok {
+		d.Email = notifier
+	}
+	return e
+}
+
 // WithWebhookBaseURL sets the base URL used to render absolute links inside
 // webhook payloads. Should be wired from config.Server.BaseURL so production
 // deployments emit correct links instead of the localhost default.

@@ -151,6 +151,15 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// absolute links instead of the localhost default.
 		if cfg, err := config.Load(); err == nil {
 			alertEngine.WithWebhookBaseURL(cfg.Server.BaseURL)
+			// F4 Phase 2: per-user email notification fan-out. Constructed
+			// here (after pool+cfg are known) and injected via the builder.
+			emailNotifier := alert.NewEmailNotifier(
+				db.NewNotificationPrefsRepository(pool),
+				db.NewUserQuerier(pool),
+				mailer,
+				cfg.Server.BaseURL,
+			)
+			alertEngine.WithEmailNotifier(emailNotifier)
 		}
 		alertEngine.Start()
 	}

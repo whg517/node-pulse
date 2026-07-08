@@ -41,6 +41,14 @@ type WebhookPusher interface {
 	SendAlert(ctx context.Context, alertEvent *models.AlertEvent) error
 }
 
+// EmailNotifier fans an alert out as email to every user whose server-side
+// notification preferences subscribe them to the alert's severity level.
+// Used by CompositeDispatcher as step 6 (after webhooks). Implementations
+// must be nil-safe (a nil EmailNotifier skips email entirely).
+type EmailNotifier interface {
+	NotifyAlertSubscribers(ctx context.Context, event *models.AlertEvent) error
+}
+
 // Dispatcher is the single orchestration seam the engine calls when a rule
 // fires. It coordinates suppression, persistence, broadcasting and webhook
 // delivery, keeping the engine free of side-effect wiring.

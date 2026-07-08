@@ -35,6 +35,8 @@ type CompositeDispatcher struct {
 	EventSink   EventSink
 	Broadcaster Broadcaster
 	Webhook     WebhookPusher
+	// Email is the optional F4 Phase 2 per-user email notifier. nil = skip.
+	Email EmailNotifier
 }
 
 // Dispatch executes the alert side-effect pipeline for a single fired event.
@@ -102,6 +104,12 @@ func (d *CompositeDispatcher) Dispatch(ctx context.Context, event *models.AlertE
 	if d.Webhook != nil {
 		go d.deliverWebhook(event)
 	}
+
+	// 6. Fan out email to per-user subscribers (F4 Phase 2). Like webhooks,
+	// this is non-blocking; failures are logged inside the notifier.
+	if d.Email != nil {
+		go d.deliverEmail(event)
+	}
 }
 
 // deliverWebhook sends the alert to all configured webhooks with a bounded
@@ -112,6 +120,24 @@ func (d *CompositeDispatcher) deliverWebhook(event *models.AlertEvent) {
 
 	if err := d.Webhook.SendAlert(ctx, event); err != nil {
 		slog.Error("Webhook push failed",
+			"alert_id", event.ID,
+			"error", err)
+	}
+}
+
+// emailDispatchTimeout bounds the per-alert email fan-out (querying
+// subscribers + sending each message). Generous because SMTP can be slow.
+const emailDispatchTimeout = 60 * time.Second
+
+// deliverEmail fans the alert out as email to every user whose server-side
+// notification preferences (F4 Phase 2) subscribe them to event.Level.
+// Failures are logged but never propagate back to the alert worker.
+func (d *CompositeDispatcher) deliverEmail(event *models.AlertEvent) {
+	ctx, cancel := context.WithTimeout(context.Background(), emailDispatchTimeout)
+	defer cancel()
+
+	if err := d.Email.NotifyAlertSubscribers(ctx, event); err != nil {
+		slog.Error("Email notification fan-out failed",
 			"alert_id", event.ID,
 			"error", err)
 	}
