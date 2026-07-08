@@ -170,6 +170,7 @@ type SMTPConfig struct {
 
 var (
 	globalConfig *Config
+	configMu     sync.RWMutex
 	once         sync.Once
 	initError    error
 )
@@ -192,9 +193,32 @@ func MustLoad() *Config {
 	return cfg
 }
 
-// Get returns the global configuration instance
-// Should be called after Load() or MustLoad()
+// Reload re-reads configuration from disk/env and atomically swaps the global
+// config. Used by the SIGHUP hot-reload path (server.reloadConfig) so that
+// Get() callers (CORS middleware, logger, etc.) observe the new values on the
+// next request without a full restart.
+//
+// Unlike Load(), this bypasses sync.Once and always re-reads. It validates
+// the new config before swapping; on validation error the old config stays
+// and the error is returned so the caller can log and keep running.
+func Reload() (*Config, error) {
+	cfg, err := loadConfig()
+	if err != nil {
+		return nil, err
+	}
+	configMu.Lock()
+	globalConfig = cfg
+	configMu.Unlock()
+	return cfg, nil
+}
+
+// Get returns the global configuration instance.
+// Should be called after Load() or MustLoad(). Safe for concurrent use;
+// hot-reload callers may see a new *Config between requests, which is the
+// intended behavior (each request reads the latest values).
 func Get() *Config {
+	configMu.RLock()
+	defer configMu.RUnlock()
 	if globalConfig == nil {
 		panic("Configuration not loaded. Call Load() or MustLoad() first")
 	}

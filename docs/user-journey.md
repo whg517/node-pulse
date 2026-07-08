@@ -183,7 +183,7 @@ Only capabilities with ✅ across all three layers are truly usable.
 | **Beacon systemd unit** | ✅ | — | — | ✅ | `beacon/deploy/beacon.service` + `install-systemd.sh` + `make install-systemd` |
 | **Version / release system** | ✅ | ✅ | — | ✅ | Makefile ldflags inject `version` package; `GET /api/v1/version` |
 | **Auth/session/token cleanup** | ✅ | — | — | ✅ | `auth-cleanup` task (`registry.go registerAuthCleanupTask`), wraps `auth.CleanupJob.RunAll` |
-| **Pulse config hot-reload** | ✅ | — | — | ✅ Phase 1 | SIGHUP triggers `reloadConfig()`; currently covers `log.level` (DB/port/JWT still need restart) |
+| **Pulse config hot-reload** | ✅ | — | — | ✅ | SIGHUP triggers `config.Reload()` + `reloadConfig()`; covers `log.level` + CORS origins (DB/port/JWT still need restart) |
 | **Admin unlock user** | ✅ | ✅ | ✅ | ✅ | `POST /admin/users/:id/unlock` + UsersPage "Unlock" button |
 | **JWT key rotation window** | ✅ | — | — | ✅ | `JWTService.WithPreviousKey` + `PULSE_JWT_PREVIOUS_*` env, old-key grace window |
 
@@ -395,9 +395,9 @@ Three states: `healthy` (200) / `degraded` (200) / `unhealthy` (503).
 | Webhook URL change + test | `/integrations/webhooks` | As needed | ✅ |
 | Audit log review | `/settings/audit-logs` | Periodic | ✅ |
 | Force logout | `/settings/users` | Emergency | ✅ |
-| Config change (log level) | Edit `pulse.yaml` → `kill -HUP <pid>` | As needed | ✅ Phase 1 (log.level only; DB/port/JWT still need restart) |
+| Config change (log level, CORS origins) | Edit `pulse.yaml` → `kill -HUP <pid>` | As needed | ✅ (log.level + CORS; DB/port/JWT still need restart) |
 | JWT key rotation | Set `PULSE_JWT_PREVIOUS_*` env → restart → wait out expiry → clear → restart | Periodic | ✅ (old-key grace window) |
-| Session key rotation | Change env → **restart** | Periodic | ❌ No concurrent old+new window (restart invalidates all sessions) |
+| Session secret rotation | Change `PULSE_SESSION_SECRET` env → restart | Periodic | ✅ N/A — sessions are DB-validated, not signed with this secret, so rotation has no impact on active sessions |
 
 ### 9.2 Data retention & cleanup
 
@@ -436,7 +436,7 @@ Three states: `healthy` (200) / `degraded` (200) / `unhealthy` (503).
 | **O-G1** | **Auth/session/token cleanup not wired** | ✅ Resolved | Auth tables no longer grow unbounded | `auth-cleanup` task registered to scheduler |
 | **O-G2** | **No admin "unlock user"** | ✅ Resolved | Locked users had to wait 10 min or hit the DB | `POST /admin/users/:id/unlock` + UI "Unlock" button |
 | **O-G3** | **No JWT rotation window** | ✅ Resolved | Rotation previously invalidated every token at once | `JWTService.WithPreviousKey` + `PULSE_JWT_PREVIOUS_*` env |
-| **O-G4** | **Pulse has no hot-reload** | ✅ Resolved (Phase 1) | Config changes forced full restart | SIGHUP triggers `reloadConfig()`; covers `log.level` (DB/port/JWT still restart-only) |
+| **O-G4** | **Pulse has no hot-reload** | ✅ Resolved | Config changes forced full restart | SIGHUP triggers `config.Reload()` + `reloadConfig()`; covers `log.level` + CORS origins (DB/port/JWT still restart-only). Also fixed a Phase 1 bug where `sync.Once` in `Load()` made `MustLoad()` return the original cached config — hot-reload now actually takes effect. |
 | **O-G5** | Graceful shutdown timeout not configurable | ✅ Resolved | Large batch flushes / long exports could be truncated | `server.shutdown_timeout_seconds` (default 10) |
 | **O-G6** | No TrustedProxies config | ✅ Resolved | Behind a reverse proxy, `ClientIP()` / audit IP were wrong | `server.trusted_proxies` CIDR list; builder calls `SetTrustedProxies` |
 | **O-G7** | No ops runbook / troubleshooting docs | ✅ Resolved | Ops knowledge was scattered across 8+ docs | `docs/operation/operations.md` consolidates health triage, incident playbooks, backup/restore, config changes |
@@ -781,9 +781,9 @@ All gaps merged across the three lifecycles, graded by severity. Disposition mar
 | **D-G4** | Beacon no systemd unit | Deploy | ✅ Resolved — `beacon/deploy/beacon.service` + `install-systemd.sh` + `make install-systemd` |
 | **D-G5** | No version/release system | Deploy | ✅ Resolved — `pulse/internal/version` + `beacon/internal/version` + Makefile ldflags + `GET /api/v1/version` |
 | **O-G3** | No JWT rotation window | Ops | ✅ Resolved — `JWTService.WithPreviousKey` + `JWTConfig.Previous*` + `PULSE_JWT_PREVIOUS_*` env |
-| **O-G4** | Pulse no hot-reload | Ops | ✅ Resolved (Phase 1) — SIGHUP triggers `reloadConfig()`; covers `log.level` (other config still needs restart) |
+| **O-G4** | Pulse no hot-reload | Ops | ✅ Resolved — SIGHUP triggers `config.Reload()`; covers `log.level` + CORS origins (DB/port/JWT still restart-only); also fixed Phase 1 sync.Once bug |
 | **F3** | Viewer no read-only webhook/export view | Feature | ✅ Resolved — Webhooks guarded by `RequireRole`; Reports `ReportGenerator` shows admin-only notice to non-admins |
-| **F4** | No notification preferences / multi-channel | Feature | ✅ Resolved (Phase 1) — user-level browser-notification prefs (master switch + min-severity filter + node online/offline toggle), localStorage-persisted; per-user server-side email/multi-channel routing is a future extension |
+| **F4** | No notification preferences / multi-channel | Feature | ✅ Resolved — Phase 1 client-side browser-notification prefs (master switch + min-severity filter + node online/offline toggle, localStorage-persisted); Phase 2 server-side per-user email-notification prefs (`user_notification_prefs` table, migration 0007; `GET/PUT /auth/notification-prefs`; PreferencesPage "Email notifications" card with severity floor). Compose: a user can set a loose server-side email floor and a tighter client-side browser floor, or vice versa. |
 | **F5** | No 2FA/MFA | Feature | ✅ Resolved — TOTP 2FA end-to-end (`MFAService` + `/auth/login/mfa` + `/auth/mfa/{setup,verify,disable,status}` + login second-step UI + PreferencesPage card) |
 | **O-G8** | No Prometheus/dashboard config shipped | Ops | ✅ Resolved — `deploy/observability/{prometheus.yml,pulse-alerts.yml}` |
 

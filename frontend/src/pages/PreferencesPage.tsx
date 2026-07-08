@@ -9,7 +9,7 @@ import { useSettingsStore, COMMON_TIMEZONES, type AlertLevel } from '@/stores/se
 import { useTheme } from '@/hooks/useTheme'
 import { supportedLanguages, type LanguageCode } from '@/i18n-config'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { changePassword, mfaStatus, mfaSetup, mfaVerify, mfaDisable } from '@/api/auth'
+import { changePassword, mfaStatus, mfaSetup, mfaVerify, mfaDisable, getNotificationPrefs, updateNotificationPrefs, type NotificationPrefsDTO } from '@/api/auth'
 import * as NotificationService from '@/services/NotificationService'
 
 export default function PreferencesPage() {
@@ -39,6 +39,30 @@ export default function PreferencesPage() {
   useEffect(() => {
     mfaStatus().then((r) => setMfaEnabled(r.data.enabled)).catch(() => { /* best-effort */ })
   }, [])
+
+  // Server-side notification preferences (F4 Phase 2) — email-notification floor.
+  const [serverPrefs, setServerPrefs] = useState<NotificationPrefsDTO | null>(null)
+  const [serverPrefsBusy, setServerPrefsBusy] = useState(false)
+  const [serverPrefsMsg, setServerPrefsMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  useEffect(() => {
+    getNotificationPrefs().then((r) => setServerPrefs(r.data)).catch(() => { /* best-effort */ })
+  }, [])
+
+  const saveServerPrefs = async (patch: { email_enabled?: boolean; min_alert_level?: 'P0' | 'P1' | 'P2' }) => {
+    if (!serverPrefs) return
+    setServerPrefsBusy(true)
+    setServerPrefsMsg(null)
+    try {
+      const r = await updateNotificationPrefs(patch)
+      setServerPrefs(r.data)
+      setServerPrefsMsg({ type: 'success', text: t('settings.serverPrefsSaved', 'Email notification preferences saved.') })
+    } catch (err) {
+      setServerPrefsMsg({ type: 'error', text: err instanceof Error ? err.message : 'Save failed' })
+    } finally {
+      setServerPrefsBusy(false)
+    }
+  }
 
   // Notification preferences (F4). Persisted via the settings store; the
   // filter itself is applied in NotificationService via useGlobalRealtime.
@@ -372,6 +396,47 @@ export default function PreferencesPage() {
               onCheckedChange={(v) => setNotificationPrefs({ nodeOnlineOffline: v })}
               disabled={!notificationPrefs.enabled}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Server-side email notification preferences (F4 Phase 2). Controls
+          which alert severities trigger an email to the user. Composes with
+          the client-side browser-notification floor above. */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">{t('settings.emailNotifications', 'Email notifications')}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {serverPrefsMsg && (
+            <div className={`rounded-md px-3 py-2 text-sm ${serverPrefsMsg.type === 'success' ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300' : 'bg-destructive/10 text-destructive'}`}>
+              {serverPrefsMsg.text}
+            </div>
+          )}
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-sm">{t('settings.emailNotifEnabled', 'Send email on alerts')}</Label>
+              <p className="text-xs text-muted-foreground">{t('settings.emailNotifEnabledHint', 'When enabled, alerts at or above the minimum level are emailed to your account address.')}</p>
+            </div>
+            <Switch
+              checked={serverPrefs?.email_enabled ?? true}
+              onCheckedChange={(v) => void saveServerPrefs({ email_enabled: v })}
+              disabled={serverPrefsBusy || !serverPrefs}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-sm">{t('settings.emailMinLevel', 'Minimum alert level for email')}</Label>
+            <p className="text-xs text-muted-foreground">{t('settings.emailMinLevelHint', 'P0 = critical only; P1 = warnings + critical; P2 = all.')}</p>
+            <select
+              className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+              value={serverPrefs?.min_alert_level ?? 'P1'}
+              onChange={(e) => void saveServerPrefs({ min_alert_level: e.target.value as 'P0' | 'P1' | 'P2' })}
+              disabled={serverPrefsBusy || !serverPrefs || !serverPrefs.email_enabled}
+            >
+              <option value="P0">{t('settings.notifLevelP0', 'P0 and above (critical only)')}</option>
+              <option value="P1">{t('settings.notifLevelP1', 'P1 and above (warnings + critical)')}</option>
+              <option value="P2">{t('settings.notifLevelP2', 'All levels')}</option>
+            </select>
           </div>
         </CardContent>
       </Card>

@@ -118,6 +118,37 @@ export async function mfaStatus(): Promise<{ data: { enabled: boolean } }> {
   return apiClient<{ data: { enabled: boolean} }>('/api/v1/auth/mfa/status')
 }
 
+// --- Notification preferences (F4 Phase 2, server-side email floor) ---
+
+export interface NotificationPrefsDTO {
+  user_id: string
+  email_enabled: boolean
+  min_alert_level: 'P0' | 'P1' | 'P2'
+  notify_email?: string | null
+  updated_at: string
+}
+
+export interface UpdateNotificationPrefsRequest {
+  email_enabled?: boolean
+  min_alert_level?: 'P0' | 'P1' | 'P2'
+  notify_email?: string
+}
+
+/** Fetch the current user's server-side notification preferences. */
+export async function getNotificationPrefs(): Promise<{ data: NotificationPrefsDTO }> {
+  return apiClient<{ data: NotificationPrefsDTO }>('/api/v1/auth/notification-prefs')
+}
+
+/** Update the current user's server-side notification preferences (partial). */
+export async function updateNotificationPrefs(
+  req: UpdateNotificationPrefsRequest
+): Promise<{ data: NotificationPrefsDTO }> {
+  return apiClient<{ data: NotificationPrefsDTO }>('/api/v1/auth/notification-prefs', {
+    method: 'PUT',
+    body: JSON.stringify(req),
+  })
+}
+
 /**
  * Refresh access token
  *

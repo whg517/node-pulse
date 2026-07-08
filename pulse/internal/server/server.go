@@ -151,18 +151,36 @@ func (s *Server) WaitForShutdown() {
 // JWT keys, worker pool sizes). Each applied field logs what changed so
 // operators can confirm the reload took effect.
 //
-// Current scope (O-G4, Phase 1):
-//   - log.level
+// Scope (O-G4):
+//   - Phase 1: log.level
+//   - Phase 2: cors.allowed_origins / allowed_headers / allowed_methods
 //
-// Future phases can extend to CORS origins, rate-limit thresholds, etc.
+// config.Reload() re-reads from disk/env and swaps the global config under
+// a lock, so Get() callers (CORS middleware reads config.Get() per request)
+// observe the new values immediately. The logger is a package-global default
+// and gets its level mutated in place.
 func (s *Server) reloadConfig() {
 	slog.Info("SIGHUP received, reloading configuration", "component", "server")
-	cfg := config.MustLoad()
-	if err := logger.SetLevel(cfg.Log.Level); err != nil {
-		slog.Error("config reload: invalid log level, keeping previous", "component", "server", "level", cfg.Log.Level, "error", err)
+	cfg, err := config.Reload()
+	if err != nil {
+		slog.Error("config reload failed, keeping previous config", "component", "server", "error", err)
 		return
 	}
-	slog.Info("config reloaded", "component", "server", "log_level", cfg.Log.Level)
+
+	// Phase 1: log level.
+	if err := logger.SetLevel(cfg.Log.Level); err != nil {
+		slog.Error("config reload: invalid log level, keeping previous", "component", "server", "level", cfg.Log.Level, "error", err)
+		// Don't return — CORS reload below is independent.
+	}
+
+	// Phase 2: CORS origins. CORSMiddleware reads config.Get() on every
+	// request, so the Reload() swap above already makes new origins take
+	// effect; we just log what changed for operator confirmation.
+	slog.Info("config reloaded",
+		"component", "server",
+		"log_level", cfg.Log.Level,
+		"cors_origins", cfg.CORS.AllowedOrigins,
+	)
 }
 
 // stopCacheComponents stops all cache-related components

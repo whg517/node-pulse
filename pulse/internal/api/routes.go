@@ -292,6 +292,12 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			authGroup.POST("/mfa/setup", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.MFASetupHandler)
 			authGroup.POST("/mfa/verify", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.MFAVerifySetupHandler)
 			authGroup.POST("/mfa/disable", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.MFADisableHandler)
+
+			// Notification preferences (F4 Phase 2) — per-user email-notification
+			// floor / enable / override address. GET is read-only; PUT is a mutation.
+			notifPrefsHandler := NewNotificationPrefsHandler(db.NewNotificationPrefsRepository(pool))
+			authGroup.GET("/notification-prefs", middleware.JWTAuthMiddleware(jwtService), notifPrefsHandler.GetNotificationPrefsHandler)
+			authGroup.PUT("/notification-prefs", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), notifPrefsHandler.UpdateNotificationPrefsHandler)
 		}
 
 		// Admin auth routes (admin only)
