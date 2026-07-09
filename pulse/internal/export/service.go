@@ -465,10 +465,9 @@ func (s *ExportService) generateXLSX(task *models.ExportTask, header []string, r
 			return "", 0, fmt.Errorf("failed to write xlsx row %d: %w", i+2, err)
 		}
 		recordCount++
-		if recordCount%1000 == 0 {
-			// No cheap size probe mid-write for xlsx (it streams to memory);
-			// enforce after save via processExport's os.Stat check.
-		}
+		// xlsx streams to memory, so there's no cheap size probe mid-write;
+		// the MaxFileSize cap is enforced after save via processExport's
+		// os.Stat check on the returned filePath.
 	}
 
 	if err := f.SaveAs(filePath); err != nil {
