@@ -231,6 +231,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Beacon config management routes (require auth) (FR-4.2.4)
 		beacons := v1.Group("/beacons")
 		beacons.Use(middleware.JWTAuthMiddleware(jwtService))
+		beacons.Use(csrf.CSRFMiddleware()) // protect config write/rollback mutations
 		{
 			// GET /api/v1/beacons/:id/config - Get beacon config
 			beacons.GET("/:id/config", beaconHandler.GetBeaconConfig)
@@ -247,6 +248,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Beacon group config management routes (admin/operator only)
 		beaconGroups := v1.Group("/beacon-groups")
 		beaconGroups.Use(middleware.JWTAuthMiddleware(jwtService))
+		beaconGroups.Use(csrf.CSRFMiddleware()) // protect batch config mutations
 		beaconGroups.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 		{
 			// POST /api/v1/beacon-groups/:gid/config - Batch update beacon configs
@@ -257,6 +259,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		beaconConfigTemplateHandler := NewBeaconConfigTemplateHandler(db.NewBeaconConfigTemplatesRepository(pool))
 		templates := v1.Group("/beacon-config-templates")
 		templates.Use(middleware.JWTAuthMiddleware(jwtService))
+		templates.Use(csrf.CSRFMiddleware()) // protect template CRUD mutations
 		{
 			templates.GET("", beaconConfigTemplateHandler.ListBeaconConfigTemplatesHandler)
 			templates.POST("", middleware.RBACMiddleware([]string{"admin", "operator"}), beaconConfigTemplateHandler.CreateBeaconConfigTemplateHandler)
@@ -274,15 +277,15 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 			// POST /api/v1/auth/refresh - Refresh access token
 			authGroup.POST("/refresh", authHandler.Refresh)
 			// POST /api/v1/auth/logout - Logout (requires valid token to blacklist it)
-			authGroup.POST("/logout", middleware.JWTAuthMiddleware(jwtService), authHandler.Logout)
+			authGroup.POST("/logout", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.Logout)
 			// GET /api/v1/auth/me - Get current user info (requires auth)
 			authGroup.GET("/me", middleware.JWTAuthMiddleware(jwtService), authHandler.GetMe)
 			// GET /api/v1/auth/sessions - Get user sessions (requires auth)
 			authGroup.GET("/sessions", middleware.JWTAuthMiddleware(jwtService), authHandler.GetSessions)
 			// DELETE /api/v1/auth/sessions/:id - Revoke specific session (requires auth)
-			authGroup.DELETE("/sessions/:id", middleware.JWTAuthMiddleware(jwtService), authHandler.DeleteSession)
+			authGroup.DELETE("/sessions/:id", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.DeleteSession)
 			// POST /api/v1/auth/sessions/revoke-all - Revoke all own sessions (requires auth)
-			authGroup.POST("/sessions/revoke-all", middleware.JWTAuthMiddleware(jwtService), authHandler.RevokeAllMySessions)
+			authGroup.POST("/sessions/revoke-all", middleware.JWTAuthMiddleware(jwtService), csrf.CSRFMiddleware(), authHandler.RevokeAllMySessions)
 			// GET /api/v1/auth/session-info - Get session expiration info (requires auth)
 			authGroup.GET("/session-info", middleware.JWTAuthMiddleware(jwtService), authHandler.GetSessionInfo)
 			// GET /api/v1/auth/verify - Validate current token and return claims (requires auth)
@@ -312,6 +315,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Admin auth routes (admin only)
 		adminAuth := v1.Group("/admin/auth")
 		adminAuth.Use(middleware.JWTAuthMiddleware(jwtService))
+		adminAuth.Use(csrf.CSRFMiddleware()) // protect revoke-all mutation
 		adminAuth.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
 			// POST /api/v1/admin/auth/revoke-all/:userId - Revoke all user sessions
@@ -336,6 +340,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		adminUsers := v1.Group("/admin/users")
 		adminUsers.Use(middleware.JWTAuthMiddleware(jwtService))
+		adminUsers.Use(csrf.CSRFMiddleware()) // protect user CRUD + unlock mutations
 		adminUsers.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
 			// GET /api/v1/admin/users - List all users (admin only)
@@ -364,6 +369,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 
 		adminAPIKeys := v1.Group("/admin/apikeys")
 		adminAPIKeys.Use(middleware.JWTAuthMiddleware(jwtService))
+		adminAPIKeys.Use(csrf.CSRFMiddleware()) // protect API key CRUD mutations
 		adminAPIKeys.Use(middleware.RBACMiddleware([]string{"admin"}))
 		{
 			// GET /api/v1/admin/apikeys - List all API keys (admin only)
@@ -509,6 +515,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		reportScheduleHandler := NewReportScheduleHandler(db.NewReportScheduleRepository(pool))
 		reportsSched := v1.Group("/reports/schedules")
 		reportsSched.Use(middleware.JWTAuthMiddleware(jwtService))
+		reportsSched.Use(csrf.CSRFMiddleware()) // protect schedule CRUD mutations
 		{
 			reportsSched.GET("", reportScheduleHandler.ListReportSchedulesHandler)
 			reportsSched.POST("", middleware.RBACMiddleware([]string{"admin"}), reportScheduleHandler.CreateReportScheduleHandler)
@@ -522,6 +529,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Alerts group with auth middleware
 		alerts := v1.Group("/alerts")
 		alerts.Use(middleware.JWTAuthMiddleware(jwtService))
+		alerts.Use(csrf.CSRFMiddleware()) // protect routing-rules + rules mutations
 
 		// Alert routing rules (ADR-002). CRUD for per-webhook routing.
 		alertRoutingHandler := NewAlertRoutingHandler(db.NewAlertRoutingRulesRepository(pool))
@@ -536,9 +544,8 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// GET /api/v1/alerts/rules/:id - Get alert rule by ID (all roles)
 		alerts.GET("/rules/:id", alertHandler.GetAlertRuleByIDHandler)
 
-		// Create/Update/Delete routes require RBAC (admin or operator)
-		// Add CSRF protection for state-changing operations
-		nodes.Use(csrf.CSRFMiddleware())
+		// Create/Update/Delete routes require RBAC (admin or operator).
+		// CSRF is already applied group-wide above (alerts.Use(csrf)).
 		alerts.Use(middleware.RBACMiddleware([]string{"admin", "operator"}))
 
 		// POST /api/v1/alerts/rules - Create alert rule (admin/operator only)
@@ -556,6 +563,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Alert records group with auth middleware
 		alertRecords := v1.Group("/alerts/records")
 		alertRecords.Use(middleware.JWTAuthMiddleware(jwtService))
+		alertRecords.Use(csrf.CSRFMiddleware()) // protect status update + note mutations
 
 		// GET /api/v1/alerts/records - Get alert records with filtering (all roles)
 		alertRecords.GET("", alertRecordHandler.GetAlertRecordsHandler)
@@ -583,6 +591,7 @@ func SetupRoutes(router *gin.Engine, healthChecker *health.HealthChecker, pool *
 		// Webhooks group with auth and RBAC middleware (admin only)
 		webhooks := v1.Group("/webhooks")
 		webhooks.Use(middleware.JWTAuthMiddleware(jwtService))
+		webhooks.Use(csrf.CSRFMiddleware()) // protect webhook CRUD + test + preview mutations
 		webhooks.Use(middleware.RBACMiddleware([]string{"admin"}))
 
 		// GET /api/v1/webhooks - Get all webhook configurations (admin only)
